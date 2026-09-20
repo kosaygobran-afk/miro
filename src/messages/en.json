@@ -1,0 +1,147 @@
+{
+  "locale": "English",
+  "site": {
+    "description": "MIRO provides professional security and communications installations in Israel."
+  },
+  "layout": {
+    "header": {
+      "logo": "MIRO",
+      "nav": {
+        "home": "Home",
+        "services": "Services",
+        "about": "About",
+        "contact": "Contact"
+      },
+      "actions": {
+        "requestQuote": "Request a Quote",
+        "account": "Account",
+        "languageSwitch": "English",
+        "themeToggle": "Toggle Theme"
+      }
+    },
+    "footer": {
+      "links": {
+        "home": "Home",
+        "services": "Services",
+        "about": "About",
+        "contact": "Contact",
+        "privacy": "Privacy Policy",
+        "terms": "Terms of Service",
+        "accessibility": "Accessibility Statement"
+      },
+      "copyright": "© {{year}} MIRO. All rights reserved."
+    }
+  },
+  "pages": {
+    "home": {
+      "hero": {
+        "title": "Security and Communications Solutions",
+        "subtitle": "Protecting your home and business with expert installations",
+        "primaryAction": "Request a Quote",
+        "secondaryAction": "View Services"
+      }
+    },
+    "services": {
+      "title": "Our Services",
+      "subtitle": "We provide professional security and communications solutions for homes and businesses.",
+      "categories": [
+        {
+          "id": "security-cameras",
+          "title": "Security Cameras",
+          "description": "Professional installation of CCTV and IP camera systems for comprehensive surveillance."
+        },
+        {
+          "id": "alarm-systems",
+          "title": "Alarm Systems",
+          "description": "Intrusion detection systems to protect your property from unauthorized access."
+        },
+        {
+          "id": "intercom-access",
+          "title": "Intercom & Access Control",
+          "description": "Video door phones, access control systems, and building automation."
+        },
+        {
+          "id": "network-wifi",
+          "title": "Network & Wi-Fi Installation",
+          "description": "Structured cabling, wireless networks, and internet connectivity solutions."
+        }
+      ],
+      "home": {
+        "title": "Home Installation & Services",
+        "subtitle": "Security and communications solutions for residential properties",
+        "content": "We offer a range of services to keep your home safe and connected, including security cameras, alarm systems, intercoms, and home network setup."
+      },
+      "business": {
+        "title": "Business Solutions",
+        "subtitle": "Security and communications for commercial properties",
+        "content": "We provide tailored security and communications solutions for businesses of all sizes, including surveillance, access control, alarm systems, and structured networking."
+      }
+    },
+    "about": {
+      "title": "About MIRO",
+      "content": "MIRO is a leading provider of security and communications installations in Israel, serving both residential and commercial clients with professional expertise and cutting-edge technology."
+    },
+    "contact": {
+      "title": "Contact Us",
+      "subtitle": "Get in touch for a free consultation",
+      "form": {
+        "name": "Name",
+        "email": "Email",
+        "phone": "Phone (optional)",
+        "message": "Your Message",
+        "submit": "Send Message"
+      }
+    },
+    "privacy": {
+      "title": "Privacy Policy",
+      "content": "This privacy policy describes how MIRO collects, uses, and protects your information when you use our website or submit an enquiry. We are committed to protecting your privacy and ensuring your personal data is handled in accordance with applicable data protection laws."
+    },
+    "terms": {
+      "title": "Terms of Service",
+      "content": "These terms of service govern your use of the MIRO website and services. By accessing or using our website, you agree to be bound by these terms. If you do not agree to these terms, please do not use our website."
+    },
+    "accessibility": {
+      "title": "Accessibility Statement",
+      "content": "MIRO is committed to ensuring digital accessibility for people with disabilities. We have endeavored to create an accessible website that adheres to the Web Content Accessibility Guidelines (WCAG) 2.2 AA standards."
+    },
+    "auth": {
+      "login": {
+        "title": "Sign In",
+        "subtitle": "Welcome back to MIRO",
+        "form": {
+          "email": "Email",
+          "password": "Password",
+          "submit": "Sign In",
+          "forgotPassword": "Forgot Password?"
+        }
+      },
+      "signup": {
+        "title": "Create Account",
+        "subtitle": "Join MIRO to manage your services and enquiries",
+        "form": {
+          "name": "Name",
+          "email": "Email",
+          "password": "Password",
+          "submit": "Create Account"
+        }
+      },
+      "forgot-password": {
+        "title": "Reset Password",
+        "subtitle": "Enter your email to reset your password",
+        "form": {
+          "email": "Email",
+          "submit": "Send Reset Link"
+        }
+      },
+      "reset-password": {
+        "title": "Set New Password",
+        "subtitle": "Enter a new password for your account",
+        "form": {
+          "password": "New Password",
+          "confirmPassword": "Confirm New Password",
+          "submit": "Set Password"
+        }
+      }
+    }
+  }
+}
