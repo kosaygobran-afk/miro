@@ -1,4 +1,18 @@
-import { Camera, Router, ShieldCheck, Siren, ShoppingCart } from "lucide-react";
+import {
+  Camera,
+  Router,
+  ShieldCheck,
+  Siren,
+  ShoppingCart,
+  HardDrive,
+  Server,
+  Cable,
+  Wrench,
+  Wifi,
+  Monitor,
+  Shield,
+  Key,
+} from "lucide-react";
 
 export interface Product {
   id: string;
@@ -7,10 +21,25 @@ export interface Product {
   priceIls: number;
   category: string;
   badge?: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: string; // Icon key (e.g., "camera", "server", "router", etc.)
 }
 
-const icons = [Camera, Siren, ShieldCheck, Router];
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  camera: Camera,
+  siren: Siren,
+  shieldCheck: ShieldCheck,
+  router: Router,
+  hardDrive: HardDrive,
+  server: Server,
+  cable: Cable,
+  wrench: Wrench,
+  wifi: Wifi,
+  monitor: Monitor,
+  shield: Shield,
+  key: Key,
+};
+
+const defaultIcons = [Camera, Siren, ShieldCheck, Router];
 
 export function ProductCard({
   product,
@@ -19,7 +48,10 @@ export function ProductCard({
   product: Product;
   index?: number;
 }) {
-  const Icon = product.icon || icons[index % icons.length];
+  const Icon =
+    product.icon && iconMap[product.icon]
+      ? iconMap[product.icon]
+      : defaultIcons[index % defaultIcons.length];
 
   return (
     <article className="miro-card flex h-full flex-col overflow-hidden p-5 rounded-2xl hover:bg-surface-hover transition-all duration-300 shadow-lg hover:shadow-xl">

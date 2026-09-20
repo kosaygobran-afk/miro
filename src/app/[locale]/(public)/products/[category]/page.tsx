@@ -69,7 +69,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           products={categoryProducts}
           t={{
             searchPlaceholder: t("searchPlaceholder"),
-            showingResults: (args) => t("showingResults", args),
           }}
         />
       </div>

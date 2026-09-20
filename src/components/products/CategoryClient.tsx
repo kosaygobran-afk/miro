@@ -7,7 +7,6 @@ import type { Product } from "@/features/catalog/product-data";
 
 type CategoryTranslations = {
   searchPlaceholder: string;
-  showingResults: (args: { count: number; total: number }) => string;
 };
 
 interface CategoryClientProps {
