@@ -1,147 +1,269 @@
 {
   "locale": "English",
   "site": {
-    "description": "MIRO provides professional security and communications installations in Israel."
+    "name": "MIRO",
+    "defaultTitle": "MIRO - Security and Communications Systems",
+    "description": "MIRO provides professional security, networking and communications installation foundations for homes and businesses in Israel."
   },
   "layout": {
     "header": {
       "logo": "MIRO",
+      "tagline": "Secure Smart Connected",
+      "homeLabel": "MIRO home",
+      "navLabel": "Main navigation",
       "nav": {
         "home": "Home",
         "services": "Services",
+        "homeServices": "Homes",
+        "business": "Business",
+        "products": "Products",
         "about": "About",
         "contact": "Contact"
       },
       "actions": {
         "requestQuote": "Request a Quote",
         "account": "Account",
-        "languageSwitch": "English",
-        "themeToggle": "Toggle Theme"
+        "languageSwitch": "עברית",
+        "themeToggle": "Switch color theme",
+        "openMenu": "Open menu",
+        "closeMenu": "Close menu"
       }
     },
     "footer": {
+      "brand": "MIRO",
+      "tagline": "Security Communication Trust",
+      "navLabel": "Footer navigation",
+      "contactTitle": "Contact details pending owner confirmation",
+      "phonePlaceholder": "Phone to be confirmed",
+      "emailPlaceholder": "Email to be confirmed",
+      "areaPlaceholder": "Service area to be confirmed",
       "links": {
         "home": "Home",
         "services": "Services",
         "about": "About",
         "contact": "Contact",
-        "privacy": "Privacy Policy",
-        "terms": "Terms of Service",
-        "accessibility": "Accessibility Statement"
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "accessibility": "Accessibility"
       },
-      "copyright": "© {{year}} MIRO. All rights reserved."
+      "copyright": "© {year} MIRO. Draft site foundation."
+    }
+  },
+  "common": {
+    "draft": "Draft content pending owner confirmation",
+    "ownerReview": "Owner review required before launch",
+    "learnMore": "Learn more",
+    "viewAll": "View all services",
+    "developmentPreview": "Development preview",
+    "illustrativeData": "Illustrative data only. Not real catalog, pricing or stock."
+  },
+  "metadata": {
+    "home": {
+      "title": "Security and Communications Systems for Homes and Businesses",
+      "description": "Explore MIRO's Hebrew-first website foundation for security cameras, alarms, intercoms, access control and Wi-Fi installation services."
+    },
+    "services": {
+      "title": "Security and Communications Services",
+      "description": "Draft MIRO service pages for security cameras, alarms, intercom access, networking and Wi-Fi installation."
+    },
+    "homeServices": {
+      "title": "Home Security and Network Installation Services",
+      "description": "Draft residential service page for home cameras, alarms, intercoms and Wi-Fi installation."
+    },
+    "businessServices": {
+      "title": "Business Security and Communications Solutions",
+      "description": "Draft business service page for security, access control, networking and communications installation."
+    },
+    "products": {
+      "title": "Security & Communication Products",
+      "description": "Browse MIRO's curated selection of cameras, servers, routers, cables, accessories and network gear. Development preview with illustrative data only."
+    },
+    "contact": {
+      "title": "Contact MIRO",
+      "description": "Development-stage contact page for MIRO quote requests. Submission is not enabled yet."
+    },
+    "privacy": {
+      "title": "Draft Privacy Policy",
+      "description": "Draft privacy page for MIRO. Legal and business details must be verified before launch."
+    },
+    "terms": {
+      "title": "Draft Terms of Use",
+      "description": "Draft terms page for MIRO. Legal and business details must be verified before launch."
+    },
+    "accessibility": {
+      "title": "Draft Accessibility Statement",
+      "description": "Draft accessibility statement and launch checklist for MIRO."
+    },
+    "about": {
+      "title": "About MIRO",
+      "description": "Verified business details are pending. This page explains the current MIRO website foundation honestly."
+    },
+    "login": {
+      "title": "Sign In",
+      "description": "Shared MIRO login page. Authentication is intentionally unavailable until Supabase auth is implemented."
+    },
+    "signup": {
+      "title": "Create Customer Account",
+      "description": "Customer-only signup page. Workers and CEO accounts are not self-service roles."
+    },
+    "forgotPassword": {
+      "title": "Reset Password",
+      "description": "Password recovery page prepared for future Supabase authentication."
+    },
+    "resetPassword": {
+      "title": "Set New Password",
+      "description": "Password reset page prepared for future Supabase authentication."
     }
   },
   "pages": {
     "home": {
       "hero": {
-        "title": "Security and Communications Solutions",
-        "subtitle": "Protecting your home and business with expert installations",
+        "eyebrow": "Secure Smart Connected",
+        "title": "MIRO. Security & connection.",
+        "subtitle": "Cameras, alarms, smart access and networks. Explore a connected approach to your home and business.",
+        "caption": "Security / Access / Networks · Equipment shown for illustration",
         "primaryAction": "Request a Quote",
         "secondaryAction": "View Services"
-      }
+      },
+      "categoriesTitle": "Every connection matters",
+      "businessBandTitle": "Smart business package",
+      "businessBandText": "Bring cameras, access and networking together. Explore a system shaped around your space.",
+      "processTitle": "Service process",
+      "faqTitle": "Questions before launch",
+      "ctaTitle": "Your space. Better connected.",
+      "ctaText": "Explore the right direction for your next security and communications project."
     },
     "services": {
-      "title": "Our Services",
-      "subtitle": "We provide professional security and communications solutions for homes and businesses.",
+      "title": "Security and communications services",
+      "subtitle": "These are proposed service categories for MIRO. The owner still needs to confirm final wording, service areas and claims.",
       "categories": [
         {
           "id": "security-cameras",
           "title": "Security Cameras",
-          "description": "Professional installation of CCTV and IP camera systems for comprehensive surveillance."
+          "description": "Planning and installation foundation for CCTV and IP camera systems."
         },
         {
           "id": "alarm-systems",
           "title": "Alarm Systems",
-          "description": "Intrusion detection systems to protect your property from unauthorized access."
+          "description": "Draft alarm-system service area for intrusion detection and property protection."
         },
         {
           "id": "intercom-access",
           "title": "Intercom & Access Control",
-          "description": "Video door phones, access control systems, and building automation."
+          "description": "Video intercoms, access-control concepts and secure entry planning."
         },
         {
           "id": "network-wifi",
           "title": "Network & Wi-Fi Installation",
-          "description": "Structured cabling, wireless networks, and internet connectivity solutions."
+          "description": "Structured cabling, Wi-Fi coverage and connected-device installation foundations."
         }
       ],
       "home": {
-        "title": "Home Installation & Services",
-        "subtitle": "Security and communications solutions for residential properties",
-        "content": "We offer a range of services to keep your home safe and connected, including security cameras, alarm systems, intercoms, and home network setup."
+        "title": "Home installation and services",
+        "subtitle": "Residential security and connectivity planning without fake guarantees.",
+        "content": "This page is ready for owner-approved home service details. For now it describes the intended structure: assessment, clear proposal, careful installation and support."
       },
       "business": {
-        "title": "Business Solutions",
-        "subtitle": "Security and communications for commercial properties",
-        "content": "We provide tailored security and communications solutions for businesses of all sizes, including surveillance, access control, alarm systems, and structured networking."
+        "title": "Business solutions",
+        "subtitle": "Security and communications foundations for workplaces and buildings.",
+        "content": "This draft page supports business-focused messaging while avoiding unverified prices, partnerships, response times or completed projects."
       }
     },
     "about": {
       "title": "About MIRO",
-      "content": "MIRO is a leading provider of security and communications installations in Israel, serving both residential and commercial clients with professional expertise and cutting-edge technology."
+      "content": "MIRO business identity, address, licensing, team and project history still need owner confirmation. Until then this page stays intentionally conservative."
     },
     "contact": {
-      "title": "Contact Us",
-      "subtitle": "Get in touch for a free consultation",
+      "title": "Contact / Request a Quote",
+      "subtitle": "The visual form is ready, but submissions are disabled until a real enquiry backend is implemented.",
+      "notice": "Do not enter real private details yet. This Phase 1 form does not send data.",
       "form": {
         "name": "Name",
         "email": "Email",
         "phone": "Phone (optional)",
-        "message": "Your Message",
-        "submit": "Send Message"
+        "message": "Message",
+        "submit": "Submission unavailable"
       }
     },
     "privacy": {
-      "title": "Privacy Policy",
-      "content": "This privacy policy describes how MIRO collects, uses, and protects your information when you use our website or submit an enquiry. We are committed to protecting your privacy and ensuring your personal data is handled in accordance with applicable data protection laws."
+      "title": "Draft Privacy Policy",
+      "content": "This draft page is not legal advice and is not approved launch copy. Before launch, MIRO must confirm business identity, data purposes, retention, processors, hosting, contact details and applicable Israeli privacy obligations."
     },
     "terms": {
-      "title": "Terms of Service",
-      "content": "These terms of service govern your use of the MIRO website and services. By accessing or using our website, you agree to be bound by these terms. If you do not agree to these terms, please do not use our website."
+      "title": "Draft Terms of Use",
+      "content": "These terms are a placeholder for development only. They must be replaced or reviewed by the business/legal owner before the site is published."
     },
     "accessibility": {
-      "title": "Accessibility Statement",
-      "content": "MIRO is committed to ensuring digital accessibility for people with disabilities. We have endeavored to create an accessible website that adheres to the Web Content Accessibility Guidelines (WCAG) 2.2 AA standards."
+      "title": "Draft Accessibility Statement",
+      "content": "The engineering target is WCAG 2.2 AA, but legal applicability and final accessibility statement wording must be verified before launch. Manual keyboard and screen-reader testing remain required."
     },
     "auth": {
+      "noticeTitle": "Authentication is unavailable in Phase 1",
       "login": {
         "title": "Sign In",
-        "subtitle": "Welcome back to MIRO",
+        "subtitle": "One shared login will later route customers, workers and CEO by trusted role.",
         "form": {
           "email": "Email",
           "password": "Password",
-          "submit": "Sign In",
-          "forgotPassword": "Forgot Password?"
+          "submit": "Sign in unavailable",
+          "forgotPassword": "Forgot password?"
         }
       },
       "signup": {
-        "title": "Create Account",
-        "subtitle": "Join MIRO to manage your services and enquiries",
+        "title": "Create customer account",
+        "subtitle": "Only customers can sign up publicly. Worker and CEO roles are owner-assigned later.",
         "form": {
           "name": "Name",
           "email": "Email",
           "password": "Password",
-          "submit": "Create Account"
+          "submit": "Signup unavailable"
         }
       },
       "forgot-password": {
-        "title": "Reset Password",
-        "subtitle": "Enter your email to reset your password",
+        "title": "Reset password",
+        "subtitle": "Password recovery will work after Supabase authentication is implemented.",
         "form": {
           "email": "Email",
-          "submit": "Send Reset Link"
+          "submit": "Reset unavailable"
         }
       },
       "reset-password": {
-        "title": "Set New Password",
-        "subtitle": "Enter a new password for your account",
+        "title": "Set new password",
+        "subtitle": "A valid recovery session will be required in Phase 2.",
         "form": {
-          "password": "New Password",
-          "confirmPassword": "Confirm New Password",
-          "submit": "Set Password"
+          "password": "New password",
+          "confirmPassword": "Confirm new password",
+          "submit": "Reset unavailable"
         }
       }
+    },
+    "protected": {
+      "title": "Private area closed",
+      "account": "Customer account",
+      "worker": "Worker area",
+      "admin": "CEO administration",
+      "body": "Authentication and role enforcement are not implemented yet, so this private route does not reveal data or simulate access.",
+      "login": "Go to login"
+    },
+    "products": {
+      "title": "Security & Communication Products",
+      "subtitle": "Curated equipment for professional installations. All data is illustrative — no real inventory, pricing or partnerships.",
+      "searchPlaceholder": "Search products...",
+      "categories": {
+        "cameras": "Cameras",
+        "servers": "Servers & NVRs",
+        "routers": "Routers & Gateways",
+        "cables": "Cables & Connectors",
+        "accessories": "Accessories",
+        "networkGear": "Network Gear"
+      },
+      "noResults": "No products match your search.",
+      "showingResults": "Showing {count} of {total} products"
+    },
+    "preview": {
+      "designTitle": "MIRO design system preview",
+      "catalogTitle": "Development catalog preview",
+      "blockedInProduction": "This development preview is not available in production."
     }
   }
 }

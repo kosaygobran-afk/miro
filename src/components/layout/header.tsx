@@ -1,103 +1,44 @@
-import Link from 'next/link';
-import { useTranslations, useLocale } from 'next-intl';
-import { useTheme } from 'next-themes';
-import { usePathname, useRouter } from 'next/navigation';
-import { Sun, Moon } from 'lucide-react';
+import { getTranslations } from "next-intl/server";
+import {
+  HeaderClient,
+  type HeaderLabels,
+} from "@/components/layout/header-client";
+import type { Locale } from "@/lib/i18n";
 
-export function Header() {
-  const t = useTranslations('layout.header');
-  const { theme, setTheme } = useTheme();
-  const pathname = usePathname();
-  const router = useRouter();
-  const locale = useLocale();
-
-  const isDark = theme === 'dark';
-
-  const toggleTheme = () => {
-    setTheme(isDark ? 'light' : 'dark');
+export async function Header({ locale }: { locale: Locale }) {
+  const t = await getTranslations({ locale, namespace: "layout.header" });
+  const pt = await getTranslations({ locale, namespace: "pages.products" });
+  const labels: HeaderLabels = {
+    logo: t("logo"),
+    tagline: t("tagline"),
+    homeLabel: t("homeLabel"),
+    navLabel: t("navLabel"),
+    nav: {
+      home: t("nav.home"),
+      services: t("nav.services"),
+      homeServices: t("nav.homeServices"),
+      business: t("nav.business"),
+      products: t("nav.products"),
+      about: t("nav.about"),
+      contact: t("nav.contact"),
+    },
+    actions: {
+      requestQuote: t("actions.requestQuote"),
+      account: t("actions.account"),
+      languageSwitch: t("actions.languageSwitch"),
+      themeToggle: t("actions.themeToggle"),
+      openMenu: t("actions.openMenu"),
+      closeMenu: t("actions.closeMenu"),
+    },
+    products: {
+      cameras: pt("categories.cameras"),
+      servers: pt("categories.servers"),
+      routers: pt("categories.routers"),
+      cables: pt("categories.cables"),
+      accessories: pt("categories.accessories"),
+      networkGear: pt("categories.networkGear"),
+    },
   };
 
-  const toggleLanguage = () => {
-    const targetLocale = locale === 'he' ? 'en' : 'he';
-    const pathParts = pathname.split('/');
-    pathParts[1] = targetLocale;
-    const newPath = pathParts.join('/');
-    router.push(newPath);
-  };
-
-  const navLinks = [
-    { href: '/', label: t('nav.home') },
-    { href: '/services', label: t('nav.services') },
-    { href: '/about', label: t('nav.about') },
-    { href: '/contact', label: t('nav.contact') },
-  ];
-
-  return (
-    <header className="border-b border-border-control bg-background/90 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        {/* Logo */}
-        <div className="flex items-center space-x-3">
-          <span className="text-xl font-bold text-foreground">
-            {t('logo')}
-          </span>
-        </div>
-
-        {/* Navigation */}
-        <div className="hidden md:flex space-x-8">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={[
-                'text-muted-foreground hover:text-foreground',
-                pathname === link.href ? 'text-foreground underline' : '',
-              ].join(' ')}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-
-        {/* Actions */}
-        <div className="flex items-center space-x-4">
-          {/* Request Quote Button */}
-          <Link
-            href="/contact"
-            className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary-hover"
-          >
-            {t('actions.requestQuote')}
-          </Link>
-
-          {/* Account Link (placeholder) */}
-          <Link
-            href="/account"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            {t('actions.account')}
-          </Link>
-
-          {/* Language Switcher */}
-          <button
-            onClick={toggleLanguage}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            {t('actions.languageSwitch')}
-          </button>
-
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="text-muted-foreground hover:text-foreground"
-            aria-label={t('actions.themeToggle')}
-          >
-            {isDark ? (
-              <Sun className="h-4 w-4" />
-            ) : (
-              <Moon className="h-4 w-4" />
-            )}
-          </button>
-        </div>
-      </div>
-    </header>
-  );
+  return <HeaderClient locale={locale} labels={labels} />;
 }

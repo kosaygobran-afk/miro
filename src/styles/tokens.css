@@ -1,33 +1,42 @@
 :root {
-  --background: #0B0C0E;
-  --surface: #17191D;
+  --background: #0b0c0e;
+  --surface: #17191d;
   --surface-muted: #202329;
-  --surface-hover: #292D34;
-  --foreground: #F5F5F3;
-  --muted-foreground: #B8BBC2;
+  --surface-hover: #292d34;
+  --foreground: #f5f5f3;
+  --muted-foreground: #b8bbc2;
   --border-subtle: #343840;
-  --border-control: #858A92;
-  --primary: #D9A11E;
-  --primary-hover: #E7B43B;
+  --border-control: #858a92;
+  --primary: #d9a11e;
+  --primary-hover: #e7b43b;
   --primary-foreground: #111111;
-  --accent-text: #E8B84B;
-  --success-text: #76D6A0;
-  --error-text: #FF9E9E;
+  --accent-text: #e8b84b;
+  --success-text: #76d6a0;
+  --error-text: #ff9e9e;
+
+  /* Border Radius Tokens - Premium Rounded Look */
+  --radius-xs: 0.25rem; /* 4px - badges, small elements */
+  --radius-sm: 0.375rem; /* 6px - buttons, inputs */
+  --radius-md: 0.5rem; /* 8px - default */
+  --radius-lg: 0.75rem; /* 12px - cards, containers */
+  --radius-xl: 1rem; /* 16px - large cards, modals */
+  --radius-2xl: 1.5rem; /* 24px - hero sections, feature cards */
+  --radius-full: 9999px; /* pills, badges */
 }
 
 [data-theme="light"] {
-  --background: #F2F2EF;
-  --surface: #FFFFFF;
-  --surface-muted: #E7E8E4;
-  --surface-hover: #DEDFDA;
-  --foreground: #17191D;
-  --muted-foreground: #595B60;
-  --border-subtle: #D2D4CF;
-  --border-control: #767A80;
-  --primary: #D9A11E;
-  --primary-hover: #C59017;
+  --background: #f2f2ef;
+  --surface: #ffffff;
+  --surface-muted: #e7e8e4;
+  --surface-hover: #dedfda;
+  --foreground: #17191d;
+  --muted-foreground: #595b60;
+  --border-subtle: #d2d4cf;
+  --border-control: #767a80;
+  --primary: #d9a11e;
+  --primary-hover: #c59017;
   --primary-foreground: #111111;
   --accent-text: #795600;
-  --success-text: #176A3A;
-  --error-text: #B42318;
+  --success-text: #176a3a;
+  --error-text: #b42318;
 }

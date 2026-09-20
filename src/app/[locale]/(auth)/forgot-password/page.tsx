@@ -1,54 +1,36 @@
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import enMessages from '@/messages/en.json';
-import heMessages from '@/messages/he.json';
+import Link from "next/link";
+import { getTranslations } from "next-intl/server";
+import { UnavailableAuthForm } from "@/components/auth/unavailable-auth-form";
+import { authUnavailableMessage } from "@/lib/auth-state";
+import { isLocale, withLocale, type Locale } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
 
-export const generateMetadata = async ({ params }: { params: { locale: string } }) => {
-  const messages = params.locale === 'en' ? enMessages : heMessages;
-  return {
-    title: messages.pages.auth['forgot-password'].title,
-    description: messages.site.description,
-  };
-};
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata.forgotPassword" });
+  return pageMetadata({ locale, path: "forgot-password", title: t("title"), description: t("description"), noIndex: true });
+}
 
-export default function ForgotPasswordPage() {
-  const t = useTranslations('pages.auth.forgot-password');
+export default async function ForgotPasswordPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale: rawLocale } = await params;
+  const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
+  const t = await getTranslations({ locale, namespace: "pages.auth" });
 
   return (
-    <section className="bg-background">
-      <div className="mx-auto max-w-md px-6 py-12">
-        <div className="bg-surface rounded-lg p-6">
-          <h1 className="mb-4 text-2xl font-bold text-foreground">{t('title')}</h1>
-          <p className="mb-6 text-lg text-muted-foreground">{t('subtitle')}</p>
-          
-          {/* Form preview - non-functional in development */}
-          <form className="space-y-4">
-            <div>
-              <label className="block mb-2 text-muted-foreground font-medium">{t('form.email')}</label>
-              <input type="email" placeholder={t('form.email')} className="w-full px-4 py-2 border border-border-control rounded-lg bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary" />
-            </div>
-            <button type="submit" className="w-full bg-primary text-primary-foreground px-6 py-3 rounded-md hover:bg-primary-hover disabled:opacity-50">
-              {t('form.submit')}
-            </button>
-          </form>
-          
-          {/* Development preview notice */}
-          <div className="mt-6 p-4 bg-border-subtle rounded text-sm text-muted-foreground">
-            <p>
-              <strong>Development Preview:</strong> Authentication is not available in this setup.
-              In production, this form would send a password reset link to your email.
-            </p>
-          </div>
-          
-          {/* Link to login */}
-          <div className="mt-4 text-center">
-            <p className="text-muted-foreground">
-              Remember your password?{' '}
-              <Link href="/auth/login" className="text-foreground hover:underline">
-                {t('pages.auth.login.title')}
-              </Link>
-            </p>
-          </div>
+    <section className="miro-section">
+      <div className="miro-container max-w-md">
+        <div className="miro-card p-6">
+          <p className="mb-3 text-sm font-black uppercase tracking-[0.24em] text-accent-text">{t("noticeTitle")}</p>
+          <h1 className="text-3xl font-black">{t("forgot-password.title")}</h1>
+          <p className="mb-6 mt-2 text-muted-foreground">{t("forgot-password.subtitle")}</p>
+          <UnavailableAuthForm
+            fields={[{ name: "email", label: t("forgot-password.form.email"), type: "email" }]}
+            submitLabel={t("forgot-password.form.submit")}
+            notice={authUnavailableMessage(locale)}
+          />
+          <Link className="mt-4 block text-sm text-accent-text hover:underline" href={withLocale(locale, "login")}>
+            {t("login.title")}
+          </Link>
         </div>
       </div>
     </section>

@@ -1,41 +1,33 @@
-import { useTranslations } from 'next-intl';
-import enMessages from '@/messages/en.json';
-import heMessages from '@/messages/he.json';
+import { getTranslations } from "next-intl/server";
+import { ContactPreviewForm } from "@/components/contact/contact-preview-form";
+import { pageMetadata } from "@/lib/seo";
 
-export const generateMetadata = async ({ params }: { params: { locale: string } }) => {
-  const messages = params.locale === 'en' ? enMessages : heMessages;
-  return {
-    title: messages.pages.contact.title,
-    description: messages.site.description,
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata.contact" });
+  return pageMetadata({ locale, path: "contact", title: t("title"), description: t("description") });
+}
+
+export default async function ContactPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "pages.contact" });
+  const form = {
+    name: t("form.name"),
+    email: t("form.email"),
+    phone: t("form.phone"),
+    message: t("form.message"),
+    submit: t("form.submit"),
   };
-};
-
-export default function ContactPage() {
-  const t = useTranslations('pages.contact');
-  const tf = useTranslations('pages.contact.form');
 
   return (
-    <section className="bg-background">
-      <div className="mx-auto max-w-3xl px-6 py-12">
-        <h1 className="mb-4 text-2xl font-bold text-foreground">{t('title')}</h1>
-        <p className="mb-6 text-lg text-muted-foreground">{t('subtitle')}</p>
-        
-        {/* Form preview - non-functional in development */}
-        <div className="bg-surface rounded-lg p-6">
-          <h2 className="mb-4 text-xl font-bold text-foreground">{tf('name')}</h2>
-          <p className="text-muted-foreground">
-            This form is a development preview. Form submission is not available in this setup.
-            In production, this form would submit an enquiry to MIRO.
-          </p>
-          <div className="mt-4 p-4 bg-border-subtle rounded">
-            <p className="text-muted-foreground">
-              <strong>{tf('name')}:</strong> John Doe<br />
-              <strong>{tf('email')}:</strong> john@example.com<br />
-              <strong>{tf('phone')}:</strong> 050-1234567<br />
-              <strong>{tf('message')}:</strong> I am interested in security camera installation for my home.
-            </p>
-          </div>
+    <section className="miro-section">
+      <div className="miro-container grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
+        <div>
+          <h1 className="text-4xl font-black">{t("title")}</h1>
+          <p className="mt-4 text-xl text-muted-foreground">{t("subtitle")}</p>
+          <p className="mt-6 rounded-lg border border-border-subtle bg-surface-muted p-4 text-sm text-muted-foreground">{t("notice")}</p>
         </div>
+        <ContactPreviewForm labels={form} notice={t("notice")} />
       </div>
     </section>
   );

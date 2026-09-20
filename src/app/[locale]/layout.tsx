@@ -1,56 +1,86 @@
-import './globals.css';
-import { NextIntlClientProvider, useMessages } from 'next-intl';
-import { ThemeProvider } from 'next-themes';
-import enMessages from '@/messages/en.json';
-import heMessages from '@/messages/he.json';
+import type { Metadata } from "next";
+import { Heebo } from "next/font/google";
+import { notFound } from "next/navigation";
+import "../globals.css";
+import { Footer } from "@/components/layout/footer";
+import { Header } from "@/components/layout/header";
+import {
+  getDirection,
+  getMessages,
+  isLocale,
+  locales,
+  type Locale,
+} from "@/lib/i18n";
+import { getSiteUrl, localizedUrl } from "@/lib/seo";
 
-// We'll create these components later
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
+const heebo = Heebo({
+  subsets: ["hebrew", "latin"],
+  display: "swap",
+  variable: "--font-miro",
+});
 
-export const generateMetadata = async ({ params }: { params: { locale: string } }) => {
-  const messages = params.locale === 'en' ? enMessages : heMessages;
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale: rawLocale } = await params;
+  const locale = isLocale(rawLocale) ? rawLocale : "he";
+  const messages = getMessages(locale);
+
   return {
     title: {
-      template: `%s | ${messages.layout.header.logo}`,
-      default: `${messages.layout.header.logo} - Security & Communications`,
+      template: `%s | ${messages.site.name}`,
+      default: messages.site.defaultTitle,
     },
-    description: messages.site.description || 'MIRO provides professional security and communications installations in Israel.',
+    description: messages.site.description,
+    metadataBase: new URL(getSiteUrl()),
     alternates: {
-      languages: {
-        en: '/en',
-        he: '/he',
-      },
+      canonical: localizedUrl(locale),
+      languages: Object.fromEntries(
+        locales.map((item) => [item, localizedUrl(item)]),
+      ),
     },
   };
-};
+}
 
-export const generateStaticParams = async () => {
-  return [{ locale: 'he' }, { locale: 'en' }];
-};
+export function generateStaticParams() {
+  return locales.map((locale) => ({ locale }));
+}
 
-export default function RootLocaleLayout({
+export default async function LocaleLayout({
   children,
-  params: { locale },
+  params,
 }: {
   children: React.ReactNode;
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 }) {
-  const messages = useMessages();
+  const { locale: rawLocale } = await params;
 
-  // Determine text direction based on locale
-  const isRTL = locale === 'he';
+  if (!isLocale(rawLocale)) {
+    notFound();
+  }
 
+  const locale: Locale = rawLocale;
   return (
-    <html lang={locale} dir={isRTL ? 'rtl' : 'ltr'}>
-      <body className={isRTL ? 'rtl' : 'ltr'}>
-        <ThemeProvider attribute="data-theme" defaultTheme="system" enableSystem>
-          <NextIntlClientProvider messages={messages} locale={locale}>
-            <Header />
-            <main className="min-h-screen">{children}</main>
-            <Footer />
-          </NextIntlClientProvider>
-        </ThemeProvider>
+    <html
+      lang={locale}
+      dir={getDirection(locale)}
+      className={heebo.variable}
+      suppressHydrationWarning
+    >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(()=>{try{const k='miro-theme';const s=localStorage.getItem(k);const m=matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=s||(m?'dark':'light')}catch{document.documentElement.dataset.theme='dark'}})();",
+          }}
+        />
+      </head>
+      <body>
+        <Header locale={locale} />
+        <main className="miro-main">{children}</main>
+        <Footer locale={locale} />
       </body>
     </html>
   );

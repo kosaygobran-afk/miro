@@ -1,70 +1,63 @@
-import { ProductCard } from '@/features/catalog/product-card';
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { ProductCard, type Product } from "@/features/catalog/product-card";
+import { devPreviewRobots } from "@/lib/seo";
 
-// Mock data for development preview
-const mockProducts: Array<{
-  id: string;
-  name: string;
-  description: string;
-  price: number; // in cents
-  imageUrl: string;
-  category: string;
-}> = [
+export const metadata: Metadata = {
+  title: "MIRO catalog development preview",
+  robots: devPreviewRobots(),
+};
+
+const mockProducts: Product[] = [
   {
-    id: '1',
-    name: 'HD Security Camera',
-    description: '1080p indoor/outdoor security camera with night vision and motion detection.',
-    price: 7999, // $79.99
-    imageUrl: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400',
-    category: 'Security Cameras'
+    id: "camera-pro",
+    name: "MIRO Pro Dome Camera",
+    description: "Illustrative camera card with stable media ratio and MIRO styling.",
+    priceIls: 790,
+    category: "Security cameras",
+    badge: "New",
   },
   {
-    id: '2',
-    name: 'Wireless Alarm System',
-    description: 'Complete wireless alarm system with door/window sensors and motion detector.',
-    price: 19999, // $199.99
-    imageUrl: 'https://images.unsplash.com/photo-1558618044-3a54f2d40a6a?w=400',
-    category: 'Alarm Systems'
+    id: "alarm-kit",
+    name: "Wireless Alarm Kit",
+    description: "Illustrative alarm kit card. Not real inventory or pricing.",
+    priceIls: 1490,
+    category: "Alarm systems",
+    badge: "Preview",
   },
   {
-    id: '3',
-    name: 'Video Doorbell',
-    description: '1080p video doorbell with two-way audio and night vision.',
-    price: 14999, // $149.99
-    imageUrl: 'https://images.unsplash.com/photo-1597518788236-8ce9e5ea9cfd?w=400',
-    category: 'Intercom & Access Control'
+    id: "video-intercom",
+    name: "Smart Video Intercom",
+    description: "Development-only product preview for later catalog integration.",
+    priceIls: 990,
+    category: "Intercom",
   },
   {
-    id: '4',
-    name: 'Mesh Wi-Fi System',
-    description: 'Tri-band mesh Wi-Fi system for whole-home coverage.',
-    price: 29999, // $299.99
-    imageUrl: 'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400',
-    category: 'Network & Wi-Fi Installation'
-  }
+    id: "wifi-access",
+    name: "Wi-Fi 6 Access Point",
+    description: "Illustrative network product card with no real stock claim.",
+    priceIls: 690,
+    category: "Network and Wi-Fi",
+  },
 ];
 
 export default function CatalogPreviewPage() {
+  if (process.env.NODE_ENV === "production") notFound();
+
   return (
-    <section className="bg-background">
-      <div className="mx-auto max-w-5xl px-6 py-12">
+    <section className="min-h-screen bg-background py-10">
+      <div className="miro-container">
         <div className="mb-8">
-          <h1 className="mb-2 text-2xl font-bold text-foreground">Product Catalog Preview</h1>
-          <p className="text-sm text-muted-foreground">
-            This is a development preview with mock data. In production, this will be replaced with the real product catalog from the database.
+          <p className="text-sm font-black uppercase tracking-[0.35em] text-accent-text">Development only</p>
+          <h1 className="mt-3 text-4xl font-black">Catalog preview</h1>
+          <p className="mt-3 max-w-2xl text-muted-foreground">
+            Illustrative data only. No real products, prices, checkout, inventory or brand partnerships are represented.
           </p>
         </div>
-        
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {mockProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          {mockProducts.map((product, index) => (
+            <ProductCard key={product.id} product={product} index={index} />
           ))}
-        </div>
-        
-        <div className="mt-8 p-4 bg-border-subtle rounded text-sm text-muted-foreground">
-          <h3 className="mb-2 font-bold text-foreground">Notice:</h3>
-          <p>
-            This preview uses mock data and is for development only. No real products, prices, or inventory are represented.
-          </p>
         </div>
       </div>
     </section>

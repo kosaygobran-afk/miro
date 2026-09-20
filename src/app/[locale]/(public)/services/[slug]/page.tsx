@@ -1,55 +1,55 @@
-import { useLocale } from 'next-intl';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import enMessages from '@/messages/en.json';
-import heMessages from '@/messages/he.json';
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
+import { isLocale, locales, withLocale, type Locale } from "@/lib/i18n";
+import { pageMetadata } from "@/lib/seo";
+import { serviceIcons } from "@/lib/service-content";
 
-export const generateMetadata = async ({ params }: { params: { locale: string; slug: string } }) => {
-  const messages = params.locale === 'en' ? enMessages : heMessages;
-  const category = messages.pages.services.categories.find((cat) => cat.id === params.slug);
-  if (!category) {
-    // If category not found, we still want to return some metadata to avoid errors, but the page will show notFound.
-    // We'll return a generic title.
-    return {
-      title: 'Service Not Found',
-      description: '',
-    };
-  }
-  return {
-    title: category.title,
-    description: messages.site.description,
-  };
-};
+type Params = Promise<{ locale: string; slug: string }>;
 
-export default function ServiceDetailPage({ params: { slug } }: { params: { slug: string } }) {
-  const locale = useLocale();
-  const messages = locale === 'en' ? enMessages : heMessages;
-  const categories = messages.pages.services.categories;
-  const category = categories.find((cat) => cat.id === slug);
+export function generateStaticParams() {
+  const slugs = ["security-cameras", "alarm-systems", "intercom-access", "network-wifi"];
+  return locales.flatMap((locale) => slugs.map((slug) => ({ locale, slug })));
+}
+
+export async function generateMetadata({ params }: { params: Params }) {
+  const { locale, slug } = await params;
+  const t = await getTranslations({ locale, namespace: "pages.services" });
+  const categories = t.raw("categories") as Array<{ id: string; title: string; description: string }>;
+  const category = categories.find((item) => item.id === slug);
 
   if (!category) {
-    notFound();
+    return pageMetadata({ locale, path: `services/${slug}`, title: "Service not found", noIndex: true });
   }
+
+  return pageMetadata({ locale, path: `services/${slug}`, title: category.title, description: category.description });
+}
+
+export default async function ServiceDetailPage({ params }: { params: Params }) {
+  const { locale: rawLocale, slug } = await params;
+  const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
+  const t = await getTranslations({ locale, namespace: "pages.services" });
+  const common = await getTranslations({ locale, namespace: "common" });
+  const categories = t.raw("categories") as Array<{ id: string; title: string; description: string }>;
+  const category = categories.find((item) => item.id === slug);
+
+  if (!category) notFound();
+
+  const Icon = serviceIcons[category.id];
 
   return (
-    <section className="bg-background">
-      <div className="mx-auto max-w-3xl px-6 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground">{category.title}</h1>
-          <Link
-            href="/services"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            ← Back to Services
-          </Link>
-        </div>
-        <p className="mb-6 text-lg text-muted-foreground">{category.description}</p>
-        
-        {/* Placeholder for service details */}
-        <div className="bg-surface rounded-lg p-6">
-          <h2 className="mb-4 text-xl font-bold text-foreground">Service Details</h2>
-          <p className="text-muted-foreground">
-            Detailed information about this service package, including equipment options, installation process, and pricing.
+    <section className="miro-section">
+      <div className="miro-container max-w-4xl">
+        <Link href={withLocale(locale, "services")} className="font-bold text-accent-text">
+          {common("viewAll")}
+        </Link>
+        <div className="miro-card mt-6 p-8">
+          {Icon ? <Icon className="mb-6 size-16 text-primary" aria-hidden="true" /> : null}
+          <p className="text-sm font-black uppercase tracking-[0.35em] text-muted-foreground">{common("draft")}</p>
+          <h1 className="mt-3 text-4xl font-black">{category.title}</h1>
+          <p className="mt-4 text-lg text-muted-foreground">{category.description}</p>
+          <p className="mt-6 text-muted-foreground">
+            {common("ownerReview")}
           </p>
         </div>
       </div>

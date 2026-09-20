@@ -14,6 +14,20 @@
 - Learned that next-intl provides a straightforward way to set up localized routing with Next.js App Router.
 - We need to wrap the app with the NextIntlClientProvider and use the usePathname and useRouter hooks for navigation.
 
-### 2026-09-20: next-themes Theme Persistence
-- Learned that next-themes provides a ThemeProvider that persists the theme choice in localStorage and respects system preference.
-- The theme can be changed via the setTheme function and will persist across sessions.
+### 2026-09-20: Theme Persistence
+- The active Phase 1 theme control stores `light` or `dark` under the `miro-theme` localStorage key.
+- A small script in `src/app/[locale]/layout.tsx` applies the saved or system theme before paint.
+- The header toggle updates `document.documentElement.dataset.theme`, so reload persistence works without hydration errors.
+
+### 2026-09-20: Route Groups Are Not URL Segments
+- Files under `src/app/[locale]/(auth)/login/page.tsx` become `/he/login` and `/en/login`, not `/he/auth/login`.
+- Parentheses help organize files without changing the public URL.
+
+### 2026-09-20: Authentication vs Authorization
+- Login forms are only authentication: proving who the user is.
+- Private route access is authorization: deciding what that user may see.
+- Because Phase 1 has no real authentication, private pages must fail closed and show no protected data.
+
+### 2026-09-20: Hydration Errors
+- A theme icon rendered differently on server and browser caused hydration errors.
+- The fix was to apply the theme before paint and render stable icon markup, then use CSS to show the correct icon.

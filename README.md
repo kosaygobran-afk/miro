@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MIRO Website
 
-## Getting Started
+MIRO is a Next.js foundation for a Hebrew-first security and communications website. Phase 1 is a local visual/structural foundation only: no real authentication, database writes, catalogue, payments or enquiry submission are live yet.
 
-First, run the development server:
+## Requirements
+
+- Node.js LTS compatible with Next.js 16
+- npm, using the committed `package-lock.json`
+
+## First Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Hebrew: `http://localhost:3000/he`
+- English: `http://localhost:3000/en`
+- Development design preview: `http://localhost:3000/design-system`
+- Development catalog preview: `http://localhost:3000/catalog-preview`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Useful Commands
 
-## Learn More
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Copy `.env.example` to `.env.local` when needed.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+```
 
-## Deploy on Vercel
+Public pages work without Supabase credentials. Auth forms honestly show unavailable behavior and private routes stay closed until Phase 2.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Current Status
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Read `docs/PROJECT_STATUS.md` before continuing work. The next implementation phase is real Supabase authentication, roles and authorization.

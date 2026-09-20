@@ -1,0 +1,49 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  "model": "nvidia/nemotron-ultra",
+
+  "default_agent": "build",
+
+  "formatter": true,
+
+  "compaction": {
+    "auto": true,
+    "keep": {
+      "tokens": 15000
+    },
+    "buffer": 20000
+  },
+
+  "providers": {
+    "nvidia": {
+      "models": {
+        "nemotron-ultra": {
+          "modelID": "nvidia/nemotron-3-ultra-550b-a55b",
+          "name": "Nemotron 3 Ultra 550B",
+
+          "capabilities": {
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"]
+          },
+
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          },
+
+          "body": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+
+            "chat_template_kwargs": {
+              "enable_thinking": true,
+              "force_nonempty_content": true
+            }
+          }
+        }
+      }
+    }
+  }
+}
