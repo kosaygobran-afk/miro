@@ -18,7 +18,18 @@ export function LiveAuthForm({
   submitLabel: string;
   initialNotice: string;
 }) {
-  const [message, setMessage] = useState(initialNotice);
+  const configured = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    (process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+  );
+  const [message, setMessage] = useState(
+    configured
+      ? initialNotice
+      : locale === "he"
+        ? "הכניסה לחשבון אינה זמינה כרגע."
+        : "Account access is currently unavailable.",
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
 
@@ -32,7 +43,8 @@ export function LiveAuthForm({
       string
     >;
     const email = (values.email ?? "").trim();
-    const password = (values.password ?? "").trim();
+    const password = values.password ?? "";
+    const confirmPassword = values.confirmPassword ?? "";
     const name = (values.name ?? "").trim();
 
     try {
@@ -63,6 +75,7 @@ export function LiveAuthForm({
             : "Signed in successfully. Redirecting to your account...",
         );
         router.push(withLocale(locale, "account"));
+        router.refresh();
         return;
       }
 
@@ -80,6 +93,7 @@ export function LiveAuthForm({
           email,
           password,
           options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/${locale}/account`,
             data: {
               full_name: name,
             },
@@ -104,6 +118,7 @@ export function LiveAuthForm({
           locale === "he" ? "נרשמת בהצלחה." : "Signed up successfully.",
         );
         router.push(withLocale(locale, "account"));
+        router.refresh();
         return;
       }
 
@@ -117,7 +132,7 @@ export function LiveAuthForm({
           return;
         }
 
-        const redirectTo = `${window.location.origin}/${locale}/reset-password`;
+        const redirectTo = `${window.location.origin}/auth/callback?next=/${locale}/reset-password`;
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo,
         });
@@ -135,11 +150,15 @@ export function LiveAuthForm({
         return;
       }
 
-      if (!password) {
+      if (!password || !confirmPassword || password !== confirmPassword) {
         setMessage(
           locale === "he"
-            ? "יש להזין סיסמה חדשה."
-            : "Please enter a new password.",
+            ? confirmPassword
+              ? "הסיסמאות אינן תואמות."
+              : "יש להזין סיסמה חדשה."
+            : confirmPassword
+              ? "Passwords do not match."
+              : "Please enter a new password.",
         );
         return;
       }
@@ -189,7 +208,10 @@ export function LiveAuthForm({
               type={field.type}
               name={field.name}
               autoComplete={autoCompleteValue}
-              required={field.name !== "confirmPassword"}
+              required
+              minLength={
+                field.type === "password" && mode !== "login" ? 8 : undefined
+              }
             />
           </label>
         );
@@ -198,7 +220,7 @@ export function LiveAuthForm({
       <button
         type="submit"
         className="miro-button miro-button-primary w-full disabled:cursor-not-allowed disabled:opacity-70"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !configured}
         aria-live="polite"
       >
         {isSubmitting

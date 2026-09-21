@@ -16,10 +16,10 @@ Route groups in parentheses are organization only. They do not appear in URLs.
 - `/he/privacy` and `/en/privacy` - draft privacy page, noindex
 - `/he/terms` and `/en/terms` - draft terms page, noindex
 - `/he/accessibility` and `/en/accessibility` - draft accessibility statement, noindex
-- `/he/login` and `/en/login` - shared login, unavailable until Phase 2
-- `/he/signup` and `/en/signup` - customer-only signup, unavailable until Phase 2
-- `/he/forgot-password` and `/en/forgot-password` - recovery request, unavailable until Phase 2
-- `/he/reset-password` and `/en/reset-password` - reset page, unavailable until Phase 2
+- `/he/login` and `/en/login` - shared login, implemented with Supabase
+- `/he/signup` and `/en/signup` - customer-only signup, implemented with Supabase
+- `/he/forgot-password` and `/en/forgot-password` - recovery request, implemented with Supabase
+- `/he/reset-password` and `/en/reset-password` - reset page, implemented with Supabase
 
 ## Development-Only Routes
 
@@ -28,13 +28,13 @@ Route groups in parentheses are organization only. They do not appear in URLs.
 
 ## Protected Routes
 
-These routes exist but fail closed until real authentication and role checks are implemented.
+These routes require a verified server session and an active profile. Worker and admin areas enforce role checks.
 
 - `/he/account` and `/en/account` - customer account
 - `/he/worker` and `/en/worker` - worker area
 - `/he/admin` and `/en/admin` - CEO/admin area
 
-## Role Permissions Planned For Phase 2
+## Phase 2 Role Permissions
 
 | Audience | Entry                                     | Permissions                                                                        |
 | -------- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
@@ -49,3 +49,11 @@ There is no role selector, no worker signup form and no CEO signup form.
 
 - Old `/he/products` and `/en/products` URLs permanently redirect to `/he/store` and `/en/store`.
 - Old `/he/products/[category]` and `/en/products/[category]` URLs permanently redirect to `/he/store/[category]` and `/en/store/[category]`.
+
+## Sensitive operations
+
+- `/auth/callback` exchanges confirmation/recovery codes and only redirects to localized account/reset routes.
+- `/api/account` handles own profile, own requests and authorized staff request updates.
+- `/api/management/users` lists accounts for staff and delegates role/status changes to audited SQL authorization.
+- `/api/ceo` requires current-password verification for email changes, adding CEOs and deleting only the current CEO account. The last active CEO cannot delete itself.
+- Mutation endpoints validate input and same-origin requests. All private pages are noindex.

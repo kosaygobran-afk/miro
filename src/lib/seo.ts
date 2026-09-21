@@ -4,7 +4,12 @@ import { getMessages, isLocale, locales, type Locale } from "@/lib/i18n";
 const fallbackSiteUrl = "http://localhost:3000";
 
 export function getSiteUrl() {
-  const raw = process.env.NEXT_PUBLIC_SITE_URL || fallbackSiteUrl;
+  const raw =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : fallbackSiteUrl);
 
   try {
     return new URL(raw).origin;

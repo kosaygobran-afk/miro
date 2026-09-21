@@ -56,8 +56,8 @@ export default async function ForgotPasswordPage({
             submitLabel={t("forgot-password.form.submit")}
             initialNotice={
               locale === "he"
-                ? "שחזור סיסמה דרך Supabase פעיל."
-                : "Password recovery via Supabase is active."
+                ? "אם קיים חשבון, נשלח אליו הוראות שחזור."
+                : "We will send recovery instructions if an account exists."
             }
           />
           <Link

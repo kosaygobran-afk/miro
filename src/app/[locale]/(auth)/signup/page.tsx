@@ -55,8 +55,8 @@ export default async function SignupPage({
             submitLabel={t("signup.form.submit")}
             initialNotice={
               locale === "he"
-                ? "יצירת חשבון דרך Supabase פעילה."
-                : "Supabase sign-up is active."
+                ? "צרו חשבון לניהול הפרטים ופניות השירות שלכם."
+                : "Create your account to manage your profile and service requests."
             }
           />
           <Link

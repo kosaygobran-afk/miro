@@ -61,8 +61,8 @@ export default async function ResetPasswordPage({
             submitLabel={t("reset-password.form.submit")}
             initialNotice={
               locale === "he"
-                ? "החלפת סיסמה דרך Supabase פעילה."
-                : "Supabase password reset is active."
+                ? "בחרו לפחות שמונה תווים ואשרו את הסיסמה החדשה."
+                : "Use at least eight characters and confirm your new password."
             }
           />
           <Link

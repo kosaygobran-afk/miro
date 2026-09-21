@@ -1,21 +1,9 @@
-# Database Plan
+# Database implementation
 
-## Current Tables (Phase 0-1)
+Phase 2 migrations are in `supabase/migrations`. The linked project includes catalog, profiles, user_roles, service_requests, audit_events and the pre-existing commerce tables. Generated definitions are in `src/lib/supabase/database.types.ts`.
 
-None - Supabase setup pending.
+`user_roles` is the authority for customer/worker/admin/CEO permissions. Profile role metadata is not trusted for authorization. Customers may update only full_name and phone. Account management and worker request updates run audited, transactional SQL functions. Public catalog reads include active products only; checkout writes remain unavailable.
 
-## Future Tables
+CEO operations require a recent password AMR claim. `add_ceo` promotes an existing active verified account. `delete_own_ceo_account` accepts no user identifier, preserves at least one active CEO and serializes with other role operations. CEO peers cannot be demoted or suspended through management.
 
-- profiles: user_id, display_name, optional phone, timestamps
-- user_roles: user_id (primary key), role (customer/worker/ceo)
-- service_requests: id, customer_id (nullable for guest), service_id, contact info, status, timestamps
-- jobs: request_id, assigned_worker_id, operational status, timestamps
-- audit_events: id, action, user_id, timestamp, details
-
-## Ownership and Indexing
-
-- Row-level security enforces data ownership.
-- Indexes on foreign keys and query predicates.
-- Generated TypeScript types from real database schema.
-
-Note: Do not migrate all speculative tables now.
+Database tests in `supabase/tests` use rolled-back fixtures and must run only against an isolated database. Production migration changes must first pass this staging validation. Never commit connection metadata, passwords or service keys.

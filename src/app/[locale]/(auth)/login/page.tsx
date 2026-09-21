@@ -49,8 +49,8 @@ export default async function LoginPage({
         submitLabel={t("login.form.submit")}
         initialNotice={
           locale === "he"
-            ? "התחברות ל-Supabase מוכנה."
-            : "Supabase sign-in is ready."
+            ? "התחברו באופן מאובטח לחשבון שלכם."
+            : "Sign in securely to your account."
         }
       />
       <div className="mt-4 flex justify-between gap-3 text-sm">

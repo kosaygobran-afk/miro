@@ -1,10 +1,10 @@
-import {
-  PrivateClosedPage,
-  privateMetadata,
-} from "@/components/auth/private-closed-page";
+import { AccountDashboard } from "@/components/account/account-dashboard";
 import { isLocale, type Locale } from "@/lib/i18n";
+import { requireAuth } from "@/lib/auth";
 
-export const generateMetadata = privateMetadata("account");
+export async function generateMetadata() {
+  return { title: "Account", robots: { index: false, follow: false } };
+}
 
 export default async function AccountPage({
   params,
@@ -12,10 +12,7 @@ export default async function AccountPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  return (
-    <PrivateClosedPage
-      kind="account"
-      locale={(isLocale(locale) ? locale : "he") as Locale}
-    />
-  );
+  const safeLocale = (isLocale(locale) ? locale : "he") as Locale;
+  const context = await requireAuth(safeLocale);
+  return <AccountDashboard locale={safeLocale} context={context} />;
 }
