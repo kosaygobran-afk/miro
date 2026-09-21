@@ -199,42 +199,42 @@
       "content": "The engineering target is WCAG 2.2 AA, but legal applicability and final accessibility statement wording must be verified before launch. Manual keyboard and screen-reader testing remain required."
     },
     "auth": {
-      "noticeTitle": "Authentication is unavailable in Phase 1",
+      "noticeTitle": "Your MIRO account",
       "login": {
         "title": "Sign In",
-        "subtitle": "One shared login will later route customers, workers and CEO by trusted role.",
+        "subtitle": "Sign in to manage your account and service requests.",
         "form": {
           "email": "Email",
           "password": "Password",
-          "submit": "Sign in unavailable",
+          "submit": "Sign in",
           "forgotPassword": "Forgot password?"
         }
       },
       "signup": {
         "title": "Create customer account",
-        "subtitle": "Only customers can sign up publicly. Worker and CEO roles are owner-assigned later.",
+        "subtitle": "Create your personal customer account.",
         "form": {
           "name": "Name",
           "email": "Email",
           "password": "Password",
-          "submit": "Signup unavailable"
+          "submit": "Create account"
         }
       },
       "forgot-password": {
         "title": "Reset password",
-        "subtitle": "Password recovery will work after Supabase authentication is implemented.",
+        "subtitle": "Enter your email to receive a password recovery link.",
         "form": {
           "email": "Email",
-          "submit": "Reset unavailable"
+          "submit": "Send recovery link"
         }
       },
       "reset-password": {
         "title": "Set new password",
-        "subtitle": "A valid recovery session will be required in Phase 2.",
+        "subtitle": "Choose a new password using your recovery link.",
         "form": {
           "password": "New password",
           "confirmPassword": "Confirm new password",
-          "submit": "Reset unavailable"
+          "submit": "Save password"
         }
       }
     },

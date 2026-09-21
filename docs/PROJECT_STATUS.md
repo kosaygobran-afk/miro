@@ -1,6 +1,34 @@
 # Project Status
 
-Last updated: 2026-09-21 (premium storefront and public experience; release 0.0.2)
+Last updated: 2026-09-21 (Phase 2 authentication and deployment repair)
+
+## Phase 2 Authentication, Permissions And Deployment Repair — 2026-09-21
+
+Current phase: Phase 2 implementation and database rollout; final deployment verification in progress. This entry supersedes older Phase 1 “next task” notes below.
+
+- Completed cookie-backed authentication, session refresh, safe confirmation callbacks, password recovery/reset validation, localized logout and server-side customer/worker/admin/CEO guards. Missing development credentials keep public pages available and disable account submission.
+- Added profile updates, authenticated service requests, worker assignment/status workflows and audited account management. Administrative operations use authenticated RLS/RPC permissions, not a browser-exposed service key.
+- Fixed profile role/status escalation, legacy inactive-catalog visibility, customer-controlled order writes, admin changes to CEO accounts, open redirects and cross-origin writes. Follow-up migration fixes SQL NULL handling for unassigned workers.
+- Added CEO password re-verification, verified email-change initiation, promotion of existing verified accounts and self-deletion. CEOs cannot demote/block another CEO; deletion has no target argument and atomically preserves at least one active CEO. The user-designated initial CEO was provisioned; no password or private key is stored in the repository.
+- Applied migrations 20260921220000, 20260921221000 and 20260921223000 after isolated PostgreSQL tests. Earlier foundation/account migrations were already present remotely. Regenerated database types from the linked schema.
+- Added explicit Vercel Next.js framework/build/output configuration after live diagnosis showed public images available but all application routes returning platform NOT_FOUND. Canonical URL configuration now accepts APP_URL and Vercel’s production domain.
+- Preserved the premium storefront and existing catalog. Public guest contact remains an explicitly labeled preview; authenticated requests are functional. Checkout/payments, invoicing issuance, catalog editing and email notifications are subsequent commerce/operations work, not completion claims for this authentication phase.
+
+Verification:
+
+- Isolated PostgreSQL: every migration applied; customer A/B isolation, anonymous access, metadata escalation, profile column permissions, admin/CEO restrictions, worker assignment, suspended writes and transactional audit tests passed.
+- CEO database tests: password freshness, unverified target rejection, protected peer CEO, self-deletion and last-active-CEO invariant passed.
+- Production build, lint, TypeScript and formatting checks passed before the final CEO additions; final checks recorded below after release validation.
+- Real CEO sign-in, account/admin rendering and rejected incorrect re-verification password: passed against the linked Supabase project.
+- `python3 scripts/verify-database.py`: all seven migrations and both access/CEO test suites passed in disposable PostgreSQL.
+- Browser suite: 16 tests passed for public routes, localization, accessibility smoke, anonymous protected routes, callback redirects, origin checks and password confirmation.
+- The private service key was corrected in ignored local configuration using authenticated project access; the new management flows do not require it at runtime.
+
+Outstanding launch actions:
+
+- Engineering: finish release/deployment verification; Supabase site URL and callback allowlist now include the correct production domain. Test actual inbox delivery with the owner. Do not claim SMTP delivery from database or browser mocks.
+- Owner: change the temporary CEO password from the account security page after first login.
+- Owner/legal: approve privacy and retention text for the now-live account/profile/request collection and self-deletion behavior. Business records and audit entries have separate retention needs. QA: manual screen-reader and device review remains outstanding.
 
 ## Removed Unneeded Canvas Worktree Changes — 2026-09-21
 
@@ -14,6 +42,35 @@ Verification:
 Future work:
 
 - Reintroduce canvas/dashboard functionality only as a separately scoped Phase 2 implementation with reviewed migrations, authentication/RLS, localized routes, accessibility coverage and feature tests.
+
+## Supabase Phase 2 Foundation — 2026-09-21
+
+Implemented and applied the repository-side Supabase foundation to the linked Supabase project:
+
+- unified browser and server clients around `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, with backward-compatible fallback to the older anon-key name
+- rejected a publishable key when supplied as `SUPABASE_SERVICE_ROLE_KEY`
+- added explicit catalog read diagnostics instead of silently hiding every connection failure
+- added an additive migration for catalog tables, profiles, user roles, service requests, audit events, triggers, grants and RLS policies
+- added initial TypeScript database definitions for those tables
+- switched public catalog reads to the server Supabase client so they use the catalog RLS grants and do not require a service-role key
+
+Verification:
+
+- `npm run format:check`: passed
+- `npm run lint`: passed
+- `npm run typecheck`: passed
+- `npm run build`: passed
+- `git diff --check`: passed
+- Supabase endpoint health responded.
+- Remote migration `20260921205000` is applied and matches the local migration.
+- Public-key REST verification returned HTTP 200 for `categories` and `products`; protected `profiles` and `service_requests` correctly rejected anonymous access.
+- Added and applied `20260921211500_grant_service_role_access.sql` after the project required explicit `service_role` table grants for trusted server-side reads.
+- `supabase db lint --local --fail-on error`: blocked because no local Supabase database is initialized.
+
+Blocking owner action:
+
+- Replace the local/deployment `SUPABASE_SERVICE_ROLE_KEY` with the actual private service-role secret before implementing admin-only workflows. The current local value is identical to the public publishable key and must not be used for admin reads.
+- The migration has been applied to the linked project after an explicit confirmation. Future schema changes must be tested in staging before production.
 
 ## Premium Storefront And Public Experience — 2026-09-21
 

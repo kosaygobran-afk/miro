@@ -2,8 +2,8 @@ import {
   mockProducts,
   productCategories,
 } from "@/features/catalog/product-data";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { categoryLabels } from "@/features/catalog/store-copy";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Product } from "@/features/catalog/product-data";
 
 export type StoreCategory = {
@@ -145,7 +145,7 @@ export async function getStoreCatalog(
   locale: "he" | "en",
 ): Promise<StoreCatalog> {
   try {
-    const supabase = createAdminClient();
+    const supabase = await createServerSupabaseClient();
 
     const [categoriesResult, productsResult] = await Promise.all([
       supabase
@@ -239,7 +239,11 @@ export async function getStoreCatalog(
     if (!categories.length || !products.length)
       return getFallbackStoreCatalog(locale);
     return { categories, products };
-  } catch {
+  } catch (error) {
+    console.error(
+      "Supabase catalog read failed; using fallback catalog.",
+      error,
+    );
     return getFallbackStoreCatalog(locale);
   }
 }

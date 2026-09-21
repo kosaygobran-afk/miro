@@ -3,6 +3,7 @@ import { Lock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { requireAuth, requireRole } from "@/lib/auth";
 
 type PrivateKind = "account" | "worker" | "admin";
 
@@ -12,9 +13,11 @@ export function privateMetadata(kind: PrivateKind) {
     return pageMetadata({
       locale,
       path: kind,
-      title: "Private area closed",
+      title: locale === "he" ? "החשבון שלי" : "Your account",
       description:
-        "Authentication is not implemented yet, so this private route fails closed.",
+        locale === "he"
+          ? "גישה מאובטחת לחשבון האישי ולסביבת העבודה."
+          : "Secure access to your account and workspace.",
       noIndex: true,
     });
   };
@@ -27,6 +30,13 @@ export async function PrivateClosedPage({
   kind: PrivateKind;
   locale: Locale;
 }) {
+  if (kind === "account") {
+    await requireAuth(locale);
+  } else if (kind === "worker") {
+    await requireRole(locale, ["worker"]);
+  } else {
+    await requireRole(locale, ["admin", "ceo"]);
+  }
   const t = await getTranslations({ locale, namespace: "pages.protected" });
 
   return (
