@@ -2,6 +2,19 @@
 
 Last updated: 2026-09-21 (premium storefront and public experience; release 0.0.2)
 
+## Removed Unneeded Canvas Worktree Changes — 2026-09-21
+
+The uncommitted canvas/dashboard experiment and its related Supabase schema, package dependencies, local MCP configuration and utility changes were removed because they were outside the verified Phase 1 storefront scope and were not ready for safe release. The working tree now matches the pushed `0.0.2` release.
+
+Verification:
+
+- `git diff --exit-code origin/0.0.2 --`: passed.
+- Source cleanup left no canvas/dashboard files or dependency changes; this status entry is the only remaining working-tree edit.
+
+Future work:
+
+- Reintroduce canvas/dashboard functionality only as a separately scoped Phase 2 implementation with reviewed migrations, authentication/RLS, localized routes, accessibility coverage and feature tests.
+
 ## Premium Storefront And Public Experience — 2026-09-21
 
 The website now follows the supplied premium black/gold and light storefront references with wider merchandising layouts, focused reading areas and usable interactive catalog controls.
@@ -18,7 +31,7 @@ What changed and why:
 
 Verification and fixes:
 
-- Release validation uses an isolated worktree at `/tmp/miro-release-0.0.2` with the website package metadata at `0.0.2`. The shared working directory already contained unrelated unfinished canvas/dashboard work and dependencies before this task. Initial full-workspace lint/typecheck exposed pre-existing canvas errors; those files were preserved and excluded from the website release. No check was disabled or weakened to make the release pass.
+- Release validation uses an isolated worktree at `/tmp/miro-release-0.0.2` with the website package metadata at `0.0.2`. An earlier unrelated canvas/dashboard experiment was removed from the working directory because it was outside this release scope. No check was disabled or weakened to make the release pass.
 - `npm ci --ignore-scripts --no-audit --no-fund` in the release worktree: passed.
 - `npm run format:check`, `npm run lint`, `npm run typecheck`: passed for the isolated website release.
 - `npm run build`: passed, 49 statically generated pages plus dynamic Contact/Store/category routes.
@@ -35,7 +48,7 @@ Launch blockers and owners:
 - Owner/legal reviewer: finalize privacy, terms, accessibility statement and commercial claims before public launch. No analytics or new data collection was added.
 - QA: complete manual screen-reader and real-device review; automated accessibility checks are evidence, not a substitute for that launch review.
 
-Release branch: `0.0.2`, requested by the user for the verified website update. Website changes and prerequisite storefront foundation changes are included; unfinished canvas/dashboard sources and their dependency changes remain uncommitted in the original workspace.
+Release branch: `0.0.2`, requested by the user for the verified website update. Website changes and prerequisite storefront foundation changes are included; canvas/dashboard functionality remains deferred to a separately scoped Phase 2 implementation.
 
 ## Full-Page Layout And Responsive Centering Pass
 
