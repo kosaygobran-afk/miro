@@ -1,87 +1,128 @@
-import {
-  Camera,
-  Router,
-  ShieldCheck,
-  Siren,
-  ShoppingCart,
-  HardDrive,
-  Server,
-  Cable,
-  Wrench,
-  Wifi,
-  Monitor,
-  Shield,
-  Key,
-} from "lucide-react";
+"use client";
 
-export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  priceIls: number;
-  category: string;
-  badge?: string;
-  icon?: string; // Icon key (e.g., "camera", "server", "router", etc.)
-}
+import { useId, useRef } from "react";
+import Link from "next/link";
+import { ArrowLeft, ArrowRight, Plus, X } from "lucide-react";
+import { ProductVisual } from "@/components/products/ProductVisual";
+import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
+import { storeCopy } from "@/features/catalog/store-copy";
+import type { Product } from "@/features/catalog/product-data";
 
-const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
-  camera: Camera,
-  siren: Siren,
-  shieldCheck: ShieldCheck,
-  router: Router,
-  hardDrive: HardDrive,
-  server: Server,
-  cable: Cable,
-  wrench: Wrench,
-  wifi: Wifi,
-  monitor: Monitor,
-  shield: Shield,
-  key: Key,
-};
-
-const defaultIcons = [Camera, Siren, ShieldCheck, Router];
+export type { Product } from "@/features/catalog/product-data";
 
 export function ProductCard({
   product,
-  index = 0,
+  locale = "en",
+  actionLabel,
 }: {
   product: Product;
   index?: number;
+  actionLabel?: string;
+  locale?: "he" | "en";
 }) {
-  const Icon =
-    product.icon && iconMap[product.icon]
-      ? iconMap[product.icon]
-      : defaultIcons[index % defaultIcons.length];
+  const copy = storeCopy[locale];
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  const kind = getProductVisualKind(product);
+  const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
+  const price =
+    product.priceIls > 0
+      ? new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
+          style: "currency",
+          currency: "ILS",
+          maximumFractionDigits: 0,
+        }).format(product.priceIls)
+      : copy.quotePrice;
+  const quoteHref = `/${locale}/contact?product=${encodeURIComponent(product.name)}`;
 
   return (
-    <article className="miro-card flex h-full flex-col overflow-hidden p-5 rounded-2xl hover:bg-surface-hover transition-all duration-300 shadow-lg hover:shadow-xl">
-      <div className="relative mb-4 grid aspect-[4/3] place-items-center rounded-xl bg-surface-muted">
-        {product.badge ? (
-          <span className="absolute end-3 top-3 rounded-full bg-primary px-3 py-1 text-xs font-black text-primary-foreground">
-            {product.badge}
-          </span>
-        ) : null}
-        <div className="grid size-24 place-items-center rounded-xl border border-border-control bg-background shadow-xl">
-          <Icon className="size-12 text-foreground" aria-hidden="true" />
-        </div>
-      </div>
-      <h3 className="text-lg font-black text-foreground">{product.name}</h3>
-      <p className="mt-1 flex-1 text-sm text-muted-foreground">
-        {product.description}
-      </p>
-      <div className="mt-4 flex items-center justify-between gap-3">
-        <span className="text-xl font-black text-foreground">
-          ₪{product.priceIls.toLocaleString("he-IL")}
+    <article
+      className="sf-product-card"
+      data-product-name={product.name}
+      data-product-price={product.priceIls}
+    >
+      <button
+        type="button"
+        className="sf-product-media"
+        onClick={() => dialog.current?.showModal()}
+        aria-label={`${copy.details}: ${product.name}`}
+      >
+        {product.badge && (
+          <span className="sf-product-badge">{product.badge}</span>
+        )}
+        <ProductVisual kind={kind} />
+        <span className="sf-product-expand">
+          <Plus size={17} aria-hidden="true" />
         </span>
+      </button>
+      <div className="sf-product-body">
+        <p className="sf-product-category">
+          {product.categoryLabel ?? product.category}
+        </p>
+        <h3 dir="auto">{product.name}</h3>
+        <p className="sf-product-description" dir="auto">
+          {product.description}
+        </p>
+        <div className="sf-product-price">
+          <strong dir="auto">{price}</strong>
+          <span>{copy.demoPrice}</span>
+        </div>
         <button
-          className="miro-button miro-button-primary min-h-10 px-4 py-2.5 text-sm rounded-xl"
+          className="sf-product-action"
           type="button"
+          onClick={() => dialog.current?.showModal()}
         >
-          <ShoppingCart className="size-4" aria-hidden="true" />
-          <span>Preview</span>
+          {actionLabel ?? copy.details}
+          <Arrow size={16} aria-hidden="true" />
         </button>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">{product.category}</p>
+      <dialog
+        ref={dialog}
+        className="sf-product-dialog"
+        aria-labelledby={titleId}
+        dir={locale === "he" ? "rtl" : "ltr"}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) dialog.current?.close();
+        }}
+      >
+        <div className="sf-product-dialog-inner">
+          <button
+            type="button"
+            className="sf-dialog-close"
+            aria-label={copy.close}
+            onClick={() => dialog.current?.close()}
+            autoFocus
+          >
+            <X size={21} aria-hidden="true" />
+          </button>
+          <div className="sf-dialog-visual">
+            <ProductVisual kind={kind} />
+            <p>{copy.illustration}</p>
+          </div>
+          <div className="sf-dialog-copy">
+            <p className="sf-eyebrow">
+              {product.categoryLabel ?? product.category}
+            </p>
+            <h2 id={titleId} dir="auto">
+              {product.name}
+            </h2>
+            <p dir="auto">{product.description}</p>
+            <div className="sf-product-price">
+              <strong dir="auto">{price}</strong>
+              <span>{copy.demoPrice}</span>
+            </div>
+            <Link
+              href={quoteHref}
+              className="miro-button miro-button-primary"
+              onClick={() => dialog.current?.close()}
+            >
+              {copy.quote}
+              <Arrow size={17} aria-hidden="true" />
+            </Link>
+            <p className="sf-dialog-note">{copy.demo}</p>
+          </div>
+        </div>
+      </dialog>
     </article>
   );
 }

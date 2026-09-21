@@ -12,7 +12,8 @@ const mockProducts: Product[] = [
   {
     id: "camera-pro",
     name: "MIRO Pro Dome Camera",
-    description: "Illustrative camera card with stable media ratio and MIRO styling.",
+    description:
+      "Illustrative camera card with stable media ratio and MIRO styling.",
     priceIls: 790,
     category: "Security cameras",
     badge: "New",
@@ -28,7 +29,8 @@ const mockProducts: Product[] = [
   {
     id: "video-intercom",
     name: "Smart Video Intercom",
-    description: "Development-only product preview for later catalog integration.",
+    description:
+      "Development-only product preview for later catalog integration.",
     priceIls: 990,
     category: "Intercom",
   },
@@ -48,10 +50,13 @@ export default function CatalogPreviewPage() {
     <section className="min-h-screen bg-background py-10">
       <div className="miro-container">
         <div className="mb-8">
-          <p className="text-sm font-black uppercase tracking-[0.35em] text-accent-text">Development only</p>
+          <p className="text-sm font-black uppercase tracking-[0.35em] text-accent-text">
+            Development only
+          </p>
           <h1 className="mt-3 text-4xl font-black">Catalog preview</h1>
           <p className="mt-3 max-w-2xl text-muted-foreground">
-            Illustrative data only. No real products, prices, checkout, inventory or brand partnerships are represented.
+            Illustrative data only. No real products, prices, checkout,
+            inventory or brand partnerships are represented.
           </p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">

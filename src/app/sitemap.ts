@@ -5,6 +5,13 @@ import { localizedUrl } from "@/lib/seo";
 export default function sitemap(): MetadataRoute.Sitemap {
   const publicPaths = [
     "",
+    "store",
+    "store/cameras",
+    "store/servers",
+    "store/routers",
+    "store/cables",
+    "store/accessories",
+    "store/network-gear",
     "services",
     "services/home",
     "services/business",

@@ -1,9 +1,17 @@
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, LockKeyhole } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
-import { serviceIcons } from "@/lib/service-content";
+import {
+  CapabilityStrip,
+  ConnectedSystem,
+  ConsultationBand,
+  DirectionArrow,
+  FaqSection,
+  ProcessSteps,
+  ServiceCategoryGrid,
+  SolutionCards,
+} from "@/components/public/experience-sections";
 
 export async function generateMetadata({
   params,
@@ -27,54 +35,122 @@ export default async function ServicesPage({
 }) {
   const { locale: rawLocale } = await params;
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
-  const t = await getTranslations({ locale, namespace: "pages.services" });
-  const common = await getTranslations({ locale, namespace: "common" });
-  const categories = t.raw("categories") as Array<{
-    id: string;
-    title: string;
-    description: string;
-  }>;
-  const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
-
+  const he = locale === "he";
   return (
-    <section className="miro-section">
-      <div className="miro-container">
-        <p className="text-sm font-black uppercase tracking-[0.35em] text-accent-text">
-          {common("draft")}
-        </p>
-        <h1 className="mt-3 max-w-3xl text-4xl font-black text-foreground">
-          {t("title")}
-        </h1>
-        <p className="mt-4 max-w-3xl text-lg text-muted-foreground">
-          {t("subtitle")}
-        </p>
-
-        <div className="miro-service-grid miro-service-grid-wide mt-8">
-          {categories.map((category) => {
-            const Icon = serviceIcons[category.id] || LockKeyhole;
-            return (
+    <>
+      <section className="experience-services-hero">
+        <div className="miro-container experience-services-hero-inner">
+          <div>
+            <nav
+              className="experience-breadcrumb"
+              aria-label={he ? "פירורי לחם" : "Breadcrumb"}
+            >
+              <Link href={withLocale(locale)}>{he ? "בית" : "Home"}</Link>
+              <span>/</span>
+              <span>{he ? "שירותים" : "Services"}</span>
+            </nav>
+            <p className="experience-overline">
+              {he
+                ? "פתרונות מיגון ותקשורת"
+                : "SECURITY & COMMUNICATION SOLUTIONS"}
+            </p>
+            <h1>
+              {he ? (
+                <>
+                  כל החיבורים.
+                  <br />
+                  <em>במקום אחד.</em>
+                </>
+              ) : (
+                <>
+                  Every connection.
+                  <br />
+                  <em>One considered plan.</em>
+                </>
+              )}
+            </h1>
+            <p className="experience-description">
+              {he
+                ? "מתכנון הכניסה ועד לכיסוי הרשת. בונים תמונה שלמה של הצרכים שלכם, ומחברים בין הטכנולוגיה הנכונה למרחב הנכון."
+                : "From your front entrance to your network coverage. Build a complete picture of what you need and connect the right technology to the right space."}
+            </p>
+            <div className="experience-actions">
               <Link
-                key={category.id}
-                href={withLocale(locale, `services/${category.id}`)}
-                className="miro-card miro-service-card group"
+                href={withLocale(locale, "contact")}
+                className="miro-button miro-button-primary"
               >
-                <div className="miro-service-symbols">
-                  <Icon
-                    className="miro-service-icon text-foreground"
-                    aria-hidden="true"
-                  />
-                  <Arrow
-                    className="size-6 text-primary transition group-hover:translate-x-1 rtl:group-hover:-translate-x-1"
-                    aria-hidden="true"
-                  />
-                </div>
-                <h2 className="miro-card-title">{category.title}</h2>
-                <p className="miro-card-description">{category.description}</p>
+                {he ? "לתכנון הפרויקט שלכם" : "Plan your project"}
+                <DirectionArrow locale={locale} />
               </Link>
-            );
-          })}
+              <a href="#expertise" className="experience-text-link">
+                {he ? "לגלות את השירותים" : "Explore the services"}
+              </a>
+            </div>
+          </div>
+          <ConnectedSystem locale={locale} />
+        </div>
+      </section>
+      <div className="experience-capability-band">
+        <div className="miro-container">
+          <CapabilityStrip locale={locale} />
         </div>
       </div>
-    </section>
+      <section className="experience-section" id="expertise">
+        <div className="miro-container">
+          <div className="experience-section-heading">
+            <div>
+              <p className="experience-overline">
+                {he ? "תחומי המומחיות" : "OUR EXPERTISE"}
+              </p>
+              <h2 className="experience-heading">
+                {he
+                  ? "כל פרט מחובר לתמונה הגדולה."
+                  : "Every detail connects to the bigger picture."}
+              </h2>
+            </div>
+            <p className="experience-description">
+              {he
+                ? "ארבעה תחומים משלימים. תכנון אחד שמתחשב בכולם."
+                : "Four complementary disciplines. One plan that considers them all."}
+            </p>
+          </div>
+          <ServiceCategoryGrid locale={locale} />
+        </div>
+      </section>
+      <section className="experience-section experience-muted-section">
+        <div className="miro-container">
+          <div className="experience-section-heading">
+            <div>
+              <p className="experience-overline">
+                {he ? "מתאימים למרחב שלכם" : "SHAPED AROUND YOUR SPACE"}
+              </p>
+              <h2 className="experience-heading">
+                {he ? "מה חשוב לכם לחבר?" : "What would you like to connect?"}
+              </h2>
+            </div>
+          </div>
+          <SolutionCards locale={locale} />
+        </div>
+      </section>
+      <section className="experience-section">
+        <div className="miro-container">
+          <div className="experience-section-heading">
+            <div>
+              <p className="experience-overline">
+                {he ? "הדרך לפרויקט שלכם" : "THE PATH TO YOUR PROJECT"}
+              </p>
+              <h2 className="experience-heading">
+                {he
+                  ? "מהשיחה הראשונה לתכנית ברורה."
+                  : "From a first conversation to a clear plan."}
+              </h2>
+            </div>
+          </div>
+          <ProcessSteps locale={locale} />
+        </div>
+      </section>
+      <FaqSection locale={locale} />
+      <ConsultationBand locale={locale} />
+    </>
   );
 }

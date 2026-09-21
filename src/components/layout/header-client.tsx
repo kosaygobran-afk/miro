@@ -2,9 +2,23 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, Moon, Shield, ShoppingCart, Sun, User, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Menu,
+  Moon,
+  Search,
+  ShieldCheck,
+  Sun,
+  SunMoon,
+  UserRound,
+  X,
+} from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
+import { Brand } from "@/components/layout/brand";
 
 export type HeaderLabels = {
   logo: string;
@@ -38,6 +52,22 @@ export type HeaderLabels = {
   };
 };
 
+type ThemeMode = "dark" | "medium" | "light";
+
+function subscribeTheme(callback: () => void) {
+  window.addEventListener("miro-theme-change", callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    window.removeEventListener("miro-theme-change", callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+function readTheme(): ThemeMode {
+  const theme = document.documentElement.dataset.theme;
+  return theme === "light" || theme === "medium" ? theme : "dark";
+}
+const serverTheme = (): ThemeMode => "dark";
+
 export function HeaderClient({
   locale,
   labels,
@@ -49,272 +79,318 @@ export function HeaderClient({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open]);
-
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const productsButton = useRef<HTMLButtonElement>(null);
+  const productsMenu = useRef<HTMLDivElement>(null);
+  const themeMode = useSyncExternalStore(
+    subscribeTheme,
+    readTheme,
+    serverTheme,
+  );
+  const he = locale === "he";
+  const Arrow = he ? ArrowLeft : ArrowRight;
+  const productsHref = withLocale(locale, "store");
   const navLinks = [
     { href: withLocale(locale), label: labels.nav.home },
+    { href: productsHref, label: labels.nav.products },
     { href: withLocale(locale, "services"), label: labels.nav.services },
-    {
-      href: withLocale(locale, "services/home"),
-      label: labels.nav.homeServices,
-    },
-    {
-      href: withLocale(locale, "services/business"),
-      label: labels.nav.business,
-    },
-    { href: withLocale(locale, "products"), label: labels.nav.products },
     { href: withLocale(locale, "about"), label: labels.nav.about },
     { href: withLocale(locale, "contact"), label: labels.nav.contact },
   ];
-
-  const productsCategories = [
+  const categories = [
+    ["cameras", labels.products.cameras],
+    ["servers", labels.products.servers],
+    ["routers", labels.products.routers],
+    ["cables", labels.products.cables],
+    ["accessories", labels.products.accessories],
+    ["network-gear", labels.products.networkGear],
+  ];
+  const modes = [
     {
-      key: "cameras",
-      href: withLocale(locale, "products/cameras"),
-      label: labels.products.cameras,
+      value: "dark" as const,
+      icon: Moon,
+      label: he ? "מצב כהה" : "Dark theme",
     },
     {
-      key: "servers",
-      href: withLocale(locale, "products/servers"),
-      label: labels.products.servers,
+      value: "medium" as const,
+      icon: SunMoon,
+      label: he ? "מצב אפור" : "Medium theme",
     },
     {
-      key: "routers",
-      href: withLocale(locale, "products/routers"),
-      label: labels.products.routers,
-    },
-    {
-      key: "cables",
-      href: withLocale(locale, "products/cables"),
-      label: labels.products.cables,
-    },
-    {
-      key: "accessories",
-      href: withLocale(locale, "products/accessories"),
-      label: labels.products.accessories,
-    },
-    {
-      key: "networkGear",
-      href: withLocale(locale, "products/network-gear"),
-      label: labels.products.networkGear,
+      value: "light" as const,
+      icon: Sun,
+      label: he ? "מצב בהיר" : "Light theme",
     },
   ];
 
-  const languageTarget = locale === "he" ? "en" : "he";
-
-  const toggleTheme = () => {
-    const root = document.documentElement;
-    const current = root.dataset.theme === "dark" ? "dark" : "light";
-    const next = current === "dark" ? "light" : "dark";
-    root.dataset.theme = next;
-    try {
-      window.localStorage.setItem("miro-theme", next);
-    } catch {
-      // Theme switching still works when the browser blocks storage.
+  useEffect(() => {
+    if (!open && !productsOpen) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+      if (productsOpen) {
+        setProductsOpen(false);
+        productsButton.current?.focus();
+      } else {
+        setOpen(false);
+        menuButton.current?.focus();
+      }
     }
-  };
+    function onPointerDown(event: PointerEvent) {
+      if (productsOpen && !productsMenu.current?.contains(event.target as Node))
+        setProductsOpen(false);
+    }
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [open, productsOpen]);
 
-  const nav = (
-    <nav
-      className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-1"
-      aria-label={labels.navLabel}
-    >
-      {navLinks.map((link) => {
-        const active = pathname === link.href;
-
-        // Products dropdown
-        if (link.href === withLocale(locale, "products")) {
-          return (
-            <div
-              key={link.href}
-              className="relative"
-              onMouseEnter={() => setProductsOpen(true)}
-              onMouseLeave={() => setProductsOpen(false)}
-            >
-              <Link
-                href={link.href}
-                aria-current={active ? "page" : undefined}
-                aria-haspopup="true"
-                aria-expanded={productsOpen}
-                onClick={() => setOpen(false)}
-                className={[
-                  "rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground hover:bg-surface-hover hover:text-foreground",
-                  active
-                    ? "bg-surface-hover text-foreground shadow-[inset_0_-3px_0_var(--primary)]"
-                    : "",
-                ].join(" ")}
-              >
-                {link.label}
-              </Link>
-
-              {/* Products Dropdown Sub-navigation */}
-              {productsOpen && (
-                <div className="absolute top-full left-0 mt-1 min-w-[200px] rounded-2xl border border-border-subtle bg-background p-2 shadow-xl z-50 animate-in fade-in-0 slide-in-from-top-2 duration-200">
-                  <div className="flex flex-col gap-1">
-                    {productsCategories.map((cat) => {
-                      const catActive = pathname === cat.href;
-                      return (
-                        <Link
-                          key={cat.key}
-                          href={cat.href}
-                          aria-current={catActive ? "page" : undefined}
-                          onClick={() => setProductsOpen(false)}
-                          className={[
-                            "rounded-xl px-3 py-2 text-sm font-semibold text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-all duration-200",
-                            catActive
-                              ? "bg-primary/10 text-primary font-black relative before:absolute before:bottom-0 before:left-1/2 before:w-full before:h-0.5 before:bg-primary before:-translate-x-1/2 before:animate-in before:grow-0 before:duration-300"
-                              : "hover:bg-primary/5",
-                          ].join(" ")}
-                        >
-                          {cat.label}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        }
-
-        return (
-          <Link
-            key={link.href}
-            href={link.href}
-            aria-current={active ? "page" : undefined}
-            onClick={() => setOpen(false)}
-            className={[
-              "rounded-xl px-3 py-2 text-sm font-bold text-muted-foreground hover:bg-surface-hover hover:text-foreground",
-              active
-                ? "bg-surface-hover text-foreground shadow-[inset_0_-3px_0_var(--primary)]"
-                : "",
-            ].join(" ")}
+  function chooseTheme(theme: ThemeMode) {
+    document.documentElement.setAttribute("data-theme", theme);
+    try {
+      localStorage.setItem("miro-theme", theme);
+    } catch {
+      /* Works without browser storage. */
+    }
+    window.dispatchEvent(new Event("miro-theme-change"));
+  }
+  function closeNavigation() {
+    setOpen(false);
+    setProductsOpen(false);
+  }
+  function searchForm(className: string) {
+    return (
+      <form
+        action={`${productsHref}#store-items`}
+        method="get"
+        role="search"
+        className={className}
+        onSubmit={closeNavigation}
+      >
+        <input
+          name="q"
+          type="search"
+          maxLength={120}
+          aria-label={he ? "חיפוש בחנות" : "Search the store"}
+          placeholder={he ? "מה תרצו למצוא?" : "Find your security solution"}
+        />
+        <button type="submit" aria-label={he ? "חיפוש" : "Search"}>
+          <Search size={18} aria-hidden="true" />
+        </button>
+      </form>
+    );
+  }
+  function navLinksView(mobile = false) {
+    return navLinks.map((link) => {
+      const exact = pathname === link.href;
+      const active =
+        exact ||
+        (link.href !== withLocale(locale) &&
+          pathname.startsWith(`${link.href}/`));
+      const linkElement = (
+        <Link
+          href={link.href}
+          aria-current={exact ? "page" : active ? "location" : undefined}
+          onClick={closeNavigation}
+          className={`premium-nav-link ${active ? "is-active" : ""}`}
+        >
+          {link.label}
+        </Link>
+      );
+      if (link.href !== productsHref || mobile)
+        return <div key={link.href}>{linkElement}</div>;
+      return (
+        <div
+          className="premium-nav-disclosure"
+          key={link.href}
+          ref={productsMenu}
+          onBlur={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node))
+              setProductsOpen(false);
+          }}
+        >
+          {linkElement}
+          <button
+            ref={productsButton}
+            className="premium-disclosure-button"
+            type="button"
+            aria-label={he ? "קטגוריות החנות" : "Store categories"}
+            aria-expanded={productsOpen}
+            aria-controls="store-navigation"
+            onClick={() => setProductsOpen(!productsOpen)}
           >
-            {link.label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
+            <ChevronDown size={13} aria-hidden="true" />
+          </button>
+          {productsOpen && (
+            <div id="store-navigation" className="premium-dropdown">
+              <p>{he ? "לכל צורך, הפתרון שלו" : "Find the right fit"}</p>
+              {categories.map(([key, label]) => (
+                <Link
+                  key={key}
+                  href={withLocale(locale, `store/${key}`)}
+                  onClick={closeNavigation}
+                >
+                  {label}
+                  <Arrow size={15} aria-hidden="true" />
+                </Link>
+              ))}
+              <Link
+                href={productsHref}
+                onClick={closeNavigation}
+                className="premium-dropdown-all"
+              >
+                {he ? "לכל המוצרים" : "Explore the store"}
+                <Arrow size={15} aria-hidden="true" />
+              </Link>
+            </div>
+          )}
+        </div>
+      );
+    });
+  }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border-subtle bg-background/92 backdrop-blur-xl">
-      <div className="miro-container flex min-h-16 items-center justify-between gap-3 py-2">
-        <Link
-          href={withLocale(locale)}
-          className="flex shrink-0 items-center gap-3"
-          aria-label={labels.homeLabel}
-        >
-          <span className="grid size-11 place-items-center rounded border border-primary bg-primary">
-            <Shield
-              className="size-6 text-primary-foreground"
-              aria-hidden="true"
-            />
+    <>
+      <div className="premium-topbar">
+        <div className="miro-container premium-topbar-inner">
+          <span>
+            <ShieldCheck size={13} aria-hidden="true" />
+            {he
+              ? "טכנולוגיה חכמה. שקט ביום־יום."
+              : "Smarter technology. Everyday peace of mind."}
           </span>
-          <span className="leading-none">
-            <span className="block text-3xl font-black tracking-normal text-foreground">
-              {labels.logo}
-            </span>
-            <span className="hidden text-[0.64rem] font-bold uppercase text-muted-foreground sm:block">
-              {labels.tagline}
-            </span>
+          <span className="premium-topbar-motto" dir="ltr">
+            SECURE. SMART. CONNECTED.
           </span>
-        </Link>
-
-        <div className="hidden lg:block">{nav}</div>
-
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-          <Link
-            className="miro-button miro-button-primary miro-desktop-action"
-            href={withLocale(locale, "contact")}
-          >
-            {labels.actions.requestQuote}
+          <Link href={withLocale(locale, "services/business")}>
+            {he ? "פתרון שמתאים לעסק שלכם" : "Security that fits your business"}
+            <Arrow size={13} aria-hidden="true" />
           </Link>
-
-          <Link
-            href={withLocale(locale, "account")}
-            className="miro-desktop-action size-11 place-items-center rounded-lg text-foreground hover:bg-surface-hover"
-            aria-label={labels.actions.account}
-          >
-            <User className="size-5" aria-hidden="true" />
-          </Link>
-
-          <span
-            className="miro-desktop-action relative size-11 place-items-center rounded-lg text-foreground"
-            aria-hidden="true"
-          >
-            <ShoppingCart className="size-5" />
-            <span className="absolute end-1 top-1 grid size-5 place-items-center rounded-full bg-primary text-xs font-black text-primary-foreground">
-              0
-            </span>
-          </span>
-
-          <button
-            type="button"
-            className="h-11 min-w-11 rounded-lg px-2 text-sm font-black text-foreground hover:bg-surface-hover"
-            onClick={() =>
-              router.push(switchLocalePath(pathname, languageTarget))
-            }
-          >
-            {labels.actions.languageSwitch}
-          </button>
-
-          <button
-            type="button"
-            className="grid size-11 place-items-center rounded-lg text-foreground hover:bg-surface-hover"
-            onClick={toggleTheme}
-            aria-label={labels.actions.themeToggle}
-          >
-            <Sun className="theme-icon-sun size-5" aria-hidden="true" />
-            <Moon className="theme-icon-moon size-5" aria-hidden="true" />
-          </button>
-
-          <button
-            type="button"
-            className="grid size-11 place-items-center rounded-lg text-foreground hover:bg-surface-hover lg:hidden"
-            aria-label={
-              open ? labels.actions.closeMenu : labels.actions.openMenu
-            }
-            aria-expanded={open}
-            aria-controls="mobile-navigation"
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? (
-              <X className="size-6" aria-hidden="true" />
-            ) : (
-              <Menu className="size-6" aria-hidden="true" />
-            )}
-          </button>
         </div>
       </div>
-
-      {open ? (
-        <div
-          id="mobile-navigation"
-          className="border-t border-border-subtle bg-background p-4 lg:hidden"
-        >
-          <div className="miro-container space-y-4">
-            {nav}
+      <header className="miro-site-header premium-header">
+        <div className="miro-container premium-header-inner">
+          <Link
+            href={withLocale(locale)}
+            className="premium-logo-link"
+            aria-label={labels.homeLabel}
+            onClick={closeNavigation}
+          >
+            <Brand locale={locale} />
+          </Link>
+          <nav className="premium-desktop-nav" aria-label={labels.navLabel}>
+            {navLinksView()}
+          </nav>
+          {searchForm("premium-header-search")}
+          <div className="premium-header-actions">
             <Link
-              className="miro-button miro-button-primary w-full"
               href={withLocale(locale, "contact")}
-              onClick={() => setOpen(false)}
+              className="miro-button miro-button-primary premium-quote-action"
             >
               {labels.actions.requestQuote}
+              <Arrow size={16} aria-hidden="true" />
             </Link>
+            <Link
+              href={withLocale(locale, "account")}
+              className="premium-account-action premium-icon-button"
+              aria-label={labels.actions.account}
+            >
+              <UserRound size={20} aria-hidden="true" />
+            </Link>
+            <button
+              type="button"
+              className="premium-language premium-icon-button"
+              onClick={() => {
+                closeNavigation();
+                router.push(
+                  `${switchLocalePath(pathname, he ? "en" : "he")}${window.location.search}${window.location.hash}`,
+                );
+              }}
+              aria-label={he ? "Switch to English" : "מעבר לעברית"}
+            >
+              {he ? "EN" : "עב"}
+            </button>
+            <div
+              className="premium-theme-selector"
+              role="group"
+              aria-label={labels.actions.themeToggle}
+              dir="ltr"
+            >
+              {modes.map(({ value, icon: Icon, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  data-theme-option={value}
+                  aria-label={label}
+                  title={label}
+                  aria-pressed={themeMode === value}
+                  onClick={() => chooseTheme(value)}
+                >
+                  <Icon size={16} aria-hidden="true" />
+                </button>
+              ))}
+            </div>
+            <button
+              ref={menuButton}
+              type="button"
+              className="premium-mobile-toggle premium-icon-button"
+              aria-label={
+                open ? labels.actions.closeMenu : labels.actions.openMenu
+              }
+              aria-expanded={open}
+              aria-controls="mobile-navigation"
+              onClick={() => setOpen(!open)}
+            >
+              {open ? (
+                <X size={22} aria-hidden="true" />
+              ) : (
+                <Menu size={22} aria-hidden="true" />
+              )}
+            </button>
           </div>
         </div>
-      ) : null}
-    </header>
+        {open && (
+          <div id="mobile-navigation" className="premium-mobile-navigation">
+            <div className="miro-container">
+              {searchForm("premium-mobile-search")}
+              <nav aria-label={labels.navLabel}>{navLinksView(true)}</nav>
+              <div className="premium-mobile-shortcuts">
+                <Link
+                  href={withLocale(locale, "services/home")}
+                  onClick={closeNavigation}
+                >
+                  {labels.nav.homeServices}
+                  <Arrow size={16} aria-hidden="true" />
+                </Link>
+                <Link
+                  href={withLocale(locale, "services/business")}
+                  onClick={closeNavigation}
+                >
+                  {labels.nav.business}
+                  <Arrow size={16} aria-hidden="true" />
+                </Link>
+                <Link
+                  href={withLocale(locale, "account")}
+                  onClick={closeNavigation}
+                >
+                  {labels.actions.account}
+                  <UserRound size={16} aria-hidden="true" />
+                </Link>
+              </div>
+              <Link
+                href={withLocale(locale, "contact")}
+                className="miro-button miro-button-primary"
+                onClick={closeNavigation}
+              >
+                {labels.actions.requestQuote}
+                <Check size={16} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        )}
+      </header>
+    </>
   );
 }

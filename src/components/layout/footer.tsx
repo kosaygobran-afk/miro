@@ -1,67 +1,112 @@
 import Link from "next/link";
-import { Mail, MapPin, Phone } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { ArrowLeft, ArrowRight, MessageSquareText } from "lucide-react";
 import { withLocale, type Locale } from "@/lib/i18n";
+import { Brand } from "@/components/layout/brand";
 
-export async function Footer({ locale }: { locale: Locale }) {
-  const t = await getTranslations({ locale, namespace: "layout.footer" });
-
-  const footerLinks = [
-    { href: withLocale(locale), label: t("links.home") },
-    { href: withLocale(locale, "services"), label: t("links.services") },
-    { href: withLocale(locale, "about"), label: t("links.about") },
-    { href: withLocale(locale, "contact"), label: t("links.contact") },
-    { href: withLocale(locale, "privacy"), label: t("links.privacy") },
-    { href: withLocale(locale, "terms"), label: t("links.terms") },
-    {
-      href: withLocale(locale, "accessibility"),
-      label: t("links.accessibility"),
-    },
+export function Footer({ locale }: { locale: Locale }) {
+  const he = locale === "he";
+  const Arrow = he ? ArrowLeft : ArrowRight;
+  const links = [
+    ["", he ? "בית" : "Home"],
+    ["store", he ? "חנות המוצרים" : "Explore the store"],
+    ["services", he ? "הפתרונות שלנו" : "Our solutions"],
+    ["about", he ? "אודות מירו" : "About MIRO"],
+    ["contact", he ? "יצירת קשר" : "Get in touch"],
   ];
-
+  const solutions = [
+    ["services/home", he ? "אבטחה לבית" : "Home security"],
+    ["services/business", he ? "אבטחה לעסק" : "Business security"],
+    ["services/security-cameras", he ? "מצלמות אבטחה" : "Security cameras"],
+    [
+      "services/intercom-access",
+      he ? "אינטרקום ובקרת כניסה" : "Intercom & access",
+    ],
+    ["services/network-wifi", he ? "רשת ותקשורת" : "Networks & connectivity"],
+  ];
+  const legal = [
+    ["privacy", he ? "פרטיות" : "Privacy"],
+    ["terms", he ? "תנאי שימוש" : "Terms"],
+    ["accessibility", he ? "נגישות" : "Accessibility"],
+  ];
   return (
-    <footer className="border-t border-border-subtle bg-surface/55">
-      <div className="miro-container miro-footer-grid">
-        <div>
-          <p className="text-3xl font-black text-foreground">{t("brand")}</p>
-          <p className="mt-2 max-w-sm text-sm font-bold uppercase tracking-[0.24em] text-muted-foreground">
-            {t("tagline")}
+    <footer className="miro-footer premium-footer">
+      <div className="miro-container premium-footer-main">
+        <div className="premium-footer-brand">
+          <Link
+            href={withLocale(locale)}
+            aria-label={he ? "דף הבית של מירו" : "MIRO home"}
+          >
+            <Brand locale={locale} />
+          </Link>
+          <p>
+            {he
+              ? "מחברים בין טכנולוגיה, אנשים ושקט נפשי. פתרונות מיגון ותקשורת שנבנים סביב המקום שלכם."
+              : "Connecting technology, people, and peace of mind. Security and communication solutions built around your space."}
           </p>
+          <span className="premium-footer-motto" dir="ltr">
+            A SAFER, SMARTER EVERYDAY.
+          </span>
         </div>
-
-        <nav
-          className="grid grid-cols-2 content-start gap-2 sm:grid-cols-3"
-          aria-label={t("navLabel")}
-        >
-          {footerLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:text-foreground"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        <address className="not-italic text-sm text-muted-foreground">
-          <p className="mb-3 font-bold text-foreground">{t("contactTitle")}</p>
-          <p className="flex items-center gap-2">
-            <Phone className="size-4 text-primary" aria-hidden="true" />
-            <span dir="ltr">{t("phonePlaceholder")}</span>
+        <div className="premium-footer-column">
+          <h2>{he ? "מכירים את מירו" : "Discover MIRO"}</h2>
+          <nav aria-label={he ? "ניווט תחתון" : "Footer navigation"}>
+            {links.map(([path, label]) => (
+              <Link key={path} href={withLocale(locale, path)}>
+                {label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="premium-footer-column">
+          <h2>{he ? "פתרון לכל מקום" : "For every space"}</h2>
+          <nav aria-label={he ? "פתרונות מיגון ותקשורת" : "Security solutions"}>
+            {solutions.map(([path, label]) => (
+              <Link key={path} href={withLocale(locale, path)}>
+                {label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+        <div className="premium-footer-column premium-footer-consult">
+          <MessageSquareText size={25} strokeWidth={1.5} aria-hidden="true" />
+          <h2>
+            {he ? "מתחילים בשיחה טובה." : "It starts with a conversation."}
+          </h2>
+          <p>
+            {he
+              ? "בית חדש, עסק בצמיחה או שדרוג מערכת קיימת — בואו נמצא את הכיוון המתאים."
+              : "A new home, a growing business, or an existing system. Let’s find the right direction."}
           </p>
-          <p className="flex items-center gap-2">
-            <Mail className="size-4 text-primary" aria-hidden="true" />
-            <span dir="ltr">{t("emailPlaceholder")}</span>
-          </p>
-          <p className="flex items-center gap-2">
-            <MapPin className="size-4 text-primary" aria-hidden="true" />
-            {t("areaPlaceholder")}
-          </p>
-        </address>
+          <Link href={withLocale(locale, "contact")}>
+            {he ? "נדבר על הפרויקט שלכם" : "Tell us about your project"}
+            <Arrow size={16} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
-      <div className="border-t border-border-subtle py-4 text-center text-xs text-muted-foreground">
-        {t("copyright", { year: new Date().getFullYear() })}
+      <div className="premium-footer-bottom">
+        <div className="miro-container">
+          <span>
+            © {new Date().getFullYear()}{" "}
+            {he
+              ? "מירו. מערכות מיגון ותקשורת."
+              : "MIRO. Security & Communications."}
+          </span>
+          <nav
+            className="premium-footer-legal"
+            aria-label={he ? "מידע משפטי ונגישות" : "Legal and accessibility"}
+          >
+            {legal.map(([path, label]) => (
+              <Link key={path} href={withLocale(locale, path)}>
+                {label}
+              </Link>
+            ))}
+          </nav>
+          <span className="premium-preview-label">
+            {he
+              ? "תצוגה מקדימה · תוכן להמחשה"
+              : "Design preview · Illustrative content"}
+          </span>
+        </div>
       </div>
     </footer>
   );
