@@ -1,6 +1,230 @@
 # Project Status
 
-Last updated: 2026-09-20 (premium design refinement)
+Last updated: 2026-09-21 (premium storefront and public experience; release 0.0.2)
+
+## Premium Storefront And Public Experience — 2026-09-21
+
+The website now follows the supplied premium black/gold and light storefront references with wider merchandising layouts, focused reading areas and usable interactive catalog controls.
+
+What changed and why:
+
+- Rebuilt the shared header/footer with an original geometric brand mark, five primary destinations, desktop/mobile product search, keyboard-operable category disclosure and directly selectable dark/medium/light themes. Removed the nonfunctional cart indicator.
+- Introduced shared `premium.css`, editorial `experience.css` and catalog `storefront.css` layers. Full page frames use a 112rem maximum with consistent gutters; About/Contact/service details and authentication forms keep narrower measures.
+- Rebuilt Home and Services with photographic equipment heroes, category navigation, home/business/network solution cards, a connected-system diagram, four project stages, useful FAQs and project CTAs. Home/business/detail service pages and About/Contact now share this composition and bilingual content structure.
+- Rebuilt Store and category pages with original SVG hardware illustrations, searchable category-aware catalogs, price/name sorting, clear/reset, load-more and accessible native product dialogs. Product inquiry links carry the product name into the Contact preview message.
+- Preserved the Supabase read path and added consistent localized fallback catalog data. Known fallback category routes remain reviewable when the connected test catalog omits them. Illustrations/prices remain explicitly sample content, with no invented ratings, partner endorsements or delivery/support guarantees.
+- Removed the rule hiding the site on phones at 360px or below and short landscape screens. Added localized skip navigation, visible keyboard focus, menu Escape/focus return, reduced-motion handling and enlarged-text reflow.
+- Kept the existing local image and existing website dependencies; no new frontend runtime package or database mutation was needed. Editable bilingual content arrays prepare the design for approved copy; a CMS is not implemented.
+
+Verification and fixes:
+
+- Release validation uses an isolated worktree at `/tmp/miro-release-0.0.2` with the website package metadata at `0.0.2`. The shared working directory already contained unrelated unfinished canvas/dashboard work and dependencies before this task. Initial full-workspace lint/typecheck exposed pre-existing canvas errors; those files were preserved and excluded from the website release. No check was disabled or weakened to make the release pass.
+- `npm ci --ignore-scripts --no-audit --no-fund` in the release worktree: passed.
+- `npm run format:check`, `npm run lint`, `npm run typecheck`: passed for the isolated website release.
+- `npm run build`: passed, 49 statically generated pages plus dynamic Contact/Store/category routes.
+- `PORT=3101 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3101 npm run test:e2e`: all 7 Chromium tests passed. An initial category-route failure was fixed by moving the pure visual-kind helper outside the client component boundary.
+- `DESIGN_BASE_URL=http://127.0.0.1:3101 node scripts/verify-design.mjs`: passed 60 Home/Store combinations (320/390/768/1440/1920px, Hebrew/English, dark/medium/light), 14 axe scans, keyboard menus, persistent themes, header search, reduced motion, small landscape and 200% text enlargement. Also passed catalog search/empty/reset/sort/category/dialog/inquiry/shared-query checks. An initial enlarged-text header overflow was corrected and the matrix rerun successfully.
+- Additional production browser review: 56 route/viewport checks across Services, Home/Business solutions, four service details, About, Contact, Privacy, Terms, Accessibility and category routes; 30 more axe scans across both languages and three themes; no errors. Selected-product Contact prefill verified.
+- Existing local development server checks: Hebrew Store, Cameras and English Network Gear returned 200 with populated cards and no browser errors; no database mutation was performed.
+- Desktop Hebrew Home/Store, English Contact/Home Solution and phone light Store screenshots visually inspected. Review artifacts are local at `/tmp/miro-design-review`; they are not committed assets.
+
+Launch blockers and owners:
+
+- Business owner: approve final company/contact facts, service copy, real product photography, specifications, prices and availability. Current catalog and package content remain illustrative.
+- Engineering/business owner: implement and validate actual inquiry delivery, checkout, inventory and protected-account workflows. The Contact preview explicitly does not submit data; this visual release does not certify pre-existing authentication work as production-ready.
+- Owner/legal reviewer: finalize privacy, terms, accessibility statement and commercial claims before public launch. No analytics or new data collection was added.
+- QA: complete manual screen-reader and real-device review; automated accessibility checks are evidence, not a substitute for that launch review.
+
+Release branch: `0.0.2`, requested by the user for the verified website update. Website changes and prerequisite storefront foundation changes are included; unfinished canvas/dashboard sources and their dependency changes remain uncommitted in the original workspace.
+
+## Full-Page Layout And Responsive Centering Pass
+
+User requested continuing the design work so each page uses the available space more naturally, with content lowered or centered according to that page's purpose while preserving the established MIRO design DNA.
+
+Changes made:
+
+- Added reusable full-page layout primitives in `src/app/globals.css`: `miro-page-shell`, `miro-page-panel`, `miro-page-panel-narrow`, `miro-split-panel`, `miro-contact-layout`, `miro-split-copy`, `miro-contact-copy`, `miro-visual-grid`, `miro-visual-tile` and `miro-contact-form`.
+- Bounded the shared wide container at `96rem` so large screens feel intentionally filled without allowing text and controls to drift across unlimited width.
+- Gave short informational pages a viewport-aware shell that centers their main panel vertically when space permits while returning to natural document flow on smaller screens.
+- Updated About, Privacy, Terms and Accessibility pages to use the narrower centered full-page panel treatment.
+- Rebuilt Contact as a wide responsive split layout, with its copy and form balanced as one composition on desktop and stacked cleanly on mobile.
+- Updated the Home and Business service pages to use centered split panels with responsive visual tiles, and updated individual service detail pages to use the shared full-page panel.
+- Replaced remaining radial decorative backgrounds in the edited surfaces with restrained linear treatments, removed viewport-scaled heading sizes and removed negative letter spacing from shared CSS.
+- Added mobile and tablet rules so split layouts collapse, copy centers where appropriate, visual tiles stack without overflow and compact pages no longer force artificial viewport height.
+- Kept the Store, navigation hierarchy, theme system and existing page-specific layouts intact; this pass changes composition and spacing without adding new product or data behavior.
+
+Verification commands and results:
+
+- `npm run format:check`: pass.
+- `npm run lint`: pass.
+- `npm run typecheck`: pass.
+- `npm run build`: pass. The production build generated 49 static pages.
+- `npm run test:e2e`: pass. All 7 Playwright Chromium tests passed against a fresh production build/server.
+- Targeted responsive layout scan: Home, Store, Services, Home Service, Business Service, service detail, Contact, About, Privacy and English Contact returned 200 and had no horizontal overflow at 1440x1000 and 390x844.
+- Targeted axe WCAG A/AA checks on Contact, About, Home Service and Store: pass, no violations.
+- Visual screenshots of desktop Contact, desktop About and mobile Home Service were inspected during the session; temporary screenshots were not committed.
+- Confirmed the local production preview was stopped after verification and no process remained intentionally running for this milestone.
+
+Important notes for future agents:
+
+- Use the shared page-shell and page-panel primitives for short content pages instead of adding one-off fixed margins or heights.
+- Choose page-relative alignment: short informational pages may center vertically; catalog and long content pages should begin naturally near the top; split pages should center their columns as a group and stack on small screens.
+- Preserve the `96rem` maximum width unless a tested page has a concrete reason to be wider. Keep readable text measures narrower inside that outer frame.
+- Legal/privacy launch blockers remain owner/legal review of privacy, terms, accessibility statement, business claims, contact facts and future catalog/commerce behavior. Owner action: approve or replace public-facing copy before deployment.
+- Accessibility launch blocker remains manual keyboard, 200% zoom and screen-reader review even though automated axe checks pass. Owner/QA action: complete manual assistive-technology testing before launch.
+
+## Three-Mode Theme Refinement And Navbar Polish
+
+User requested a richer theme system with bright, medium and dark states, a softer medium-gray mode for long reading, improved navbar styling in the brighter themes, and a switch-like control instead of a simple icon toggle.
+
+Changes made:
+
+- Added a third theme state in `src/app/globals.css`: `dark`, `medium` and `light`, with the medium palette tuned as a calm gray-neutral for eye comfort and readability.
+- Updated the pre-render theme bootstrap in `src/app/[locale]/layout.tsx` to honor stored values and use a valid default that matches the new three-mode system.
+- Refined the header surface and navbar color tokens so the bright/light navbar reads as part of the premium storefront instead of feeling visually detached.
+- Rebuilt the theme control in `src/components/layout/header-client.tsx` as a segmented switch with D / M / L states and proportional thumb movement.
+- Kept the existing MIRO brand direction intact: dark storefront, premium gold accents, and a professional security-brand feel without introducing heavy libraries or unnecessary animation.
+
+Why this change was needed:
+
+- The project had only dark and light support, which did not match the requested design flow.
+- The light/bright navbar was visually weaker than the rest of the storefront and needed a more premium, cohesive treatment.
+- The owner specifically requested a medium mode that is easy on the eyes while still reading as premium and modern.
+
+Verification commands and results:
+
+- `npm run lint`: pass.
+- `npm run typecheck`: pass.
+- `npm run build`: pass.
+
+Important notes for future agents:
+
+- Keep the three-mode theme model intact: `dark`, `medium`, `light`.
+- Treat medium as the default comfort mode for product browsing and extended reading.
+- Preserve the segmented switch style and maintain a premium dark storefront tone across all modes.
+- Legal/privacy launch blockers remain owner review of business claims, product imagery and public-facing copy before launch.
+
+## Store Rename And Screenshot-Inspired Redesign
+
+User supplied a store/e-commerce screenshot on 2026-09-20 as a visual reference, not as content to copy. User requested changing the Products section to Store, moving Store beside Home, keeping the MIRO design DNA, removing underline-style active effects, showing both section and sub-section active states, using rounded connected shapes, reserving product image slots for later CEO-managed images/items, and recording the work for future AI agents.
+
+Changes made:
+
+- Renamed the public product route surface to Store: `/he/store`, `/en/store`, and `/store/[category]`.
+- Removed the live `/products` route files and added permanent redirects from `/products` and `/products/[category]` to the matching `/store` URLs.
+- Moved Store directly after Home in the header navigation.
+- Kept a two-level active state: Store stays active on `/store/*` and the selected store category subnav stays active on its own category page.
+- Preserved rounded button/pill active states and removed underline-style active treatments from header/dropdown/subnav surfaces.
+- Rebuilt the Store landing page around the supplied reference structure: top hero banner, department tiles, category rail, featured item cards, business package band, service/trust row and brand slots.
+- Product images are intentionally placeholders/icons for now. Future real product images, editable item names, inventory and add/manage flows are still planned for the CEO/admin account and require the real data/admin layer.
+- Localized Store copy, no-results text and cart/action labels in Hebrew and English.
+- Added `dir="auto"` to product card text fields so English item names inside Hebrew pages keep sane number/text ordering.
+- Replaced the Store hero's orb-like radial highlight with a linear treatment and changed the Store title to fixed breakpoint sizes instead of viewport-scaled type.
+- Updated `src/app/sitemap.ts`, `tests/smoke.spec.ts`, `docs/ROUTES_AND_ROLES.md`, `docs/DESIGN_SYSTEM.md` and `docs/OPERATIONS.md` for the Store route and redirect contract.
+- Removed a duplicate Hebrew `metadata.about` key from `src/messages/he.json`.
+
+Verification commands and results:
+
+- `npm run format:check`: pass.
+- `npm run lint`: pass.
+- `npm run typecheck`: pass.
+- `npm run build`: pass. Final build generated 49 static pages and shows `/[locale]/store` plus `/[locale]/store/[category]`, with no live `/products` route.
+- `npm run test:e2e`: pass. 7 Playwright Chromium tests passed, including `/he/store`, old `/he/products/cameras` redirecting to `/he/store/cameras`, localized metadata and automated axe checks on home pages.
+- Manual production preview: `npm run start` was ready in about 65ms.
+- Targeted Playwright check: `/he/store` Store nav has `aria-current="page"`; `/he/store/cameras` Store nav has `aria-current="location"` and Cameras subnav has `aria-current="page"`.
+- Targeted layout check: `/he/store`, `/he/store/cameras` and `/en/store` had no horizontal overflow at 1440px desktop or 390px mobile.
+- Targeted axe WCAG A/AA check on `/he/store`: pass, no violations.
+- Visual screenshots inspected at `/tmp/miro-store-final-desktop.png` and `/tmp/miro-store-final-mobile.png` during the session. Temporary screenshot artifacts were not committed.
+- Confirmed no local process remains listening on port 3000 after verification.
+
+Important notes for future agents:
+
+- Public wording should remain Store / חנות unless the owner changes it. Internal component names may still say Product because the cards represent products.
+- Preserve Store beside Home in the header.
+- Preserve the two active levels: Store as the active parent section and the selected category as the active subpage.
+- Product image slots are placeholders only. Do not fake CEO catalog editing or inventory; implement it later with real authentication, roles and storage.
+- Legal/privacy launch blockers remain owner/legal review of business claims, product claims, legal pages, contact facts and any future catalog/commerce flow. This pass introduced no real data collection.
+- Accessibility launch blocker remains manual keyboard, zoom and screen-reader review before launch, even though automated axe checks passed.
+
+## Modern Rounded Design And Product Navigation Refinement
+
+User requested a more modern rounded design, stronger contrast/shadows/lights, softer fast effects, removal of the double underline/button active effect in the header, active parent Products state on product subpages, active product subnav state, better centering/connected shapes, fast rendering and full AI handoff logging.
+
+Changes made:
+
+- Reworked global shape tokens in `src/app/globals.css` with larger shared radii, stronger but soft shadows, glow tokens and faster 140-160ms interaction transitions.
+- Replaced header active underline/shadow effects with a single rounded active pill state.
+- Made the Products header nav item stay active for all `/products/*` routes. Exact product category links in the subnav remain separately active, so users can see both the section and subsection.
+- Removed underline-style `after` bars from product dropdown and product subnav active states.
+- Added connected rounded surfaces for the product subnav rail, dropdown menu, search input, product card media, product icon shell and cards.
+- Updated product listing layout from nested containers/grid tracks to a centered wrapping layout. Incomplete final rows now center correctly in RTL and mobile cards use full available width.
+- Centered product and category page headings/search area to better match the product browsing surface.
+- Reduced product search debounce from 300ms to 180ms for a quicker feel without filtering on every keystroke.
+- Fixed a regression caught in visual review: the shared icon-action class had overridden `lg:hidden`, making the mobile menu icon visible on desktop. The class no longer sets `display`, so responsive Tailwind utilities work again.
+- Changed Playwright config to `reuseExistingServer: false`, so `npm run test:e2e` always starts its own `npm run build && npm run start` server and cannot accidentally test a stale dev server.
+
+Verification commands and results:
+
+- `npm run format:check`: pass.
+- `npm run lint`: pass.
+- `npm run typecheck`: pass.
+- `npm run build`: pass. Final build generated 49 static pages and detected Proxy.
+- `npm run test:e2e`: pass. 6 Playwright Chromium tests passed from a clean port with the production-backed server.
+- Targeted Playwright DOM check on `/he/products/cameras`: pass. Products nav has `aria-current="location"` and active class; Cameras subnav has `aria-current="page"` and active class.
+- Targeted desktop/mobile layout check on `/he/products/cameras`: pass. No horizontal overflow; desktop hamburger hidden; mobile hamburger visible; 6 cards render; final row centered on desktop; cards full-width on mobile.
+- Extra axe WCAG A/AA check on `/he/products/cameras` and `/en/products/cameras`: pass, no violations.
+- Visual screenshots inspected at `/tmp/miro-products-desktop-final2.png` and `/tmp/miro-products-mobile-final2.png` during the session. Temporary screenshot artifacts were not committed.
+
+Important notes for future agents:
+
+- Product navigation intentionally has two active levels: parent Products as section (`aria-current="location"`) and category subnav as page (`aria-current="page"`).
+- Header/subnav active states should remain pill/button states only; do not reintroduce underline bars or inset underline shadows unless explicitly requested.
+- Keep `npm run test:e2e` production-backed and non-reusing. Stop any local server on port 3000 before running it.
+- Legal/privacy launch blockers remain owner/legal review of draft pages and business claims. This design pass introduced no real data collection.
+- Accessibility launch blocker remains manual keyboard, zoom and screen-reader review before launch, even though automated axe smoke checks passed.
+
+## Run / Deployment Stabilization And AI Handoff Update
+
+User requested fixing project run, deployment problems and running time, then asked that all future work be recorded for other AI chats.
+
+Changes made:
+
+- Installed dependencies with `npm install` and verified clean CI-style install with `npm ci`.
+- Read local Next.js 16.3.5 docs from `node_modules/next/dist/docs/` before touching framework-sensitive code.
+- Verified `src/proxy.ts` is correct for Next.js 16 Proxy convention.
+- Ran Prettier across the repo so `npm run format:check` passes. Many existing docs and TSX files changed only by formatting.
+- Simplified `next.config.ts` from an empty placeholder object with a comment to `const nextConfig: NextConfig = {};`.
+- Set `localeDetection: false` in `src/i18n/routing.ts` so `/` deterministically redirects to the Hebrew-first default `/he`, independent of browser language.
+- Added `playwright.config.ts` with production-backed `webServer` behavior: `npm run build && npm run start`.
+- Added `tests/smoke.spec.ts` covering Hebrew/English route rendering, localized `lang`/`dir`, root redirect to `/he`, and automated axe WCAG A/AA smoke checks on home pages.
+- Added `/playwright-report` and `/test-results` to `.gitignore`.
+- Installed Playwright Chromium locally with `npx playwright install chromium` so `npm run test:e2e` can run on this machine.
+- Cleared generated Playwright artifacts after the run.
+- Confirmed no local server process remained on port 3000 after verification.
+- Updated `AGENTS.md` to require future agents to record meaningful project changes in this file for cross-chat handoff.
+
+Verification commands and results:
+
+- `npm ci`: pass. npm reported 0 vulnerabilities.
+- `npm run format:check`: pass after formatting.
+- `npm run lint`: pass.
+- `npm run typecheck`: pass.
+- `npm run build`: pass. Final production build generated 49 static pages and detected Proxy.
+- `npm run test:e2e`: pass. 6 Playwright Chromium tests passed.
+- `npm run start`: pass. Production server was ready in about 55ms during final manual check.
+- `curl -I -L http://localhost:3000/`: pass. `/` returns 307 then `/he` returns 200.
+- `curl -I http://localhost:3000/he`: pass, 200.
+- `curl -I http://localhost:3000/en/contact`: pass, 200.
+- `npm run dev`: pass. Dev server was ready in about 203ms during final manual check.
+
+Important notes for future agents:
+
+- `npm run test:e2e` now starts a production build/server through Playwright config. It is a real deployment smoke check, not just a placeholder command.
+- The app is Hebrew-first by design. Do not re-enable Accept-Language root routing unless the owner explicitly requests language auto-detection.
+- Playwright browser binaries are machine-local cache, not committed project files. On a fresh machine or CI worker, run `npx playwright install chromium` if the browser binary is missing.
+- npm currently reports install scripts awaiting review for `@parcel/watcher`, `@swc/core` and `unrs-resolver`. Builds and tests pass without approving them, but a project/security owner should decide whether to approve or deny those scripts before CI hardening.
+- Legal/privacy launch blockers remain: owner/legal review of privacy, terms, accessibility statement, business identity, contact facts and service claims.
+- Accessibility launch blocker remains: automated axe smoke checks pass, but manual keyboard, zoom and screen-reader review is still required before launch.
 
 ## Proportions And Performance Follow-up
 
@@ -17,11 +241,11 @@ User feedback: text, components and positioning needed a more coherent relative 
 
 Measured on local production `/en`, Chromium, 390x844, fresh browser, same font/image readiness:
 
-| Measurement | Before | After |
-| --- | ---: | ---: |
-| Rendered document outerHTML UTF-8 bytes | 57,548 | 47,497 |
-| Script resource encodedBodySize total | 155,143 | 144,878 |
-| Optimized mobile hero bytes | 7,684 | 7,684 |
+| Measurement                             |  Before |   After |
+| --------------------------------------- | ------: | ------: |
+| Rendered document outerHTML UTF-8 bytes |  57,548 |  47,497 |
+| Script resource encodedBodySize total   | 155,143 | 144,878 |
+| Optimized mobile hero bytes             |   7,684 |   7,684 |
 
 These are local payload measurements, not Lighthouse scores or a claim of equivalent percentage loading-speed improvements. Real-device/network Core Web Vitals remain unmeasured.
 

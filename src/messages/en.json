@@ -16,7 +16,7 @@
         "services": "Services",
         "homeServices": "Homes",
         "business": "Business",
-        "products": "Products",
+        "products": "Store",
         "about": "About",
         "contact": "Contact"
       },
@@ -54,6 +54,7 @@
     "ownerReview": "Owner review required before launch",
     "learnMore": "Learn more",
     "viewAll": "View all services",
+    "contact": "Contact",
     "developmentPreview": "Development preview",
     "illustrativeData": "Illustrative data only. Not real catalog, pricing or stock."
   },
@@ -75,8 +76,8 @@
       "description": "Draft business service page for security, access control, networking and communications installation."
     },
     "products": {
-      "title": "Security & Communication Products",
-      "description": "Browse MIRO's curated selection of cameras, servers, routers, cables, accessories and network gear. Development preview with illustrative data only."
+      "title": "MIRO Store",
+      "description": "Browse MIRO's security and communications store preview for cameras, recorders, routers, cables, accessories and network gear."
     },
     "contact": {
       "title": "Contact MIRO",
@@ -246,9 +247,26 @@
       "login": "Go to login"
     },
     "products": {
-      "title": "Security & Communication Products",
-      "subtitle": "Curated equipment for professional installations. All data is illustrative — no real inventory, pricing or partnerships.",
-      "searchPlaceholder": "Search products...",
+      "title": "MIRO Store",
+      "subtitle": "A structured store preview for security and communications equipment. Product images, inventory and item editing will be controlled later from the CEO account.",
+      "hero": {
+        "eyebrow": "Secure Smart Connected",
+        "title": "Store for smart security and communications",
+        "subtitle": "Cameras, NVRs, smart access, networking and installation accessories arranged like a real storefront while staying in MIRO's visual language.",
+        "primaryAction": "Browse items",
+        "secondaryAction": "Business package"
+      },
+      "categoryStripTitle": "Store departments",
+      "featuredTitle": "Featured store items",
+      "featuredText": "Image slots are reserved for future CEO-managed product photos. Names and layout are ready for the first catalog pass.",
+      "businessTitle": "Smart business bundle",
+      "businessText": "A storefront band for combined camera, NVR, network and access packages. Final bundle details remain owner-managed.",
+      "businessAction": "Request package quote",
+      "serviceTitle": "Store support",
+      "brandTitle": "Brand slots",
+      "imageNote": "Product images will be added later from the CEO account.",
+      "searchPlaceholder": "Search store items...",
+      "addToCart": "Add to cart",
       "categories": {
         "cameras": "Cameras",
         "servers": "Servers & NVRs",
@@ -257,8 +275,8 @@
         "accessories": "Accessories",
         "networkGear": "Network Gear"
       },
-      "noResults": "No products match your search.",
-      "showingResults": "Showing {count} of {total} products"
+      "noResults": "No store items match your search.",
+      "showingResults": "Showing {count} of {total} store items"
     },
     "preview": {
       "designTitle": "MIRO design system preview",

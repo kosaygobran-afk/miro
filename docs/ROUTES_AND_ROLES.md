@@ -5,6 +5,8 @@ Route groups in parentheses are organization only. They do not appear in URLs.
 ## Public Routes
 
 - `/he` and `/en` - homepage
+- `/he/store` and `/en/store` - public store preview
+- `/he/store/[category]` and `/en/store/[category]` - store category preview
 - `/he/services` and `/en/services` - services index
 - `/he/services/home` and `/en/services/home` - home services
 - `/he/services/business` and `/en/services/business` - business services
@@ -34,11 +36,16 @@ These routes exist but fail closed until real authentication and role checks are
 
 ## Role Permissions Planned For Phase 2
 
-| Audience | Entry | Permissions |
-| --- | --- | --- |
-| Visitor | No account needed | Browse public pages and submit enquiry only after real enquiry backend exists |
-| Customer | Public signup and shared login | Own profile and own service requests |
-| Worker | Shared login; owner assigns role manually | Assigned jobs and minimum required customer information |
-| CEO | Shared login; owner provisions account | Operational administration, assignments, catalog management and approved reporting |
+| Audience | Entry                                     | Permissions                                                                        |
+| -------- | ----------------------------------------- | ---------------------------------------------------------------------------------- |
+| Visitor  | No account needed                         | Browse public pages and submit enquiry only after real enquiry backend exists      |
+| Customer | Public signup and shared login            | Own profile and own service requests                                               |
+| Worker   | Shared login; owner assigns role manually | Assigned jobs and minimum required customer information                            |
+| CEO      | Shared login; owner provisions account    | Operational administration, assignments, catalog management and approved reporting |
 
 There is no role selector, no worker signup form and no CEO signup form.
+
+## Redirects
+
+- Old `/he/products` and `/en/products` URLs permanently redirect to `/he/store` and `/en/store`.
+- Old `/he/products/[category]` and `/en/products/[category]` URLs permanently redirect to `/he/store/[category]` and `/en/store/[category]`.

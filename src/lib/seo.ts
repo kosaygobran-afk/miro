@@ -52,7 +52,9 @@ export async function pageMetadata({
     metadataBase: new URL(getSiteUrl()),
     alternates: {
       canonical: localizedUrl(safeLocale, path),
-      languages: Object.fromEntries(locales.map((item) => [item, localizedUrl(item, path)])),
+      languages: Object.fromEntries(
+        locales.map((item) => [item, localizedUrl(item, path)]),
+      ),
     },
     robots: noIndex ? { index: false, follow: false } : undefined,
     openGraph: {

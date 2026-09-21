@@ -1,6 +1,7 @@
 # Decisions Log
 
 ## 2026-09-20: Project Initialization
+
 - Selected Next.js 16.3.5 with App Router, TypeScript, Tailwind CSS
 - Used npm as the actual package manager because the repository has `package-lock.json`
 - Selected next-intl for internationalization (Hebrew/English)

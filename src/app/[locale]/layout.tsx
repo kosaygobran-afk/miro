@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
 import { notFound } from "next/navigation";
 import "../globals.css";
+import "@/styles/premium.css";
+import "@/styles/experience.css";
+import "@/styles/storefront.css";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import {
@@ -73,13 +76,18 @@ export default async function LocaleLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "(()=>{try{const k='miro-theme';const s=localStorage.getItem(k);const m=matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.dataset.theme=s||(m?'dark':'light')}catch{document.documentElement.dataset.theme='dark'}})();",
+              "(()=>{try{const k='miro-theme';const themes=['dark','medium','light'];const saved=localStorage.getItem(k);const prefersDark=matchMedia('(prefers-color-scheme: dark)').matches;const prefersLight=matchMedia('(prefers-color-scheme: light)').matches;let preferred=saved&&themes.includes(saved)?saved:(prefersDark?'dark':(prefersLight?'light':'medium'));document.documentElement.dataset.theme=preferred;}catch{document.documentElement.dataset.theme='dark';}})();",
           }}
         />
       </head>
       <body>
+        <a className="premium-skip-link" href="#main-content">
+          {locale === "he" ? "דילוג לתוכן הראשי" : "Skip to main content"}
+        </a>
         <Header locale={locale} />
-        <main className="miro-main">{children}</main>
+        <main id="main-content" tabIndex={-1} className="miro-main">
+          {children}
+        </main>
         <Footer locale={locale} />
       </body>
     </html>

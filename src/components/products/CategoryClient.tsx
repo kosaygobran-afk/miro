@@ -1,30 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { ProductSearch } from "@/components/products/ProductSearch";
-import { ProductGrid } from "@/components/products/ProductGrid";
+import { ProductsClient } from "@/components/products/ProductsClient";
 import type { Product } from "@/features/catalog/product-data";
 
-type CategoryTranslations = {
-  searchPlaceholder: string;
-};
-
-interface CategoryClientProps {
+export function CategoryClient({
+  products,
+  category,
+  locale,
+  initialQuery = "",
+}: {
   products: Product[];
-  t: CategoryTranslations;
-}
-
-export function CategoryClient({ products, t }: CategoryClientProps) {
-  const [filteredProducts, setFilteredProducts] = useState(products);
-
+  category: { key: string; label: string };
+  locale: "he" | "en";
+  initialQuery?: string;
+}) {
   return (
-    <>
-      <ProductSearch
-        products={products}
-        onSearch={setFilteredProducts}
-        placeholder={t.searchPlaceholder}
-      />
-      <ProductGrid products={filteredProducts} />
-    </>
+    <ProductsClient
+      products={products}
+      categories={[category]}
+      fixedCategory={category.key}
+      locale={locale}
+      initialQuery={initialQuery}
+    />
   );
 }

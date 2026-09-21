@@ -19,11 +19,11 @@ export function ProductSearch({
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  // Debounce the search query
+  // Keep filtering responsive without recomputing on every keystroke.
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(query);
-    }, 300);
+    }, 180);
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -50,7 +50,7 @@ export function ProductSearch({
   }, [products, onSearch]);
 
   return (
-    <div className="miro-container mb-6">
+    <div className="mb-8">
       <div className="relative max-w-xl mx-auto">
         <Search
           className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-muted-foreground"
@@ -62,10 +62,9 @@ export function ProductSearch({
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
           className={cn(
-            "w-full rounded-2xl border border-border-control bg-surface px-12 py-3.5 text-base text-foreground",
+            "miro-search-input w-full border border-border-control bg-surface px-12 py-3.5 text-base text-foreground",
             "placeholder:text-muted-foreground",
             "focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent",
-            "transition-all duration-200",
           )}
           aria-label={placeholder}
         />
@@ -73,7 +72,7 @@ export function ProductSearch({
           <button
             type="button"
             onClick={handleClear}
-            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
+            className="miro-icon-action absolute right-4 top-1/2 inline-flex size-8 -translate-y-1/2 items-center justify-center p-1 text-muted-foreground hover:text-foreground"
             aria-label="Clear search"
           >
             <X className="size-5" aria-hidden="true" />

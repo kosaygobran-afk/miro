@@ -6,15 +6,17 @@ export interface Product {
   category: string;
   badge?: string;
   icon?: string; // Icon key: camera, server, router, cable, wrench, wifi, monitor, shield, hardDrive, siren, shieldCheck, key
+  categoryLabel?: string;
+  isFeatured?: boolean;
 }
 
 export const productCategories = [
-  { key: "cameras", label: "Cameras", href: "/products/cameras" },
-  { key: "servers", label: "Servers & NVRs", href: "/products/servers" },
-  { key: "routers", label: "Routers & Gateways", href: "/products/routers" },
-  { key: "cables", label: "Cables & Connectors", href: "/products/cables" },
-  { key: "accessories", label: "Accessories", href: "/products/accessories" },
-  { key: "networkGear", label: "Network Gear", href: "/products/network-gear" },
+  { key: "cameras", label: "Cameras", href: "/store/cameras" },
+  { key: "servers", label: "Servers & NVRs", href: "/store/servers" },
+  { key: "routers", label: "Routers & Gateways", href: "/store/routers" },
+  { key: "cables", label: "Cables & Connectors", href: "/store/cables" },
+  { key: "accessories", label: "Accessories", href: "/store/accessories" },
+  { key: "networkGear", label: "Network Gear", href: "/store/network-gear" },
 ] as const;
 
 export type ProductCategoryKey = (typeof productCategories)[number]["key"];
