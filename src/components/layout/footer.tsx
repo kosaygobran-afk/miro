@@ -29,7 +29,7 @@ export function Footer({ locale }: { locale: Locale }) {
     ["accessibility", he ? "נגישות" : "Accessibility"],
   ];
   return (
-    <footer className="miro-footer premium-footer">
+    <footer className="miro-footer premium-footer" suppressHydrationWarning>
       <div className="miro-container premium-footer-main">
         <div className="premium-footer-brand">
           <Link

@@ -26,7 +26,15 @@
         "languageSwitch": "עברית",
         "themeToggle": "Switch color theme",
         "openMenu": "Open menu",
-        "closeMenu": "Close menu"
+        "closeMenu": "Close menu",
+        "logout": "Log out",
+        "switchToStorefront": "Switch to storefront",
+        "manageAccount": "Manage account",
+        "workerArea": "Worker area",
+        "adminConsole": "Management console",
+        "myAccount": "My account",
+        "userMenu": "User menu",
+        "roleBadge": "Role: {role}"
       }
     },
     "footer": {
@@ -114,6 +122,10 @@
     "resetPassword": {
       "title": "Set New Password",
       "description": "Password reset page prepared for future Supabase authentication."
+    },
+    "checkEmail": {
+      "title": "Check Your Email",
+      "description": "Check your email for the password reset link."
     }
   },
   "pages": {
@@ -236,6 +248,19 @@
           "confirmPassword": "Confirm new password",
           "submit": "Save password"
         }
+      },
+      "checkEmail": {
+        "title": "Check your email",
+        "subtitle": "We've sent a password reset link to your inbox.",
+        "steps": {
+          "inbox": "Check your inbox",
+          "spam": "Also check spam/junk folder",
+          "click": "Click the link in the email"
+        },
+        "resend": "Resend email",
+        "differentEmail": "Enter different email",
+        "backToLogin": "Back to login",
+        "sentAgain": "Sent again successfully. Check your inbox."
       }
     },
     "protected": {

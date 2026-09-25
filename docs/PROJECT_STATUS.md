@@ -1,6 +1,214 @@
 # Project Status
 
-Last updated: 2026-09-21 (Phase 2 authentication and deployment repair)
+Last updated: 2026-09-25 (admin console design-DNA polish + full audit cycle complete)
+
+## Admin Console Design-DNA Polish — 2026-09-25 (final)
+
+Owner feedback: the newly built management area needed a real polish pass connected to the site's design DNA. Root cause found: the crashed Wave-3 shell agent never wrote the CSS — ~2,300 lines of referenced class families (admin-shell, overview-panel, inventory/suppliers/sales/customers/finance/analytics managers) were entirely unstyled.
+
+What was done:
+
+- Authored the full `src/styles/workspace.css` (562 → ~4,100 lines): sticky glass admin header with gold active-nav underline, stat-card vocabulary (--warning/--critical), tables→cards at ≤767px, drawers/modals/toasts, CSS bar charts (gross/net/views/searches), all token-based (no hardcoded hex outside color-mix(var())), logical RTL properties, 44px touch targets scoped to `.admin-shell`, focus-visible + reduced-motion + forced-colors support.
+- New theme tokens in `globals.css`: `--badge-admin/worker/customer/suspended` per theme (dark/medium/light).
+- Replaced hardcoded Tailwind badge utilities across management components with semantic `status-badge--*`/`role-badge--*` classes; added `<caption class="sr-only">` to every admin data table.
+- Regressions caught by review + screenshots, fixed: unscoped global `button/input min-height:44px` rule (broke the 320px header); admin header wrapping incorrectly; mobile stats grid overflow.
+- Verified visually with authenticated screenshots (light + dark + RTL mobile): gold-accented dark console matches the storefront DNA.
+
+Final verification (all green): lint/typecheck/format:check/build; verify-database (17 migrations + 3 suites); admin-console smoke 14/14; e2e 16/16; recovery 20/20; design suite 60 combos + 14 axe scans.
+
+## Full-Project Audit & Hardening — 2026-09-25 (later)
+
+Method: two parallel independent auditors (security/backend/data + frontend/performance/quality/a11y), each verdict reviewed by hand before applying. No CRITICAL security holes found.
+
+Fixes applied from the security audit:
+
+- `hasSameOrigin` now prefers the proxy-forwarded host (`x-forwarded-host`) over the raw Host header (`src/lib/request-origin.ts`).
+- `/api/auth/resend-reset` no longer proxies raw Supabase error messages (enumeration hygiene; generic localized message, server-side log).
+- `mapPostgresError` no longer exposes raw Postgres error codes to clients (opaque `invalid_input` / `referenced_entity`).
+- Products/categories DELETE default to soft-archive (`status='archived'` / `is_active=false`); hard delete only with `?hard=true`, and referenced products return 409 `product_has_history` instead of a misleading error.
+- Logout fetch detection now keys on `content-type: application/json` only.
+- Migration `20260925172000_analytics_grant_hygiene.sql`: revoked the noisy `SELECT` grant to `anon` on analytics_events (insert-only for anon now); test updated to assert permission denial (verified passing).
+
+Fixes applied from the frontend audit:
+
+- Removed duplicate mount-time fetch in `UsersManagement` (server already provides `initialUsers`).
+- `ProductsClient` per-render category counts memoized; confirmed search filter already memoized (audit's remap kept URL-reload behavior intact via `key`).
+- `ProductCard` product impressions now fire on real viewport intersection (IntersectionObserver, once per mount) instead of only on dialog open; dialog gained `aria-modal="true"`.
+- Theme tokens: role/status badge colors in `workspace.css` moved to `--badge-*` / `--success-text` / `--error-text` tokens defined per theme in `globals.css` (dark/medium/light contrast-safe).
+- Deleted dead code: `dashboard-link.tsx`, `management-console.tsx` (superseded by UsersManagement), `unavailable-auth-form.tsx`, `ProductSearch.tsx`. (`contact-preview-form.tsx` IS used by /contact — audit false positive; kept.)
+
+Deferred deliberately (documented, not fixed now): `/api/track` rate limiting (post-launch WAF/edge rule; events are validated + bounded 200-char anon inserts), server-prefetch refactors for admin client islands, moving management inline strings into messages JSON, CSS gradient dedup in experience/storefront sheets, storefront checkout (out of scope by design).
+
+Verification after fixes (all green): lint, typecheck, format:check, build; `python3 scripts/verify-database.py` (17 migrations + 3 test suites); admin console smoke 14/14 pages incl. RTL; e2e 16/16; recovery e2e 20/20; design suite 60 combos + 14 axe scans.
+
+## Runtime Hardening & Admin Console Smoke — 2026-09-25 (later same day)
+
+Owner-reported runtime crash on the admin layout surfaced a class of untested server-render errors (previous suites only cover public pages, and admin routes redirect to login for visitors).
+
+Fixes:
+
+- `AdminNav` called `useLocale()` without a `NextIntlClientProvider` in the admin shell → "No intl context found". Now uses its `locale` prop only.
+- Admin overview page exported `privateMetadata()` (a function factory) as `metadata` instead of `generateMetadata` — invalid function-valued metadata caused a server RSC serialization crash (React #441 / `$$typeof undefined`) on `/admin` only. Fixed to `generateMetadata`.
+- Overview page queried nonexistent columns (`product_variants.purchase_cost`; orders `total_amount`/`net_amount`/`vat_amount`) → joined product cost via FK join and corrected order columns (`total`, `net_total`, `vat_total`).
+- Admin overview + audit routes joined `profiles` through an FK that points to `auth.users` → "Could not find a relationship" 500s. Both now merge names in memory via a separate profiles query.
+- `service_role` was missing table grants on `products`, `categories`, `product_images` (management APIs use the service client) → 500 "permission denied". Migration `20260925171000_service_role_grants.sql` grants them (+ orders/order_items select). Applied live.
+- Two seeded product images were dead Unsplash URLs (404 through `/_next/image`) — nulled/removed pending real product photography (data-level fix).
+- `overview-panel` icons were emojis from an interrupted agent — replaced with lucide-react components (design-DNA compliance).
+- NEW verification: `scripts/verify-admin-console.mjs` — drives a disposable real admin account through UI login and all 14 admin pages (EN + HE), asserting no page errors / console errors / bad responses, then deletes the account. Run: `node scripts/verify-admin-console.mjs` (requires a server at ADMIN_BASE_URL or :3105 and `.env.local`).
+
+Verification (final tree): lint / typecheck / format:check / build pass; admin smoke 14/14 pages; e2e 16/16; recovery e2e 20/20; design suite 60 combos + 14 axe scans; `verify-database.py` all migrations + tests pass.
+
+## Commerce, Inventory & Admin Platform — 2026-09-25
+
+Owner brief: evolve MIRO from brochure+admin page into a synchronized business platform — one source of truth, CEO vs admin capability split, real inventory ledgers, sales snapshots, VAT config, first-party analytics, and public catalog driven by the same data.
+
+### Database (migrations, all applied live via `npx supabase db push --linked`)
+
+- `20260925140000_commerce_foundation.sql` — products: nullable price (NULL = "price not published", never 0), lifecycle `status` (draft/active/hidden/archived; trigger keeps legacy `is_active` in sync), brand/model/tags/specifications/warranty/SEO/sort_order/purchase_cost/recommended_price/sale_price/out_of_stock_policy( inherit|keep_visible_contact|keep_visible_restock|hide_from_public )/expected_restock_date/tracking_mode(none|serial|lot)/supplier_id. New tables: `suppliers`, `product_variants` (canonical sellable entity; sku/barcode UNIQUE; one default variant per product via partial unique index; backfilled default variant per existing product from inventory_count), `stock_movements` (append-only ledger, RESTRICT FK), `product_serial_units`, `tax_rates` (seeded 18% VAT from 2025-01-01), `business_settings`, `analytics_events` (anon+auth insert with validated whitelist, admin/ceo read), view `v_product_daily_metrics` (security_invoker, granted to authenticated+service_role). `orders`/`order_items` extended with VAT/cost/name/sku snapshot columns + source channel. RPCs: `record_stock_movement`, `adjust_stock`, `record_sale` (atomic order+items+stock decrement+VAT snapshot, advisory/row locks), `set_tax_rate` (CEO), `set_business_setting` (CEO), `current_tax_rate`. audit_events gained entity_type/entity_id.
+- `20260925150000_publish_product.sql` — `publish_product`/`unpublish_product` RPCs; publishing validates names+category+≥1 active variant with SKU and barcode.
+- `20260925160000_product_image_alt.sql` — bilingual alt text on product_images.
+- `20260925161000_product_images_grant.sql` — anon SELECT grant for public galleries.
+- `20260925170000_set_default_variant.sql` — atomic advisory-locked default-variant flip.
+- DB tests: `supabase/tests/commerce_foundation.sql` (constraint/RLS/RPC/stock/sale/tax/analytics coverage).
+
+### Backend (src/)
+
+- `src/lib/permissions.ts` — explicit capability model (`can(role, capability)`); CEO: all; admin: manageCatalog/manageInventory/recordSale/viewAnalytics/viewFinance/viewUsers; **admin lacks manageUsers/manageTax/manageSettings** (owner requirement: CEO-only users control, tax, settings).
+- `src/app/api/management/_shared.ts` — shared guard HOF (same-origin on mutations, getAuthContext, capability check, service client) + `mapPostgresError` (23505→409 duplicate_sku/duplicate_barcode, no raw PG leaks).
+- New routes: `suppliers` CRUD (soft delete when referenced), `inventory` (variant list + search + low-stock filter + movement POST via RPC + adjust PATCH + `?variantId=` movement history), `variants` CRUD (never sets stock_qty), `sales` (record_sale + order history), `tax` + `settings` (CEO write guarded), `customers` (list with emails/last-seen + per-customer orders/service requests/analytics events — product vs service activity separate), `finance` (gross/net/VAT/COGS/profit/margin/discounts/inventory value+daily series, cancelled/refunded excluded from both revenue and COGS), `analytics` (totals incl. distinct sessions, per-product, per-search-term incl. no-result, per-category, daily series). Existing routes refactored onto the guard; products route writes `status` and uses the publish RPC (422 `publish_incomplete`); catalog mutations call revalidatePath for store pages.
+- `src/app/api/track` — validated anonymous analytics ingestion (same-origin, zod whitelist, session via `miro_sid`, user_id attached when logged in). Client helper `src/components/analytics/track.ts` uses sendBeacon/fetch keepalive with JSON Blob; real events only: product_view/impression/search/search_no_result/category_view/contact/phone/whatsapp clicks.
+
+### Public catalog sync
+
+- `store-data.ts` reads live products+variants+images; effective price = role price → default variant override → base price (null = unpublished). Stock aggregated from variants; low/out states; `hide_from_public` with zero stock filtered out.
+- Product card/dialog: unpublished-price message ('המחיר טרם עודכן. לקבלת מחיר ניתן ליצור איתנו קשר.'), out-of-stock policy badges/restock date, color variant chips, tracked CTAs.
+- New SSR product detail page `store/[category]/[slug]` with gallery, variants, stock badge, SEO metadata, JSON-LD (price omitted when unpublished), 404 for draft/hidden/archived.
+
+### Admin console (shared CEO/admin shell, capability-gated inside)
+
+`src/app/[locale]/(protected)/admin/layout.tsx` + `admin-nav.tsx`: Overview, Products, Inventory, Suppliers, Sales, Customers, Analytics, Finance, Users, Requests, Audit, Settings. Overview = real metrics (status counts, stock, inventory value, sales day/week/month, recent audit/stock/analytics). Products = reworked tabbed editor (Basic/Content/Media/Variants/Pricing/Publishing) on `components/management/products/*`. Inventory = movements + adjustment + receiving + replenishment recommendations. Sales = record-sale (POS-style) + history. Customers = CRM list + detail. Analytics/Finance dashboards with date ranges, real data, CSS-bar charts, empty states. Settings = tax + business settings (CEO-only writes; admin read-only) + CeoSettings for CEO. Users/Requests/Audit reuse existing components.
+
+### Architect review corrections after agent batches
+
+- Fixed broken receive modal (quantity/cost swapped), missing submitAdjust/submitOut, JSX syntax errors, invalid generateMetadata export, lint `set-state-in-effect` violations (AbortController pattern), 7 GET routes created with `new Request("")` (500s) + wrong capabilities, guard changed to enforce same-origin only on mutations (browser same-origin GETs send no Origin), store-data `product_images.url`→`image_url` (fell back to mock data → 400 images), sales RPC camelCase→snake_case item mapping (would have made every sale fail), default-variant race via new RPC, analytics unique-sessions count, effective-price precedence (default variant), JSON-LD null-price handling, `set_default_variant` wiring, mock Variant type (`isDefault?`).
+
+### Verification (all green on final state)
+
+`npm run lint`, `npm run typecheck`, `npm run format:check`, `npm run build`; `python3 scripts/verify-database.py` (12 migrations + 3 test suites PASS); e2e 16/16; recovery e2e 20/20; design suite 60 combos + 14 axe scans; route probes (anon 403 on management APIs, 403 on cross-origin POST, 200 track, 404 unknown product slug).
+
+### Deferred with reasons
+
+- Supabase Storage image uploads: still URL-based (no buckets exist); UI supports alt text/reorder. Owner decision needed to introduce Storage.
+- Serial-number management UI: `product_serial_units` table + states exist; no UI yet (track for serial products first needs receiving integration).
+- CSV exports, stock-aging dashboard, per-product analytics drill page: schema/aggregates support them; deferred to keep this increment verifiable.
+- Storefront checkout: intentionally absent (no fake cart events); sales are recorded from the management console. Old `carts` tables remain for a future real checkout.
+- `orders` storefront INSERT RLS stays service-role-only (as hardened 2026-09-21).
+
+### Legal / privacy notes
+
+- First-party analytics store a random session id (no fingerprinting); authenticated events may carry user_id for business history. Privacy policy text must cover this collection before public launch (owner/legal).
+- Finance dashboard is a managerial view — UI carries a bilingual disclaimer it is not an accounting ledger. VAT 18% seeded as configuration, CEO-changeable; historical sales keep their own rate snapshots.
+
+### Owner actions
+
+- Sign up with `kosay.gobran@gmail.com`, verify email, re-run `npx supabase db push --linked` (bootstrap migration grants CEO), then change password and add real suppliers/products/prices/stock.
+- Manually exercise: publish a product (validation on missing SKU/barcode), receive stock, record a sale, check finance/analytics dashboards after a day of real traffic.
+- Before launch: legal/privacy approval, real catalog content and photography, manual accessibility review of the new admin screens.
+
+## CEO/Admin Control Plane — 2026-09-24
+
+Owner request: a real CEO/admin interface distinct from the customer view, a visible logout button, a well-designed menu switch for CEO/admin, CEO as the only account that manages the users list (admin read-only for now), CEO-only user deletion, and `kosay.gobran@gmail.com` as the initial CEO.
+
+What changed and why:
+
+- **Header account menu**: new `src/components/layout/account-menu.tsx` replaces the weak account icon link. Signed-out users get the sign-in link; signed-in users get a premium dropdown (name, role badge, primary role-switch button — Management console for ceo/admin, worker area for worker, my account for customer — a "Switch to storefront" link and a visible Log out action). Keyboard accessible (Escape closes, focus returns, outside-click closes) and mirrored in the mobile drawer. Styles: new `.premium-account-menu*` section in `src/styles/premium.css` using theme tokens only (works in dark/medium/light, RTL-safe).
+- **Session + logout APIs**: `GET /api/auth/session` now returns `{ authenticated, role, name }` for the menu; `POST /api/auth/logout` returns JSON 200 for fetch requests (form POST still gets a 303 redirect).
+- **CEO-only user management**: migration `supabase/migrations/20260924120000_ceo_user_controls.sql` redefines `manage_account` so ALL role/status changes require an active CEO (admin is now read-only on the users list, per owner decision) and adds `delete_user_account(target)` — CEO-only, refuses self and any CEO account (CEOs only leave via the audited `delete_own_ceo_account` flow that preserves ≥1 active CEO), writes an `account_deleted` audit row. Applied to the live database via `npx supabase db push --linked`.
+- **User deletion endpoint**: `DELETE /api/management/users` (CEO-only, same-origin, RPC first then `auth.admin.deleteUser` for auth cleanup). `PATCH` now returns 403 for admins; `GET` stays available to admin+CEO.
+- **Admin console UI**: `src/components/management/users-management.tsx` (new) lists every account with email/name/role badge/status; CEOs get per-row role select, suspend/activate, and a two-step type-`DELETE` removal; admins see the identical list with a "View only" badge and no controls. The admin page (`src/app/[locale]/(protected)/admin/page.tsx`) gained a console header with role badge, "Switch to storefront" link and a working Log out form, plus the emails are merged server-side via the service role (`profiles` has no email column).
+- **Initial CEO bootstrap**: migration `supabase/migrations/20260924130000_bootstrap_ceo.sql` idempotently promotes `kosay.gobran@gmail.com` to CEO when the account exists (no-op with notice otherwise — the owner must sign up first, then re-run the migration or an existing CEO uses `add_ceo`). Nothing else grants the CEO role. Applied live. Verified read-only by `scripts/verify-bootstrap-ceo.py` (all six CEO/user functions present in the live DB; bootstrap pending owner signup).
+- Fixes during architect review: `manage_account` replacement keeps the `(uuid,text,text)` signature, so no function overload was left with old privileges; the users list merges emails from `auth.admin.listUsers` because `profiles` has no email column; the delete-confirm flow was rewritten (stale-state bug made deletion unreachable); the admin logout form posts to `/api/auth/logout?locale=…`; `roleBadge` uses `t.raw` (client-side `{role}` substitution); the quote CTA now hides at `max-width: 1199px` (it overflowed the header at 768px/200% text zoom); added missing trailing newline and i18n keys `layout.header.actions.{logout,switchToStorefront,manageAccount,workerArea,adminConsole,myAccount,userMenu,roleBadge}` (en+he). `playwright.config.ts` gained opt-in `PLAYWRIGHT_REUSE` so tests can run against an already-running server when port 3000 is occupied.
+
+Verification (all passed on the final deliverable):
+
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run build`.
+- `PLAYWRIGHT_REUSE=1 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3105 npm run test:e2e`: 16/16 passed against a fresh production build (a stale `next start` from an earlier session on port 3105 initially served outdated chunks — killed by PID and restarted; see the 2026-09-23 operational note).
+- `npx playwright test --config=playwright.recovery.config.ts`: 20/20 passed.
+- `DESIGN_BASE_URL=http://127.0.0.1:3105 node scripts/verify-design.mjs`: 60 route/viewport/language/theme combinations, 14 axe scans, all interaction and catalog checks passed.
+- `/opt/anaconda3/bin/python3 scripts/verify-bootstrap-ceo.py`: CEO functions live; bootstrap pending owner signup.
+
+Legal/privacy notes for this milestone:
+
+- User deletion permanently removes accounts (auth + profile + role rows) — hard-delete is destructive and irreversible; audit rows record actor and target. Owner/legal should confirm retention expectations before public launch.
+- Admins can view the full user list including emails (read-only) — internal PII exposure to admin role must be covered by the approved privacy policy.
+
+Remaining blockers / owner actions:
+
+- Owner: sign up with `kosay.gobran@gmail.com`, verify the email, then re-run `npx supabase db push --linked` (or have a CEO run `select add_ceo('kosay.gobran@gmail.com')`) to activate the initial CEO; change the temporary password after first login.
+- Owner: confirm the fresh-email password recovery flow on localhost.
+- Owner/legal: approve privacy, terms, accessibility and business copy; real product photography, prices and inventory replace the seeded sample catalog before launch.
+- Engineering: regenerate `src/lib/supabase/database.types.ts` if strict RPC typing is desired (`delete_user_account` is called via untyped `rpc`); run `node scripts/verify-recovery.mjs` and deployment verification when rolling out.
+- QA: manual screen-reader/keyboard/device review of the new account menu and admin console remains outstanding.
+
+## Unfinished Workspace And Storefront Work Repaired — 2026-09-23
+
+The working tree contained a large uncommitted feature set (workspace entry, role-aware header/account link, check-email page, saved products, role-based catalog pricing, admin management console with product/category/price/image CRUD, CEO settings, audit history) left mid-flight by a previous session. The production build was broken and the functionality had real bugs. This session repaired, completed and fully verified it.
+
+What changed and why:
+
+- Created the missing `src/styles/workspace.css` (imported by `src/app/[locale]/layout.tsx` but never written), unblocking the production build; it styles the compact `.workspace-entry` header link consistent with the existing icon-button treatment.
+- Gated `<SpeedInsights />` behind `process.env.VERCEL` in the locale layout; locally it requested `/_vercel/speed-insights/script.js`, which 404s and failed the repo's own "no browser errors" design-check gate. It still loads on Vercel deployments.
+- Extracted `getStoreViewer()` in `src/lib/store-data.ts` and used it on the Store and category pages. The previous per-page code called `createServerSupabaseClient()` without a try/catch, so `/store` crashed when Supabase credentials were missing — violating the project's missing-credentials fallback contract. Category pages now also apply role-based pricing and saved state consistently (they previously dropped them).
+- Fixed the saved-products toggle: the client sent `DELETE` with the product id in a JSON body while the route read it from the query string, so unsaving always failed with 400. The client now sends `?productId=...`, the route validates it as a UUID, and the product card toggles optimistically with rollback. The inline styles it introduced were moved to `sf-product-actions`/`sf-save-button` in `src/styles/storefront.css`; the invalid `text-accent` utility became `text-accent-text` (the registered token).
+- Fixed the account dashboard's saved-products join handling (PostgREST many-to-one returns an object, not an array — the products previously filtered themselves out silently) and moved its Remove button into a client component (`src/components/account/remove-saved-button.tsx`); an `onClick` handler on a host element inside a server component would have crashed render for logged-in customers.
+- Allowed admin-managed external HTTPS product images in `next.config.ts` (`images.remotePatterns` wildcard), since the dashboard renders catalog `image_url` values through `next/image`.
+- Added same-origin and email-format validation to `POST /api/auth/resend-reset` for consistency with the other cookie-based mutations.
+- Ran Prettier across the tree; it had 6 uncommitted style violations.
+
+Verification (all passed on the final deliverable):
+
+- `npm run format:check`, `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check`.
+- `PORT=3102 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3102 npm run test:e2e`: 16/16 passed.
+- `npx playwright test --config=playwright.recovery.config.ts`: 20/20 passed.
+- `DESIGN_BASE_URL=http://127.0.0.1:3105 node scripts/verify-design.mjs`: 60 route/viewport/language/theme combinations, 14 axe scans, all interaction and catalog checks passed.
+- `python3 scripts/verify-database.py`: all 7 migrations and both access/CEO test suites passed in disposable PostgreSQL (tables `saved_products` and `product_prices` with RLS are present and support the new features).
+- Route probe on the production build: public pages 200; `/account`/`/workspace`/`/admin`/`/worker` redirect to login for visitors; management APIs return 403 and the account API 401 for anonymous callers.
+
+Operational note for future agents: a `next start` production server can survive `kill` of its `npm` wrapper PID. Kill by process listings (`pkill -f 'next start'` / port check via `lsof -iTCP:<port>`) before verification servers, or a stale build silently serves tests. One mid-session design failure (mobile-nav click not navigating) was traced to exactly such a stale server, not to code.
+
+Remaining blockers / owner actions (unchanged from earlier entries):
+
+- Owner: confirm the fresh-email password recovery flow on localhost, then change the temporary CEO password after first login.
+- Owner/legal: approve privacy, terms, accessibility and business copy; real product photography, prices and inventory replace the seeded sample catalog before launch.
+- Engineering: run the live recovery check (`node scripts/verify-recovery.mjs`) and deployment verification when rolling out; the management features use server-only admin clients — keep service-role keys in ignored configuration only.
+- QA: manual screen-reader/keyboard/device review remains outstanding.
+
+## Live Localhost Recovery Allowlist Repair — 2026-09-22
+
+- The owner's manual check reproduced localhost recovery redirecting to the Vercel Site URL. Live Supabase inspection found only the bare `http://localhost:3000/auth/callback` allowed, while the application sends callback query parameters. The recovery email template correctly uses `{{ .ConfirmationURL }}`.
+- Added `http://localhost:3000/**` and `http://127.0.0.1:3000/**` to the linked project's Auth redirect allowlist through the authenticated Management API. Readback verified both additions and preservation of every existing entry, the Site URL, and the email template.
+- The actual Site URL is `https://miro-kosaygobran-afks-projects.vercel.app/`; the previous operations note identifying `miro-one-omega.vercel.app` as the Site URL was stale.
+- Verification: `node scripts/verify-recovery.mjs` passed all four live combinations (Hebrew/English × localhost/127.0.0.1), including accepted callback parameters, the visible password form, removed hash tokens, password update, new-password sign-in and old-password rejection. The disposable user was deleted. This uses real Supabase generated links without sending email; the owner's inbox/PKCE flow remains the final manual check.
+- Real development-server verification additionally reproduced a Strict Mode effect replay race: the first initialization removed the recovery hash while the second read an unfinished session. The reset component now shares one recovery promise across effect replays. Added opt-in `scripts/verify-recovery.mjs` to exercise live generated recovery links, password update/new-password login/old-password rejection in both locales on localhost and 127.0.0.1, then delete the disposable user.
+- Next.js 16 also blocked the development HMR connection on `127.0.0.1`, leaving that origin's page stuck loading. Added only `127.0.0.1` to `allowedDevOrigins`, following the installed Next.js guide, so the second allowed loopback hostname works in development too.
+- `npx playwright test --config=playwright.recovery.config.ts`: all 20 tests passed after the Strict Mode fix. `npm run lint`, `npm run build`, `npm run typecheck`, `npm run format:check` and `git diff --check`: passed; the final build restored `.env.local` rather than the test service. Initial live checks exposed the two development issues above and deleted their disposable users on failure; the final live run passed. The Homebrew Supabase executable exited 137, so authenticated inspection used the working npm CLI/Management API instead.
+- Privacy/accessibility: no new collection or UI changes; keep tokens/credentials out of logs and delete the disposable account. Existing owner/legal privacy approval and QA manual accessibility review remain launch actions.
+- Owner action after verification: request a fresh email on localhost, open it in the same browser, and confirm password change/sign-in. Previously issued links retain the previous destination. Continue broader fixes only after the owner confirms recovery works.
+
+## Password Recovery Redirect Repair — 2026-09-22
+
+- Scope: repair and verify password reset first; the owner explicitly requested a manual email check before work on other problems. Preserve the existing unrelated workspace changes.
+- Initial and resent reset emails now share the localized callback URL. Resend previously omitted `redirectTo` entirely.
+- Homepage PKCE callbacks now reach the code-exchange handler, which uses Supabase's recovery marker to select the reset page. Preserve `sb_flow_id` for the installed SDK's verifier selection.
+- Preserve the incoming Host in callback/resend URLs. The production-server test reproduced an internal `localhost` redirect from `127.0.0.1`, which discarded access to the browser's session cookies.
+- Legacy/dashboard recovery hashes landing on public pages move intact to the reset page; invalid/expired links offer an accessible retry action. The reset form requires a verified user session. The template verifier accepts `token_hash` as well as the older `token` parameter.
+- The installed SSR SDK always uses PKCE and rejects implicit callback URLs during automatic initialization. The reset page explicitly imports legacy recovery tokens with `setSession`, removes the hash, then verifies the user before displaying the form.
+- Added an isolated Supabase protocol double and browser regression suite covering initial/resend requests, both locales, password update, homepage fallback, token hashes, expired/reused links and missing browser verifiers. No test emails or real account changes are needed.
+- Final verification: `npx playwright test --config=playwright.recovery.config.ts` — all 20 tests passed; `npm run lint`, `npm run build`, `npm run typecheck`, `npm run format:check`, targeted formatting and `git diff --check` — passed. The last production build used the real `.env.local` again, not the protocol-double environment.
+- Earlier checks caught and resolved a SDK return-type mismatch, overly broad test locators, the hostname/cookie mismatch and implicit-token incompatibility. The first concurrent lint attempt raced Playwright's temporary output cleanup; the final standalone lint passed.
+- Owner action: after automated verification, request a fresh reset email and confirm the new-password page and sign-in. Engineering: live email-template/redirect allowlist and deployment are not verified by the local protocol double. Do not claim actual inbox delivery from these tests.
+- Privacy/accessibility: recovery tokens must not be logged; error/loading states use live regions and retry links are keyboard accessible. Owner/legal approval of existing account privacy/retention notices and QA manual screen-reader/device review remain launch blockers; no new data collection was added.
+- Handoff: local code only; no deployment or hosted Supabase configuration changes were made. Await the owner's fresh-email manual result before beginning the broader issue-fixing request.
 
 ## Phase 2 Authentication, Permissions And Deployment Repair — 2026-09-21
 

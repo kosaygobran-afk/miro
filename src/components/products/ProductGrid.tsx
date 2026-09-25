@@ -7,11 +7,13 @@ export function ProductGrid({
   actionLabel,
   emptyLabel = "No store items found.",
   locale = "en",
+  savedProductIds = [],
 }: {
   products: Product[];
   actionLabel?: string;
   emptyLabel?: string;
   locale?: "he" | "en";
+  savedProductIds?: string[];
 }) {
   if (!products.length) return <p className="sf-empty">{emptyLabel}</p>;
   return (
@@ -22,6 +24,7 @@ export function ProductGrid({
           product={product}
           actionLabel={actionLabel}
           locale={locale}
+          isSaved={savedProductIds.includes(product.id)}
         />
       ))}
     </div>

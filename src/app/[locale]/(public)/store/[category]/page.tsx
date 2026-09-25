@@ -9,7 +9,12 @@ import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
-import { getStoreCatalog, getFallbackStoreCatalog } from "@/lib/store-data";
+import {
+  getStoreCatalog,
+  getFallbackStoreCatalog,
+  getStoreViewer,
+} from "@/lib/store-data";
+import { CategoryViewTracker } from "@/components/analytics/CategoryViewTracker";
 
 interface CategoryPageProps {
   params: Promise<{ locale: string; category: string }>;
@@ -48,7 +53,8 @@ export default async function CategoryPage({
     await Promise.all([params, searchParams]);
   const locale = rawLocale === "en" ? "en" : "he";
   const category = normalizeCategory(rawCategory);
-  const liveCatalog = await getStoreCatalog(locale);
+  const viewer = await getStoreViewer();
+  const liveCatalog = await getStoreCatalog(locale, viewer.role);
   const catalog = liveCatalog.categories.some((item) => item.key === category)
     ? liveCatalog
     : getFallbackStoreCatalog(locale);
@@ -63,6 +69,7 @@ export default async function CategoryPage({
 
   return (
     <div className="sf-storefront">
+      <CategoryViewTracker categoryId={selected.id} locale={locale} />
       <section className="sf-category-hero">
         <div className="miro-container sf-category-hero-inner">
           <div>
@@ -96,6 +103,7 @@ export default async function CategoryPage({
             category={selected}
             locale={locale}
             initialQuery={initialQuery}
+            savedProductIds={viewer.savedProductIds}
           />
           <p className="sf-preview-note">
             <span aria-hidden="true" />

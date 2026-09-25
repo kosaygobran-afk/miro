@@ -4,9 +4,14 @@ import {
 } from "@/features/catalog/product-data";
 import { categoryLabels } from "@/features/catalog/store-copy";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import type { Product } from "@/features/catalog/product-data";
+import type {
+  Product,
+  ProductVariant,
+  ProductImage,
+} from "@/features/catalog/product-data";
 
 export type StoreCategory = {
+  id: string;
   key: string;
   label: string;
   href: string;
@@ -16,6 +21,48 @@ export type StoreCatalog = {
   categories: StoreCategory[];
   products: Product[];
 };
+
+export type UserRole = "customer" | "worker" | "admin" | "ceo" | null;
+
+export type StoreViewer = {
+  role: UserRole;
+  savedProductIds: string[];
+};
+
+export async function getStoreViewer(): Promise<StoreViewer> {
+  const empty: StoreViewer = { role: null, savedProductIds: [] };
+  try {
+    const supabase = await createServerSupabaseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return empty;
+
+    const [roleResult, savedResult] = await Promise.all([
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("saved_products")
+        .select("product_id")
+        .eq("user_id", user.id),
+    ]);
+
+    const rawRole = roleResult.data?.role;
+    const role: UserRole =
+      rawRole && ["customer", "worker", "admin", "ceo"].includes(rawRole)
+        ? rawRole
+        : null;
+    return {
+      role,
+      savedProductIds: (savedResult.data ?? []).map((row) => row.product_id),
+    };
+  } catch {
+    return empty;
+  }
+}
 
 const hebrewProductNames: Record<string, string> = {
   "camera-dome-pro": "מצלמת כיפה Pro 4K",
@@ -65,32 +112,83 @@ const hebrewDescriptions: Record<string, string> = {
   networkGear: "תשתית רשת למצלמות, נקודות גישה ומכשירים מחוברים בבית ובעסק.",
 };
 
+function normalizePrice(
+  value: number | string | null | undefined,
+): number | null {
+  if (value === null || value === undefined) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
+function computeEffectivePrice(
+  productPrice: number | null,
+  variants: ProductVariant[],
+): number | null {
+  const defaultVariant =
+    variants.find((v) => v.isDefault) ?? variants.find((v) => v.price !== null);
+  if (
+    defaultVariant &&
+    defaultVariant.price !== null &&
+    defaultVariant.price !== undefined
+  ) {
+    return defaultVariant.price;
+  }
+  return productPrice;
+}
+
+function computeStockState(
+  stockQty: number,
+  variants: ProductVariant[],
+): "in_stock" | "low" | "out" {
+  if (stockQty <= 0) return "out";
+  const maxThreshold = Math.max(
+    0,
+    ...variants.map((v) => v.lowStockThreshold ?? 0),
+  );
+  if (maxThreshold > 0 && stockQty <= maxThreshold) return "low";
+  return "in_stock";
+}
+
+function shouldHideFromPublic(
+  policy: Product["outOfStockPolicy"],
+  stockQty: number,
+): boolean {
+  return policy === "hide_from_public" && stockQty <= 0;
+}
+
 export function getFallbackStoreCatalog(locale: "he" | "en"): StoreCatalog {
   return {
     categories: productCategories.map((category) => ({
+      id: category.key,
       key: category.key,
       label: categoryLabels[category.key]?.[locale] ?? category.label,
       href: `/store/${category.key}`,
     })),
-    products: mockProducts.map((product) => ({
-      ...product,
-      name:
-        locale === "he"
-          ? (hebrewProductNames[product.id] ?? product.name)
-          : product.name,
-      description:
-        locale === "he"
-          ? (hebrewDescriptions[product.category] ?? product.description)
-          : product.description.replace(", lifetime warranty", ""),
-      categoryLabel:
-        categoryLabels[product.category]?.[locale] ?? product.category,
-      badge: product.badge
-        ? locale === "he"
-          ? "מהקולקציה"
-          : "Collection pick"
-        : undefined,
-      isFeatured: Boolean(product.badge),
-    })),
+    products: mockProducts
+      .filter(
+        (product) =>
+          !shouldHideFromPublic(product.outOfStockPolicy, product.stockQty),
+      )
+      .map((product) => ({
+        ...product,
+        name:
+          locale === "he"
+            ? (hebrewProductNames[product.id] ?? product.name)
+            : product.name,
+        description:
+          locale === "he"
+            ? (hebrewDescriptions[product.category] ?? product.description)
+            : product.description.replace(", lifetime warranty", ""),
+        categoryLabel:
+          categoryLabels[product.category]?.[locale] ?? product.category,
+        badge: product.badge
+          ? locale === "he"
+            ? "מהקולקציה"
+            : "Collection pick"
+          : undefined,
+        isFeatured: Boolean(product.badge),
+        rolePrice: undefined,
+      })),
   };
 }
 
@@ -136,43 +234,109 @@ function getProductIcon(categoryKey: string) {
   return iconMap[categoryKey] ?? "shieldCheck";
 }
 
-function normalizePrice(value: number | string | null | undefined) {
-  const numeric = Number(value ?? 0);
-  return Number.isFinite(numeric) ? numeric : 0;
-}
-
 export async function getStoreCatalog(
   locale: "he" | "en",
+  role: UserRole = null,
 ): Promise<StoreCatalog> {
   try {
     const supabase = await createServerSupabaseClient();
 
-    const [categoriesResult, productsResult] = await Promise.all([
-      supabase
-        .from("categories")
-        .select("id, slug, name_he, name_en, sort_order")
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("products")
-        .select(
-          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured",
-        )
-        .eq("is_active", true)
-        .order("is_featured", { ascending: false })
-        .order("created_at", { ascending: false }),
-    ]);
+    const [categoriesResult, productsResult, variantsResult, imagesResult] =
+      await Promise.all([
+        supabase
+          .from("categories")
+          .select("id, slug, name_he, name_en, sort_order")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("products")
+          .select(
+            "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order",
+          )
+          .eq("status", "active")
+          .order("is_featured", { ascending: false })
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("product_variants")
+          .select(
+            "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, is_default, is_active, stock_qty, low_stock_threshold",
+          )
+          .eq("is_active", true),
+        supabase
+          .from("product_images")
+          .select("id, product_id, image_url, alt_he, alt_en, sort_order")
+          .order("sort_order", { ascending: true }),
+      ]);
 
-    if (categoriesResult.error || productsResult.error) {
+    if (
+      categoriesResult.error ||
+      productsResult.error ||
+      variantsResult.error ||
+      imagesResult.error
+    ) {
       throw new Error(
         categoriesResult.error?.message ??
           productsResult.error?.message ??
+          variantsResult.error?.message ??
+          imagesResult.error?.message ??
           "Catalog fetch failed.",
       );
+    }
+
+    const variantsByProduct = new Map<string, ProductVariant[]>();
+    for (const variant of variantsResult.data ?? []) {
+      const list = variantsByProduct.get(variant.product_id) ?? [];
+      list.push({
+        id: variant.id,
+        sku: variant.sku,
+        colorHe: variant.color_he ?? "",
+        colorEn: variant.color_en ?? "",
+        colorHex: variant.color_hex ?? "#cccccc",
+        price:
+          variant.price_override !== null &&
+          variant.price_override !== undefined
+            ? Number(variant.price_override)
+            : null,
+        stockQty: variant.stock_qty ?? 0,
+        lowStockThreshold: variant.low_stock_threshold ?? 0,
+        isDefault: variant.is_default ?? false,
+      });
+      variantsByProduct.set(variant.product_id, list);
+    }
+
+    const imagesByProduct = new Map<string, ProductImage[]>();
+    for (const image of imagesResult.data ?? []) {
+      const list = imagesByProduct.get(image.product_id) ?? [];
+      list.push({
+        id: image.id,
+        url: image.image_url,
+        altHe: image.alt_he ?? undefined,
+        altEn: image.alt_en ?? undefined,
+        sortOrder: image.sort_order ?? 0,
+      });
+      imagesByProduct.set(image.product_id, list);
+    }
+
+    // Fetch role-based prices if role is provided
+    let rolePrices: Map<string, number> = new Map();
+    if (role) {
+      const { data: pricesData } = await supabase
+        .from("product_prices")
+        .select("product_id, price")
+        .eq("role", role);
+
+      if (pricesData) {
+        rolePrices = new Map(
+          pricesData.map((p) => [p.product_id, Number(p.price)]),
+        );
+      }
     }
 
     const categories = (categoriesResult.data ?? []).map((category) => {
       const key = getCategoryKeyFromSlug(category.slug as string);
       return {
+        id: category.id as string,
         key,
         label: mapCategoryLabel(
           locale,
@@ -182,57 +346,117 @@ export async function getStoreCatalog(
       };
     });
 
-    const products = (productsResult.data ?? []).map((product) => ({
-      id: product.id as string,
-      name:
-        locale === "he"
-          ? (product.name_he ?? product.name_en ?? "Product")
-          : (product.name_en ?? product.name_he ?? "Product"),
-      description:
-        locale === "he"
-          ? (product.short_description_he ??
-            product.description_he ??
-            product.short_description_en ??
-            product.description_en ??
-            "")
-          : (product.short_description_en ??
-            product.description_en ??
-            product.short_description_he ??
-            product.description_he ??
-            ""),
-      priceIls: normalizePrice(product.price),
-      category: getCategoryKeyFromSlug(
-        (product.category_id
-          ? (categoriesResult.data ?? []).find(
-              (category) => category.id === product.category_id,
-            )?.slug
-          : null) ?? "cameras",
-      ),
-      categoryLabel: categories.find(
-        (category) =>
-          category.key ===
-          getCategoryKeyFromSlug(
-            (categoriesResult.data ?? []).find(
-              (row) => row.id === product.category_id,
-            )?.slug ?? "cameras",
-          ),
-      )?.label,
-      badge: product.is_featured
-        ? locale === "he"
-          ? "מהקולקציה"
-          : "Collection pick"
-        : undefined,
-      icon: getProductIcon(
-        getCategoryKeyFromSlug(
-          (product.category_id
-            ? (categoriesResult.data ?? []).find(
-                (category) => category.id === product.category_id,
-              )?.slug
-            : null) ?? "cameras",
-        ),
-      ),
-      isFeatured: Boolean(product.is_featured),
-    }));
+    const categoryMap = new Map(
+      (categoriesResult.data ?? []).map((c) => [c.id, c.slug]),
+    );
+
+    const products = (productsResult.data ?? [])
+      .filter((product) => {
+        const productVariants = variantsByProduct.get(product.id) ?? [];
+        const stockQty = productVariants.reduce(
+          (sum, v) => sum + v.stockQty,
+          0,
+        );
+        const policy = product.out_of_stock_policy ?? "inherit";
+        return !shouldHideFromPublic(policy, stockQty);
+      })
+      .map((product) => {
+        const productVariants = variantsByProduct.get(product.id) ?? [];
+        const productImages = imagesByProduct.get(product.id) ?? [];
+        const productPrice = normalizePrice(product.price);
+        const effectivePrice = computeEffectivePrice(
+          productPrice,
+          productVariants,
+        );
+        const rolePrice = rolePrices.get(product.id);
+        const finalPrice = rolePrice !== undefined ? rolePrice : effectivePrice;
+        const stockQty = productVariants.reduce(
+          (sum, v) => sum + v.stockQty,
+          0,
+        );
+        const stockState = computeStockState(stockQty, productVariants);
+        const categorySlug = categoryMap.get(product.category_id) ?? "cameras";
+        const categoryKey = getCategoryKeyFromSlug(categorySlug);
+
+        return {
+          id: product.id as string,
+          name:
+            locale === "he"
+              ? (product.name_he ?? product.name_en ?? "Product")
+              : (product.name_en ?? product.name_he ?? "Product"),
+          description:
+            locale === "he"
+              ? (product.short_description_he ??
+                product.description_he ??
+                product.short_description_en ??
+                product.description_en ??
+                "")
+              : (product.short_description_en ??
+                product.description_en ??
+                product.short_description_he ??
+                product.description_he ??
+                ""),
+          shortDescription:
+            locale === "he"
+              ? (product.short_description_he ??
+                product.short_description_en ??
+                undefined)
+              : (product.short_description_en ??
+                product.short_description_he ??
+                undefined),
+          priceIls: finalPrice,
+          category: categoryKey,
+          categorySlug: categoryKey,
+          categoryLabel: categories.find((c) => c.key === categoryKey)?.label,
+          badge: product.is_featured
+            ? locale === "he"
+              ? "מהקולקציה"
+              : "Collection pick"
+            : undefined,
+          icon: getProductIcon(categoryKey),
+          isFeatured: Boolean(product.is_featured),
+          rolePrice: rolePrice,
+          variants: productVariants,
+          stockQty,
+          stockState,
+          outOfStockPolicy: product.out_of_stock_policy ?? "inherit",
+          expectedRestockDate: product.expected_restock_date ?? null,
+          slug: product.slug ?? product.id,
+          brand: product.brand ?? undefined,
+          modelNumber: product.model_number ?? undefined,
+          specifications: product.specifications ?? undefined,
+          warranty:
+            locale === "he"
+              ? (product.warranty_he ?? product.warranty_en ?? undefined)
+              : (product.warranty_en ?? product.warranty_he ?? undefined),
+          images:
+            productImages.length > 0
+              ? productImages
+              : product.image_url
+                ? [
+                    {
+                      id: `${product.id}-main`,
+                      url: product.image_url,
+                      altHe: undefined,
+                      altEn: undefined,
+                      sortOrder: 0,
+                    },
+                  ]
+                : [],
+          seoTitle:
+            locale === "he"
+              ? (product.seo_title_he ?? product.seo_title_en ?? undefined)
+              : (product.seo_title_en ?? product.seo_title_he ?? undefined),
+          seoDescription:
+            locale === "he"
+              ? (product.seo_description_he ??
+                product.seo_description_en ??
+                undefined)
+              : (product.seo_description_en ??
+                product.seo_description_he ??
+                undefined),
+        };
+      });
 
     // Keep categories and products from the same source; mixed fallback data can
     // otherwise produce empty category pages when the live catalog is unseeded.

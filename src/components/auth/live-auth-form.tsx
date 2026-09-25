@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
+import { passwordRecoveryRedirect } from "@/lib/password-recovery";
 
 export function LiveAuthForm({
   locale,
@@ -11,12 +12,14 @@ export function LiveAuthForm({
   fields,
   submitLabel,
   initialNotice,
+  userEmail,
 }: {
   locale: Locale;
   mode: "login" | "signup" | "forgot" | "reset";
   fields: Array<{ name: string; label: string; type: string }>;
   submitLabel: string;
   initialNotice: string;
+  userEmail?: string;
 }) {
   const configured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -74,8 +77,7 @@ export function LiveAuthForm({
             ? "התחברת בהצלחה. מעביר אותך לחשבון..."
             : "Signed in successfully. Redirecting to your account...",
         );
-        router.push(withLocale(locale, "account"));
-        router.refresh();
+        window.location.assign(withLocale(locale, "workspace"));
         return;
       }
 
@@ -132,7 +134,11 @@ export function LiveAuthForm({
           return;
         }
 
-        const redirectTo = `${window.location.origin}/auth/callback?next=/${locale}/reset-password`;
+        // Provide redirectTo so the recovery link goes to our callback with next=/reset-password
+        const redirectTo = passwordRecoveryRedirect(
+          window.location.origin,
+          locale,
+        );
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo,
         });
@@ -142,10 +148,9 @@ export function LiveAuthForm({
           return;
         }
 
-        setMessage(
-          locale === "he"
-            ? "הקישור לשחזור סיסמה נשלח למייל שלך."
-            : "A password reset link has been sent to your email.",
+        // Redirect to check-email page with email in query params
+        router.push(
+          withLocale(locale, `check-email?email=${encodeURIComponent(email)}`),
         );
         return;
       }
@@ -174,7 +179,15 @@ export function LiveAuthForm({
           ? "הסיסמה עודכנה בהצלחה."
           : "Password updated successfully.",
       );
-      router.push(withLocale(locale, "login"));
+
+      // Sign out after password reset so user can log in with new password
+      await supabase.auth.signOut();
+
+      // Redirect to login with email pre-filled
+      const loginUrl = userEmail
+        ? withLocale(locale, `login?email=${encodeURIComponent(userEmail)}`)
+        : withLocale(locale, "login");
+      router.push(loginUrl);
     } catch (error) {
       setMessage(
         error instanceof Error

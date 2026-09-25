@@ -5,6 +5,8 @@ const isCI = Boolean(process.env.CI);
 
 export default defineConfig({
   testDir: "./tests",
+  // Requires the isolated Supabase double in playwright.recovery.config.ts.
+  testIgnore: ["**/password-recovery.spec.ts"],
   timeout: 30_000,
   expect: {
     timeout: 5_000,
@@ -20,7 +22,7 @@ export default defineConfig({
   webServer: {
     command: "npm run build && npm run start",
     url: baseURL,
-    reuseExistingServer: false,
+    reuseExistingServer: Boolean(process.env.PLAYWRIGHT_REUSE),
     timeout: 120_000,
   },
   projects: [

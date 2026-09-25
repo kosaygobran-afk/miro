@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { withLocale, type Locale } from "@/lib/i18n";
+import { roleHome, type AppRole, type AccountStatus } from "@/lib/roles";
 
-export type AppRole = "customer" | "worker" | "admin" | "ceo";
-export type AccountStatus = "active" | "suspended" | "blocked";
+export type { AppRole, AccountStatus } from "@/lib/roles";
 
 export type AuthContext = {
   user: User;
@@ -100,7 +100,7 @@ export async function requireAuth(locale: Locale) {
 export async function requireRole(locale: Locale, roles: AppRole[]) {
   const context = await requireAuth(locale);
   if (!roles.includes(context.role)) {
-    redirect(withLocale(locale, "account"));
+    redirect(withLocale(locale, roleHome(context.role)));
   }
   return context;
 }
@@ -110,5 +110,9 @@ export function canManageAccounts(role: AppRole) {
 }
 
 export function canControlAdmins(role: AppRole) {
+  return role === "ceo";
+}
+
+export function isCeo(role: AppRole) {
   return role === "ceo";
 }

@@ -8,6 +8,9 @@ import "@/styles/experience.css";
 import "@/styles/storefront.css";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
+import { RecoveryRedirect } from "@/components/auth/recovery-redirect";
+import { SiteChrome } from "@/components/layout/site-chrome";
+import "@/styles/workspace.css";
 import {
   getDirection,
   getMessages,
@@ -75,6 +78,7 @@ export default async function LocaleLayout({
     >
       <head>
         <script
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{
             __html:
               "(()=>{try{const k='miro-theme';const themes=['dark','medium','light'];const saved=localStorage.getItem(k);const prefersDark=matchMedia('(prefers-color-scheme: dark)').matches;const prefersLight=matchMedia('(prefers-color-scheme: light)').matches;let preferred=saved&&themes.includes(saved)?saved:(prefersDark?'dark':(prefersLight?'light':'medium'));document.documentElement.dataset.theme=preferred;}catch{document.documentElement.dataset.theme='dark';}})();",
@@ -82,15 +86,20 @@ export default async function LocaleLayout({
         />
       </head>
       <body>
+        <RecoveryRedirect locale={locale} />
         <a className="premium-skip-link" href="#main-content">
           {locale === "he" ? "דילוג לתוכן הראשי" : "Skip to main content"}
         </a>
-        <Header locale={locale} />
+        <SiteChrome>
+          <Header locale={locale} />
+        </SiteChrome>
         <main id="main-content" tabIndex={-1} className="miro-main">
           {children}
         </main>
-        <Footer locale={locale} />
-        <SpeedInsights />
+        <SiteChrome>
+          <Footer locale={locale} />
+        </SiteChrome>
+        {process.env.VERCEL ? <SpeedInsights /> : null}
       </body>
     </html>
   );

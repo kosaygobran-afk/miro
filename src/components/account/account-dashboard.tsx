@@ -1,10 +1,13 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Children } from "react";
 import { AccountForms } from "./account-forms";
+import { RemoveSavedButton } from "./remove-saved-button";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { type AuthContext } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { withLocale, type Locale } from "@/lib/i18n";
+import { roleHome } from "@/lib/roles";
 
 export async function AccountDashboard({
   locale,
@@ -16,8 +19,9 @@ export async function AccountDashboard({
   const supabase = await createServerSupabaseClient();
   const [
     { data: orders, error: orderError },
-    { data: saved, error: savedError },
+    { data: savedProducts, error: savedError },
     { data: requests, error: requestError },
+    { data: invoices, error: invoiceError },
   ] = await Promise.all([
     supabase
       .from("orders")
@@ -27,7 +31,28 @@ export async function AccountDashboard({
       .limit(10),
     supabase
       .from("saved_products")
-      .select("product_id, created_at")
+      .select(
+        `
+        product_id,
+        created_at,
+        products (
+          id,
+          name_he,
+          name_en,
+          short_description_he,
+          short_description_en,
+          price,
+          image_url,
+          is_featured,
+          category_id,
+          categories (
+            slug,
+            name_he,
+            name_en
+          )
+        )
+      `,
+      )
       .eq("user_id", context.user.id)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -35,6 +60,14 @@ export async function AccountDashboard({
       .from("service_requests")
       .select("id, service_id, status, created_at")
       .eq("customer_id", context.user.id)
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("invoices")
+      .select(
+        "id, invoice_number, status, total, currency, issued_at, created_at",
+      )
+      .eq("user_id", context.user.id)
       .order("created_at", { ascending: false })
       .limit(10),
   ]);
@@ -45,6 +78,45 @@ export async function AccountDashboard({
           context.role
         ]
       : context.role;
+
+  // Format saved products with locale-appropriate names. PostgREST returns the
+  // many-to-one join as a single object, but tolerate an array shape as well.
+  const formattedSavedProducts = (savedProducts ?? [])
+    .map((sp) => {
+      type SavedProduct = {
+        id: string;
+        name_he: string | null;
+        name_en: string | null;
+        short_description_he: string | null;
+        short_description_en: string | null;
+        price: number | null;
+        image_url: string | null;
+        is_featured: boolean;
+        category_id: string | null;
+        categories:
+          | { slug: string; name_he: string; name_en: string }
+          | Array<{ slug: string; name_he: string; name_en: string }>
+          | null;
+      };
+      const joined = sp.products as unknown as SavedProduct | SavedProduct[];
+      const product = Array.isArray(joined) ? joined[0] : joined;
+      if (!product) return null;
+      const category = Array.isArray(product.categories)
+        ? product.categories[0]
+        : product.categories;
+      return {
+        productId: sp.product_id,
+        savedAt: sp.created_at,
+        name:
+          locale === "he"
+            ? (product.name_he ?? product.name_en ?? "")
+            : (product.name_en ?? product.name_he ?? ""),
+        price: product.price,
+        imageUrl: product.image_url,
+        category: category?.slug ?? "",
+      };
+    })
+    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   return (
     <section className="miro-section">
@@ -65,7 +137,7 @@ export async function AccountDashboard({
           />
         </div>
 
-        {(orderError || savedError || requestError) && (
+        {(orderError || savedError || requestError || invoiceError) && (
           <p role="status">
             {locale === "he"
               ? "חלק מנתוני החשבון אינם זמינים כרגע."
@@ -82,26 +154,33 @@ export async function AccountDashboard({
           context.role === "worker") && (
           <Link
             className="miro-button miro-button-secondary"
-            href={withLocale(
-              locale,
-              context.role === "worker" ? "worker" : "admin",
-            )}
+            href={withLocale(locale, roleHome(context.role))}
           >
-            {locale === "he" ? "סביבת עבודה" : "Workspace"}
+            {context.role === "ceo"
+              ? locale === "he"
+                ? "פתיחת לוח המנכ״ל"
+                : "Open CEO dashboard"
+              : locale === "he"
+                ? "פתיחת סביבת העבודה"
+                : "Open workspace"}
           </Link>
         )}
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-4">
           <SummaryCard
             title={locale === "he" ? "רכישות" : "Purchases"}
             value={orders?.length ?? 0}
           />
           <SummaryCard
             title={locale === "he" ? "שמורים לקנייה" : "Saved products"}
-            value={saved?.length ?? 0}
+            value={savedProducts?.length ?? 0}
           />
           <SummaryCard
             title={locale === "he" ? "פניות שירות" : "Service requests"}
             value={requests?.length ?? 0}
+          />
+          <SummaryCard
+            title={locale === "he" ? "חשבוניות" : "Invoices"}
+            value={invoices?.length ?? 0}
           />
         </div>
 
@@ -139,6 +218,98 @@ export async function AccountDashboard({
             ))}
           </HistoryPanel>
         </div>
+
+        {/* Saved Products Panel */}
+        {formattedSavedProducts.length > 0 && (
+          <div className="miro-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-black">
+                {locale === "he" ? "מוצרים שמורים" : "Saved Products"}
+              </h2>
+              <Link
+                className="miro-button miro-button-secondary text-sm"
+                href={withLocale(locale, "store")}
+              >
+                {locale === "he" ? "המשך קנייה" : "Continue shopping"}
+              </Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {formattedSavedProducts.map((item) => (
+                <article
+                  key={item.productId}
+                  className="miro-card p-4 flex flex-col"
+                >
+                  <div className="aspect-video bg-surface-muted rounded-lg overflow-hidden relative mb-3">
+                    {item.imageUrl && (
+                      <Image
+                        src={item.imageUrl}
+                        alt={item.name}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-1">
+                    {item.category}
+                  </p>
+                  <h3 className="font-bold text-sm mb-2 line-clamp-1">
+                    {item.name}
+                  </h3>
+                  <div className="mt-auto flex items-center justify-between">
+                    <span className="text-lg font-black">
+                      {item.price
+                        ? new Intl.NumberFormat(
+                            locale === "he" ? "he-IL" : "en-IL",
+                            {
+                              style: "currency",
+                              currency: "ILS",
+                              maximumFractionDigits: 0,
+                            },
+                          ).format(item.price)
+                        : locale === "he"
+                          ? "לפי הצעה"
+                          : "Price on request"}
+                    </span>
+                    <RemoveSavedButton
+                      productId={item.productId}
+                      label={locale === "he" ? "הסר" : "Remove"}
+                    />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Invoices Panel */}
+        {invoices && invoices.length > 0 && (
+          <div className="miro-card p-6">
+            <h2 className="text-xl font-black mb-4">
+              {locale === "he" ? "חשבוניות" : "Invoices"}
+            </h2>
+            <ul className="space-y-2">
+              {invoices.map((invoice) => (
+                <li
+                  key={invoice.id}
+                  className="flex justify-between items-center border-b border-border-subtle py-3 text-sm"
+                >
+                  <div>
+                    <span className="font-medium">
+                      {invoice.invoice_number}
+                    </span>
+                    <span className="ml-3 px-2 py-0.5 text-xs bg-surface-muted rounded">
+                      {invoice.status}
+                    </span>
+                  </div>
+                  <span className="font-black">
+                    {invoice.total} {invoice.currency}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="miro-card flex flex-wrap items-center justify-between gap-4 p-6">
           <div>

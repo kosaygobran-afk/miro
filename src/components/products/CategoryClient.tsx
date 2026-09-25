@@ -8,11 +8,13 @@ export function CategoryClient({
   category,
   locale,
   initialQuery = "",
+  savedProductIds = [],
 }: {
   products: Product[];
   category: { key: string; label: string };
   locale: "he" | "en";
   initialQuery?: string;
+  savedProductIds?: string[];
 }) {
   return (
     <ProductsClient
@@ -21,6 +23,7 @@ export function CategoryClient({
       fixedCategory={category.key}
       locale={locale}
       initialQuery={initialQuery}
+      savedProductIds={savedProductIds}
     />
   );
 }

@@ -26,7 +26,15 @@
         "languageSwitch": "EN",
         "themeToggle": "החלפת מצב צבע",
         "openMenu": "פתיחת תפריט",
-        "closeMenu": "סגירת תפריט"
+        "closeMenu": "סגירת תפריט",
+        "logout": "התנתקות",
+        "switchToStorefront": "מעבר לחנות",
+        "manageAccount": "ניהול חשבון",
+        "workerArea": "אזור עובדים",
+        "adminConsole": "קונסולת ניהול",
+        "myAccount": "החשבון שלי",
+        "userMenu": "תפריט משתמש",
+        "roleBadge": "תפקיד: {role}"
       }
     },
     "footer": {
@@ -114,6 +122,10 @@
     "resetPassword": {
       "title": "הגדרת סיסמה חדשה",
       "description": "עמוד הגדרת סיסמה שמוכן לשלב אימות עתידי."
+    },
+    "checkEmail": {
+      "title": "בדוק את הדוא״ל שלך",
+      "description": "בדוק את הדוא״ל שלך לקבלת קישור לאיפוס סיסמה."
     }
   },
   "pages": {
@@ -236,6 +248,19 @@
           "confirmPassword": "אישור סיסמה חדשה",
           "submit": "שמירת סיסמה"
         }
+      },
+      "checkEmail": {
+        "title": "בדוק את הדוא״ל שלך",
+        "subtitle": "שלחנו קישור לאיפוס סיסמה לתיבת הדואר שלך.",
+        "steps": {
+          "inbox": "בדוק את תיבת הדואר הנכנס",
+          "spam": "בדוק גם תיקיית ספאם/זבל",
+          "click": "לחץ על הקישור במייל"
+        },
+        "resend": "שלח שוב",
+        "differentEmail": "הזן כתובת אחרת",
+        "backToLogin": "חזור להתחברות",
+        "sentAgain": "נשלח שוב בהצלחה. בדוק את תיבת הדואר שלך."
       }
     },
     "protected": {
