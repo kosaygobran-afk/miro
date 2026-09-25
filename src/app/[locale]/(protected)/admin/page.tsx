@@ -12,7 +12,36 @@ export default async function AdminOverviewPage({
 }) {
   const { locale } = await params;
   const safeLocale = (isLocale(locale) ? locale : "he") as Locale;
-  const admin = createAdminClient();
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch (error) {
+    console.warn("Failed to create Supabase admin client:", error);
+    admin = null;
+  }
+
+  if (!admin) {
+    // Return a fallback page with empty data when admin client is not available (e.g., during build without SUPABASE_SERVICE_ROLE_KEY)
+    return (
+      <OverviewPanel
+        locale={safeLocale}
+        stats={{
+          products: { active: 0, draft: 0, archived: 0 },
+          lowStockCount: 0,
+          outOfStockCount: 0,
+          inventoryUnits: 0,
+          inventoryValue: 0,
+          salesToday: { revenue: 0, net: 0, vat: 0 },
+          salesWeek: { revenue: 0, net: 0, vat: 0 },
+          salesMonth: { revenue: 0, net: 0, vat: 0 },
+          analytics: { product_view: 0, product_search: 0, product_inquiry: 0 },
+        }}
+        recentAuditEvents={[]}
+        recentStockMovements={[]}
+        hasErrors={false}
+      />
+    );
+  }
 
   // Pre-compute date boundaries to avoid impure Date.now() in render
   const now = new Date();
