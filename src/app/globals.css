@@ -21,6 +21,10 @@
   --secondary-accent: #69e1d3;
   --success-text: #7fe5a2;
   --error-text: #ff9a9a;
+  --badge-admin: #c084fc;
+  --badge-worker: #60a5fa;
+  --badge-customer: #4ade80;
+  --badge-suspended: #fbbf24;
   --hero-glow: rgba(242, 194, 29, 0.22);
   --header-surface: rgba(9, 12, 15, 0.82);
   --header-surface-strong: rgba(12, 16, 19, 0.92);
@@ -55,6 +59,10 @@
   --secondary-accent: #0f6f69;
   --success-text: #176a3a;
   --error-text: #ba2a2a;
+  --badge-admin: #7e22ce;
+  --badge-worker: #1d4ed8;
+  --badge-customer: #15803d;
+  --badge-suspended: #b45309;
   --hero-glow: rgba(242, 194, 29, 0.12);
   --header-surface: rgba(247, 249, 250, 0.78);
   --header-surface-strong: rgba(255, 255, 255, 0.9);
@@ -89,6 +97,10 @@
   --secondary-accent: #0d6d64;
   --success-text: #0d6f3d;
   --error-text: #b12323;
+  --badge-admin: #7e22ce;
+  --badge-worker: #1d4ed8;
+  --badge-customer: #15803d;
+  --badge-suspended: #92400e;
   --hero-glow: rgba(242, 194, 29, 0.14);
   --header-surface: rgba(255, 255, 255, 0.84);
   --header-surface-strong: rgba(255, 255, 255, 0.96);

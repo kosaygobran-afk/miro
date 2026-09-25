@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { LiveAuthForm } from "@/components/auth/live-auth-form";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { LoginClient } from "./login-client";
 
 export async function generateMetadata({
   params,
@@ -22,66 +22,25 @@ export async function generateMetadata({
 
 export default async function LoginPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ email?: string }>;
 }) {
   const { locale: rawLocale } = await params;
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
+  const { email } = await searchParams;
   const t = await getTranslations({ locale, namespace: "pages.auth" });
 
-  return (
-    <AuthShell
-      title={t("login.title")}
-      subtitle={t("login.subtitle")}
-      noticeTitle={t("noticeTitle")}
-    >
-      <LiveAuthForm
-        locale={locale}
-        mode="login"
-        fields={[
-          { name: "email", label: t("login.form.email"), type: "email" },
-          {
-            name: "password",
-            label: t("login.form.password"),
-            type: "password",
-          },
-        ]}
-        submitLabel={t("login.form.submit")}
-        initialNotice={
-          locale === "he"
-            ? "התחברו באופן מאובטח לחשבון שלכם."
-            : "Sign in securely to your account."
-        }
-      />
-      <div className="mt-4 flex justify-between gap-3 text-sm">
-        <Link
-          className="text-accent-text hover:underline"
-          href={withLocale(locale, "forgot-password")}
-        >
-          {t("login.form.forgotPassword")}
-        </Link>
-        <Link
-          className="text-accent-text hover:underline"
-          href={withLocale(locale, "signup")}
-        >
-          {t("signup.title")}
-        </Link>
-      </div>
-    </AuthShell>
-  );
-}
+  const noticeTitle = t("noticeTitle");
+  const loginTitle = t("login.title");
+  const loginSubtitle = t("login.subtitle");
+  const emailLabel = t("login.form.email");
+  const passwordLabel = t("login.form.password");
+  const submitLabel = t("login.form.submit");
+  const forgotPasswordLabel = t("login.form.forgotPassword");
+  const signupTitle = t("signup.title");
 
-function AuthShell({
-  title,
-  subtitle,
-  noticeTitle,
-  children,
-}: {
-  title: string;
-  subtitle: string;
-  noticeTitle: string;
-  children: React.ReactNode;
-}) {
   return (
     <section className="miro-section">
       <div className="miro-container max-w-md">
@@ -89,9 +48,29 @@ function AuthShell({
           <p className="mb-3 text-sm font-black uppercase tracking-[0.24em] text-accent-text">
             {noticeTitle}
           </p>
-          <h1 className="text-3xl font-black">{title}</h1>
-          <p className="mb-6 mt-2 text-muted-foreground">{subtitle}</p>
-          {children}
+          <h1 className="text-3xl font-black">{loginTitle}</h1>
+          <p className="mb-6 mt-2 text-muted-foreground">{loginSubtitle}</p>
+          <LoginClient
+            locale={locale}
+            prefilledEmail={email}
+            emailLabel={emailLabel}
+            passwordLabel={passwordLabel}
+            submitLabel={submitLabel}
+          />
+          <div className="mt-4 flex justify-between gap-3 text-sm">
+            <Link
+              className="text-accent-text hover:underline"
+              href={withLocale(locale, "forgot-password")}
+            >
+              {forgotPasswordLabel}
+            </Link>
+            <Link
+              className="text-accent-text hover:underline"
+              href={withLocale(locale, "signup")}
+            >
+              {signupTitle}
+            </Link>
+          </div>
         </div>
       </div>
     </section>

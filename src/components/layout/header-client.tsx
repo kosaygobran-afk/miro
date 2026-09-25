@@ -13,12 +13,12 @@ import {
   ShieldCheck,
   Sun,
   SunMoon,
-  UserRound,
   X,
 } from "lucide-react";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
 import { Brand } from "@/components/layout/brand";
+import { AccountMenu } from "@/components/layout/account-menu";
 
 export type HeaderLabels = {
   logo: string;
@@ -41,6 +41,14 @@ export type HeaderLabels = {
     themeToggle: string;
     openMenu: string;
     closeMenu: string;
+    logout: string;
+    switchToStorefront: string;
+    manageAccount: string;
+    workerArea: string;
+    adminConsole: string;
+    myAccount: string;
+    userMenu: string;
+    roleBadge: string;
   };
   products: {
     cameras: string;
@@ -55,6 +63,7 @@ export type HeaderLabels = {
 type ThemeMode = "dark" | "medium" | "light";
 
 function subscribeTheme(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
   window.addEventListener("miro-theme-change", callback);
   window.addEventListener("storage", callback);
   return () => {
@@ -63,6 +72,7 @@ function subscribeTheme(callback: () => void) {
   };
 }
 function readTheme(): ThemeMode {
+  if (typeof document === "undefined") return "dark";
   const theme = document.documentElement.dataset.theme;
   return theme === "light" || theme === "medium" ? theme : "dark";
 }
@@ -148,13 +158,19 @@ export function HeaderClient({
   }, [open, productsOpen]);
 
   function chooseTheme(theme: ThemeMode) {
-    document.documentElement.setAttribute("data-theme", theme);
+    if (typeof document !== "undefined") {
+      document.documentElement.setAttribute("data-theme", theme);
+    }
     try {
-      localStorage.setItem("miro-theme", theme);
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("miro-theme", theme);
+      }
     } catch {
       /* Works without browser storage. */
     }
-    window.dispatchEvent(new Event("miro-theme-change"));
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event("miro-theme-change"));
+    }
   }
   function closeNavigation() {
     setOpen(false);
@@ -253,7 +269,7 @@ export function HeaderClient({
 
   return (
     <>
-      <div className="premium-topbar">
+      <div className="premium-topbar" suppressHydrationWarning>
         <div className="miro-container premium-topbar-inner">
           <span>
             <ShieldCheck size={13} aria-hidden="true" />
@@ -270,7 +286,10 @@ export function HeaderClient({
           </Link>
         </div>
       </div>
-      <header className="miro-site-header premium-header">
+      <header
+        className="miro-site-header premium-header"
+        suppressHydrationWarning
+      >
         <div className="miro-container premium-header-inner">
           <Link
             href={withLocale(locale)}
@@ -292,13 +311,21 @@ export function HeaderClient({
               {labels.actions.requestQuote}
               <Arrow size={16} aria-hidden="true" />
             </Link>
-            <Link
-              href={withLocale(locale, "account")}
-              className="premium-account-action premium-icon-button"
-              aria-label={labels.actions.account}
-            >
-              <UserRound size={20} aria-hidden="true" />
-            </Link>
+            <AccountMenu
+              locale={locale}
+              labels={{
+                account: labels.actions.account,
+                logout: labels.actions.logout,
+                switchToStorefront: labels.actions.switchToStorefront,
+                manageAccount: labels.actions.manageAccount,
+                workerArea: labels.actions.workerArea,
+                adminConsole: labels.actions.adminConsole,
+                myAccount: labels.actions.myAccount,
+                userMenu: labels.actions.userMenu,
+                roleBadge: labels.actions.roleBadge,
+              }}
+              compact
+            />
             <button
               type="button"
               className="premium-language premium-icon-button"
@@ -317,6 +344,7 @@ export function HeaderClient({
               role="group"
               aria-label={labels.actions.themeToggle}
               dir="ltr"
+              suppressHydrationWarning
             >
               {modes.map(({ value, icon: Icon, label }) => (
                 <button
@@ -352,7 +380,11 @@ export function HeaderClient({
           </div>
         </div>
         {open && (
-          <div id="mobile-navigation" className="premium-mobile-navigation">
+          <div
+            id="mobile-navigation"
+            className="premium-mobile-navigation"
+            suppressHydrationWarning
+          >
             <div className="miro-container">
               {searchForm("premium-mobile-search")}
               <nav aria-label={labels.navLabel}>{navLinksView(true)}</nav>
@@ -371,13 +403,21 @@ export function HeaderClient({
                   {labels.nav.business}
                   <Arrow size={16} aria-hidden="true" />
                 </Link>
-                <Link
-                  href={withLocale(locale, "account")}
-                  onClick={closeNavigation}
-                >
-                  {labels.actions.account}
-                  <UserRound size={16} aria-hidden="true" />
-                </Link>
+                <AccountMenu
+                  locale={locale}
+                  labels={{
+                    account: labels.actions.account,
+                    logout: labels.actions.logout,
+                    switchToStorefront: labels.actions.switchToStorefront,
+                    manageAccount: labels.actions.manageAccount,
+                    workerArea: labels.actions.workerArea,
+                    adminConsole: labels.actions.adminConsole,
+                    myAccount: labels.actions.myAccount,
+                    userMenu: labels.actions.userMenu,
+                    roleBadge: labels.actions.roleBadge,
+                  }}
+                  onNavigate={closeNavigation}
+                />
               </div>
               <Link
                 href={withLocale(locale, "contact")}

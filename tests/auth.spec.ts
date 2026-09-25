@@ -48,12 +48,15 @@ test("anonymous management and account writes are rejected", async ({
     ).status(),
   ).toBe(403);
 });
-test("reset password requires confirmation and minimum length", async ({
+test("reset password without a session offers a fresh link", async ({
   page,
 }) => {
   await page.goto("/en/reset-password");
-  const password = page.locator('input[name="password"]');
-  const confirmation = page.locator('input[name="confirmPassword"]');
-  await expect(password).toHaveAttribute("minlength", "8");
-  await expect(confirmation).toHaveAttribute("required", "");
+  await expect(page.locator("main").getByRole("alert")).toContainText(
+    "invalid or has expired",
+  );
+  await expect(
+    page.getByRole("link", { name: "Request a new reset link" }),
+  ).toHaveAttribute("href", "/en/forgot-password");
+  await expect(page.locator('input[name="password"]')).toHaveCount(0);
 });

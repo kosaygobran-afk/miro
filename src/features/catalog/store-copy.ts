@@ -27,6 +27,8 @@ export const storeCopy = {
     close: "Close product details",
     demoPrice: "Illustrative price",
     quotePrice: "Price on request",
+    saveForLater: "Save for later",
+    removeFromSaved: "Remove from saved",
     category: "Category",
     preview: "Collection preview",
     demo: "Preview collection · Products, illustrations and prices are examples. Final specifications, availability and quotes require confirmation.",
@@ -102,6 +104,17 @@ export const storeCopy = {
     categoryIntro:
       "Explore equipment for a more connected, considered security system.",
     illustration: "Illustration · final product may differ",
+    priceUnpublished:
+      "Price has not been published yet. Contact us for current pricing.",
+    outOfStockContact: "Out of stock — contact us to check availability.",
+    outOfStockRestock: "Currently unavailable — expected back in stock.",
+    lowStock: "Only a few left",
+    expectedRestock: "Expected restock",
+    variants: "Variants",
+    color: "Color",
+    contactForProduct: "Contact us about this product",
+    callForProduct: "Call about this product",
+    whatsappForProduct: "WhatsApp about this product",
   },
   he: {
     eyebrow: "הקולקציה של MIRO",
@@ -131,6 +144,8 @@ export const storeCopy = {
     close: "סגירת פרטי המוצר",
     demoPrice: "מחיר להמחשה",
     quotePrice: "מחיר לפי הצעה",
+    saveForLater: "שמור להמשך",
+    removeFromSaved: "הסר משמורים",
     category: "קטגוריה",
     preview: "תצוגת הקולקציה",
     demo: "קטלוג להמחשה · המוצרים, האיורים והמחירים הם דוגמאות. המפרט הסופי, הזמינות והצעת המחיר כפופים לאישור.",
@@ -193,8 +208,21 @@ export const storeCopy = {
     back: "לכל הקולקציות",
     categoryIntro: "ציוד נבחר למערכת מיגון ותקשורת מחוברת ומתוכננת נכון.",
     illustration: "איור להמחשה · המוצר הסופי עשוי להיות שונה",
+    priceUnpublished: "המחיר טרם עודכן. לקבלת מחיר ניתן ליצור איתנו קשר.",
+    outOfStockContact: "אזל מהמלאי — ניתן ליצור איתנו קשר לבירור זמינות.",
+    outOfStockRestock: "אינו זמין כרגע — צפוי לחזור למלאי.",
+    lowStock: "נותרו יחידות אחרונות",
+    expectedRestock: "צפוי לחזור למלאי",
+    variants: "גרסאות",
+    color: "צבע",
+    contactForProduct: "ליצירת קשר על מוצר זה",
+    callForProduct: "לשיחה על מוצר זה",
+    whatsappForProduct: "לוואטסאפ על מוצר זה",
   },
 } as const;
+
+export type StoreCopy = typeof storeCopy.en;
+export type StoreCopyLocale = typeof storeCopy.he;
 
 export const categoryLabels: Record<string, { he: string; en: string }> = {
   cameras: { he: "מצלמות אבטחה", en: "Security cameras" },

@@ -2,6 +2,13 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
+  // Support the same loopback hosts as the Supabase recovery allowlist.
+  allowedDevOrigins: ["127.0.0.1"],
+  // Product images come from the admin-managed catalog, which stores
+  // arbitrary external HTTPS URLs.
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "**" }],
+  },
   async redirects() {
     return [
       {

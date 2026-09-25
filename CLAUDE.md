@@ -1,5 +1,19 @@
 @AGENTS.md
 
+# CEO/admin control plane — 2026-09-24
+
+The CEO/admin interface was built out per the owner's direction and verified end to end. Key facts future sessions must respect:
+
+- Roles are `customer | worker | admin | ceo`. CEO and admin share one management console at `/[locale]/admin` and otherwise browse as customers; the header account menu (`src/components/layout/account-menu.tsx`) is the switch — prominent gold "Management console" entry for ceo/admin, worker area for worker, account for customer, plus "Switch to storefront" and a visible Log out.
+- Only the CEO controls the users list: migration `supabase/migrations/20260924120000_ceo_user_controls.sql` makes `manage_account` CEO-only (admin is read-only there by owner decision) and adds `delete_user_account`. CEO accounts are protected from deletion except through the audited self-delete flow (`add_ceo`/`delete_own_ceo_account`) that preserves at least one active CEO.
+- The initial CEO is `kosay.gobran@gmail.com`, activated by migration `20260924130000_bootstrap_ceo.sql` once the owner signs up and verifies the email (re-run `npx supabase db push --linked`, or an existing CEO runs `add_ceo`). Nothing else grants the CEO role.
+- `GET /api/auth/session` returns `{ authenticated, role, name }`; `POST /api/auth/logout` returns JSON 200 for fetch calls and 303 for form posts.
+- `profiles` has no `email` column — management user lists merge emails via the service-role `admin.auth.listUsers` server-side.
+- New header i18n keys live under `layout.header.actions.*` in `src/messages/{en,he}.json`; `roleBadge` is interpolated client-side via `t.raw` + replace.
+- Verification: lint, typecheck, build, format:check, 16/16 e2e, 20/20 recovery e2e, 60-combo design suite all passed. Run e2e against a custom port with `PLAYWRIGHT_REUSE=1 PLAYWRIGHT_BASE_URL=...` if 3000 is occupied.
+
+Full details, legal notes (hard user deletion, admin PII visibility) and owner actions are in `docs/PROJECT_STATUS.md` (2026-09-24 entry); the permission model is documented in `docs/ROUTES_AND_ROLES.md`.
+
 # Premium storefront enhancement — 2026-09-20
 
 This session reviewed the existing AI handoff notes and matched the design direction to the supplied premium dark storefront reference. The goal was to elevate the current MIRO site from a clean front-end foundation into a more polished, higher-trust, more premium sales-facing experience without changing the project’s Phase 1 architecture.
@@ -150,3 +164,19 @@ Future agent direction:
 - treat this data as mock storefront sample content only
 - replace or expand it with approved pricing and inventory before any commercial launch
 - do not consider the seed a production catalog or final legal product list
+
+# Commerce / inventory / admin platform — 2026-09-25
+
+The project now includes a full business layer. Future sessions must respect these architecture rules:
+
+- **Products ≠ Services.** Products: catalog, variants, inventory, sales, analytics. Services: `service_requests` + quotes. Never share logic across the two; customer CRM shows them as separate labelled groups.
+- **`product_variants` is the canonical sellable/inventory entity** (SKU/barcode unique, one default per product). Simple products have one default variant. `products.inventory_count` is deprecated — stock lives on variants.
+- **Price `NULL` = not published** (never render ₪0; show the bilingual "price not published, contact us" fallback). Effective price precedence: role price → default variant override → base price.
+- **Stock changes only via `record_stock_movement`/`adjust_stock` RPCs** (append-only `stock_movements` ledger). Sales only via `record_sale` (atomic order+items+stock+VAT snapshots). Never write `stock_qty` directly.
+- **Permissions: `src/lib/permissions.ts` capabilities** — CEO: all; admin lacks manageUsers/manageTax/manageSettings. New management routes must use `withManagementAuth(request, capability)` from `_shared.ts`, never scattered role checks.
+- **Admin console IA**: `/[locale]/admin` sections (overview, products, inventory, suppliers, sales, customers, analytics, finance, users, requests, audit, settings). Management components use inline `he ? ... : ...` ternaries and workspace.css classes; loading/error/empty states required; no fabricated metrics.
+- **Analytics**: real events only via `POST /api/track` + `src/components/analytics/track.ts` (sendBeacon/fetch keepalive, `miro_sid` localStorage session, no fingerprinting). Reads are admin/ceo-only.
+- **CEO bootstrap**: `kosay.gobran@gmail.com` via migration `20260924130000_bootstrap_ceo.sql` (owner signs up, verifies, re-runs `npx supabase db push --linked`).
+- Known deferred items (see docs/PROJECT_STATUS.md 2026-09-25): Storage image uploads, serial-unit UI, CSV export, stock aging UI, storefront checkout.
+
+Verification contract unchanged: lint, typecheck, format:check, build, `python3 scripts/verify-database.py`, e2e 16, recovery e2e 20, design suite 60 combos must stay green.

@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
+import { trackProductSearch } from "@/components/analytics/track";
 
 type CatalogCategory = { key: string; label: string };
 
@@ -14,12 +15,14 @@ export function ProductsClient({
   locale,
   initialQuery = "",
   fixedCategory,
+  savedProductIds = [],
 }: {
   products: Product[];
   categories: CatalogCategory[];
   locale: "he" | "en";
   initialQuery?: string;
   fixedCategory?: string;
+  savedProductIds?: string[];
 }) {
   const copy = storeCopy[locale];
   const [query, setQuery] = useState(initialQuery);
@@ -27,6 +30,26 @@ export function ProductsClient({
   const [sort, setSort] = useState("featured");
   const [limit, setLimit] = useState(12);
   const normalized = query.toLocaleLowerCase(locale).trim();
+  const searchTrackedRef = useRef<string>("");
+
+  const categoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const product of products) {
+      counts.set(product.category, (counts.get(product.category) ?? 0) + 1);
+    }
+    return counts;
+  }, [products]);
+
+  // Track search with debounce
+  const trackSearch = useCallback(
+    (searchQuery: string, resultsCount: number) => {
+      if (searchTrackedRef.current === searchQuery) return;
+      searchTrackedRef.current = searchQuery;
+      trackProductSearch(searchQuery, resultsCount, locale);
+    },
+    [locale],
+  );
+
   const filtered = useMemo(
     () =>
       products
@@ -42,17 +65,38 @@ export function ProductsClient({
             normalized.split(/\s+/).every((word) => haystack.includes(word))
           );
         })
-        .sort((a, b) =>
-          sort === "low"
-            ? a.priceIls - b.priceIls
-            : sort === "high"
-              ? b.priceIls - a.priceIls
-              : sort === "name"
-                ? a.name.localeCompare(b.name, locale)
-                : Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured)),
-        ),
+        .sort((a, b) => {
+          if (sort === "low") {
+            // null prices last
+            if (a.priceIls === null && b.priceIls === null) return 0;
+            if (a.priceIls === null) return 1;
+            if (b.priceIls === null) return -1;
+            return a.priceIls - b.priceIls;
+          }
+          if (sort === "high") {
+            // null prices last
+            if (a.priceIls === null && b.priceIls === null) return 0;
+            if (a.priceIls === null) return 1;
+            if (b.priceIls === null) return -1;
+            return b.priceIls - a.priceIls;
+          }
+          if (sort === "name") {
+            return a.name.localeCompare(b.name, locale);
+          }
+          // featured
+          return Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured));
+        }),
     [products, category, normalized, sort, locale],
   );
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (normalized) {
+        trackSearch(normalized, filtered.length);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [normalized, filtered.length, trackSearch]);
 
   function resetFilters() {
     setQuery("");
@@ -137,12 +181,7 @@ export function ProductsClient({
               }}
             >
               {item.label}
-              <span>
-                {
-                  products.filter((product) => product.category === item.key)
-                    .length
-                }
-              </span>
+              <span>{categoryCounts.get(item.key) ?? 0}</span>
             </button>
           ))}
         </div>
@@ -159,7 +198,11 @@ export function ProductsClient({
         )}
       </div>
       {filtered.length ? (
-        <ProductGrid products={filtered.slice(0, limit)} locale={locale} />
+        <ProductGrid
+          products={filtered.slice(0, limit)}
+          locale={locale}
+          savedProductIds={savedProductIds}
+        />
       ) : (
         <div className="sf-empty">
           <Search size={30} aria-hidden="true" />

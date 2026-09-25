@@ -18,7 +18,7 @@ import { storeCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
 import type { Locale } from "@/lib/i18n";
-import { getStoreCatalog } from "@/lib/store-data";
+import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
 
 interface ProductsPageProps {
   params: Promise<{ locale: string }>;
@@ -49,7 +49,11 @@ export default async function ProductsPage({
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
   const copy = storeCopy[locale];
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
-  const catalog = await getStoreCatalog(locale);
+
+  const viewer = await getStoreViewer();
+  const catalog = await getStoreCatalog(locale, viewer.role);
+  const savedProductIds = new Set(viewer.savedProductIds);
+
   const categories = catalog.categories.map((category) => ({
     ...category,
     href: `/${locale}${category.href}`,
@@ -128,6 +132,7 @@ export default async function ProductsPage({
             categories={catalog.categories}
             locale={locale}
             initialQuery={initialQuery}
+            savedProductIds={Array.from(savedProductIds)}
           />
           <p className="sf-preview-note">
             <span aria-hidden="true" />
