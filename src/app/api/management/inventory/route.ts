@@ -4,6 +4,7 @@ import {
   withManagementAuth,
   errorResponse,
 } from "@/app/api/management/_shared";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const movementSchema = z.object({
   variantId: z.string().uuid(),
@@ -114,15 +115,18 @@ export async function POST(request: Request) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { admin } = auth;
-  const { data: movementId, error } = await admin.rpc("record_stock_movement", {
-    p_variant_id: parsed.data.variantId,
-    p_delta: parsed.data.delta,
-    p_type: parsed.data.type,
-    p_reference: parsed.data.reference ?? null,
-    p_note: parsed.data.note ?? null,
-    p_unit_cost: parsed.data.unitCost ?? null,
-  });
+  const client = await createServerSupabaseClient();
+  const { data: movementId, error } = await client.rpc(
+    "record_stock_movement",
+    {
+      p_variant_id: parsed.data.variantId,
+      p_delta: parsed.data.delta,
+      p_type: parsed.data.type,
+      p_reference: parsed.data.reference ?? null,
+      p_note: parsed.data.note ?? null,
+      p_unit_cost: parsed.data.unitCost ?? null,
+    },
+  );
 
   if (error) {
     if (error.code === "22023") {
@@ -150,8 +154,8 @@ export async function PATCH(request: Request) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { admin } = auth;
-  const { data: movementId, error } = await admin.rpc("adjust_stock", {
+  const client = await createServerSupabaseClient();
+  const { data: movementId, error } = await client.rpc("adjust_stock", {
     p_variant_id: parsed.data.variantId,
     p_counted: parsed.data.counted,
     p_reason: parsed.data.reason,

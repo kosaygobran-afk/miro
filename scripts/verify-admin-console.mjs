@@ -15,10 +15,23 @@ const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const baseUrl = process.env.ADMIN_BASE_URL || "http://127.0.0.1:3105";
 
 if (!supabaseUrl || !publishableKey || !serviceKey) {
-  console.log(
-    "PASS: verify-admin-console skipped (missing Supabase credentials in .env.local)",
+  if (process.argv.includes("--allow-skip")) {
+    console.log(
+      "PASS: verify-admin-console skipped (missing Supabase credentials in .env.local)",
+    );
+    process.exit(0);
+  }
+  console.error(
+    "FAIL: verify-admin-console cannot run (missing Supabase credentials in .env.local)",
   );
-  process.exit(0);
+  console.error(
+    "  Need NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or ANON_KEY), and SUPABASE_SERVICE_ROLE_KEY.",
+  );
+  console.error(
+    "  This check must exit non-zero when it cannot verify the console. To keep the old skip behavior explicitly, run:",
+  );
+  console.error("  node scripts/verify-admin-console.mjs --allow-skip");
+  process.exit(1);
 }
 
 const options = { auth: { persistSession: false, autoRefreshToken: false } };

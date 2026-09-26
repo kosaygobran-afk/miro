@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   AlertCircle,
   RotateCcw,
@@ -67,6 +67,20 @@ export function SettingsPanel({
     valid_from: new Date().toISOString().split("T")[0],
   });
   const [taxSubmitting, setTaxSubmitting] = useState(false);
+  const taxTriggerRef = useRef<HTMLButtonElement>(null);
+  const closeTaxModal = useCallback(() => {
+    setShowTaxForm(false);
+    taxTriggerRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!showTaxForm) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeTaxModal();
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [showTaxForm, closeTaxModal]);
 
   // Business settings state
   const [settingsLoading, setSettingsLoading] = useState(true);
@@ -247,7 +261,7 @@ export function SettingsPanel({
       const data = await response.json();
       if (response.ok) {
         showToast(he ? "שיעור מס נוסף" : "Tax rate added");
-        setShowTaxForm(false);
+        closeTaxModal();
         setTaxForm({
           name: "",
           rate: 0,
@@ -310,7 +324,7 @@ export function SettingsPanel({
 
   const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(he ? "he-IL" : "en-US");
+    new Date(iso).toLocaleDateString(he ? "he-IL" : "en-IL");
 
   if (loading) {
     return (
@@ -362,10 +376,11 @@ export function SettingsPanel({
             </div>
             {isCeo && (
               <button
+                ref={taxTriggerRef}
                 className="miro-button miro-button-primary"
                 onClick={() => setShowTaxForm(true)}
               >
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="me-2 h-4 w-4" />
                 {he ? "הוסף שיעור מס" : "Add Tax Rate"}
               </button>
             )}
@@ -405,7 +420,7 @@ export function SettingsPanel({
                   className="miro-button miro-button-secondary text-sm mt-2"
                   onClick={fetchTaxRates}
                 >
-                  <RotateCcw className="h-4 w-4 mr-1" aria-hidden="true" />
+                  <RotateCcw className="h-4 w-4 me-1" aria-hidden="true" />
                   {he ? "נסה שוב" : "Retry"}
                 </button>
               </div>
@@ -464,7 +479,7 @@ export function SettingsPanel({
                     role="grid"
                   >
                     <thead>
-                      <tr className="border-b border-border-subtle bg-surface-muted text-left">
+                      <tr className="border-b border-border-subtle bg-surface-muted text-start">
                         <th className="p-4">{he ? "שם" : "Name"}</th>
                         <th className="p-4">{he ? "שיעור" : "Rate"}</th>
                         <th className="p-4">
@@ -488,7 +503,7 @@ export function SettingsPanel({
                             {rate.is_current ? (
                               <span className="status-badge status-badge--active">
                                 <ShieldCheck
-                                  className="h-3 w-3 mr-1"
+                                  className="h-3 w-3 me-1"
                                   aria-hidden="true"
                                 />
                                 {he ? "פעיל" : "Active"}
@@ -511,21 +526,25 @@ export function SettingsPanel({
             {isCeo && showTaxForm && (
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-                onClick={() => setShowTaxForm(false)}
+                onClick={closeTaxModal}
               >
                 <div
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="tax-modal-title"
                   className="bg-background rounded-xl shadow-xl max-w-md w-full"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="border-b border-border-subtle p-4 flex items-center justify-between">
-                    <h3 className="text-lg font-black">
+                    <h3 id="tax-modal-title" className="text-lg font-black">
                       {he ? "הוסף שיעור מס חדש" : "Add New Tax Rate"}
                     </h3>
                     <button
                       className="text-muted-foreground hover:text-foreground"
-                      onClick={() => setShowTaxForm(false)}
+                      aria-label={he ? "סגור" : "Close"}
+                      onClick={closeTaxModal}
                     >
-                      <X className="h-5 w-5" />
+                      <X className="h-5 w-5" aria-hidden="true" />
                     </button>
                   </div>
                   <form
@@ -589,7 +608,7 @@ export function SettingsPanel({
                       <button
                         type="button"
                         className="miro-button miro-button-secondary"
-                        onClick={() => setShowTaxForm(false)}
+                        onClick={closeTaxModal}
                       >
                         {he ? "ביטול" : "Cancel"}
                       </button>
@@ -600,12 +619,12 @@ export function SettingsPanel({
                       >
                         {taxSubmitting ? (
                           <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Loader2 className="me-2 h-4 w-4 animate-spin" />
                             {he ? "שומר..." : "Saving..."}
                           </>
                         ) : (
                           <>
-                            <Save className="mr-2 h-4 w-4" />
+                            <Save className="me-2 h-4 w-4" />
                             {he ? "שמור" : "Save"}
                           </>
                         )}
@@ -666,7 +685,7 @@ export function SettingsPanel({
                   className="miro-button miro-button-secondary text-sm mt-2"
                   onClick={fetchBusinessSettings}
                 >
-                  <RotateCcw className="h-4 w-4 mr-1" aria-hidden="true" />
+                  <RotateCcw className="h-4 w-4 me-1" aria-hidden="true" />
                   {he ? "נסה שוב" : "Retry"}
                 </button>
               </div>

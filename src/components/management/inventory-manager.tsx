@@ -103,7 +103,7 @@ function formatCurrency(value: number, locale: "he" | "en"): string {
 }
 
 function formatDate(dateStr: string, locale: "he" | "en"): string {
-  return new Date(dateStr).toLocaleString(locale === "he" ? "he-IL" : "en-US", {
+  return new Date(dateStr).toLocaleString(locale === "he" ? "he-IL" : "en-IL", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -510,7 +510,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
           <div className="inventory-manager__replenishment-header">
             <h2 className="inventory-manager__replenishment-title">
               <Package
-                className="h-5 w-5 inline-block align-middle ml-2"
+                className="h-5 w-5 inline-block align-middle ms-2"
                 aria-hidden="true"
               />
               {he ? "סיכום חידוש מלאי" : "Replenishment Summary"}
@@ -568,7 +568,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
           <div className="inventory-manager__header-left">
             <h2 className="text-xl font-black">
               <Package
-                className="h-6 w-6 inline-block align-middle ml-2"
+                className="h-6 w-6 inline-block align-middle ms-2"
                 aria-hidden="true"
               />
               {he ? "ניהול מלאי וריאנטים" : "Variant Inventory Management"}
@@ -811,7 +811,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                       {variant.stock_qty === 0 && (
                         <span className="status-badge status-badge--blocked">
                           <XCircle
-                            className="h-3 w-3 mr-1"
+                            className="h-3 w-3 me-1"
                             aria-hidden="true"
                           />
                           {he ? "חסר במלאי" : "Out of Stock"}
@@ -821,7 +821,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                         variant.stock_qty <= variant.low_stock_threshold && (
                           <span className="status-badge status-badge--suspended">
                             <AlertTriangle
-                              className="h-3 w-3 mr-1"
+                              className="h-3 w-3 me-1"
                               aria-hidden="true"
                             />
                             {he ? "מלאי נמוך" : "Low Stock"}
@@ -845,7 +845,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                       <span className="inventory-manager__card-value">
                         {variant.color_hex && (
                           <span
-                            className="inventory-manager__color-swatch inline-block align-middle ml-2"
+                            className="inventory-manager__color-swatch inline-block align-middle ms-2"
                             style={{ backgroundColor: variant.color_hex }}
                           />
                         )}
@@ -1132,7 +1132,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                     {busyVariant === receiveModal.variant.id ? (
                       <>
                         <Loader2
-                          className="h-4 w-4 animate-spin mr-2"
+                          className="h-4 w-4 animate-spin me-2"
                           aria-hidden="true"
                         />
                         {he ? "שומר..." : "Saving..."}
@@ -1242,7 +1242,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                     {busyVariant === adjustModal.variant.id ? (
                       <>
                         <Loader2
-                          className="h-4 w-4 animate-spin mr-2"
+                          className="h-4 w-4 animate-spin me-2"
                           aria-hidden="true"
                         />
                         {he ? "שומר..." : "Saving..."}
@@ -1387,7 +1387,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                     {busyVariant === outModal.variant.id ? (
                       <>
                         <Loader2
-                          className="h-4 w-4 animate-spin mr-2"
+                          className="h-4 w-4 animate-spin me-2"
                           aria-hidden="true"
                         />
                         {he ? "שומר..." : "Saving..."}

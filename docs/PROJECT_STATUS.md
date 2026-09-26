@@ -1,6 +1,43 @@
 # Project Status
 
-Last updated: 2026-09-25 (admin console design-DNA polish + full audit cycle complete)
+Last updated: 2026-09-26 (CEO console audit-driven remediation)
+
+## CEO Console Remediation — 2026-09-26
+
+Method: lead architect audited the CEO surface with six parallel investigators (pages/interface, API logic, permissions, database, i18n, tests/docs), personally verified the top claims against code, then five implementation workers applied fixes with strict file ownership.
+
+Root cause of the biggest defect: management write routes invoked self-authorizing RPCs (`set_tax_rate`, `set_business_setting`, `record_sale`, `record_stock_movement`, `adjust_stock`, `publish_product`/`unpublish_product`, `set_default_variant`) through the service-role client. Under service role `auth.uid()` is NULL, so the RPCs' `active_app_role()` checks always raised 42501 — live CEO tax settings, sales recording, stock movement, publish and default-variant actions were all dead ends returning 403.
+
+What changed:
+
+- All self-authorizing RPC calls now go through the user-context server client (`src/lib/supabase/server`), matching the existing `users/route.ts` pattern; reads stay on the service-role client. Route-level capability/same-origin checks unchanged.
+- New migration `supabase/migrations/20260926100000_ceo_console_fixes.sql`: `add_ceo` sets `profiles.role='ceo'` (was `'admin'`) and rejects already-CEO targets instead of logging fake `ceo_added` events; one-time repair aligns existing CEOs' `profiles.role`; `delete_user_account` now deletes the `auth.users` row in the same transaction (atomic deletion; route-level `auth.admin.deleteUser` removed). `supabase/tests/ceo_controls.sql` gained assertions for all three behaviors.
+- Removed duplicate route-level audit inserts (`user_updated`, `user_deleted`, `product_published`, `product_status_changed`) — the SQL RPCs already audit transactionally. Publish errors no longer leak raw Postgres messages into the API response.
+- `/api/ceo`: no-op email change rejected (400); expired 120 s fresh-password window on delete now reports distinctly instead of "At least one active CEO must remain".
+- Users management UI: role/status selects render the current value (previously filtered out → blank controlled select with silent one-tap PATCH) and now stage changes behind an inline bilingual Confirm/Cancel before any PATCH. Typed-DELETE user deletion preserved.
+- Audit history UI: removed the fake "Demo User" user filter (was crashing the view with uuid column `eq "1"`); Load More now appends instead of overwriting; fixed operator-precedence bug that could show Hebrew in English mode; completed the bilingual action-label/filter catalog (tax, settings, stock, sale, publish, account, CEO actions); localized the record counter; `en-IL` date format.
+- CEO settings UI: client-side password-match check, per-form busy state and styled success/error notices, verified-account hint on the add-CEO form.
+- RTL sweep across all management components: physical Tailwind classes converted to logical (`text-start`, `ms/me`, `ps/pe`, `start-*`); search-icon offsets fixed.
+- Product delete / variant archive now use themed, bilingual, keyboard-accessible two-step inline confirmation instead of native `confirm()` (note: variant re-activation no longer prompts — only archive is destructive).
+- Tax modal: `role="dialog"`/`aria-modal`, Escape-to-close, focus return to trigger.
+- Admin metadata fixed: `privateMetadata()` now uses `kind` (+bilingual section titles); all 11 section pages export noindex metadata (previously every admin page titled "My account").
+- Localization: English-only placeholders/aria-label words localized; dates standardized to `he-IL`/`en-IL`.
+- Ops: `verify-admin-console.mjs` exits 1 on missing credentials unless `--allow-skip`; OPERATIONS.md documents both CEO verification scripts and the `PLAYWRIGHT_REUSE` fix; ROUTES_AND_ROLES.md now states audit log is viewable by admin + CEO explicitly; package.json bumped to 0.0.3 (matches the 0.0.3 release commit).
+
+Commands run and status:
+
+- `npm run lint` — passed
+- `npm run typecheck` — passed
+- `npm run build` — passed
+- `node scripts/verify-admin-console.mjs` against a production server on :3105 — passed 14/14 pages (EN + HE) via disposable admin sign-in
+- `scripts/verify-database.py` — NOT run: no local PostgreSQL 17 binaries on this machine; the new migration + tests still need a real disposable-PG run and then `npx supabase db push --linked`
+
+Remaining blockers / owner actions:
+
+- **Push `supabase/migrations/20260926100000_ceo_console_fixes.sql` to the live project (`npx supabase db push --linked`) before the next deploy** — the users DELETE route now relies on the RPC to remove the auth.users row; deploying the route without the migration would leave orphaned auth users. Also run `scripts/verify-database.py` somewhere with PostgreSQL 17 first.
+- The user-context RPC switch (tax/sales/inventory/publish) is verified by code review + lint + build, but not yet against the live DB — first live CEO action should be a low-stakes write (e.g., add tax rate) to confirm.
+- Deferred by design (pre-existing): centralizing the console's 724 he/en ternaries into message catalogs, `/api/ceo` rate limiting, auth-user pagination past 1000 in users GET, role-aware admin nav for plain admins, CEO offboarding (remove_ceo/demote RPC), overview dashboard partial-render on partial query failures.
+- Worker package-lock.json note: lockfile top-level version still says 0.0.2; it will self-sync on next `npm install`.
 
 ## Admin Console Design-DNA Polish — 2026-09-25 (final)
 
@@ -54,7 +91,7 @@ Fixes:
 - `service_role` was missing table grants on `products`, `categories`, `product_images` (management APIs use the service client) → 500 "permission denied". Migration `20260925171000_service_role_grants.sql` grants them (+ orders/order_items select). Applied live.
 - Two seeded product images were dead Unsplash URLs (404 through `/_next/image`) — nulled/removed pending real product photography (data-level fix).
 - `overview-panel` icons were emojis from an interrupted agent — replaced with lucide-react components (design-DNA compliance).
-- NEW verification: `scripts/verify-admin-console.mjs` — drives a disposable real admin account through UI login and all 14 admin pages (EN + HE), asserting no page errors / console errors / bad responses, then deletes the account. Run: `node scripts/verify-admin-console.mjs` (requires a server at ADMIN_BASE_URL or :3105 and `.env.local`).
+- NEW verification: `scripts/verify-admin-console.mjs` — drives a disposable real admin account through UI login and all 12 admin pages in EN plus 1 page in HE (RTL check) and 1 nav-link assertion (14 checks total), asserting no page errors / console errors / bad responses, then deletes the account. Run: `node scripts/verify-admin-console.mjs` (requires a server at ADMIN_BASE_URL or :3105 and `.env.local`; exits 1 if credentials are missing unless `--allow-skip` is passed).
 
 Verification (final tree): lint / typecheck / format:check / build pass; admin smoke 14/14 pages; e2e 16/16; recovery e2e 20/20; design suite 60 combos + 14 axe scans; `verify-database.py` all migrations + tests pass.
 

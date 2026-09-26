@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { InventoryManager } from "@/components/management/inventory-manager";
+import { privateMetadata } from "@/components/auth/private-closed-page";
+
+export const generateMetadata = privateMetadata("admin", "inventory");
 
 export default async function InventoryPage({
   params,

@@ -337,7 +337,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
               className="miro-button miro-button-primary"
               onClick={openCreateForm}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               {he ? "הוסף ספק" : "Add Supplier"}
             </button>
           </div>
@@ -436,7 +436,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
                             className="suppliers-manager__phone"
                           >
                             <Phone
-                              className="h-3 w-3 inline-block align-middle ml-1"
+                              className="h-3 w-3 inline-block align-middle ms-1"
                               aria-hidden="true"
                             />
                             {supplier.phone}
@@ -452,7 +452,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
                             className="suppliers-manager__email"
                           >
                             <Mail
-                              className="h-3 w-3 inline-block align-middle ml-1"
+                              className="h-3 w-3 inline-block align-middle ms-1"
                               aria-hidden="true"
                             />
                             {supplier.email}
@@ -465,7 +465,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
                         {supplier.default_lead_time_days !== null ? (
                           <>
                             <Clock
-                              className="h-3 w-3 inline-block align-middle ml-1"
+                              className="h-3 w-3 inline-block align-middle ms-1"
                               aria-hidden="true"
                             />
                             {supplier.default_lead_time_days}
@@ -477,7 +477,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
                       <td className="suppliers-manager__td">
                         <span className="suppliers-manager__currency-badge">
                           <DollarSign
-                            className="h-3 w-3 inline-block align-middle ml-1"
+                            className="h-3 w-3 inline-block align-middle ms-1"
                             aria-hidden="true"
                           />
                           {getCurrencyLabel(supplier.currency)}
@@ -767,7 +767,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
                       <span className="suppliers-manager__card-value">
                         <span className="suppliers-manager__currency-badge">
                           <DollarSign
-                            className="h-3 w-3 inline-block align-middle ml-1"
+                            className="h-3 w-3 inline-block align-middle ms-1"
                             aria-hidden="true"
                           />
                           {getCurrencyLabel(supplier.currency)}
@@ -1043,12 +1043,12 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
                   >
                     {busy ? (
                       <>
-                        <RotateCcw className="mr-2 h-4 w-4 animate-spin" />
+                        <RotateCcw className="me-2 h-4 w-4 animate-spin" />
                         {he ? "שומר..." : "Saving..."}
                       </>
                     ) : (
                       <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
+                        <CheckCircle className="me-2 h-4 w-4" />
                         {he ? "שמור" : "Save"}
                       </>
                     )}

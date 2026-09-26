@@ -4,6 +4,7 @@ import {
   withManagementAuth,
   errorResponse,
 } from "@/app/api/management/_shared";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const taxRateSchema = z.object({
   name: z.string().min(1).max(100),
@@ -38,8 +39,8 @@ export async function POST(request: Request) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { admin } = auth;
-  const { data: taxRateId, error } = await admin.rpc("set_tax_rate", {
+  const client = await createServerSupabaseClient();
+  const { data: taxRateId, error } = await client.rpc("set_tax_rate", {
     p_name: parsed.data.name,
     p_rate: parsed.data.rate,
     p_valid_from: parsed.data.valid_from,

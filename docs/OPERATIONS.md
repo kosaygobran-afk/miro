@@ -10,7 +10,7 @@
 
 - Install dependencies with `npm ci` for CI-style reproducibility.
 - Run `npm run format:check`, `npm run lint`, `npm run typecheck` and `npm run build` before handoff.
-- Run `npm run test:e2e` for production-backed Playwright smoke coverage. It intentionally refuses to reuse an existing local server, so port 3000 must be free. On a fresh machine, install the browser cache with `npx playwright install chromium` if Playwright reports a missing executable.
+- Run `npm run test:e2e` for production-backed Playwright smoke coverage. By default it builds and starts its own server on port 3000 and requires that port to be free. Server reuse is opt-in: set `PLAYWRIGHT_REUSE=1` (`reuseExistingServer` in playwright.config.ts) to run against an already-running server instead. On a fresh machine, install the browser cache with `npx playwright install chromium` if Playwright reports a missing executable.
 - Confirm no local process is left listening on port 3000 after manual `npm run dev` or `npm run start` checks.
 
 ## Deployment
@@ -53,6 +53,14 @@
 - If port 3000 is occupied, run smoke checks with both `PORT=<port>` and `PLAYWRIGHT_BASE_URL=http://127.0.0.1:<port>`; the URL alone does not change the server port.
 - A `next start` server can outlive its `npm` wrapper PID. Stop verification servers with `pkill -f 'next start'` (and confirm with `lsof -iTCP:<port>`) before starting a new one, or tests may silently hit a stale build.
 - Sample catalog fallback works without Supabase credentials. The live database read branch and existing authentication require a separately configured staging environment; never commit environment secrets.
+
+## Console verification scripts
+
+- `node scripts/verify-admin-console.mjs` runs a production-backed smoke test of the CEO/admin console. It creates a disposable confirmed admin account in the configured Supabase project via the service-role key, signs in through the UI, visits every admin page in English plus the Hebrew admin shell, and asserts clean renders (no error patterns, no page/console errors, admin nav visible, RTL direction) and settings navigation. It deletes the disposable account in `finally`.
+  - Requires `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or `NEXT_PUBLIC_SUPABASE_ANON_KEY`) and `SUPABASE_SERVICE_ROLE_KEY` in the environment or `.env.local`, Playwright's Chromium, and a running production server at `ADMIN_BASE_URL` (default `http://127.0.0.1:3105`; start it with `npm run build && npm run start -- --port 3105`).
+  - Exits non-zero on any failure, including missing Supabase credentials — a silent pass is never acceptable. To skip intentionally (e.g. a machine without credentials), pass `--allow-skip`, which prints a skip notice and exits 0.
+- `python3 scripts/verify-bootstrap-ceo.py` is a read-only check of the bootstrap CEO state. It inspects `user_roles`/`profiles` for the `ceo` role, reports whether the bootstrap owner account holds the CEO role, and confirms the CEO SQL functions (`add_ceo`, `delete_own_ceo_account`, `manage_account`, `delete_user_account`, `require_recent_ceo_password`, `active_app_role`) exist. It requires `NEXT_PUBLIC_SUPABASE_URL` and the publishable (or anon) key plus the `supabase` Python package (`pip install supabase`); it uses only the anon key, so visibility into `auth.users` is limited and it never modifies the database. Missing credentials exit non-zero; the checks print a report of found/missing state with manual bootstrap steps when no CEO exists yet.
+
 
 ## Phase 2 account operations
 

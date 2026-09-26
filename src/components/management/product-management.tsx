@@ -274,6 +274,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [images, setImages] = useState<ProductImage[]>([]);
   const [rolePrices, setRolePrices] = useState<Record<string, number>>({});
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -339,13 +340,23 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
     };
   }, [he]);
 
-  function handleFormChange(
-    field: string,
-    value:
-      string | number | boolean | null | string[] | Record<string, unknown>,
-  ) {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  }
+  const handleFormChange = useCallback(
+    (
+      field: string,
+      value:
+        string | number | boolean | null | string[] | Record<string, unknown>,
+    ) => {
+      setFormData((prev) => ({ ...prev, [field]: value }));
+    },
+    [],
+  );
+
+  const handleSpecificationsChange = useCallback(
+    (specs: Record<string, unknown>) => {
+      handleFormChange("specifications", specs);
+    },
+    [handleFormChange],
+  );
 
   function resetForm() {
     setFormData(emptyFormData);
@@ -506,15 +517,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
   }
 
   async function deleteProduct(id: string) {
-    if (
-      !confirm(
-        he
-          ? "האם אתה בטוח שברצונך למחוק מוצר זה?"
-          : "Are you sure you want to delete this product?",
-      )
-    )
-      return;
-
+    setPendingDeleteId(null);
     setError("");
     try {
       const response = await fetch(`/api/management/products?id=${id}`, {
@@ -610,7 +613,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
           className="miro-button miro-button-primary"
           onClick={openCreateForm}
         >
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="me-2 h-4 w-4" />
           {he ? "הוסף מוצר" : "Add Product"}
         </button>
       </div>
@@ -631,7 +634,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
               {he ? "טבלת ניהול מוצרים" : "Product management table"}
             </caption>
             <thead>
-              <tr className="border-b border-border-subtle bg-surface-muted text-left">
+              <tr className="border-b border-border-subtle bg-surface-muted text-start">
                 <th className="p-4">{he ? "תמונה" : "Image"}</th>
                 <th className="p-4">{he ? "שמות" : "Names"}</th>
                 <th className="p-4">{he ? "קטגוריה" : "Category"}</th>
@@ -721,7 +724,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                           className="miro-button miro-button-secondary text-xs"
                           onClick={() => openEditForm(product)}
                         >
-                          <Edit className="mr-1 h-3 w-3" />
+                          <Edit className="me-1 h-3 w-3" />
                           {he ? "עריכה" : "Edit"}
                         </button>
                         {product.status === "active" ? (
@@ -730,14 +733,14 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                               className="miro-button miro-button-secondary text-xs text-amber-600 hover:bg-amber-50"
                               onClick={() => handleStatusChange("hidden")}
                             >
-                              <EyeOff className="mr-1 h-3 w-3" />
+                              <EyeOff className="me-1 h-3 w-3" />
                               {he ? "הסתר" : "Hide"}
                             </button>
                             <button
                               className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
                               onClick={() => handleStatusChange("archived")}
                             >
-                              <Archive className="mr-1 h-3 w-3" />
+                              <Archive className="me-1 h-3 w-3" />
                               {he ? "ארכב" : "Archive"}
                             </button>
                           </>
@@ -747,14 +750,14 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                               className="miro-button miro-button-secondary text-xs"
                               onClick={() => handleStatusChange("active")}
                             >
-                              <Eye className="mr-1 h-3 w-3" />
+                              <Eye className="me-1 h-3 w-3" />
                               {he ? "פרסם" : "Publish"}
                             </button>
                             <button
                               className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
                               onClick={() => handleStatusChange("archived")}
                             >
-                              <Archive className="mr-1 h-3 w-3" />
+                              <Archive className="me-1 h-3 w-3" />
                               {he ? "ארכב" : "Archive"}
                             </button>
                           </>
@@ -763,7 +766,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                             className="miro-button miro-button-primary text-xs"
                             onClick={() => handleStatusChange("active")}
                           >
-                            <Globe className="mr-1 h-3 w-3" />
+                            <Globe className="me-1 h-3 w-3" />
                             {he ? "פרסם" : "Publish"}
                           </button>
                         ) : (
@@ -771,17 +774,49 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                             className="miro-button miro-button-secondary text-xs"
                             onClick={() => handleStatusChange("draft")}
                           >
-                            <RotateCcw className="mr-1 h-3 w-3" />
+                            <RotateCcw className="me-1 h-3 w-3" />
                             {he ? "שחזר לטיוטה" : "Restore to Draft"}
                           </button>
                         )}
-                        <button
-                          className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
-                          onClick={() => deleteProduct(product.id)}
-                        >
-                          <Trash2 className="mr-1 h-3 w-3" />
-                          {he ? "מחיקה" : "Delete"}
-                        </button>
+                        {pendingDeleteId === product.id ? (
+                          <span
+                            className="inline-flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1"
+                            role="group"
+                            aria-label={
+                              he
+                                ? "אישור מחיקת מוצר"
+                                : "Confirm product deletion"
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Escape") setPendingDeleteId(null);
+                            }}
+                          >
+                            <span className="text-xs font-medium text-destructive">
+                              {he ? "למחוק את המוצר?" : "Delete this product?"}
+                            </span>
+                            <button
+                              className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
+                              ref={(el) => el?.focus()}
+                              onClick={() => deleteProduct(product.id)}
+                            >
+                              {he ? "אישור מחיקה" : "Confirm delete"}
+                            </button>
+                            <button
+                              className="miro-button miro-button-secondary text-xs"
+                              onClick={() => setPendingDeleteId(null)}
+                            >
+                              {he ? "ביטול" : "Cancel"}
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
+                            onClick={() => setPendingDeleteId(product.id)}
+                          >
+                            <Trash2 className="me-1 h-3 w-3" />
+                            {he ? "מחיקה" : "Delete"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1157,7 +1192,11 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                         }
                         className="miro-input"
                         rows={2}
-                        placeholder="e.g., 2 years official warranty"
+                        placeholder={
+                          he
+                            ? "למשל: שנתיים אחריות רשמית"
+                            : "e.g., 2 years official warranty"
+                        }
                       />
                     </div>
                   </div>
@@ -1166,9 +1205,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                     <SpecificationsEditor
                       locale={locale}
                       initialSpecs={formData.specifications}
-                      onChange={(specs) =>
-                        handleFormChange("specifications", specs)
-                      }
+                      onChange={handleSpecificationsChange}
                     />
                   </div>
                 </div>
@@ -1601,7 +1638,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                           }
                           className="miro-input"
                           maxLength={60}
-                          placeholder="Up to 60 chars"
+                          placeholder={he ? "עד 60 תווים" : "Up to 60 chars"}
                         />
                       </div>
                     </div>
@@ -1643,7 +1680,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                           className="miro-input"
                           rows={2}
                           maxLength={160}
-                          placeholder="Up to 160 chars"
+                          placeholder={he ? "עד 160 תווים" : "Up to 160 chars"}
                         />
                       </div>
                     </div>
@@ -1679,7 +1716,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                   }}
                   disabled={activeTab === "basic"}
                 >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
+                  <ChevronLeft className="me-1 h-4 w-4" />
                   {he ? "הקודם" : "Previous"}
                 </button>
                 <button
@@ -1702,7 +1739,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                   }
                 >
                   {he ? "הבא" : "Next"}
-                  <ChevronRight className="ml-1 h-4 w-4" />
+                  <ChevronRight className="ms-1 h-4 w-4" />
                 </button>
                 <button
                   type="submit"
@@ -1711,12 +1748,12 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                 >
                   {saving ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="me-2 h-4 w-4 animate-spin" />
                       {he ? "שומר..." : "Saving..."}
                     </>
                   ) : (
                     <>
-                      <Save className="mr-2 h-4 w-4" />
+                      <Save className="me-2 h-4 w-4" />
                       {he ? "שמור מוצר" : "Save Product"}
                     </>
                   )}

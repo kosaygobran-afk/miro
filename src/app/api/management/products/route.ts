@@ -5,6 +5,7 @@ import {
   errorResponse,
   mapPostgresError,
 } from "@/app/api/management/_shared";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 const productSchema = z.object({
@@ -176,17 +177,18 @@ export async function PATCH(request: Request) {
     statusFromBody !== "archived"
   ) {
     // Target is 'active' - call publish_product RPC
-    const { error: rpcError } = await admin.rpc("publish_product", {
+    const client = await createServerSupabaseClient();
+    const { error: rpcError } = await client.rpc("publish_product", {
       p_product: id,
     });
 
     if (rpcError) {
       if (rpcError.code === "22023") {
+        console.error("publish_product validation failed:", rpcError.message);
         return NextResponse.json(
           {
             error: "Publish validation failed",
             code: "publish_incomplete",
-            details: rpcError.message,
           },
           { status: 422 },
         );
@@ -194,6 +196,7 @@ export async function PATCH(request: Request) {
       if (rpcError.code === "42501") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+      console.error("publish_product failed:", rpcError.code, rpcError.message);
       return NextResponse.json(
         { error: "Failed to publish product" },
         { status: 500 },
@@ -211,14 +214,6 @@ export async function PATCH(request: Request) {
       return errorResponse("Failed to fetch updated product");
     }
 
-    await admin.from("audit_events").insert({
-      action: "product_published",
-      user_id: actor.user.id,
-      details: { product_id: product.id, slug: product.slug },
-      entity_type: "product",
-      entity_id: product.id,
-    });
-
     await revalidateCatalog();
 
     return NextResponse.json({ product });
@@ -228,7 +223,8 @@ export async function PATCH(request: Request) {
   const targetStatus = statusFromBody ?? parsed.data.status;
   if (targetStatus && ["draft", "hidden", "archived"].includes(targetStatus)) {
     // Call unpublish_product RPC for transitions away from active
-    const { error: rpcError } = await admin.rpc("unpublish_product", {
+    const client = await createServerSupabaseClient();
+    const { error: rpcError } = await client.rpc("unpublish_product", {
       p_product: id,
       p_status: targetStatus,
     });
@@ -237,6 +233,11 @@ export async function PATCH(request: Request) {
       if (rpcError.code === "42501") {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+      console.error(
+        "unpublish_product failed:",
+        rpcError.code,
+        rpcError.message,
+      );
       return NextResponse.json(
         { error: "Failed to update product status" },
         { status: 500 },
@@ -252,18 +253,6 @@ export async function PATCH(request: Request) {
     if (fetchError) {
       return errorResponse("Failed to fetch updated product");
     }
-
-    await admin.from("audit_events").insert({
-      action: "product_status_changed",
-      user_id: actor.user.id,
-      details: {
-        product_id: product.id,
-        slug: product.slug,
-        new_status: targetStatus,
-      },
-      entity_type: "product",
-      entity_id: product.id,
-    });
 
     await revalidateCatalog();
 

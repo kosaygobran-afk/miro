@@ -345,7 +345,7 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
           <div className="mt-4 flex flex-wrap gap-3">
             <div className="relative flex-1 min-w-[250px]">
               <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
                 aria-hidden="true"
               />
               <input
@@ -357,7 +357,7 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
                     ? "חפש לפי שם, אימייל או טלפון…"
                     : "Search by name, email or phone…"
                 }
-                className="miro-input pl-10"
+                className="miro-input ps-10"
                 aria-label={he ? "חיפוש לקוחות" : "Search customers"}
               />
             </div>

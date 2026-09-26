@@ -472,7 +472,11 @@ export function AnalyticsDashboard({ locale }: { locale: "he" | "en" }) {
                         key={point.day}
                         className="analytics-dashboard__bar-group"
                         role="listitem"
-                        aria-label={`${new Date(point.day).toLocaleDateString(he ? "he-IL" : "en-IL")}: ${formatNumber(point.views)} views, ${formatNumber(point.searches)} searches`}
+                        aria-label={
+                          he
+                            ? `${new Date(point.day).toLocaleDateString("he-IL")}: ${formatNumber(point.views)} צפיות, ${formatNumber(point.searches)} חיפושים`
+                            : `${new Date(point.day).toLocaleDateString("en-IL")}: ${formatNumber(point.views)} views, ${formatNumber(point.searches)} searches`
+                        }
                       >
                         <div className="analytics-dashboard__bar-wrapper">
                           <div

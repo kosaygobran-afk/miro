@@ -504,7 +504,11 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
                       key={point.day}
                       className="finance-dashboard__bar-group"
                       role="listitem"
-                      aria-label={`${new Date(point.day).toLocaleDateString(he ? "he-IL" : "en-IL")}: ${formatCurrency(point.gross)} gross, ${point.orders} orders`}
+                      aria-label={
+                        he
+                          ? `${new Date(point.day).toLocaleDateString("he-IL")}: ${formatCurrency(point.gross)} ברוטו, ${point.orders} הזמנות`
+                          : `${new Date(point.day).toLocaleDateString("en-IL")}: ${formatCurrency(point.gross)} gross, ${point.orders} orders`
+                      }
                     >
                       <div className="finance-dashboard__bar-wrapper">
                         <div

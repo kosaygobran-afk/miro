@@ -44,6 +44,14 @@ export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success)
     return NextResponse.json({ error: "Invalid input" }, { status: 400 });
+  if (
+    parsed.data.action === "email" &&
+    parsed.data.email.toLowerCase() === actor.user.email.toLowerCase()
+  )
+    return NextResponse.json(
+      { error: "New email must differ from your current email." },
+      { status: 400 },
+    );
   // Re-authenticate on an isolated client; never replace or expose the browser session.
   const client = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -70,7 +78,15 @@ export async function POST(request: Request) {
           : input.action === "password"
             ? await client.auth.updateUser({ password: input.newPassword })
             : await client.auth.updateUser({ email: input.email });
-    if (result.error)
+    if (result.error) {
+      if (
+        input.action === "delete" &&
+        result.error.message.includes("Verify your password again")
+      )
+        return NextResponse.json(
+          { error: "Password verification expired. Please try again." },
+          { status: 400 },
+        );
       return NextResponse.json(
         {
           error:
@@ -82,6 +98,7 @@ export async function POST(request: Request) {
         },
         { status: 400 },
       );
+    }
     return NextResponse.json({ ok: true });
   } finally {
     // This only revokes the temporary password-verification session.

@@ -67,6 +67,7 @@ export function VariantsManager({
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [pendingArchiveId, setPendingArchiveId] = useState<string | null>(null);
 
   const loadVariants = useCallback(async () => {
     try {
@@ -206,14 +207,7 @@ export function VariantsManager({
   };
 
   const archiveVariant = async (variant: ProductVariant) => {
-    if (
-      !confirm(
-        he
-          ? "האם לארכב וריאנט זה? הוא יהפוך ללא פעיל."
-          : "Archive this variant? It will become inactive.",
-      )
-    )
-      return;
+    setPendingArchiveId(null);
     setError("");
     try {
       const response = await fetch(
@@ -271,7 +265,7 @@ export function VariantsManager({
               className="miro-button miro-button-primary"
               onClick={openCreateForm}
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="me-2 h-4 w-4" />
               {he ? "הוסף וריאנט ראשון" : "Add first variant"}
             </button>
           )}
@@ -306,7 +300,7 @@ export function VariantsManager({
             className="miro-button miro-button-primary"
             onClick={openCreateForm}
           >
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="me-2 h-4 w-4" />
             {he ? "הוסף וריאנט" : "Add variant"}
           </button>
         )}
@@ -346,34 +340,34 @@ export function VariantsManager({
               </caption>
               <thead className="bg-surface-muted border-b border-border-subtle">
                 <tr>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "צבע" : "Color"}
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     SKU
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "ברקוד" : "Barcode"}
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "מחיר" : "Price"}
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "עלות" : "Cost"}
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "ספק" : "Supplier"}
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "מלאי" : "Stock"}
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "מצב" : "Status"}
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "ברירת מחדל" : "Default"}
                   </th>
-                  <th className="p-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-xs">
+                  <th className="p-3 text-start font-medium text-muted-foreground uppercase tracking-wider text-xs">
                     {he ? "פעולות" : "Actions"}
                   </th>
                 </tr>
@@ -434,7 +428,7 @@ export function VariantsManager({
                       >
                         {variant.stock_qty}
                         {variant.low_stock_threshold > 0 && (
-                          <span className="ml-1 text-xs text-muted-foreground">
+                          <span className="ms-1 text-xs text-muted-foreground">
                             (min: {variant.low_stock_threshold})
                           </span>
                         )}
@@ -472,28 +466,62 @@ export function VariantsManager({
                             <Edit className="h-4 w-4" />
                           </button>
                         )}
-                        {!disabled && (
-                          <button
-                            type="button"
-                            className={`miro-button miro-button-secondary text-xs p-2 ${variant.is_active ? "text-destructive hover:bg-destructive/10" : ""}`}
-                            onClick={() => archiveVariant(variant)}
-                            aria-label={
-                              variant.is_active
-                                ? he
-                                  ? "ארכב"
-                                  : "Archive"
-                                : he
-                                  ? "הפעל"
-                                  : "Activate"
-                            }
-                          >
-                            {variant.is_active ? (
-                              <EyeOff className="h-4 w-4" />
-                            ) : (
-                              <Eye className="h-4 w-4" />
-                            )}
-                          </button>
-                        )}
+                        {!disabled &&
+                          (pendingArchiveId === variant.id &&
+                          variant.is_active ? (
+                            <span
+                              className="inline-flex items-center gap-1"
+                              role="group"
+                              aria-label={
+                                he ? "אישור ארכוב וריאנט" : "Confirm archive"
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === "Escape")
+                                  setPendingArchiveId(null);
+                              }}
+                            >
+                              <button
+                                type="button"
+                                ref={(el) => el?.focus()}
+                                className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
+                                onClick={() => archiveVariant(variant)}
+                              >
+                                {he ? "אשר" : "Confirm"}
+                              </button>
+                              <button
+                                type="button"
+                                className="miro-button miro-button-secondary text-xs"
+                                onClick={() => setPendingArchiveId(null)}
+                              >
+                                {he ? "ביטול" : "Cancel"}
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              className={`miro-button miro-button-secondary text-xs p-2 ${variant.is_active ? "text-destructive hover:bg-destructive/10" : ""}`}
+                              onClick={() =>
+                                variant.is_active
+                                  ? setPendingArchiveId(variant.id)
+                                  : archiveVariant(variant)
+                              }
+                              aria-label={
+                                variant.is_active
+                                  ? he
+                                    ? "ארכב"
+                                    : "Archive"
+                                  : he
+                                    ? "הפעל"
+                                    : "Activate"
+                              }
+                            >
+                              {variant.is_active ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          ))}
                       </div>
                     </td>
                   </tr>
@@ -566,26 +594,60 @@ export function VariantsManager({
                   >
                     <Edit className="h-4 w-4" />
                   </button>
-                  <button
-                    type="button"
-                    className={`miro-button miro-button-secondary text-xs p-2 ${variant.is_active ? "text-destructive hover:bg-destructive/10" : ""}`}
-                    onClick={() => archiveVariant(variant)}
-                    aria-label={
-                      variant.is_active
-                        ? he
-                          ? "ארכב"
-                          : "Archive"
-                        : he
-                          ? "הפעל"
-                          : "Activate"
-                    }
-                  >
-                    {variant.is_active ? (
-                      <EyeOff className="h-4 w-4" />
+                  {!disabled &&
+                    (pendingArchiveId === variant.id && variant.is_active ? (
+                      <span
+                        className="inline-flex items-center gap-1"
+                        role="group"
+                        aria-label={
+                          he ? "אישור ארכוב וריאנט" : "Confirm archive"
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") setPendingArchiveId(null);
+                        }}
+                      >
+                        <button
+                          type="button"
+                          ref={(el) => el?.focus()}
+                          className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
+                          onClick={() => archiveVariant(variant)}
+                        >
+                          {he ? "אשר" : "Confirm"}
+                        </button>
+                        <button
+                          type="button"
+                          className="miro-button miro-button-secondary text-xs"
+                          onClick={() => setPendingArchiveId(null)}
+                        >
+                          {he ? "ביטול" : "Cancel"}
+                        </button>
+                      </span>
                     ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
+                      <button
+                        type="button"
+                        className={`miro-button miro-button-secondary text-xs p-2 ${variant.is_active ? "text-destructive hover:bg-destructive/10" : ""}`}
+                        onClick={() =>
+                          variant.is_active
+                            ? setPendingArchiveId(variant.id)
+                            : archiveVariant(variant)
+                        }
+                        aria-label={
+                          variant.is_active
+                            ? he
+                              ? "ארכב"
+                              : "Archive"
+                            : he
+                              ? "הפעל"
+                              : "Activate"
+                        }
+                      >
+                        {variant.is_active ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    ))}
                 </div>
               )}
             </div>
@@ -759,7 +821,7 @@ export function VariantsManager({
                       handleFormChange("color_en", e.target.value)
                     }
                     className="miro-input"
-                    placeholder="e.g., Black"
+                    placeholder={he ? "למשל: Black" : "e.g., Black"}
                     disabled={disabled || saving}
                   />
                 </div>
@@ -966,7 +1028,7 @@ export function VariantsManager({
                   {saving ? (
                     <>
                       <svg
-                        className="mr-2 h-4 w-4 animate-spin"
+                        className="me-2 h-4 w-4 animate-spin"
                         fill="none"
                         viewBox="0 0 24 24"
                       >
@@ -989,7 +1051,7 @@ export function VariantsManager({
                   ) : (
                     <>
                       <svg
-                        className="mr-2 h-4 w-4"
+                        className="me-2 h-4 w-4"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"

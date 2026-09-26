@@ -3,16 +3,48 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+type CeoAction = "email" | "password" | "add" | "delete";
+
+type FormNotice = {
+  text: string;
+  type: "success" | "error";
+};
+
 export function CeoSettings({ locale }: { locale: "he" | "en" }) {
   const he = locale === "he";
   const router = useRouter();
-  const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [busyAction, setBusyAction] = useState<CeoAction | null>(null);
+  const [notices, setNotices] = useState<Partial<Record<CeoAction, FormNotice>>>(
+    {},
+  );
+
+  function setFormNotice(
+    action: CeoAction,
+    text: string,
+    type: "success" | "error",
+  ) {
+    setNotices((prev) => ({ ...prev, [action]: { text, type } }));
+  }
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
-    setBusy(true);
     const data = Object.fromEntries(new FormData(form));
+    const action = String(data.action ?? "") as CeoAction;
+
+    if (
+      action === "password" &&
+      String(data.newPassword ?? "") !== String(data.confirmPassword ?? "")
+    ) {
+      setFormNotice(
+        action,
+        he ? "הסיסמאות החדשות אינן תואמות." : "New passwords do not match.",
+        "error",
+      );
+      return;
+    }
+
+    setBusyAction(action);
     try {
       const response = await fetch("/api/ceo", {
         method: "POST",
@@ -20,40 +52,46 @@ export function CeoSettings({ locale }: { locale: "he" | "en" }) {
         body: JSON.stringify(data),
       });
       if (!response.ok) {
-        setNotice(
+        setFormNotice(
+          action,
           he
             ? "הפעולה לא הושלמה. בדקו את הסיסמה. הוספת מנהל ראשי דורשת חשבון מאומת, ומחיקה דורשת מנהל ראשי פעיל נוסף."
             : "Action could not be completed. Check your password. Adding a CEO requires a verified account; deleting yourself requires another active CEO.",
+          "error",
         );
         return;
       }
       form.reset();
-      if (data.action === "delete") {
+      if (action === "delete") {
         await createClient().auth.signOut({ scope: "local" });
         router.replace(`/${locale}/login`);
         router.refresh();
       } else {
-        setNotice(
-          data.action === "password"
+        setFormNotice(
+          action,
+          action === "password"
             ? he
               ? "הסיסמה עודכנה."
               : "Password updated."
-            : data.action === "email"
+            : action === "email"
               ? he
                 ? "בדקו את שתי תיבות הדואר ואשרו את השינוי."
                 : "Check both email inboxes to verify the change."
               : he
                 ? "נוסף מנהל ראשי."
                 : "CEO added successfully.",
+          "success",
         );
         router.refresh();
       }
     } catch {
-      setNotice(
+      setFormNotice(
+        action,
         he ? "שגיאת חיבור. נסו שוב." : "Connection failed. Please try again.",
+        "error",
       );
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   }
   return (
@@ -119,16 +157,25 @@ export function CeoSettings({ locale }: { locale: "he" | "en" }) {
                 </label>
               </>
             ) : action !== "delete" ? (
-              <label className="block">
-                {he ? "כתובת דואר" : "Email address"}
-                <input
-                  className="miro-input"
-                  name="email"
-                  type="email"
-                  required
-                  maxLength={254}
-                />
-              </label>
+              <>
+                <label className="block">
+                  {he ? "כתובת דואר" : "Email address"}
+                  <input
+                    className="miro-input"
+                    name="email"
+                    type="email"
+                    required
+                    maxLength={254}
+                  />
+                </label>
+                {action === "add" && (
+                  <p className="text-sm text-muted-foreground">
+                    {he
+                      ? "יש להזין כתובת של חשבון קיים, פעיל ומאומת במערכת."
+                      : "Enter the address of an existing verified active account."}
+                  </p>
+                )}
+              </>
             ) : (
               <>
                 <p className="text-sm">
@@ -161,7 +208,7 @@ export function CeoSettings({ locale }: { locale: "he" | "en" }) {
             </label>
             <button
               className="miro-button miro-button-secondary"
-              disabled={busy}
+              disabled={busyAction === action}
             >
               {action === "delete"
                 ? he
@@ -171,10 +218,21 @@ export function CeoSettings({ locale }: { locale: "he" | "en" }) {
                   ? "אימות והמשך"
                   : "Verify and continue"}
             </button>
+            {notices[action] && (
+              <p
+                role="status"
+                className={`rounded-lg border px-4 py-2 text-sm ${
+                  notices[action]!.type === "success"
+                    ? "border-success-text/30 bg-success-text/10 text-success-text"
+                    : "border-error-text/30 bg-error-text/10 text-error-text"
+                }`}
+              >
+                {notices[action]!.text}
+              </p>
+            )}
           </form>
         ))}
       </div>
-      <p role="status">{notice}</p>
     </section>
   );
 }
