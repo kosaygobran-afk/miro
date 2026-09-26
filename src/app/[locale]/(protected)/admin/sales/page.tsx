@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { SalesPanel } from "@/components/management/sales-panel";
+import { privateMetadata } from "@/components/auth/private-closed-page";
+
+export const generateMetadata = privateMetadata("admin", "sales");
 
 export default async function SalesPage({
   params,

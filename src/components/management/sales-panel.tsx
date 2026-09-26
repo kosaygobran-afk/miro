@@ -537,7 +537,7 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
                   </label>
                   <div className="relative">
                     <Search
-                      className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                      className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
                       aria-hidden="true"
                     />
                     <input
@@ -550,7 +550,7 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
                           ? "חפש לפי שם, SKU או ברקוד…"
                           : "Search by name, SKU or barcode…"
                       }
-                      className="miro-input pl-10"
+                      className="miro-input ps-10"
                     />
                   </div>
                 </div>

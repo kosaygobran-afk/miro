@@ -42,7 +42,7 @@ These routes require a verified server session and an active profile. Worker and
 - `/[locale]/admin/finance` - managerial finance (revenue, VAT, COGS, margin, inventory value)
 - `/[locale]/admin/users` - user list (CEO controls; admin read-only)
 - `/[locale]/admin/requests` - service requests
-- `/[locale]/admin/audit` - audit log
+- `/[locale]/admin/audit` - audit log (viewable by both admin and CEO; gated on the shared viewAnalytics capability, server-enforced via requireRole admin|ceo)
 - `/[locale]/admin/settings` - tax + business settings (CEO-only writes; CeoSettings)
 
 ## Phase 2+ Role Capabilities (see `src/lib/permissions.ts`)

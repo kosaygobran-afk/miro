@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { RequestDashboard } from "@/components/requests/request-dashboard";
+import { privateMetadata } from "@/components/auth/private-closed-page";
+
+export const generateMetadata = privateMetadata("admin", "requests");
 
 export default async function RequestsPage({
   params,

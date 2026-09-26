@@ -75,6 +75,11 @@ export function UsersManagement({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [actionState, setActionState] = useState<UserActionState>(null);
+  const [pendingChange, setPendingChange] = useState<{
+    userId: string;
+    field: "role" | "status";
+    value: string;
+  } | null>(null);
 
   const loadUsers = useCallback(
     async (showLoading = false) => {
@@ -172,6 +177,40 @@ export function UsersManagement({
     }
   };
 
+  const requestPendingChange = (
+    userId: string,
+    field: "role" | "status",
+    value: string,
+    currentValue: string,
+  ) => {
+    if (value === currentValue) {
+      if (pendingChange?.userId === userId && pendingChange.field === field) {
+        setPendingChange(null);
+      }
+      return;
+    }
+    setPendingChange({ userId, field, value });
+  };
+
+  const confirmPendingChange = async () => {
+    if (!pendingChange) return;
+    const { userId, field, value } = pendingChange;
+    setPendingChange(null);
+    if (field === "role") {
+      await handleRoleChange(userId, value as AppRole);
+    } else {
+      await handleStatusChange(
+        userId,
+        value as "active" | "suspended" | "blocked",
+      );
+    }
+  };
+
+  const pendingChangeFor = (userId: string, field: "role" | "status") =>
+    pendingChange?.userId === userId && pendingChange.field === field
+      ? pendingChange.value
+      : undefined;
+
   const handleDeleteUser = async (userId: string) => {
     if (actionState?.confirmText?.trim().toUpperCase() !== "DELETE") {
       showMessage(
@@ -218,14 +257,12 @@ export function UsersManagement({
     const allRoles: AppRole[] = ["customer", "worker", "admin", "ceo"];
     return allRoles.filter(
       (r) =>
-        r !== currentRole && r !== "ceo" && (r !== "admin" || canControlAdmins),
+        r === currentRole ||
+        (r !== "ceo" && (r !== "admin" || canControlAdmins)),
     );
   };
 
-  const getStatusOptions = (currentStatus: string) => {
-    const all = ["active", "suspended", "blocked"] as const;
-    return all.filter((s) => s !== currentStatus);
-  };
+  const getStatusOptions = () => ["active", "suspended", "blocked"] as const;
 
   const isCeoAccount = (user: ManagedUser) => user.role === "ceo";
 
@@ -409,30 +446,43 @@ export function UsersManagement({
                             <>
                               <select
                                 disabled={busy}
-                                value={user.role}
+                                value={
+                                  pendingChangeFor(user.id, "role") ??
+                                  user.role
+                                }
                                 onChange={(e) =>
-                                  handleRoleChange(
+                                  requestPendingChange(
                                     user.id,
-                                    e.target.value as AppRole,
+                                    "role",
+                                    e.target.value,
+                                    user.role,
                                   )
                                 }
                                 className="users-management__select"
                                 aria-label={he ? "שינוי תפקיד" : "Change role"}
                               >
                                 {getRoleOptions(user.role).map((role) => (
-                                  <option key={role} value={role}>
+                                  <option
+                                    key={role}
+                                    value={role}
+                                    disabled={role === user.role}
+                                  >
                                     {roleLabel(role, locale)}
                                   </option>
                                 ))}
                               </select>
                               <select
                                 disabled={busy}
-                                value={user.account_status}
+                                value={
+                                  pendingChangeFor(user.id, "status") ??
+                                  user.account_status
+                                }
                                 onChange={(e) =>
-                                  handleStatusChange(
+                                  requestPendingChange(
                                     user.id,
-                                    e.target.value as
-                                      "active" | "suspended" | "blocked",
+                                    "status",
+                                    e.target.value,
+                                    user.account_status,
                                   )
                                 }
                                 className="users-management__select"
@@ -442,24 +492,46 @@ export function UsersManagement({
                                     : "Change account status"
                                 }
                               >
-                                {getStatusOptions(user.account_status).map(
-                                  (status) => (
-                                    <option key={status} value={status}>
-                                      {status === "active"
+                                {getStatusOptions().map((status) => (
+                                  <option
+                                    key={status}
+                                    value={status}
+                                    disabled={status === user.account_status}
+                                  >
+                                    {status === "active"
+                                      ? he
+                                        ? "פעיל"
+                                        : "Active"
+                                      : status === "suspended"
                                         ? he
-                                          ? "פעיל"
-                                          : "Active"
-                                        : status === "suspended"
-                                          ? he
-                                            ? "מושהה"
-                                            : "Suspended"
-                                          : he
-                                            ? "חסום"
-                                            : "Blocked"}
-                                    </option>
-                                  ),
-                                )}
+                                          ? "מושהה"
+                                          : "Suspended"
+                                        : he
+                                          ? "חסום"
+                                          : "Blocked"}
+                                  </option>
+                                ))}
                               </select>
+                              {pendingChange?.userId === user.id && (
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    className="miro-button miro-button-secondary text-sm"
+                                    onClick={confirmPendingChange}
+                                  >
+                                    {he ? "אישור" : "Confirm"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    className="miro-button miro-button-secondary text-sm"
+                                    onClick={() => setPendingChange(null)}
+                                  >
+                                    {he ? "ביטול" : "Cancel"}
+                                  </button>
+                                </div>
+                              )}
                               {actionState?.type === "delete" &&
                                 actionState.userId === user.id && (
                                   <div className="users-management__delete-confirm">
@@ -622,27 +694,40 @@ export function UsersManagement({
                       <>
                         <select
                           disabled={busy}
-                          value={user.role}
+                          value={pendingChangeFor(user.id, "role") ?? user.role}
                           onChange={(e) =>
-                            handleRoleChange(user.id, e.target.value as AppRole)
+                            requestPendingChange(
+                              user.id,
+                              "role",
+                              e.target.value,
+                              user.role,
+                            )
                           }
                           className="users-management__select"
                           aria-label={he ? "שינוי תפקיד" : "Change role"}
                         >
                           {getRoleOptions(user.role).map((role) => (
-                            <option key={role} value={role}>
+                            <option
+                              key={role}
+                              value={role}
+                              disabled={role === user.role}
+                            >
                               {roleLabel(role, locale)}
                             </option>
                           ))}
                         </select>
                         <select
                           disabled={busy}
-                          value={user.account_status}
+                          value={
+                            pendingChangeFor(user.id, "status") ??
+                            user.account_status
+                          }
                           onChange={(e) =>
-                            handleStatusChange(
+                            requestPendingChange(
                               user.id,
-                              e.target.value as
-                                "active" | "suspended" | "blocked",
+                              "status",
+                              e.target.value,
+                              user.account_status,
                             )
                           }
                           className="users-management__select"
@@ -650,24 +735,52 @@ export function UsersManagement({
                             he ? "שינוי מצב חשבון" : "Change account status"
                           }
                         >
-                          {getStatusOptions(user.account_status).map(
-                            (status) => (
-                              <option key={status} value={status}>
-                                {status === "active"
+                          {getStatusOptions().map((status) => (
+                            <option
+                              key={status}
+                              value={status}
+                              disabled={status === user.account_status}
+                            >
+                              {status === "active"
+                                ? he
+                                  ? "פעיל"
+                                  : "Active"
+                                : status === "suspended"
                                   ? he
-                                    ? "פעיל"
-                                    : "Active"
-                                  : status === "suspended"
-                                    ? he
-                                      ? "מושהה"
-                                      : "Suspended"
-                                    : he
-                                      ? "חסום"
-                                      : "Blocked"}
-                              </option>
-                            ),
-                          )}
+                                    ? "מושהה"
+                                    : "Suspended"
+                                  : he
+                                    ? "חסום"
+                                    : "Blocked"}
+                            </option>
+                          ))}
                         </select>
+                        {pendingChange?.userId === user.id && (
+                          <div
+                            style={{
+                              flex: "1 1 100%",
+                              display: "flex",
+                              gap: "0.5rem",
+                            }}
+                          >
+                            <button
+                              type="button"
+                              disabled={busy}
+                              className="miro-button miro-button-secondary text-sm"
+                              onClick={confirmPendingChange}
+                            >
+                              {he ? "אישור" : "Confirm"}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              className="miro-button miro-button-secondary text-sm"
+                              onClick={() => setPendingChange(null)}
+                            >
+                              {he ? "ביטול" : "Cancel"}
+                            </button>
+                          </div>
+                        )}
                         {actionState?.type === "delete" &&
                         actionState.userId === user.id ? (
                           <div

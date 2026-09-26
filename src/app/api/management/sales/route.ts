@@ -4,6 +4,7 @@ import {
   withManagementAuth,
   errorResponse,
 } from "@/app/api/management/_shared";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const saleItemSchema = z.object({
   variantId: z.string().uuid(),
@@ -102,8 +103,8 @@ export async function POST(request: Request) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { admin } = auth;
-  const { data: orderId, error } = await admin.rpc("record_sale", {
+  const client = await createServerSupabaseClient();
+  const { data: orderId, error } = await client.rpc("record_sale", {
     p_customer: parsed.data.customer,
     p_items: parsed.data.items.map((item) => ({
       variant_id: item.variantId,

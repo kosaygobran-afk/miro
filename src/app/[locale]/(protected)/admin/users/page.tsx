@@ -3,6 +3,9 @@ import { isLocale, type Locale } from "@/lib/i18n";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { UsersManagement } from "@/components/management/users-management";
+import { privateMetadata } from "@/components/auth/private-closed-page";
+
+export const generateMetadata = privateMetadata("admin", "users");
 
 type ManagedUser = {
   id: string;

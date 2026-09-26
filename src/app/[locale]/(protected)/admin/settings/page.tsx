@@ -2,6 +2,9 @@ import { requireRole } from "@/lib/auth";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { SettingsPanel } from "@/components/management/settings-panel";
 import { CeoSettings } from "@/components/management/ceo-settings";
+import { privateMetadata } from "@/components/auth/private-closed-page";
+
+export const generateMetadata = privateMetadata("admin", "settings");
 
 export default async function SettingsPage({
   params,

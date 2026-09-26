@@ -18,7 +18,6 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState({
-    userId: "" as string | null,
     action: "" as string | null,
     limit: 50,
     offset: 0,
@@ -30,6 +29,8 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
     "product_created",
     "product_updated",
     "product_deleted",
+    "product_published",
+    "product_unpublished",
     "category_created",
     "category_updated",
     "category_deleted",
@@ -38,7 +39,13 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
     "product_image_added",
     "product_image_updated",
     "product_image_deleted",
+    "stock_movement",
+    "sale_recorded",
+    "variant_set_default",
+    "tax_rate_changed",
+    "setting_changed",
     "account_control",
+    "account_deleted",
     "ceo_added",
     "ceo_self_deleted",
     "request_update",
@@ -49,23 +56,33 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         product_created: "נוצר מוצר",
         product_updated: "עודכן מוצר",
         product_deleted: "נמחק מוצר",
+        product_published: "פורסם מוצר",
+        product_unpublished: "בוטל פרסום מוצר",
         category_created: "נוצרה קטגוריה",
-        category_updated: "עודכן קטגוריה",
+        category_updated: "עודכנה קטגוריה",
         category_deleted: "נמחקה קטגוריה",
         product_price_set: "נקבע מחיר מוצר",
         product_price_deleted: "נמחק מחיר מוצר",
         product_image_added: "נוספה תמונת מוצר",
         product_image_updated: "עודכנה תמונת מוצר",
         product_image_deleted: "נמחקה תמונת מוצר",
-        account_control: "פקדון חשבון",
+        stock_movement: "תנועת מלאי",
+        sale_recorded: "נרשמה מכירה",
+        variant_set_default: "נקבע וריאנט ברירת מחדל",
+        tax_rate_changed: "שונתה שיעור מס",
+        setting_changed: "הגדרה שונתה",
+        account_control: "בקרת חשבון",
+        account_deleted: "נמחק חשבון",
         ceo_added: "נוסף מנכ״ל",
-        ceo_self_deleted: "נמחק מנכ״ל עצמי",
+        ceo_self_deleted: "מנכ״ל מחק את עצמו",
         request_update: "עודכן שירות",
       }
     : {
         product_created: "Product Created",
         product_updated: "Product Updated",
         product_deleted: "Product Deleted",
+        product_published: "Product Published",
+        product_unpublished: "Product Unpublished",
         category_created: "Category Created",
         category_updated: "Category Updated",
         category_deleted: "Category Deleted",
@@ -74,7 +91,13 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         product_image_added: "Product Image Added",
         product_image_updated: "Product Image Updated",
         product_image_deleted: "Product Image Deleted",
+        stock_movement: "Stock Movement",
+        sale_recorded: "Sale Recorded",
+        variant_set_default: "Default Variant Set",
+        tax_rate_changed: "Tax Rate Changed",
+        setting_changed: "Setting Changed",
         account_control: "Account Control",
+        account_deleted: "Account Deleted",
         ceo_added: "CEO Added",
         ceo_self_deleted: "CEO Self Deleted",
         request_update: "Request Updated",
@@ -85,7 +108,6 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
     setError("");
     try {
       const queryParams = new URLSearchParams();
-      if (filters.userId) queryParams.append("userId", filters.userId);
       if (filters.action) queryParams.append("action", filters.action);
       queryParams.append("limit", String(filters.limit));
       queryParams.append("offset", String(filters.offset));
@@ -101,7 +123,9 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
       }
 
       const { auditEvents: events, totalCount } = await response.json();
-      setAuditEvents(events);
+      setAuditEvents((prev) =>
+        filters.offset > 0 ? [...prev, ...events] : events,
+      );
       setTotalCount(totalCount);
     } catch (err) {
       setError(
@@ -115,7 +139,7 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters.userId, filters.action, filters.limit, filters.offset, he]);
+  }, [filters.action, filters.limit, filters.offset, he]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -220,30 +244,13 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
                   <RefreshCw className="h-4 w-4" />
                 </>
               )}
-              <span className="ml-2">{he ? "רענן" : "Refresh"}</span>
+              <span className="ms-2">{he ? "רענן" : "Refresh"}</span>
             </button>
           </div>
         </div>
 
         <div className="mt-6">
           <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                {he ? "משתמש" : "User"}
-              </label>
-              <select
-                value={filters.userId ?? ""}
-                onChange={(e) =>
-                  handleFilterChange("userId", e.target.value || null)
-                }
-                className="miro-input"
-              >
-                <option value="">{he ? "הכל" : "All"}</option>
-                {/* In a real app, you'd fetch users here */}
-                <option value="1">Demo User 1</option>
-                <option value="2">Demo User 2</option>
-              </select>
-            </div>
             <div>
               <label className="block text-sm font-medium mb-2">
                 {he ? "פעולה" : "Action"}
@@ -275,16 +282,16 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
             </caption>
             <thead className="bg-surface-muted">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {he ? "תאריך" : "Date"}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {he ? "משתמש" : "User"}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {he ? "פעולה" : "Action"}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {he ? "פרטים" : "Details"}
                 </th>
               </tr>
@@ -294,13 +301,13 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
                 <tr key={event.id} className="hover:bg-surface-muted/50">
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {new Date(event.created_at).toLocaleString(
-                      he ? "he-IL" : "en-US",
+                      he ? "he-IL" : "en-IL",
                     )}
                   </td>
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {event.profiles?.full_name || event.user_id || he
-                      ? "לא ידוע"
-                      : "Unknown"}
+                    {event.profiles?.full_name ||
+                      event.user_id ||
+                      (he ? "לא ידוע" : "Unknown")}
                   </td>
                   <td className="px-4 py-3 text-sm text-capitalize font-medium">
                     {actionLabels[event.action] || event.action}
@@ -327,7 +334,9 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         {auditEvents.length > 0 && (
           <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground">
             <div>
-              Showing {auditEvents.length} of {totalCount} records
+              {he
+                ? `מוצגות ${auditEvents.length} מתוך ${totalCount} רשומות`
+                : `Showing ${auditEvents.length} of ${totalCount} records`}
             </div>
             {totalCount > filters.limit + filters.offset && (
               <button

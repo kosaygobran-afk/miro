@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { AuditHistory } from "@/components/management/audit-history";
+import { privateMetadata } from "@/components/auth/private-closed-page";
+
+export const generateMetadata = privateMetadata("admin", "audit");
 
 export default async function AuditPage({
   params,

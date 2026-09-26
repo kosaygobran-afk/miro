@@ -4,6 +4,7 @@ import {
   withManagementAuth,
   errorResponse,
 } from "@/app/api/management/_shared";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const settingSchema = z.object({
   key: z.string().min(1).max(100),
@@ -52,8 +53,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const { admin } = auth;
-  const { error } = await admin.rpc("set_business_setting", {
+  const client = await createServerSupabaseClient();
+  const { error } = await client.rpc("set_business_setting", {
     p_key: parsed.data.key,
     p_value: parsed.data.value,
   });

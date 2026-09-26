@@ -5,6 +5,7 @@ import {
   errorResponse,
   mapPostgresError,
 } from "@/app/api/management/_shared";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 const variantSchema = z.object({
@@ -99,7 +100,8 @@ export async function POST(request: Request) {
   }
 
   if (wantsDefault) {
-    const { error: defaultError } = await admin.rpc("set_default_variant", {
+    const client = await createServerSupabaseClient();
+    const { error: defaultError } = await client.rpc("set_default_variant", {
       p_variant: variant.id,
     });
     if (defaultError) return mapPostgresError(defaultError);
@@ -158,7 +160,8 @@ export async function PATCH(request: Request) {
   }
 
   if (wantsDefault) {
-    const { error: defaultError } = await admin.rpc("set_default_variant", {
+    const client = await createServerSupabaseClient();
+    const { error: defaultError } = await client.rpc("set_default_variant", {
       p_variant: id,
     });
     if (defaultError) return mapPostgresError(defaultError);

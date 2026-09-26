@@ -37,7 +37,7 @@ export function SpecificationsEditor({
 
   useEffect(() => {
     syncToParent();
-  }, [specs, syncToParent]);
+  }, [syncToParent]);
 
   const addRow = () => {
     setSpecs((prev) => [...prev, { key: "", value: "" }]);
@@ -68,7 +68,7 @@ export function SpecificationsEditor({
             onClick={addRow}
             aria-label={he ? "הוסף שורה" : "Add row"}
           >
-            <Plus className="mr-1 h-4 w-4" />
+            <Plus className="me-1 h-4 w-4" />
             {he ? "הוסף שדה" : "Add field"}
           </button>
         )}

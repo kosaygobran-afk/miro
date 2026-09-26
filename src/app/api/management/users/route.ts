@@ -89,20 +89,6 @@ export async function PATCH(request: Request) {
       { status: error.code === "42501" ? 403 : 400 },
     );
 
-  await createAdminClient()
-    .from("audit_events")
-    .insert({
-      action: "user_updated",
-      user_id: actor.user.id,
-      details: {
-        target_user_id: parsed.data.userId,
-        role: parsed.data.role,
-        status: parsed.data.status,
-      },
-      entity_type: "user",
-      entity_id: parsed.data.userId,
-    });
-
   return NextResponse.json({ ok: true });
 }
 
@@ -134,24 +120,6 @@ export async function DELETE(request: Request) {
       },
       { status: rpcError.code === "42501" ? 403 : 400 },
     );
-
-  const admin = createAdminClient();
-  const { error: authError } = await admin.auth.admin.deleteUser(
-    parsed.data.userId,
-  );
-  if (authError)
-    return NextResponse.json(
-      { error: "Auth user cleanup failed." },
-      { status: 500 },
-    );
-
-  await admin.from("audit_events").insert({
-    action: "user_deleted",
-    user_id: actor.user.id,
-    details: { target_user_id: parsed.data.userId },
-    entity_type: "user",
-    entity_id: parsed.data.userId,
-  });
 
   return NextResponse.json({ ok: true });
 }

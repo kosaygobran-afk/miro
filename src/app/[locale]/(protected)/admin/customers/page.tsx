@@ -1,6 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { CustomersManager } from "@/components/management/customers-manager";
+import { privateMetadata } from "@/components/auth/private-closed-page";
+
+export const generateMetadata = privateMetadata("admin", "customers");
 
 export default async function CustomersPage({
   params,
