@@ -3,14 +3,14 @@ import { z } from "zod";
 import {
   withManagementAuth,
   errorResponse,
-  mapPostgresError,
 } from "@/app/api/management/_shared";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
 const rolePriceSchema = z.object({
   product_id: z.string().uuid(),
   role: z.enum(["customer", "worker", "admin", "ceo"]),
-  price: z.number().nonnegative(),
+  price: z.number().positive(),
 });
 
 async function revalidateCatalog() {
@@ -18,6 +18,33 @@ async function revalidateCatalog() {
   revalidatePath("/en/store");
   revalidatePath("/he/store/[category]", "page");
   revalidatePath("/en/store/[category]", "page");
+}
+
+function mapPriceRpcError(error: {
+  code?: string;
+  message?: string;
+}): NextResponse {
+  console.error("upsert_product_price failed:", error.code, error.message);
+  if (error.code === "42501") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (error.code === "22023") {
+    const message = error.message ?? "";
+    if (message.includes("Product not found")) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+    if (message.includes("Price must be positive")) {
+      return NextResponse.json(
+        { error: "Price must be greater than 0" },
+        { status: 400 },
+      );
+    }
+    return NextResponse.json(
+      { error: "Invalid input", code: "invalid_input" },
+      { status: 400 },
+    );
+  }
+  return NextResponse.json({ error: "Operation failed" }, { status: 500 });
 }
 
 export async function GET(request: Request) {
@@ -47,32 +74,21 @@ export async function POST(request: Request) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { admin, actor } = auth;
-  const { data, error: insertError } = await admin
-    .from("product_prices")
-    .upsert(parsed.data, { onConflict: "product_id,role" })
-    .select()
-    .single();
-
-  if (insertError) {
-    return mapPostgresError(insertError);
-  }
-
-  await admin.from("audit_events").insert({
-    action: "product_price_set",
-    user_id: actor.user.id,
-    details: {
-      product_id: parsed.data.product_id,
-      role: parsed.data.role,
-      price: parsed.data.price,
-    },
-    entity_type: "product_price",
-    entity_id: parsed.data.product_id,
+  // Transactional set/replace with audit (self-authorizing RPC: user context).
+  const client = await createServerSupabaseClient();
+  const { error: rpcError } = await client.rpc("upsert_product_price", {
+    p_product_id: parsed.data.product_id,
+    p_role: parsed.data.role,
+    p_price: parsed.data.price,
   });
+
+  if (rpcError) {
+    return mapPriceRpcError(rpcError);
+  }
 
   await revalidateCatalog();
 
-  return NextResponse.json({ price: data });
+  return NextResponse.json({ price: parsed.data });
 }
 
 export async function DELETE(request: Request) {
@@ -83,28 +99,28 @@ export async function DELETE(request: Request) {
   const productId = searchParams.get("productId");
   const role = searchParams.get("role");
 
-  if (!productId || !role) {
+  const parsed = z
+    .object({
+      product_id: z.string().uuid(),
+      role: z.enum(["customer", "worker", "admin", "ceo"]),
+    })
+    .safeParse({ product_id: productId, role });
+  if (!parsed.success) {
     return errorResponse("productId and role required", 400);
   }
 
-  const { admin, actor } = auth;
-  const { error: deleteError } = await admin
-    .from("product_prices")
-    .delete()
-    .eq("product_id", productId)
-    .eq("role", role);
-
-  if (deleteError) {
-    return mapPostgresError(deleteError);
-  }
-
-  await admin.from("audit_events").insert({
-    action: "product_price_deleted",
-    user_id: actor.user.id,
-    details: { product_id: productId, role },
-    entity_type: "product_price",
-    entity_id: productId,
+  // upsert_product_price with a NULL price removes the row (= not published
+  // for this role) and audits product_price_removed in the same transaction.
+  const client = await createServerSupabaseClient();
+  const { error: rpcError } = await client.rpc("upsert_product_price", {
+    p_product_id: parsed.data.product_id,
+    p_role: parsed.data.role,
+    p_price: null,
   });
+
+  if (rpcError) {
+    return mapPriceRpcError(rpcError);
+  }
 
   await revalidateCatalog();
 

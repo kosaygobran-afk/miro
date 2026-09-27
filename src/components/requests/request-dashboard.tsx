@@ -10,7 +10,7 @@ export async function RequestDashboard({
   const client = await createServerSupabaseClient();
   const { data, error } = await client
     .from("service_requests")
-    .select("id,name,message,status,assigned_worker_id")
+    .select("id,name,message,status,assigned_to")
     .order("created_at", { ascending: false })
     .limit(100);
   if (error)

@@ -6,7 +6,7 @@ type Item = {
   name: string;
   message: string;
   status: string;
-  assigned_worker_id: string | null;
+  assigned_to: string | null;
 };
 export function RequestList({
   items,
@@ -100,7 +100,7 @@ export function RequestList({
               <select
                 name="worker"
                 className="miro-input"
-                defaultValue={item.assigned_worker_id ?? ""}
+                defaultValue={item.assigned_to ?? ""}
               >
                 <option value="">{he ? "ללא שיוך" : "Unassigned"}</option>
                 {workers.map((worker) => (

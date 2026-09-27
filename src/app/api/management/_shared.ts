@@ -102,3 +102,23 @@ export function mapPostgresError(error: {
   console.error("Management API database error:", error.code, error.message);
   return NextResponse.json({ error: "Operation failed" }, { status: 500 });
 }
+
+// Check-constraint violations (23514) from the catalog price contract:
+// raw constraint names stay server-side, clients get a safe business message.
+export function mapPriceConstraintError(error: {
+  code?: string;
+  message?: string;
+}): NextResponse {
+  const message = error.message ?? "";
+  console.error("Price constraint violation:", error.code, message);
+  if (message.includes("compare_at")) {
+    return NextResponse.json(
+      { error: "Compare-at price must be greater than the sale price" },
+      { status: 400 },
+    );
+  }
+  return NextResponse.json(
+    { error: "Price must be greater than 0" },
+    { status: 400 },
+  );
+}

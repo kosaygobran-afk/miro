@@ -79,22 +79,29 @@ export async function POST(request: Request) {
             ? await client.auth.updateUser({ password: input.newPassword })
             : await client.auth.updateUser({ email: input.email });
     if (result.error) {
-      if (
-        input.action === "delete" &&
-        result.error.message.includes("Verify your password again")
-      )
+      console.error("CEO action failed:", input.action, result.error.message);
+      if (input.action === "delete") {
+        if (result.error.message.includes("Verify your password again"))
+          return NextResponse.json(
+            { error: "Password verification expired. Please try again." },
+            { status: 400 },
+          );
         return NextResponse.json(
-          { error: "Password verification expired. Please try again." },
+          {
+            error:
+              "Unable to delete this protected account. At least one active CEO must remain.",
+          },
           { status: 400 },
         );
+      }
       return NextResponse.json(
         {
           error:
-            input.action === "delete"
-              ? "Deletion failed. At least one active CEO must remain."
+            input.action === "password"
+              ? "Unable to update password."
               : input.action === "add"
-                ? "Choose an existing active account with a verified email."
-                : "Unable to start email verification.",
+                ? "Unable to grant CEO access to that account."
+                : "Unable to start email change verification.",
         },
         { status: 400 },
       );

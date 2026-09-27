@@ -4,6 +4,7 @@ export type Capability =
   | "manageUsers"
   | "manageCatalog"
   | "manageInventory"
+  | "manageRequests"
   | "recordSale"
   | "viewAnalytics"
   | "viewFinance"
@@ -16,6 +17,7 @@ const capabilityMap: Record<AppRole, Capability[]> = {
     "manageUsers",
     "manageCatalog",
     "manageInventory",
+    "manageRequests",
     "recordSale",
     "viewAnalytics",
     "viewFinance",
@@ -26,6 +28,7 @@ const capabilityMap: Record<AppRole, Capability[]> = {
   admin: [
     "manageCatalog",
     "manageInventory",
+    "manageRequests",
     "recordSale",
     "viewAnalytics",
     "viewFinance",

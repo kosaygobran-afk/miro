@@ -40,16 +40,49 @@ const adjustSchema = z.object({
   reason: z.string().min(1).max(500),
 });
 
+const inventoryListQuerySchema = z.object({
+  // Legacy alias kept for existing callers: lowStock=true narrows to the
+  // SQL-computed "low" stock state.
+  lowStock: z.string().optional(),
+  search: z.string().trim().max(120).optional().default(""),
+  status: z
+    .enum(["all", "in_stock", "low", "out_of_stock"])
+    .optional()
+    .default("all"),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(25),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
+
+// Items returned by the management_inventory_list RPC (snake_case jsonb).
+type InventoryListItem = {
+  variant_id: string;
+  sku: string;
+  barcode: string | null;
+  stock_qty: number;
+  low_stock_threshold: number;
+  reorder_point: number | null;
+  reorder_qty: number | null;
+  supplier_company_name: string | null;
+  product_id: string;
+  product_slug: string | null;
+  product_name_he: string | null;
+  product_name_en: string | null;
+  status: string;
+};
+
+type InventoryListResult = {
+  total_count: number;
+  page: number;
+  page_size: number;
+  items: InventoryListItem[];
+};
+
 export async function GET(request: Request) {
   const auth = await withManagementAuth(request, "manageInventory");
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
-  const lowStock = searchParams.get("lowStock") === "true";
-  const search = searchParams.get("search") || "";
   const variantId = searchParams.get("variantId");
-  const limit = Math.min(parseInt(searchParams.get("limit") || "100", 10), 500);
-  const offset = parseInt(searchParams.get("offset") || "0", 10);
 
   const { admin } = auth;
 
@@ -66,41 +99,76 @@ export async function GET(request: Request) {
     return NextResponse.json({ movements: movements ?? [] });
   }
 
-  let query = admin
-    .from("product_variants")
-    .select(
-      `
-      id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override,
-      supplier_id, supplier_sku, is_default, is_active, stock_qty, low_stock_threshold,
-      reorder_point, reorder_qty, created_at, updated_at,
-      products!product_variants_product_id_fkey (id, name_he, name_en, slug, status, tracking_mode, out_of_stock_policy),
-      suppliers (id, company_name)
-    `,
-    )
-    .order("sku");
-
-  if (search) {
-    query = query.or(
-      `sku.ilike.%${search}%,barcode.ilike.%${search}%,products.name_he.ilike.%${search}%,products.name_en.ilike.%${search}%`,
-    );
+  const parsed = inventoryListQuerySchema.safeParse({
+    ...Object.fromEntries(searchParams),
+    search: searchParams.get("search") ?? undefined,
+    status: searchParams.get("status") ?? undefined,
+    limit: searchParams.get("limit") ?? undefined,
+    offset: searchParams.get("offset") ?? undefined,
+    lowStock: searchParams.get("lowStock") ?? undefined,
+  });
+  if (!parsed.success) {
+    return errorResponse("Invalid query params", 400, parsed.error.flatten());
   }
 
-  const { data, error } = await query.range(offset, offset + limit - 1);
+  const { search, status, limit, offset, lowStock } = parsed.data;
+  // Note: management_inventory_list has no supplier/active/sort filters —
+  // search + SQL stock state only (see migration 20260927110000).
+  const rpcStatus =
+    lowStock === "true"
+      ? "low"
+      : status === "in_stock"
+        ? "in"
+        : status === "out_of_stock"
+          ? "out"
+          : status === "low"
+            ? "low"
+            : null;
 
-  if (error) {
-    return mapPostgresError(error);
-  }
+  // The RPC paginates by page; map limit/offset onto pages and trim the
+  // leading rows when offset is not page-aligned.
+  const page = Math.floor(offset / limit) + 1;
 
-  let variants = data ?? [];
+  // User-context client: the RPC authorizes via active_app_role(), which is
+  // null under the service-role key.
+  const client = await createServerSupabaseClient();
+  const { data: result, error } = await client.rpc(
+    "management_inventory_list",
+    {
+      p_search: search || null,
+      p_status: rpcStatus,
+      p_page: page,
+      p_page_size: limit,
+    },
+  );
+  if (error) return mapPostgresError(error);
 
-  // Filter low stock in memory
-  if (lowStock) {
-    variants = variants.filter((v) => v.stock_qty <= v.low_stock_threshold);
-  }
+  const payload = result as unknown as InventoryListResult;
+  const trim = offset % limit;
+  const items = (payload?.items ?? []).slice(trim);
 
   return NextResponse.json({
-    variants,
-    totalCount: variants.length,
+    items: items.map((item) => ({
+      // Field names kept compatible with the inventory manager UI.
+      id: item.variant_id,
+      sku: item.sku,
+      barcode: item.barcode,
+      stock_qty: item.stock_qty,
+      low_stock_threshold: item.low_stock_threshold,
+      reorder_point: item.reorder_point,
+      reorder_qty: item.reorder_qty,
+      status: item.status,
+      products: {
+        id: item.product_id,
+        slug: item.product_slug,
+        name_he: item.product_name_he,
+        name_en: item.product_name_en,
+      },
+      suppliers: item.supplier_company_name
+        ? { company_name: item.supplier_company_name }
+        : null,
+    })),
+    totalCount: payload?.total_count ?? 0,
     limit,
     offset,
   });

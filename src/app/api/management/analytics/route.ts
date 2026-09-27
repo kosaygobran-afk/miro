@@ -3,12 +3,66 @@ import { z } from "zod";
 import {
   withManagementAuth,
   errorResponse,
+  mapPostgresError,
 } from "@/app/api/management/_shared";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const analyticsParamsSchema = z.object({
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
 });
+
+// Overview counters are produced by the management_analytics_overview RPC;
+// these interfaces mirror its documented output (snake_case jsonb).
+type AnalyticsOverview = {
+  from: string;
+  to: string;
+  generated_at: string;
+  totals: {
+    unique_sessions: number;
+    product_views: number;
+    product_impressions: number;
+    searches: number;
+    no_result_searches: number;
+    contact_clicks: {
+      contact: number;
+      phone: number;
+      whatsapp: number;
+      total: number;
+    };
+    product_inquiries: number;
+    service_requests: number;
+  };
+  top_products: {
+    product_id: string | null;
+    slug: string | null;
+    name_he: string | null;
+    name_en: string | null;
+    views: number;
+  }[];
+  top_categories: {
+    category_id: string | null;
+    slug: string | null;
+    name_he: string | null;
+    name_en: string | null;
+    views: number;
+  }[];
+  top_searches: { query: string; searches: number }[];
+};
+
+type SalesSummary = {
+  current: { orders_count: number } | null;
+};
+
+// Bound for the per-product unique-viewer session fetch. The aggregation
+// RPC intentionally has no per-product detail; a fuller per-product
+// breakdown should become a dedicated RPC (DB follow-up).
+const UNIQUE_VIEWER_ROW_CAP = 5000;
+
+function toNumber(value: unknown): number {
+  const num = typeof value === "string" ? Number(value) : value;
+  return typeof num === "number" && Number.isFinite(num) ? num : 0;
+}
 
 export async function GET(request: Request) {
   const auth = await withManagementAuth(request, "viewAnalytics");
@@ -22,256 +76,250 @@ export async function GET(request: Request) {
     return errorResponse("Invalid query params", 400, parsed.error.flatten());
   }
 
+  const from = parsed.data.from ?? "1970-01-01T00:00:00.000Z";
+  const to = parsed.data.to ?? new Date().toISOString();
+
+  // RPCs authorize via active_app_role(), which reads the caller's JWT and
+  // is null under the service-role key — run them on the user-context
+  // client. Bounded table reads stay on the admin client.
+  const client = await createServerSupabaseClient();
+  const [overviewResult, summaryResult] = await Promise.all([
+    client.rpc("management_analytics_overview", { p_from: from, p_to: to }),
+    client.rpc("management_sales_summary", { p_from: from, p_to: to }),
+  ]);
+
+  if (overviewResult.error) {
+    return mapPostgresError(overviewResult.error);
+  }
+  const overview = overviewResult.data as unknown as AnalyticsOverview;
+  const totals = overview?.totals;
+  if (!totals) {
+    console.error("management_analytics_overview returned no totals");
+    return errorResponse("Analytics query failed", 500);
+  }
+
+  // Sales counters must never come from analytics 'sale' events; they are
+  // sourced from orders via management_sales_summary only. Treat summary
+  // failure as non-fatal so the engagement overview still renders.
+  let salesCount: number | null = null;
+  if (summaryResult.error) {
+    console.error(
+      "management_sales_summary failed:",
+      summaryResult.error.code,
+      summaryResult.error.message,
+    );
+  } else {
+    const summary = summaryResult.data as unknown as SalesSummary;
+    salesCount = summary?.current ? toNumber(summary.current.orders_count) : 0;
+  }
+
+  // Per-product detail is NOT covered by the overview RPC (it returns only
+  // the top-10 products by views). Exact counts per top product come from
+  // count-exact head queries; unique viewers need a distinct session count
+  // and are computed from a capped session fetch.
+  const topProducts = (overview.top_products ?? []).filter(
+    (entry): entry is typeof entry & { product_id: string } =>
+      Boolean(entry.product_id),
+  );
+  const clickTypes = [
+    "product_contact_click",
+    "product_phone_click",
+    "product_whatsapp_click",
+  ];
+
   const { admin } = auth;
-  const { from, to } = parsed.data;
 
+  let uniqueViewersCapped = false;
+  let perProduct: {
+    productId: string;
+    slug: string | null;
+    name: { he: string | null; en: string | null };
+    category: {
+      id: string;
+      slug: string | null;
+      name_he: string | null;
+      name_en: string | null;
+    } | null;
+    views: number;
+    uniqueViewers: number;
+    contactClicks: number;
+    enquiries: number;
+    conversion: number;
+  }[];
   try {
-    // 1. Totals - using individual queries since exec_sql RPC doesn't exist
-    const [
-      { count: views },
-      { data: sessionRows },
-      { count: searches },
-      { count: noResultSearches },
-      { count: inquiries },
-      { count: salesCount },
-    ] = await Promise.all([
-      admin
-        .from("analytics_events")
-        .select("*", { count: "exact", head: true })
-        .in("event_type", ["product_view", "product_impression"])
-        .gte("created_at", from ?? "1970-01-01")
-        .lte("created_at", to ?? "2999-12-31"),
-      // unique sessions: count distinct session_id
-      admin
-        .from("analytics_events")
-        .select("session_id")
-        .in("event_type", ["product_view", "product_impression"])
-        .not("session_id", "is", null)
-        .gte("created_at", from ?? "1970-01-01")
-        .lte("created_at", to ?? "2999-12-31")
-        .limit(10000),
-      admin
-        .from("analytics_events")
-        .select("*", { count: "exact", head: true })
-        .eq("event_type", "product_search")
-        .gte("created_at", from ?? "1970-01-01")
-        .lte("created_at", to ?? "2999-12-31"),
-      admin
-        .from("analytics_events")
-        .select("*", { count: "exact", head: true })
-        .eq("event_type", "search_no_result")
-        .gte("created_at", from ?? "1970-01-01")
-        .lte("created_at", to ?? "2999-12-31"),
-      admin
-        .from("analytics_events")
-        .select("*", { count: "exact", head: true })
-        .in("event_type", [
-          "product_contact_click",
-          "product_phone_click",
-          "product_whatsapp_click",
-          "product_inquiry",
-        ])
-        .gte("created_at", from ?? "1970-01-01")
-        .lte("created_at", to ?? "2999-12-31"),
-      admin
-        .from("analytics_events")
-        .select("*", { count: "exact", head: true })
-        .eq("event_type", "sale")
-        .gte("created_at", from ?? "1970-01-01")
-        .lte("created_at", to ?? "2999-12-31"),
-    ]);
-
-    // 2. Per-product table
-    const { data: perProductData, error: perProductError } = await admin
-      .from("analytics_events")
-      .select("product_id, event_type, session_id")
-      .in("event_type", [
-        "product_view",
-        "product_impression",
-        "product_contact_click",
-        "product_phone_click",
-        "product_whatsapp_click",
-        "product_inquiry",
-      ])
-      .gte("created_at", from ?? "1970-01-01")
-      .lte("created_at", to ?? "2999-12-31");
-
-    if (perProductError) {
-      return errorResponse(perProductError.message);
-    }
-
-    const perProductMap = new Map<
+    const productIds = topProducts.map((entry) => entry.product_id);
+    const categoryByProduct = new Map<
       string,
       {
-        views: number;
-        uniqueViewers: number;
-        inquiries: number;
-        clicks: number;
-      }
+        id: string;
+        slug: string | null;
+        name_he: string | null;
+        name_en: string | null;
+      } | null
     >();
-    (perProductData ?? []).forEach((row) => {
-      const pid = row.product_id;
-      if (!pid) return;
-      const entry = perProductMap.get(pid) ?? {
-        views: 0,
-        uniqueViewers: 0,
-        inquiries: 0,
-        clicks: 0,
-      };
-      if (
-        row.event_type === "product_view" ||
-        row.event_type === "product_impression"
-      ) {
-        entry.views++;
+    if (productIds.length > 0) {
+      const { data: productRows, error: productError } = await admin
+        .from("products")
+        .select(
+          "id, category_id, categories:category_id (slug, name_he, name_en)",
+        )
+        .in("id", productIds);
+      if (productError) throw productError;
+      for (const row of (productRows ?? []) as unknown as {
+        id: string;
+        category_id: string | null;
+        categories: {
+          slug: string | null;
+          name_he: string | null;
+          name_en: string | null;
+        } | null;
+      }[]) {
+        categoryByProduct.set(
+          row.id,
+          row.categories && row.category_id
+            ? { id: row.category_id, ...row.categories }
+            : null,
+        );
       }
-      if (
-        [
-          "product_contact_click",
-          "product_phone_click",
-          "product_whatsapp_click",
-        ].includes(row.event_type)
-      ) {
-        entry.clicks++;
-      }
-      if (row.event_type === "product_inquiry") {
-        entry.inquiries++;
-      }
-      perProductMap.set(pid, entry);
-    });
+    }
 
-    // Count unique viewers per product
-    const viewEvents = (perProductData ?? []).filter(
-      (r) =>
-        r.event_type === "product_view" ||
-        r.event_type === "product_impression",
-    );
-    const uniqueViewersMap = new Map<string, Set<string>>();
-    viewEvents.forEach((r) => {
-      if (r.product_id && r.session_id) {
-        const set = uniqueViewersMap.get(r.product_id) ?? new Set();
-        set.add(r.session_id);
-        uniqueViewersMap.set(r.product_id, set);
-      }
-    });
+    perProduct = await Promise.all(
+      topProducts.map(async (entry) => {
+        const productId = entry.product_id;
+        const [clicksResult, enquiriesResult, sessionsResult] =
+          await Promise.all([
+            admin
+              .from("analytics_events")
+              .select("id", { count: "exact", head: true })
+              .eq("product_id", productId)
+              .in("event_type", clickTypes)
+              .gte("created_at", from)
+              .lte("created_at", to),
+            admin
+              .from("service_requests")
+              .select("id", { count: "exact", head: true })
+              .eq("product_id", productId)
+              .gte("created_at", from)
+              .lte("created_at", to),
+            admin
+              .from("analytics_events")
+              .select("session_id")
+              .eq("product_id", productId)
+              .eq("event_type", "product_view")
+              .not("session_id", "is", null)
+              .gte("created_at", from)
+              .lte("created_at", to)
+              .limit(UNIQUE_VIEWER_ROW_CAP),
+          ]);
+        if (clicksResult.error) throw clicksResult.error;
+        if (enquiriesResult.error) throw enquiriesResult.error;
+        if (sessionsResult.error) throw sessionsResult.error;
 
-    const perProduct = Array.from(perProductMap.entries()).map(
-      ([productId, metrics]) => ({
-        productId,
-        views: metrics.views,
-        uniqueViewers: uniqueViewersMap.get(productId)?.size ?? 0,
-        inquiries: metrics.inquiries,
-        clicks: metrics.clicks,
+        const sessions = (sessionsResult.data ?? []) as unknown as {
+          session_id: string | null;
+        }[];
+        if (sessions.length >= UNIQUE_VIEWER_ROW_CAP)
+          uniqueViewersCapped = true;
+        const uniqueViewers = new Set(
+          sessions.map((row) => row.session_id).filter(Boolean),
+        ).size;
+        const views = toNumber(entry.views);
+        const contactClicks = clicksResult.count ?? 0;
+        const enquiries = enquiriesResult.count ?? 0;
+
+        return {
+          productId,
+          slug: entry.slug,
+          name: { he: entry.name_he, en: entry.name_en },
+          category: categoryByProduct.get(productId) ?? null,
+          views,
+          uniqueViewers,
+          contactClicks,
+          enquiries,
+          conversion: views > 0 ? enquiries / views : 0,
+        };
       }),
     );
+  } catch (err) {
+    return mapPostgresError(err as { code?: string; message?: string });
+  }
 
-    // 3. Per-search-term
-    const { data: searchData, error: searchError } = await admin
-      .from("analytics_events")
-      .select("search_query, event_type, results_count")
-      .in("event_type", ["product_search", "search_no_result"])
-      .gte("created_at", from ?? "1970-01-01")
-      .lte("created_at", to ?? "2999-12-31");
+  // Daily series: keeps reading the pre-aggregated v_product_daily_metrics
+  // view (bounded by the date window; no raw-event scan).
+  const { data: dailyData, error: dailyError } = await admin
+    .from("v_product_daily_metrics")
+    .select("day, event_type, events, unique_sessions, unique_users")
+    .gte("day", from.split("T")[0])
+    .lte("day", to.split("T")[0])
+    .order("day", { ascending: true });
+  if (dailyError) return mapPostgresError(dailyError);
 
-    if (searchError) {
-      return errorResponse(searchError.message);
-    }
-
-    const searchMap = new Map<
+  const dailySeries = (
+    (dailyData ?? []) as unknown as {
+      day: string | null;
+      event_type: string | null;
+      events: number | null;
+      unique_sessions: number | null;
+      unique_users: number | null;
+    }[]
+  ).reduce<
+    Record<
       string,
-      { searches: number; results: number; noResult: number }
-    >();
-    (searchData ?? []).forEach((row) => {
-      const query = row.search_query ?? "(empty)";
-      const entry = searchMap.get(query) ?? {
-        searches: 0,
-        results: 0,
-        noResult: 0,
-      };
-      if (row.event_type === "product_search") {
-        entry.searches++;
-        entry.results += row.results_count ?? 0;
-      } else {
-        entry.noResult++;
-      }
-      searchMap.set(query, entry);
-    });
-
-    const perSearchTerm = Array.from(searchMap.entries())
-      .map(([searchQuery, metrics]) => ({ searchQuery, ...metrics }))
-      .sort((a, b) => b.searches - a.searches);
-
-    // 4. Per-category views
-    const { data: categoryData, error: categoryError } = await admin
-      .from("analytics_events")
-      .select("category_id, event_type")
-      .eq("event_type", "category_view")
-      .gte("created_at", from ?? "1970-01-01")
-      .lte("created_at", to ?? "2999-12-31");
-
-    if (categoryError) {
-      return errorResponse(categoryError.message);
-    }
-
-    const categoryMap = new Map<string, number>();
-    (categoryData ?? []).forEach((row) => {
-      const cid = row.category_id ?? "unknown";
-      categoryMap.set(cid, (categoryMap.get(cid) ?? 0) + 1);
-    });
-
-    const perCategory = Array.from(categoryMap.entries())
-      .map(([categoryId, views]) => ({ categoryId, views }))
-      .sort((a, b) => b.views - a.views);
-
-    // 5. Daily series (using v_product_daily_metrics)
-    const { data: dailyData, error: dailyError } = await admin
-      .from("v_product_daily_metrics")
-      .select("day, event_type, events, unique_sessions, unique_users")
-      .gte("day", from ? from.split("T")[0] : "1970-01-01")
-      .lte("day", to ? to.split("T")[0] : "2999-12-31")
-      .order("day", { ascending: true });
-
-    if (dailyError) {
-      return errorResponse(dailyError.message);
-    }
-
-    const dailySeries = (dailyData ?? []).reduce<
       Record<
         string,
-        Record<
-          string,
-          { events: number; uniqueSessions: number; uniqueUsers: number }
-        >
+        { events: number; uniqueSessions: number; uniqueUsers: number }
       >
-    >((acc, row) => {
-      const day = row.day?.split("T")[0] ?? "unknown";
-      if (!acc[day]) acc[day] = {};
-      acc[day][row.event_type ?? "unknown"] = {
-        events: row.events ?? 0,
-        uniqueSessions: row.unique_sessions ?? 0,
-        uniqueUsers: row.unique_users ?? 0,
-      };
-      return acc;
-    }, {});
+    >
+  >((acc, row) => {
+    const day = row.day?.split("T")[0] ?? "unknown";
+    if (!acc[day]) acc[day] = {};
+    acc[day][row.event_type ?? "unknown"] = {
+      events: row.events ?? 0,
+      uniqueSessions: row.unique_sessions ?? 0,
+      uniqueUsers: row.unique_users ?? 0,
+    };
+    return acc;
+  }, {});
 
-    return NextResponse.json({
-      totals: {
-        views: views ?? 0,
-        uniqueSessions: new Set(
-          (sessionRows ?? []).map((row) => row.session_id),
-        ).size,
-        searches: searches ?? 0,
-        noResultSearches: noResultSearches ?? 0,
-        inquiries: inquiries ?? 0,
-        salesCount: salesCount ?? 0,
+  const uniqueSessions = toNumber(totals.unique_sessions);
+  const enquiriesSubmitted = toNumber(totals.service_requests);
+
+  return NextResponse.json({
+    range: {
+      from: overview.from,
+      to: overview.to,
+      generatedAt: overview.generated_at,
+    },
+    totals: {
+      views: toNumber(totals.product_views),
+      impressions: toNumber(totals.product_impressions),
+      uniqueSessions,
+      searches: toNumber(totals.searches),
+      noResultSearches: toNumber(totals.no_result_searches),
+      contactClicks: {
+        contact: toNumber(totals.contact_clicks?.contact),
+        phone: toNumber(totals.contact_clicks?.phone),
+        whatsapp: toNumber(totals.contact_clicks?.whatsapp),
+        total: toNumber(totals.contact_clicks?.total),
       },
-      perProduct,
-      perSearchTerm,
-      perCategory,
-      dailySeries,
-    });
-  } catch (err) {
-    return errorResponse(
-      err instanceof Error ? err.message : "Analytics query failed",
-    );
-  }
+      productInquiries: toNumber(totals.product_inquiries),
+      enquiriesSubmitted,
+      enquiryConversionRate:
+        uniqueSessions > 0 ? enquiriesSubmitted / uniqueSessions : 0,
+      salesCount,
+    },
+    perProduct,
+    perSearchTerm: (overview.top_searches ?? []).map((entry) => ({
+      searchQuery: entry.query,
+      searches: toNumber(entry.searches),
+    })),
+    perCategory: (overview.top_categories ?? []).map((entry) => ({
+      categoryId: entry.category_id,
+      slug: entry.slug,
+      name: { he: entry.name_he, en: entry.name_en },
+      views: toNumber(entry.views),
+    })),
+    dailySeries,
+    partial: { uniqueViewersCapped },
+  });
 }

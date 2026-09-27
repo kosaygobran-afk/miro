@@ -4,6 +4,7 @@ import {
   withManagementAuth,
   errorResponse,
   mapPostgresError,
+  mapPriceConstraintError,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -20,7 +21,7 @@ const variantSchema = z.object({
     .regex(/^#[0-9A-Fa-f]{6}$/)
     .nullable()
     .optional(),
-  price_override: z.number().nonnegative().nullable().optional(),
+  price_override: z.number().positive().nullable().optional(),
   cost_override: z.number().nonnegative().nullable().optional(),
   supplier_id: z.string().uuid().nullable().optional(),
   supplier_sku: z.string().max(100).nullable().optional(),
@@ -30,6 +31,58 @@ const variantSchema = z.object({
   reorder_point: z.number().int().nonnegative().nullable().optional(),
   reorder_qty: z.number().int().nonnegative().nullable().optional(),
 });
+
+// PATCH payload for public.update_variant(p_id, p_patch): exactly the RPC
+// whitelist (reorder_point/reorder_qty are intentionally not editable there;
+// unknown keys are rejected loudly instead of being silently dropped).
+const variantPatchSchema = z
+  .object({
+    id: z.string().uuid(),
+    product_id: z.string().uuid().optional(),
+    sku: z.string().min(1).max(100).optional(),
+    barcode: z.string().max(100).nullable().optional(),
+    color_he: z.string().max(100).nullable().optional(),
+    color_en: z.string().max(100).nullable().optional(),
+    color_hex: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .nullable()
+      .optional(),
+    price_override: z.number().positive().nullable().optional(),
+    cost_override: z.number().nonnegative().nullable().optional(),
+    supplier_id: z.string().uuid().nullable().optional(),
+    supplier_sku: z.string().max(100).nullable().optional(),
+    is_default: z.boolean().optional(),
+    is_active: z.boolean().optional(),
+    low_stock_threshold: z.number().int().nonnegative().optional(),
+  })
+  .strict();
+
+function mapVariantRpcError(error: {
+  code?: string;
+  message?: string;
+}): NextResponse {
+  console.error("update_variant failed:", error.code, error.message);
+  if (error.code === "42501") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+  if (error.code === "23505") {
+    return mapPostgresError(error);
+  }
+  if (error.code === "23514") {
+    return mapPriceConstraintError(error);
+  }
+  if (error.code === "22023") {
+    if ((error.message ?? "").includes("Variant not found")) {
+      return NextResponse.json({ error: "Variant not found" }, { status: 404 });
+    }
+    return NextResponse.json(
+      { error: "Invalid input", code: "invalid_input" },
+      { status: 400 },
+    );
+  }
+  return NextResponse.json({ error: "Operation failed" }, { status: 500 });
+}
 
 async function revalidateCatalog() {
   revalidatePath("/he/store");
@@ -131,56 +184,34 @@ export async function PATCH(request: Request) {
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => null);
-  const parsed = variantSchema
-    .partial()
-    .extend({ id: z.string().uuid() })
-    .safeParse(body);
+  const parsed = variantPatchSchema.safeParse(body);
   if (!parsed.success) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { admin, actor } = auth;
-  const { id, product_id, ...updateData } = parsed.data;
-
-  // Default-flag flips go through the atomic RPC (advisory-locked).
-  const wantsDefault = updateData.is_default === true;
-  if (wantsDefault) {
-    delete updateData.is_default;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id, product_id: _productId, ...fields } = parsed.data;
+  const patch: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) patch[key] = value;
+  }
+  if (Object.keys(patch).length === 0) {
+    return errorResponse("Nothing to update", 400);
   }
 
-  const { data: variant, error: variantError } = await admin
-    .from("product_variants")
-    .update(updateData)
-    .eq("id", id)
-    .select()
-    .single();
+  // One transactional call: field update, atomic default-flag flip (sibling
+  // clearing + audit) and the last-sellable-variant unpublish trigger. The
+  // RPC self-authorizes via active_app_role(), so it must run through the
+  // user-context client (auth.uid()), not the service client.
+  const client = await createServerSupabaseClient();
+  const { data: variant, error: variantError } = await client.rpc(
+    "update_variant",
+    { p_id: id, p_patch: patch },
+  );
 
   if (variantError) {
-    return mapPostgresError(variantError);
+    return mapVariantRpcError(variantError);
   }
-
-  if (wantsDefault) {
-    const client = await createServerSupabaseClient();
-    const { error: defaultError } = await client.rpc("set_default_variant", {
-      p_variant: id,
-    });
-    if (defaultError) return mapPostgresError(defaultError);
-    variant.is_default = true;
-  }
-
-  await admin.from("audit_events").insert({
-    action: "variant_updated",
-    user_id: actor.user.id,
-    details: {
-      variant_id: variant.id,
-      product_id: variant.product_id,
-      sku: variant.sku,
-      changes: Object.keys(updateData),
-      requested_product_id: product_id ?? null,
-    },
-    entity_type: "product_variant",
-    entity_id: variant.id,
-  });
 
   await revalidateCatalog();
 
@@ -212,30 +243,17 @@ export async function DELETE(request: Request) {
   const hasMovements = (movementsCount ?? 0) > 0;
 
   if (hasMovements) {
-    // Soft delete: set is_active = false
-    const { data: variant, error: updateError } = await admin
-      .from("product_variants")
-      .update({ is_active: false })
-      .eq("id", id)
-      .select()
-      .single();
+    // Soft delete via the transactional RPC (archives + audits + fires the
+    // last-sellable-variant unpublish trigger in one transaction).
+    const client = await createServerSupabaseClient();
+    const { error: updateError } = await client.rpc("update_variant", {
+      p_id: id,
+      p_patch: { is_active: false },
+    });
 
     if (updateError) {
-      return mapPostgresError(updateError);
+      return mapVariantRpcError(updateError);
     }
-
-    await admin.from("audit_events").insert({
-      action: "variant_archived",
-      user_id: actor.user.id,
-      details: {
-        variant_id: id,
-        product_id: variant.product_id,
-        sku: variant.sku,
-        reason: "referenced_by_stock_movements",
-      },
-      entity_type: "product_variant",
-      entity_id: id,
-    });
 
     await revalidateCatalog();
 

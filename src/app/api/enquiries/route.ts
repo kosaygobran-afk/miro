@@ -49,30 +49,32 @@ function failureResponse(
   );
 }
 
-// Per-IP token bucket, ~5 submissions per minute.
-// LIMITATION: in-memory, so the limit applies per server instance only.
-// Serverless/multi-instance deployments need a shared store (e.g. Upstash
-// Redis or a Postgres-backed counter) to enforce this globally.
-const RATE_LIMIT = 5;
-const RATE_WINDOW_MS = 60_000;
-const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+// Per-IP rate limiting is enforced by the shared check_rate_limit RPC
+// (rate_limit_events table in Postgres), so limits hold across server
+// instances: tier 1 = 5/min, tier 2 = 30/hour.
+type RateLimitOutcome = "ok" | "limited" | "error";
 
-function isRateLimited(ip: string, now: number): boolean {
-  const bucket = rateBuckets.get(ip);
-  if (!bucket || now >= bucket.resetAt) {
-    rateBuckets.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-  } else if (bucket.count >= RATE_LIMIT) {
-    return true;
-  } else {
-    bucket.count += 1;
-  }
-  // Bound memory use: purge expired buckets when the map grows large.
-  if (rateBuckets.size > 5000) {
-    for (const [key, value] of rateBuckets) {
-      if (now >= value.resetAt) rateBuckets.delete(key);
+async function checkRateLimits(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  ip: string,
+): Promise<RateLimitOutcome> {
+  const buckets = [
+    { key: `enquiry:ip:1m:${ip}`, limit: 5, window: "1 minute" },
+    { key: `enquiry:ip:1h:${ip}`, limit: 30, window: "1 hour" },
+  ] as const;
+  for (const bucket of buckets) {
+    const { data: allowed, error } = await supabase.rpc("check_rate_limit", {
+      p_key: bucket.key,
+      p_limit: bucket.limit,
+      p_window: bucket.window,
+    });
+    if (error) {
+      console.error("check_rate_limit failed:", error.code, error.message);
+      return "error";
     }
+    if (allowed !== true) return "limited";
   }
-  return false;
+  return "ok";
 }
 
 function getClientIp(request: NextRequest): string {
@@ -108,7 +110,15 @@ export async function POST(request: NextRequest) {
   }
   const locale = localeFromBody(body);
 
-  if (isRateLimited(getClientIp(request), Date.now())) {
+  const rateLimit = await checkRateLimits(
+    await createServerSupabaseClient(),
+    getClientIp(request),
+  );
+  if (rateLimit === "error") {
+    // Never silently allow unlimited submissions when the limiter is down.
+    return failureResponse("unavailable", 503, locale);
+  }
+  if (rateLimit === "limited") {
     return failureResponse("rate_limited", 429, locale);
   }
 

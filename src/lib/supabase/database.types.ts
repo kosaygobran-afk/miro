@@ -853,45 +853,75 @@ export type Database = {
       };
       service_requests: {
         Row: {
-          assigned_worker_id: string | null;
+          assigned_to: string | null;
           created_at: string;
           customer_id: string | null;
           email: string;
           id: string;
+          locale: string | null;
           message: string;
+          metadata: Json;
           name: string;
           phone: string | null;
+          product_id: string | null;
           service_id: string | null;
+          source: string;
           status: string;
           updated_at: string;
+          variant_id: string | null;
         };
         Insert: {
-          assigned_worker_id?: string | null;
+          assigned_to?: string | null;
           created_at?: string;
           customer_id?: string | null;
           email: string;
           id?: string;
+          locale?: string | null;
           message: string;
+          metadata?: Json;
           name: string;
           phone?: string | null;
+          product_id?: string | null;
           service_id?: string | null;
+          source?: string;
           status?: string;
           updated_at?: string;
+          variant_id?: string | null;
         };
         Update: {
-          assigned_worker_id?: string | null;
+          assigned_to?: string | null;
           created_at?: string;
           customer_id?: string | null;
           email?: string;
           id?: string;
+          locale?: string | null;
           message?: string;
+          metadata?: Json;
           name?: string;
           phone?: string | null;
+          product_id?: string | null;
           service_id?: string | null;
+          source?: string;
           status?: string;
           updated_at?: string;
+          variant_id?: string | null;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "products";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "service_requests_variant_id_fkey";
+            columns: ["variant_id"];
+            isOneToOne: false;
+            referencedRelation: "product_variants";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       stock_movements: {
         Row: {
@@ -1072,12 +1102,33 @@ export type Database = {
         Args: { target_user_id: string };
         Returns: undefined;
       };
-      current_tax_rate: { Args: never; Returns: number };
+      check_rate_limit: {
+        Args: { p_key: string; p_limit: number; p_window: string };
+        Returns: boolean;
+      };
+      current_tax_rate: { Args: { p_on?: string }; Returns: number };
       delete_own_ceo_account: { Args: never; Returns: undefined };
       delete_user_account: { Args: { target: string }; Returns: undefined };
       manage_account: {
         Args: { new_role?: string; new_status?: string; target: string };
         Returns: undefined;
+      };
+      management_analytics_overview: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
+      management_inventory_list: {
+        Args: {
+          p_page?: number;
+          p_page_size?: number;
+          p_search?: string | null;
+          p_status?: string | null;
+        };
+        Returns: Json;
+      };
+      management_sales_summary: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
       };
       publish_product: { Args: { p_product: string }; Returns: undefined };
       record_sale: {
@@ -1102,15 +1153,36 @@ export type Database = {
       };
       set_default_variant: { Args: { p_variant: string }; Returns: undefined };
       set_tax_rate: {
-        Args: { p_name: string; p_rate: number; p_valid_from: string };
+        Args: {
+          p_name: string;
+          p_rate: number;
+          p_valid_from: string;
+          p_valid_until?: string | null;
+        };
         Returns: string;
       };
       unpublish_product: {
         Args: { p_product: string; p_status?: string };
         Returns: undefined;
       };
+      update_product: {
+        Args: { p_id: string; p_patch: Json };
+        Returns: Database["public"]["Tables"]["products"]["Row"];
+      };
       update_service_request: {
         Args: { new_status: string; target: string; worker?: string };
+        Returns: undefined;
+      };
+      update_variant: {
+        Args: { p_id: string; p_patch: Json };
+        Returns: Database["public"]["Tables"]["product_variants"]["Row"];
+      };
+      upsert_product_image_meta: {
+        Args: { p_id: string; p_patch: Json };
+        Returns: Database["public"]["Tables"]["product_images"]["Row"];
+      };
+      upsert_product_price: {
+        Args: { p_price?: number | null; p_product_id: string; p_role: string };
         Returns: undefined;
       };
     };

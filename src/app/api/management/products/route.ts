@@ -4,6 +4,7 @@ import {
   withManagementAuth,
   errorResponse,
   mapPostgresError,
+  mapPriceConstraintError,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
@@ -59,6 +60,62 @@ const productSchema = z.object({
   supplier_id: z.string().uuid().nullable().optional(),
   status: z.enum(["draft", "active", "hidden", "archived"]).default("draft"),
 });
+
+// PATCH payload for public.update_product(p_id, p_patch): exactly the RPC
+// whitelist plus the optional target status. Unknown keys are rejected loudly
+// (never silently discarded — the field-loss bug this RPC fixes).
+const productPatchSchema = z
+  .object({
+    id: z.string().uuid(),
+    name_he: z.string().min(1).max(255).optional(),
+    name_en: z.string().min(1).max(255).optional(),
+    slug: z
+      .string()
+      .min(1)
+      .max(100)
+      .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
+      .optional(),
+    category_id: z.string().uuid().nullable().optional(),
+    brand: z.string().max(255).nullable().optional(),
+    model_number: z.string().max(255).nullable().optional(),
+    short_description_he: z.string().max(500).nullable().optional(),
+    short_description_en: z.string().max(500).nullable().optional(),
+    description_he: z.string().max(20000).nullable().optional(),
+    description_en: z.string().max(20000).nullable().optional(),
+    tags: z.array(z.string().min(1).max(100)).max(50).optional(),
+    warranty_he: z.string().max(1000).nullable().optional(),
+    warranty_en: z.string().max(1000).nullable().optional(),
+    sort_order: z.number().int().optional(),
+    out_of_stock_policy: z
+      .enum([
+        "inherit",
+        "keep_visible_contact",
+        "keep_visible_restock",
+        "hide_from_public",
+      ])
+      .optional(),
+    is_featured: z.boolean().optional(),
+    seo_title_he: z.string().max(255).nullable().optional(),
+    seo_title_en: z.string().max(255).nullable().optional(),
+    seo_description_he: z.string().max(1000).nullable().optional(),
+    seo_description_en: z.string().max(1000).nullable().optional(),
+    price: z.number().positive().nullable().optional(),
+    compare_at_price: z.number().positive().nullable().optional(),
+    sale_price: z.number().positive().nullable().optional(),
+    purchase_cost: z.number().nonnegative().nullable().optional(),
+    status: z.enum(["draft", "active", "hidden", "archived"]).optional(),
+  })
+  .strict();
+
+// update_product raises these exact texts with errcode 22023 when a requested
+// publish transition fails validation against the final patched state.
+const PUBLISH_INCOMPLETE_REASONS = [
+  "Missing Hebrew name",
+  "Missing English name",
+  "Missing category",
+  "Category is not active",
+  "at least one active variant",
+];
 
 async function revalidateCatalog() {
   revalidatePath("/he/store");
@@ -158,126 +215,65 @@ export async function PATCH(request: Request) {
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => null);
-  const parsed = productSchema
-    .partial()
-    .extend({ id: z.string().uuid() })
-    .safeParse(body);
+  const parsed = productPatchSchema.safeParse(body);
   if (!parsed.success) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { admin, actor } = auth;
-  const { id, status: statusFromBody, ...updateData } = parsed.data;
+  const { id, ...fields } = parsed.data;
+  const patch: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (value !== undefined) patch[key] = value;
+  }
+  if (Object.keys(patch).length === 0) {
+    return errorResponse("Nothing to update", 400);
+  }
 
-  // Handle status transitions specially
-  if (
-    statusFromBody &&
-    statusFromBody !== "draft" &&
-    statusFromBody !== "hidden" &&
-    statusFromBody !== "archived"
-  ) {
-    // Target is 'active' - call publish_product RPC
-    const client = await createServerSupabaseClient();
-    const { error: rpcError } = await client.rpc("publish_product", {
-      p_product: id,
-    });
+  // One transactional call: applies all whitelisted fields, optionally
+  // transitions status (publish rules validated against the final patched
+  // state) and writes the audit row. Self-authorizing RPC, so it must run
+  // through the user-context client (auth.uid()), not the service client.
+  const client = await createServerSupabaseClient();
+  const { data: product, error: rpcError } = await client.rpc(
+    "update_product",
+    { p_id: id, p_patch: patch },
+  );
 
-    if (rpcError) {
-      if (rpcError.code === "22023") {
-        console.error("publish_product validation failed:", rpcError.message);
+  if (rpcError) {
+    console.error("update_product failed:", rpcError.code, rpcError.message);
+    if (rpcError.code === "42501") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    if (rpcError.code === "23514") {
+      return mapPriceConstraintError(rpcError);
+    }
+    if (rpcError.code === "22023") {
+      const message = rpcError.message ?? "";
+      if (message.includes("Product not found")) {
+        return NextResponse.json(
+          { error: "Product not found" },
+          { status: 404 },
+        );
+      }
+      if (
+        PUBLISH_INCOMPLETE_REASONS.some((reason) => message.includes(reason))
+      ) {
         return NextResponse.json(
           {
             error: "Publish validation failed",
             code: "publish_incomplete",
+            details: message,
           },
-          { status: 422 },
+          { status: 400 },
         );
       }
-      if (rpcError.code === "42501") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-      console.error("publish_product failed:", rpcError.code, rpcError.message);
       return NextResponse.json(
-        { error: "Failed to publish product" },
-        { status: 500 },
+        { error: "Invalid input", code: "invalid_input" },
+        { status: 400 },
       );
     }
-
-    // Fetch updated product
-    const { data: product, error: fetchError } = await admin
-      .from("products")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (fetchError) {
-      return errorResponse("Failed to fetch updated product");
-    }
-
-    await revalidateCatalog();
-
-    return NextResponse.json({ product });
+    return NextResponse.json({ error: "Operation failed" }, { status: 500 });
   }
-
-  // For other status changes (draft, hidden, archived) or non-status updates
-  const targetStatus = statusFromBody ?? parsed.data.status;
-  if (targetStatus && ["draft", "hidden", "archived"].includes(targetStatus)) {
-    // Call unpublish_product RPC for transitions away from active
-    const client = await createServerSupabaseClient();
-    const { error: rpcError } = await client.rpc("unpublish_product", {
-      p_product: id,
-      p_status: targetStatus,
-    });
-
-    if (rpcError) {
-      if (rpcError.code === "42501") {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
-      console.error(
-        "unpublish_product failed:",
-        rpcError.code,
-        rpcError.message,
-      );
-      return NextResponse.json(
-        { error: "Failed to update product status" },
-        { status: 500 },
-      );
-    }
-
-    const { data: product, error: fetchError } = await admin
-      .from("products")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (fetchError) {
-      return errorResponse("Failed to fetch updated product");
-    }
-
-    await revalidateCatalog();
-
-    return NextResponse.json({ product });
-  }
-
-  // Regular update (no status change to active)
-  const { data: product, error: productError } = await admin
-    .from("products")
-    .update(updateData)
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (productError) {
-    return mapPostgresError(productError);
-  }
-
-  await admin.from("audit_events").insert({
-    action: "product_updated",
-    user_id: actor.user.id,
-    details: { product_id: product.id, slug: product.slug },
-    entity_type: "product",
-    entity_id: product.id,
-  });
 
   await revalidateCatalog();
 
