@@ -19,6 +19,10 @@ import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
 import type { Locale } from "@/lib/i18n";
 import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import {
+  getPublicContactConfig,
+  toPublicContactActions,
+} from "@/lib/contact-config";
 
 interface ProductsPageProps {
   params: Promise<{ locale: string }>;
@@ -51,7 +55,10 @@ export default async function ProductsPage({
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
 
   const viewer = await getStoreViewer();
-  const catalog = await getStoreCatalog(locale, viewer.role);
+  const [catalog, contactConfig] = await Promise.all([
+    getStoreCatalog(locale, viewer.role),
+    getPublicContactConfig(),
+  ]);
   const savedProductIds = new Set(viewer.savedProductIds);
 
   const categories = catalog.categories.map((category) => ({
@@ -133,6 +140,7 @@ export default async function ProductsPage({
             locale={locale}
             initialQuery={initialQuery}
             savedProductIds={Array.from(savedProductIds)}
+            contact={toPublicContactActions(contactConfig)}
           />
           <p className="sf-preview-note">
             <span aria-hidden="true" />

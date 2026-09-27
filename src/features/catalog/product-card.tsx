@@ -19,6 +19,7 @@ import { ProductVisual } from "@/components/products/ProductVisual";
 import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Product, ProductVariant } from "@/features/catalog/product-data";
+import type { PublicContactActions } from "@/lib/contact-config";
 import {
   trackProductImpression,
   trackProductContactClick,
@@ -96,12 +97,15 @@ export function ProductCard({
   locale = "en",
   actionLabel,
   isSaved = false,
+  contact = null,
 }: {
   product: Product;
   index?: number;
   actionLabel?: string;
   locale?: "he" | "en";
   isSaved?: boolean;
+  /** Config-driven contact channels; null/absent hides the actions. */
+  contact?: PublicContactActions | null;
 }) {
   const copy = storeCopy[locale] as StoreCopy;
   const dialog = useRef<HTMLDialogElement>(null);
@@ -115,7 +119,6 @@ export function ProductCard({
   const kind = getProductVisualKind(product);
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
   const price = formatPrice(product.priceIls, locale, copy);
-  const quoteHref = `/${locale}/contact?product=${encodeURIComponent(product.name)}`;
 
   useEffect(() => {
     const element = cardRef.current;
@@ -191,6 +194,14 @@ export function ProductCard({
     copy,
   );
   const displaySku = selectedVariant?.sku ?? defaultVariant?.sku;
+
+  const quoteParams = new URLSearchParams({
+    product: product.id,
+    item: product.slug,
+  });
+  const quoteVariantId = selectedVariant?.id ?? defaultVariant?.id;
+  if (quoteVariantId) quoteParams.set("variant", quoteVariantId);
+  const quoteHref = `/${locale}/contact?${quoteParams.toString()}`;
 
   // Don't render card if product should be hidden from public (handled in store-data, but defensive)
   if (
@@ -376,28 +387,36 @@ export function ProductCard({
               {copy.quote}
               <Arrow size={17} aria-hidden="true" />
             </Link>
-            <div className="sf-dialog-secondary-actions">
-              <a
-                href={`tel:+972-00-000-0000`}
-                className="sf-dialog-action-link"
-                onClick={() => trackProductPhoneClick(product.id, locale)}
-                aria-label={copy.callForProduct}
-              >
-                <Phone size={16} aria-hidden="true" />
-                <span>{copy.callForProduct}</span>
-              </a>
-              <a
-                href={`https://wa.me/972000000000?text=${encodeURIComponent(`${copy.whatsappForProduct}: ${product.name}`)}`}
-                className="sf-dialog-action-link"
-                onClick={() => trackProductWhatsAppClick(product.id, locale)}
-                aria-label={copy.whatsappForProduct}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MessageSquare size={16} aria-hidden="true" />
-                <span>{copy.whatsappForProduct}</span>
-              </a>
-            </div>
+            {contact?.phoneHref || contact?.whatsapp ? (
+              <div className="sf-dialog-secondary-actions">
+                {contact.phoneHref ? (
+                  <a
+                    href={`tel:${contact.phoneHref}`}
+                    className="sf-dialog-action-link"
+                    onClick={() => trackProductPhoneClick(product.id, locale)}
+                    aria-label={copy.callForProduct}
+                  >
+                    <Phone size={16} aria-hidden="true" />
+                    <span>{copy.callForProduct}</span>
+                  </a>
+                ) : null}
+                {contact.whatsapp ? (
+                  <a
+                    href={`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(`${copy.whatsappForProduct}: ${product.name}`)}`}
+                    className="sf-dialog-action-link"
+                    onClick={() =>
+                      trackProductWhatsAppClick(product.id, locale)
+                    }
+                    aria-label={copy.whatsappForProduct}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MessageSquare size={16} aria-hidden="true" />
+                    <span>{copy.whatsappForProduct}</span>
+                  </a>
+                ) : null}
+              </div>
+            ) : null}
             <p className="sf-dialog-note">{copy.demo}</p>
           </div>
         </div>

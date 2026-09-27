@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,7 +8,6 @@ import {
 } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { ProductVisual } from "@/components/products/ProductVisual";
 import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
@@ -21,7 +19,11 @@ import {
 } from "@/lib/store-data";
 import { withLocale, isLocale } from "@/lib/i18n";
 import { ProductViewTracker } from "@/components/analytics/ProductViewTracker";
-import { ProductDetailActions } from "@/components/analytics/ProductDetailActions";
+import { ProductDetailInteractive } from "@/components/products/ProductDetailInteractive";
+import {
+  getPublicContactConfig,
+  toPublicContactActions,
+} from "@/lib/contact-config";
 
 interface ProductDetailPageProps {
   params: Promise<{ locale: string; category: string; slug: string }>;
@@ -63,19 +65,6 @@ export async function generateMetadata({
     title: seoTitle,
     description: seoDescription,
   });
-}
-
-function formatPrice(
-  price: number | null,
-  locale: "he" | "en",
-  copy: StoreCopy,
-) {
-  if (price === null || price === undefined) return copy.priceUnpublished;
-  return new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
-    style: "currency",
-    currency: "ILS",
-    maximumFractionDigits: 0,
-  }).format(price);
 }
 
 function getStockBadge(
@@ -148,7 +137,10 @@ export default async function ProductDetailPage({
   const category = normalizeCategory(rawCategory);
   const copy = storeCopy[locale] as StoreCopy;
   const Arrow = locale === "he" ? ArrowRight : ArrowLeft;
-  const catalog = await getStoreCatalog(locale, viewer.role);
+  const [catalog, contactConfig] = await Promise.all([
+    getStoreCatalog(locale, viewer.role),
+    getPublicContactConfig(),
+  ]);
   const fallbackCatalog = getFallbackStoreCatalog(locale);
   const allProducts = [...catalog.products, ...fallbackCatalog.products];
 
@@ -171,8 +163,6 @@ export default async function ProductDetailPage({
     product.variants.find((v) => v.price !== null) ??
     product.variants[0];
   const effectivePrice = defaultVariant?.price ?? product.priceIls;
-  const displayPrice = formatPrice(effectivePrice, locale, copy);
-  const displaySku = defaultVariant?.sku;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const productUrl = `${siteUrl}/${locale}/store/${category}/${slug}`;
@@ -214,7 +204,9 @@ export default async function ProductDetailPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
       />
       <ProductViewTracker productId={product.id} locale={locale} />
       <div className="sf-storefront sf-product-detail">
@@ -241,198 +233,85 @@ export default async function ProductDetailPage({
 
         <section className="sf-product-main" aria-labelledby="product-title">
           <div className="miro-container sf-product-grid">
-            {/* Gallery */}
-            <div className="sf-product-gallery">
-              <div className="sf-main-image">
-                {product.images.length > 0 ? (
-                  <Image
-                    src={product.images[0].url}
-                    alt={
-                      locale === "he"
-                        ? (product.images[0].altHe ?? product.name)
-                        : (product.images[0].altEn ?? product.name)
-                    }
-                    width={800}
-                    height={600}
-                    sizes="(max-width: 1200px) 100vw, 800px"
-                    priority
-                    className="sf-product-main-image"
-                  />
-                ) : (
-                  <div
-                    className="sf-product-visual-placeholder"
-                    aria-hidden="true"
-                  >
-                    <ProductVisual kind={getProductVisualKind(product)} />
-                    <p className="sf-illustration-note">{copy.illustration}</p>
-                  </div>
-                )}
-              </div>
-              {product.images.length > 1 && (
-                <div
-                  className="sf-thumbnail-strip"
-                  role="list"
-                  aria-label="Product images"
-                >
-                  {product.images.map((image, index) => (
-                    <button
-                      key={image.id}
-                      role="listitem"
-                      className={`sf-thumbnail ${index === 0 ? "is-active" : ""}`}
-                      aria-label={`${locale === "he" ? (image.altHe ?? product.name) : (image.altEn ?? product.name)}`}
-                      aria-current={index === 0 ? "true" : "false"}
-                    >
-                      <Image
-                        src={image.url}
-                        alt=""
-                        width={120}
-                        height={90}
-                        className="sf-thumbnail-image"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Product Info */}
-            <div className="sf-product-info">
-              <p className="sf-product-category">
-                {product.categoryLabel ?? product.category}
-              </p>
-              <h1 id="product-title" dir="auto">
-                {product.name}
-              </h1>
-              {product.modelNumber && (
-                <p className="sf-product-model" dir="ltr">
-                  {locale === "he" ? "מק״ט" : "Model"}: {product.modelNumber}
-                </p>
-              )}
-
-              <div className="sf-product-price-block">
-                <div className="sf-price-display">
-                  <strong dir="auto">{displayPrice}</strong>
-                  {effectivePrice !== null && <span>{copy.demoPrice}</span>}
-                </div>
-                {displaySku && (
-                  <p className="sf-product-sku" dir="ltr">
-                    <span>{locale === "he" ? "מק״ט" : "SKU"}</span>:{" "}
-                    {displaySku}
+            <ProductDetailInteractive
+              productId={product.id}
+              productSlug={product.slug}
+              productName={product.name}
+              locale={locale}
+              basePrice={product.priceIls}
+              images={product.images}
+              variants={product.variants}
+              defaultVariantId={defaultVariant?.id ?? null}
+              visualKind={getProductVisualKind(product)}
+              contact={toPublicContactActions(contactConfig)}
+              header={
+                <>
+                  <p className="sf-product-category">
+                    {product.categoryLabel ?? product.category}
                   </p>
-                )}
-              </div>
-
-              {/* Stock badge */}
-              <div className="sf-product-stock" aria-live="polite">
-                {getStockBadge(
-                  product.stockState,
-                  product.outOfStockPolicy,
-                  product.expectedRestockDate,
-                  copy,
-                  locale,
-                )}
-              </div>
-
-              {/* Variant selector */}
-              {product.variants.length > 0 && (
-                <fieldset className="sf-variant-fieldset">
-                  <legend>
-                    {copy.variants} {copy.color}
-                  </legend>
-                  <div
-                    className="sf-variant-chips"
-                    role="radiogroup"
-                    aria-label={copy.variants}
-                  >
-                    {product.variants.map((variant) => (
-                      <label key={variant.id} className="sf-variant-chip-label">
-                        <input
-                          type="radio"
-                          name={`variant-${product.id}`}
-                          value={variant.id}
-                          defaultChecked={variant.id === defaultVariant?.id}
-                          className="sr-only"
-                          onChange={() => {}}
-                        />
-                        <span
-                          className="sf-variant-chip"
-                          style={
-                            {
-                              "--variant-color": variant.colorHex,
-                            } as React.CSSProperties
-                          }
-                        >
-                          <span
-                            className="sf-variant-swatch"
-                            aria-hidden="true"
-                          />
-                          <span className="sf-variant-name">
-                            {locale === "he"
-                              ? variant.colorHe
-                              : variant.colorEn}
-                          </span>
-                          {variant.price !== null &&
-                            variant.price !== effectivePrice && (
-                              <span className="sf-variant-price-diff">
-                                {formatPrice(variant.price, locale, copy)}
-                              </span>
-                            )}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
+                  <h1 id="product-title" dir="auto">
+                    {product.name}
+                  </h1>
+                  {product.modelNumber && (
+                    <p className="sf-product-model" dir="ltr">
+                      {locale === "he" ? "מק״ט" : "Model"}:{" "}
+                      {product.modelNumber}
+                    </p>
+                  )}
+                </>
+              }
+              stockBadge={getStockBadge(
+                product.stockState,
+                product.outOfStockPolicy,
+                product.expectedRestockDate,
+                copy,
+                locale,
               )}
-
-              {product.shortDescription && (
-                <p className="sf-product-short-description" dir="auto">
-                  {product.shortDescription}
-                </p>
-              )}
-
-              <ProductDetailActions
-                productId={product.id}
-                productSlug={product.slug}
-                productName={product.name}
-                locale={locale}
-              />
-
-              <p className="sf-product-disclaimer">{copy.demo}</p>
-
-              {/* Specifications */}
-              {product.specifications &&
-                Object.keys(product.specifications).length > 0 && (
-                  <details className="sf-product-specs">
-                    <summary>
-                      {locale === "he" ? "מפרט טכני" : "Specifications"}
-                      <ExternalLink size={16} aria-hidden="true" />
-                    </summary>
-                    <dl className="sf-specs-list">
-                      {Object.entries(product.specifications).map(
-                        ([key, value]) => (
-                          <div key={key} className="sf-spec-row">
-                            <dt>{key}</dt>
-                            <dd>{value}</dd>
-                          </div>
-                        ),
-                      )}
-                    </dl>
-                  </details>
-                )}
-
-              {product.warranty && (
-                <div className="sf-product-warranty">
-                  <Circle
-                    size={18}
-                    aria-hidden="true"
-                    className="text-accent-text"
-                  />
-                  <span>
-                    {product.warranty} {locale === "he" ? "אחריות" : "warranty"}
-                  </span>
-                </div>
-              )}
-            </div>
+              description={
+                product.shortDescription ? (
+                  <p className="sf-product-short-description" dir="auto">
+                    {product.shortDescription}
+                  </p>
+                ) : null
+              }
+              footer={
+                <>
+                  <p className="sf-product-disclaimer">{copy.demo}</p>
+                  {product.specifications &&
+                    Object.keys(product.specifications).length > 0 && (
+                      <details className="sf-product-specs">
+                        <summary>
+                          {locale === "he" ? "מפרט טכני" : "Specifications"}
+                          <ExternalLink size={16} aria-hidden="true" />
+                        </summary>
+                        <dl className="sf-specs-list">
+                          {Object.entries(product.specifications).map(
+                            ([key, value]) => (
+                              <div key={key} className="sf-spec-row">
+                                <dt>{key}</dt>
+                                <dd>{value}</dd>
+                              </div>
+                            ),
+                          )}
+                        </dl>
+                      </details>
+                    )}
+                  {product.warranty && (
+                    <div className="sf-product-warranty">
+                      <Circle
+                        size={18}
+                        aria-hidden="true"
+                        className="text-accent-text"
+                      />
+                      <span>
+                        {product.warranty}{" "}
+                        {locale === "he" ? "אחריות" : "warranty"}
+                      </span>
+                    </div>
+                  )}
+                </>
+              }
+            />
           </div>
         </section>
 

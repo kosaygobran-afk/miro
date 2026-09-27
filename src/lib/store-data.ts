@@ -157,6 +157,9 @@ function shouldHideFromPublic(
 }
 
 export function getFallbackStoreCatalog(locale: "he" | "en"): StoreCatalog {
+  if (process.env.NODE_ENV === "production") {
+    return { categories: [], products: [] };
+  }
   return {
     categories: productCategories.map((category) => ({
       id: category.key,
@@ -464,10 +467,7 @@ export async function getStoreCatalog(
       return getFallbackStoreCatalog(locale);
     return { categories, products };
   } catch (error) {
-    console.error(
-      "Supabase catalog read failed; using fallback catalog.",
-      error,
-    );
+    console.error("Supabase catalog read failed.", error);
     return getFallbackStoreCatalog(locale);
   }
 }

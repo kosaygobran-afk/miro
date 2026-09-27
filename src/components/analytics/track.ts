@@ -9,9 +9,7 @@ type TrackEventType =
   | "product_contact_click"
   | "product_phone_click"
   | "product_whatsapp_click"
-  | "product_inquiry"
-  | "sale"
-  | "return";
+  | "product_inquiry";
 
 interface TrackEventParams {
   type: TrackEventType;

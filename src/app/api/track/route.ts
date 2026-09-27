@@ -15,8 +15,9 @@ const trackSchema = z.object({
     "product_phone_click",
     "product_whatsapp_click",
     "product_inquiry",
-    "sale",
-    "return",
+    // Financial events ("sale", "return") are intentionally not accepted here:
+    // browser tracking must never carry financial data; trusted sale data comes
+    // from orders.
   ]),
   productId: z.string().uuid().optional(),
   categoryId: z.string().uuid().optional(),

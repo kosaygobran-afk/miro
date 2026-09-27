@@ -89,7 +89,7 @@
     },
     "contact": {
       "title": "Contact MIRO",
-      "description": "Development-stage contact page for MIRO quote requests. Submission is not enabled yet."
+      "description": "Contact MIRO to request a quote or ask about security and communications products and services."
     },
     "privacy": {
       "title": "Draft Privacy Policy",
@@ -188,14 +188,28 @@
     },
     "contact": {
       "title": "Contact / Request a Quote",
-      "subtitle": "The visual form is ready, but submissions are disabled until a real enquiry backend is implemented.",
-      "notice": "Do not enter real private details yet. This Phase 1 form does not send data.",
+      "subtitle": "Tell us about your project or the product you are interested in, and we will get back to you.",
+      "directTitle": "Direct contact",
+      "whatsappAction": "WhatsApp",
       "form": {
         "name": "Name",
         "email": "Email",
         "phone": "Phone (optional)",
         "message": "Message",
-        "submit": "Submission unavailable"
+        "company": "Company",
+        "submit": "Send enquiry",
+        "sending": "Sending…",
+        "productContext": "Enquiry about product: {item}",
+        "success": "Your enquiry was sent. We will get back to you soon.",
+        "invalidInput": "Some details are missing or invalid. Correct the highlighted fields and try again.",
+        "rateLimited": "Too many enquiries were sent. Please try again in a minute.",
+        "unavailable": "Submission is unavailable right now. Please try again later.",
+        "errors": {
+          "name": "Please enter a name (up to 120 characters).",
+          "email": "Please enter a valid email address.",
+          "phone": "Please enter a valid phone number or leave this field empty.",
+          "message": "Please enter a message (up to 2,000 characters)."
+        }
       }
     },
     "privacy": {

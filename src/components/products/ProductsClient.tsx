@@ -5,6 +5,7 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
+import type { PublicContactActions } from "@/lib/contact-config";
 import { trackProductSearch } from "@/components/analytics/track";
 
 type CatalogCategory = { key: string; label: string };
@@ -16,6 +17,7 @@ export function ProductsClient({
   initialQuery = "",
   fixedCategory,
   savedProductIds = [],
+  contact = null,
 }: {
   products: Product[];
   categories: CatalogCategory[];
@@ -23,6 +25,7 @@ export function ProductsClient({
   initialQuery?: string;
   fixedCategory?: string;
   savedProductIds?: string[];
+  contact?: PublicContactActions | null;
 }) {
   const copy = storeCopy[locale];
   const [query, setQuery] = useState(initialQuery);
@@ -202,6 +205,7 @@ export function ProductsClient({
           products={filtered.slice(0, limit)}
           locale={locale}
           savedProductIds={savedProductIds}
+          contact={contact}
         />
       ) : (
         <div className="sf-empty">
