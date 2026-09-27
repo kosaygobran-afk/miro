@@ -306,6 +306,7 @@ end $$;
 -- 9. Anonymous analytics consumers cannot write sale/return events
 -- ============================================================
 set local role anon;
+select set_config('request.jwt.claim.sub','',true); -- clear stale claim from earlier sections; anon has no JWT
 do $$ begin
   begin
     insert into public.analytics_events(event_type) values ('sale');

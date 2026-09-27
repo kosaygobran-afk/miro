@@ -88,3 +88,8 @@
 - Inserts land in `service_requests` with `status='new'` (a fail-closed DB trigger re-forces that status); they surface in the admin Requests page. DB-side length caps mirror the zod limits.
 - Manual verification: `curl -X POST http://127.0.0.1:3000/en/api/enquiries -H 'content-type: application/json' -H "origin: http://127.0.0.1:3000" -d '{"name":"Test","email":"t@example.com","phone":"+972500000000","message":"Hello there","startedAt":0}'` (expect `invalid_input` for the instant time trap; use a real form submission for a full happy path). Automated coverage: `npx playwright test tests/enquiry.spec.ts` (4 API-level tests run without browsers; the 2 browser tests need Playwright Chromium).
 - Privacy: enquiries store personal contact details; include them and their retention in the privacy review before launch (see LEGAL_CHECKLIST_IL.md).
+
+## Local verification without credentials
+
+- `python3 scripts/verify-database.py` works on machines without system PostgreSQL if PATH contains user-space binaries: `npm i embedded-postgres` in a scratch dir provides `initdb/pg_ctl/postgres` under `node_modules/@embedded-postgres/<platform>/native/bin`, and `psql` can be added there by `apt-get download postgresql-client-<ver>` + `dpkg -x` (no root). Verified 2026-09-27: 20 migrations + 4 SQL test files pass on PostgreSQL 18.
+- `scripts/verify-design.mjs` skips the store interaction step (with an explicit SKIP line) when the catalog is empty, which is the honest production behavior without a seeded database since the mock fallback is dev-only. For full store-interaction coverage, run it against staging/production data.

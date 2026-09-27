@@ -439,11 +439,17 @@ create trigger service_requests_guard_insert_trg
 -- and for customers both require customer_id = auth.uid().)
 grant insert on public.service_requests to anon;
 
+-- RLS WITH CHECK below calls active_app_role() as the invoking user, including
+-- anon (the trigger needed SECURITY DEFINER for the same reason). The function
+-- only reveals the caller's own role, so granting anon is safe.
+grant execute on function public.active_app_role() to anon;
+
 drop policy if exists "Anyone can submit contact requests" on public.service_requests;
 create policy "Anyone can submit contact requests" on public.service_requests
   for insert to anon, authenticated
   with check (
-    (customer_id is null or customer_id = auth.uid())
+    (auth.uid() is null or public.active_app_role() is not null)
+    and (customer_id is null or customer_id = auth.uid())
     and length(name) between 1 and 200
     and length(email) between 1 and 320
     and (phone is null or length(phone) <= 50)

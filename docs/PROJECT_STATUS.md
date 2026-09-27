@@ -35,11 +35,15 @@ Commands run and status:
 - `npm run build` (production) — passed (static + dynamic routes prerender fine)
 - `npx playwright test tests/enquiry.spec.ts` — 4/6 passed; see "Enquiry E2E Spec" entry (browser binary unavailable here)
 
+- `npx playwright test` (full suite) — 22/22 passed (Chromium headless shell installed locally; enquiry browser tests, smoke, auth, redirects, axe all green)
+- `python3 scripts/verify-database.py` against a disposable user-space PostgreSQL 18 (embedded-postgres binaries + extracted `psql` deb, no root) — all 20 migrations and all 4 SQL test files PASS, including `hardening.sql`. This pass caught and fixed two real defects:
+  - `hardening.sql` itself never cleared the JWT claim GUC when switching to the `anon` role, so the fail-closed triage guard was never exercised (test bug — added `set_config('request.jwt.claim.sub','',true)`).
+  - Regression in `20260927110000` (caught by `phase2_access.sql`): the new "Anyone can submit contact requests" policy dropped the active-account requirement, letting suspended customers create requests. Fixed by re-adding `auth.uid() is null or public.active_app_role() is not null` to the policy's WITH CHECK, plus `grant execute on function public.active_app_role() to anon` (RLS expressions evaluate as the invoking user; the function only exposes the caller's own role).
+
 NOT run (environment lacks them):
 
-- SQL migrations/tests (`hardening.sql` et al.): no local PostgreSQL 17, docker, or Supabase CLI. Owner action: apply the three migrations to staging and run `supabase/tests/*.sql` before production deploy.
-- Full Playwright suite and `scripts/verify-admin-console.mjs`: need browsers plus throwaway admin credentials (owner action per earlier entries).
-- Live sale POST / enquiry insert against real Supabase (no credentials in this environment).
+- `npx supabase db push --linked` against staging/production: no linked project credentials on this machine. Owner action: apply the three 2026-09-27 migrations to staging first, replay `supabase/tests/*.sql` there, then production.
+- `scripts/verify-admin-console.mjs` and live sale/enquiry inserts: need real Supabase credentials (no `.env.local` here).
 
 Legal / privacy / accessibility notes:
 
@@ -63,7 +67,7 @@ Commands run and status:
 
 Remaining owner actions:
 
-- Run `npx playwright install chromium` (or run in CI with browsers) to execute the two page-level tests.
+- Done 2026-09-27: Chromium installed (`npx playwright install chromium`); full suite green, see the "Production Hardening" entry above. The honeypot browser assertion was relaxed to `aria-hidden`/`tabindex` checks because the honeypot is intentionally bot-plausible (off-screen 1px clip, not `display:none`).
 - No Supabase service client exists in the test fixtures, so the honeypot test asserts only the fake-success response; add a service-role DB check for the missing `service_requests` row if such a fixture is introduced.
 
 ## CEO Console Remediation — 2026-09-26

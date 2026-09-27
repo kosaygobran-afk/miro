@@ -34,7 +34,14 @@ test.describe("enquiry flow", () => {
     await expect(
       form.getByRole("button", { name: "Send enquiry" }),
     ).toBeVisible();
-    await expect(form.locator('input[name="company"]')).toBeHidden();
+    // The honeypot is kept bot-plausible (off-screen 1px clip, not
+    // display:none), so assert invisibility to humans/AT instead:
+    const honeypot = form.locator('input[name="company"]');
+    await expect(honeypot).toHaveAttribute("tabindex", "-1");
+    await expect(honeypot.locator("..").locator("..")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 
   test("invalid input is flagged client-side before submission", async ({
