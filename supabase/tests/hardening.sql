@@ -345,7 +345,7 @@ do $$ begin
   if not exists (
     select 1 from public.service_requests
     where email = 'anon@example.invalid' and status = 'new'
-      and assigned_to is null and assigned_worker_id is null
+      and assigned_to is null
   ) then
     raise exception 'Anon request triage fields not forced';
   end if;

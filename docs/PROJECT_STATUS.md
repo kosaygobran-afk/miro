@@ -2,6 +2,22 @@
 
 Last updated: 2026-09-27 (production hardening)
 
+## DB-3: Services CMS, canonical product media, storage bucket — 2026-09-27
+
+Scope: SQL/database layer only (TypeScript/API/UI switch-over is a follow-up wave).
+
+- New migration `supabase/migrations/20260927230000_services_media.sql`:
+  - `public.services` CMS table (bilingual names/descriptions/SEO, `visual_kind` CHECK whitelist of 13 approved kinds, `content` jsonb constrained to objects, slug pattern CHECK, sort_order, is_active). RLS: public SELECT of active rows only; management ALL for active admin/ceo. Grants revoked from PUBLIC and re-granted narrowly.
+  - `upsert_service(jsonb)` RPC: security definer, `search_path=''`, admin/ceo via `active_app_role()` (42501 otherwise), slug/id/visual_kind/content/sort_order validation (22023), per-slug advisory lock, partial-merge update by id or slug, `service_upserted` audit row with `auth.uid()` in the same transaction.
+  - Four seed rows (`INSERT ... ON CONFLICT (slug) DO NOTHING`) mirroring the hard-coded slugs in `src/lib/service-content.ts` / `src/messages/*.json` (security-cameras, alarm-systems, intercom-access, network-wifi) so pages can switch to DB content at parity.
+  - Canonical media: `product_images` is the only image model going forward; primary image = lowest `sort_order` (documented in comments). `products.image_url` is marked DEPRECATED (kept, not dropped) and idempotently backfilled into `product_images` (sort_order 0, alt from name_he/name_en) for products with a non-empty legacy image and no gallery rows, via the grant-restricted `public.backfill_product_images_from_legacy()` function.
+  - Storage: single public bucket `product-media` (5MB, image MIME allowlist incl. SVG), created via idempotent upsert. `storage.objects` RLS: public SELECT on the bucket; INSERT/UPDATE/DELETE only for active admin/ceo and only under the `products/%` name prefix (prefix escape on UPDATE denied via WITH CHECK). Clearly marked LOCAL-TEST SHIMS (`create schema/table if not exists storage.*`) make the policies exercisable in the disposable local PG while no-oping on real Supabase.
+- New test file `supabase/tests/services_media.sql`: seed parity, public-vs-inactive RLS, customer write rejection, admin RPC insert/merge/slug-upsert/audit, all 22023 validation rejects, direct-write CHECK/UNIQUE violations, backfill correctness + idempotency + legacy column preserved, lowest-sort_order primary convention, bucket config + idempotent upsert, and storage RLS (anon read/denied-write, customer denied, admin allowed in prefix only, customer UPDATE/DELETE no-ops).
+
+Verification: `PATH=/tmp/pgtest/node_modules/@embedded-postgres/linux-x64/native/bin:$PATH python3 scripts/verify-database.py` — 23 migrations and 6 SQL test files all PASS (includes the parallel DB-1/DB-2 ticket's tax_requests files, untouched here).
+
+Owner actions: apply `20260927230000` via `npx supabase db push --linked` (staging first, replay `supabase/tests/*.sql`, then production); afterwards the app wave can read `services` instead of hard-coded content and upload to the `product-media` bucket.
+
 ## Production Hardening — 2026-09-27
 
 Method: mission brief executed as lead + parallel worker swarm. Baseline gates re-established on the untouched tree (npm ci, format, lint, typecheck, build — all pass), then four independent static verifiers audited database business logic, storefront correctness, admin/CEO console security+i18n, and tests/docs/error handling. Every PASS/FAIL finding below was confirmed against code; fixes were applied by workers with disjoint file ownership and re-gated.

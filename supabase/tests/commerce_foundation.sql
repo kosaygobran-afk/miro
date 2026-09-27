@@ -232,7 +232,7 @@ do $$ begin
 end $$;
 
 -- ============================================================
--- 7. set_tax_rate: admin denied, CEO works, second set closes first
+-- 7. set_tax_rate: admin denied, CEO works, second set truncates first window
 -- ============================================================
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000102',true); -- admin
 do $$ begin
@@ -245,30 +245,42 @@ end $$;
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000103',true); -- CEO
 do $$
-declare v_rate1_id uuid; v_rate2_id uuid;
+declare v_rate1_id uuid; v_rate2_id uuid; v_seed_id uuid;
 begin
-  -- First rate
+  select id into v_seed_id from public.tax_rates where rate = 18.00 and valid_from = '2025-01-01';
+
+  -- First rate: scheduling a future rate must NOT deactivate the current one;
+  -- the seeded 18% gets valid_until = 2026-01-01 - 1 day and stays enabled.
   v_rate1_id := public.set_tax_rate('New VAT', 17.00, '2026-01-01');
   if v_rate1_id is null then raise exception 'First rate ID not returned'; end if;
 
   -- Verify active
   if (select rate from public.tax_rates where id = v_rate1_id) <> 17.00 then raise exception 'First rate not set'; end if;
   if (select is_active from public.tax_rates where id = v_rate1_id) <> true then raise exception 'First rate not active'; end if;
+  if (select valid_until from public.tax_rates where id = v_seed_id) <> '2025-12-31' then
+    raise exception 'Seeded rate window not truncated before new rate';
+  end if;
+  if (select is_active from public.tax_rates where id = v_seed_id) <> true then
+    raise exception 'Seeded rate was deactivated by scheduling';
+  end if;
 
   -- Second rate (CEO)
   v_rate2_id := public.set_tax_rate('Updated VAT', 19.00, '2026-06-01');
   if v_rate2_id is null then raise exception 'Second rate ID not returned'; end if;
 
-  -- First should be inactive with valid_until = day before second valid_from
-  if (select is_active from public.tax_rates where id = v_rate1_id) <> false then raise exception 'First rate not deactivated'; end if;
+  -- First stays enabled; its window now ends the day before the second starts
+  if (select is_active from public.tax_rates where id = v_rate1_id) <> true then raise exception 'First rate was deactivated'; end if;
   if (select valid_until from public.tax_rates where id = v_rate1_id) <> '2026-05-31' then raise exception 'First rate valid_until wrong'; end if;
 
   -- Second should be active
   if (select is_active from public.tax_rates where id = v_rate2_id) <> true then raise exception 'Second rate not active'; end if;
   if (select rate from public.tax_rates where id = v_rate2_id) <> 19.00 then raise exception 'Second rate value wrong'; end if;
 
-  -- current_tax_rate should return 19
+  -- current_tax_rate should return 19 today (test date is inside the 19% window)
   if public.current_tax_rate() <> 19.00 then raise exception 'current_tax_rate wrong'; end if;
+  -- and the earlier windows resolve by date, with no dead gap
+  if public.current_tax_rate('2026-03-01'::date) <> 17.00 then raise exception 'March 2026 rate wrong'; end if;
+  if public.current_tax_rate('2025-06-01'::date) <> 18.00 then raise exception '2025 rate wrong'; end if;
 end $$;
 
 -- ============================================================
