@@ -447,8 +447,7 @@ export function UsersManagement({
                               <select
                                 disabled={busy}
                                 value={
-                                  pendingChangeFor(user.id, "role") ??
-                                  user.role
+                                  pendingChangeFor(user.id, "role") ?? user.role
                                 }
                                 onChange={(e) =>
                                   requestPendingChange(

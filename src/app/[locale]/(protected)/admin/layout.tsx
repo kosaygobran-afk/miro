@@ -1,7 +1,13 @@
 import { requireRole } from "@/lib/auth";
-import { isLocale, type Locale, withLocale } from "@/lib/i18n";
-import { AdminNav } from "@/components/management/admin-nav";
+import { getDirection, isLocale, type Locale } from "@/lib/i18n";
+import { ManagementShell } from "@/components/management/shell/management-shell";
+import "@/styles/management.css";
 
+/**
+ * Management console layout. Resolves the actor role/status on the server
+ * (user_roles is the trusted source via requireRole) and hands it to the
+ * client shell, which renders the sidebar, top bar and content area.
+ */
 export default async function AdminLayout({
   children,
   params,
@@ -13,50 +19,19 @@ export default async function AdminLayout({
   const safeLocale = (isLocale(locale) ? locale : "he") as Locale;
   const context = await requireRole(safeLocale, ["admin", "ceo"]);
 
+  const userName =
+    context.profile?.full_name?.trim() || context.user.email || "";
+
   return (
-    <div
-      className="admin-shell min-h-screen"
-      dir={safeLocale === "he" ? "rtl" : "ltr"}
-    >
-      <header className="admin-shell__header">
-        <div className="admin-shell__header-inner">
-          <div className="admin-shell__brand">
-            <a
-              href={withLocale(safeLocale)}
-              className="admin-shell__storefront-link"
-            >
-              {safeLocale === "he" ? "↗ מעבר לחנות" : "↗ Switch to storefront"}
-            </a>
-          </div>
-          <AdminNav locale={safeLocale} />
-          <div className="admin-shell__user">
-            <span
-              className={`admin-shell__role-badge ${
-                context.role === "ceo"
-                  ? "admin-shell__role-badge--ceo"
-                  : "admin-shell__role-badge--admin"
-              }`}
-            >
-              {context.role === "ceo"
-                ? safeLocale === "he"
-                  ? "מנכ״ל"
-                  : "CEO"
-                : safeLocale === "he"
-                  ? "מנהל"
-                  : "Admin"}
-            </span>
-            <form
-              action={`/api/auth/logout?locale=${safeLocale}`}
-              method="POST"
-            >
-              <button type="submit" className="admin-shell__logout-button">
-                {safeLocale === "he" ? "התנתקות" : "Log out"}
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-      <main className="admin-shell__main">{children}</main>
+    <div className="admin-shell mgmt-shell-root" dir={getDirection(safeLocale)}>
+      <ManagementShell
+        locale={safeLocale}
+        role={context.role}
+        userName={userName}
+        userEmail={context.user.email ?? ""}
+      >
+        {children}
+      </ManagementShell>
     </div>
   );
 }

@@ -14,9 +14,9 @@ export function CeoSettings({ locale }: { locale: "he" | "en" }) {
   const he = locale === "he";
   const router = useRouter();
   const [busyAction, setBusyAction] = useState<CeoAction | null>(null);
-  const [notices, setNotices] = useState<Partial<Record<CeoAction, FormNotice>>>(
-    {},
-  );
+  const [notices, setNotices] = useState<
+    Partial<Record<CeoAction, FormNotice>>
+  >({});
 
   function setFormNotice(
     action: CeoAction,

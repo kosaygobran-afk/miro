@@ -1,75 +1,123 @@
 "use client";
 
-import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Lock } from "lucide-react";
+import { withLocale, type Locale } from "@/lib/i18n";
+import type { AppRole } from "@/lib/roles";
+import {
+  matchMgmtNav,
+  mgmtNavItemLabel,
+  mgmtNavSectionLabel,
+  mgmtNavSections,
+  mgmtShellCopy,
+} from "./shell/nav-config";
 
-const navItems = [
-  { href: "/admin", key: "overview" },
-  { href: "/admin/products", key: "products" },
-  { href: "/admin/inventory", key: "inventory" },
-  { href: "/admin/suppliers", key: "suppliers" },
-  { href: "/admin/sales", key: "sales" },
-  { href: "/admin/customers", key: "customers" },
-  { href: "/admin/analytics", key: "analytics" },
-  { href: "/admin/finance", key: "finance" },
-  { href: "/admin/users", key: "users" },
-  { href: "/admin/requests", key: "requests" },
-  { href: "/admin/audit", key: "audit" },
-  { href: "/admin/settings", key: "settings" },
-] as const;
-
-type NavKey = (typeof navItems)[number]["key"];
-
-const labels: Record<NavKey, { he: string; en: string }> = {
-  overview: { he: "סקירה", en: "Overview" },
-  products: { he: "מוצרים", en: "Products" },
-  inventory: { he: "מלאי", en: "Inventory" },
-  suppliers: { he: "ספקים", en: "Suppliers" },
-  sales: { he: "מכירות", en: "Sales" },
-  customers: { he: "לקוחות", en: "Customers" },
-  analytics: { he: "אנליטיקה", en: "Analytics" },
-  finance: { he: "כספים", en: "Finance" },
-  users: { he: "משתמשים", en: "Users" },
-  requests: { he: "פניות", en: "Requests" },
-  audit: { he: "יומן פעולות", en: "Audit" },
-  settings: { he: "הגדרות", en: "Settings" },
+export type AdminNavProps = {
+  locale: Locale;
+  /** Role of the signed-in management user (drives CEO-only affordances). */
+  role: AppRole;
+  /** Icon-only presentation (collapsed sidebar). Default false. */
+  collapsed?: boolean;
+  /** Called after a navigation link is activated (drawer dismissal). */
+  onNavigate?: () => void;
 };
 
-export function AdminNav({ locale }: { locale: "he" | "en" }) {
+/**
+ * Grouped management navigation used by the sidebar and the mobile drawer.
+ * Semantic <nav> with links and aria-current="page" for the active entry
+ * (page navigation, not tabs). CEO-only entries stay visible for Admin
+ * users but carry a read-only badge and hint.
+ */
+export function AdminNav({
+  locale,
+  role,
+  collapsed = false,
+  onNavigate,
+}: AdminNavProps) {
   const pathname = usePathname();
-
-  const currentKey = navItems.find((item) => {
-    const fullPath = `/${locale}${item.href}`;
-    return pathname === fullPath || pathname.startsWith(fullPath + "/");
-  })?.key;
+  const activeKey = matchMgmtNav(pathname ?? `/${locale}/admin`, locale).item
+    .key;
+  const isCeo = role === "ceo";
 
   return (
     <nav
-      className="admin-shell__nav"
-      aria-label={locale === "he" ? "ניווט ניהול" : "Admin navigation"}
+      className={["mgmt-nav", collapsed ? "mgmt-nav--collapsed" : null]
+        .filter(Boolean)
+        .join(" ")}
+      aria-label={mgmtShellCopy.navLabel[locale]}
     >
-      <div className="admin-shell__nav-scroller">
-        <ul className="admin-shell__nav-list" role="tablist">
-          {navItems.map((item) => {
-            const label = labels[item.key];
-            const isActive = currentKey === item.key;
-            const href = `/${locale}${item.href}`;
-            return (
-              <li key={item.key} role="presentation">
-                <Link
-                  href={href}
-                  className={`admin-shell__nav-link ${isActive ? "admin-shell__nav-link--active" : ""}`}
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-current={isActive ? "page" : undefined}
-                >
-                  {locale === "he" ? label.he : label.en}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      {mgmtNavSections.map((section) => (
+        <div className="mgmt-nav__section" key={section.key}>
+          <p
+            className="mgmt-nav__section-label"
+            aria-hidden={collapsed || undefined}
+          >
+            {collapsed ? "" : mgmtNavSectionLabel(section.key, locale)}
+          </p>
+          <ul className="mgmt-nav__list">
+            {section.items.map((item) => {
+              const isActive = activeKey === item.key;
+              const restricted = item.ceoOnly && !isCeo;
+              const label = mgmtNavItemLabel(item.key, locale);
+              const Icon = item.icon;
+              return (
+                <li key={item.key}>
+                  <Link
+                    href={withLocale(locale, item.href)}
+                    onClick={onNavigate}
+                    className={[
+                      "mgmt-nav__link",
+                      isActive ? "mgmt-nav__link--active" : null,
+                      restricted ? "mgmt-nav__link--restricted" : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    aria-current={isActive ? "page" : undefined}
+                    title={
+                      collapsed
+                        ? restricted
+                          ? `${label} · ${mgmtShellCopy.ceoOnlyBadge[locale]}`
+                          : label
+                        : restricted
+                          ? mgmtShellCopy.ceoOnlyHint[locale]
+                          : undefined
+                    }
+                  >
+                    <Icon
+                      size={18}
+                      aria-hidden="true"
+                      className="mgmt-nav__icon"
+                    />
+                    <span className="mgmt-nav__label">{label}</span>
+                    {restricted ? (
+                      <span
+                        className="mgmt-nav__badge"
+                        data-collapsed={collapsed || undefined}
+                      >
+                        <Lock
+                          size={collapsed ? 12 : 11}
+                          aria-hidden="true"
+                          className="mgmt-nav__badge-icon"
+                        />
+                        {collapsed ? (
+                          <span className="mgmt-visually-hidden">
+                            {mgmtShellCopy.ceoOnlyBadge[locale]}
+                          </span>
+                        ) : (
+                          <span className="mgmt-nav__badge-text">
+                            {mgmtShellCopy.ceoOnlyBadge[locale]}
+                          </span>
+                        )}
+                      </span>
+                    ) : null}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </nav>
   );
 }

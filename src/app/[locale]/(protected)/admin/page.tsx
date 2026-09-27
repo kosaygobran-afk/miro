@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { OverviewPanel } from "@/components/management/overview-panel";
@@ -12,6 +13,7 @@ export default async function AdminOverviewPage({
 }) {
   const { locale } = await params;
   const safeLocale = (isLocale(locale) ? locale : "he") as Locale;
+  await requireRole(safeLocale, ["admin", "ceo"]);
   let admin;
   try {
     admin = createAdminClient();
