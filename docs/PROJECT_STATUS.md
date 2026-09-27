@@ -1,6 +1,70 @@
 # Project Status
 
-Last updated: 2026-09-26 (CEO console audit-driven remediation)
+Last updated: 2026-09-27 (production hardening)
+
+## Production Hardening — 2026-09-27
+
+Method: mission brief executed as lead + parallel worker swarm. Baseline gates re-established on the untouched tree (npm ci, format, lint, typecheck, build — all pass), then four independent static verifiers audited database business logic, storefront correctness, admin/CEO console security+i18n, and tests/docs/error handling. Every PASS/FAIL finding below was confirmed against code; fixes were applied by workers with disjoint file ownership and re-gated.
+
+Database / business logic (new migrations + tests):
+
+- `supabase/migrations/20260927090000_sales_identity_discount.sql` — `orders.recorded_by` separates the staff recorder from `orders.user_id` (the customer); `record_sale` validates a linked customer account is active, snapshot-fills contact fields, and now takes **`discount_per_unit`** per line (the legacy `discount` key is rejected with 22023). Math verified: line discount `round(qty*dpu, 2)`, non-negative line gross, VAT-inclusive net, clamped order totals.
+- `supabase/migrations/20260927100000_stock_publish_invariants.sql` — `record_stock_movement` enforces sign-per-type, zero-delta rejection and non-negative final stock under a per-variant `pg_advisory_xact_lock` + `SELECT ... FOR UPDATE`; `adjust_stock` serializes on the same lock key, so all stock mutation paths are race-safe. Publish invariants: active products require HE/EN names, an active category and at least one active variant with SKU+barcode; last-variant removal auto-unpublishes, category deactivation cascades to hidden — both audited. Transitions route only through `publish_product`/`unpublish_product`.
+- `supabase/migrations/20260927110000_analytics_enquiries.sql` — client analytics INSERT policy no longer admits `sale`/`return` (financial events are service-role only; no client UPDATE/DELETE grants, so events are write-once); length caps added. Enquiry intake table with anonymous INSERT, caps and a fail-closed trigger forcing `status='new'`. Management analytics/summary RPCs re-issued as security-definer with role checks and `search_path=''`.
+- `supabase/tests/hardening.sql` (428 lines) covers all of the above: linked/suspended/guest customers, discount math and legacy-key rejection, wrong-sign/zero/oversell movements, race-safe adjust, born-active rejection, last-variant auto-unpublish, anon tamper attempts, RPC authz, contact-config whitelisting.
+
+Verification findings and fixes applied this round:
+
+- **Sales API contract break (critical, found by audit):** `src/app/api/management/sales/route.ts` still sent the legacy `discount` key, so every management sale would have been rejected. Now sends `discount_per_unit` (accepting `discountPerUnit`/`discount_per_unit`), validates `0 ≤ dpu ≤ unitPrice`, and maps `customer.userId` → `customer_id`. `sales-panel.tsx` line items renamed to per-unit semantics (label was already "Discount/unit") and gained a customer-account selector fed by the existing `GET /api/management/customers` endpoint, auto-filling contact fields.
+- **Mock catalog reachable in production (critical, found by audit):** `getFallbackStoreCatalog` now returns an empty catalog when `NODE_ENV === "production"`; production DB errors/empty results render the honest empty state or `notFound()` instead of demo products/prices. Dev/demo behaviour and its disclaimer copy are unchanged.
+- **JSON-LD injection (found by audit):** store detail page now escapes `<` as `\u003c` in the serialized structured data.
+- **Dead detail-page UI (found by audit):** gallery thumbnails and variant radios were no-ops inside a server component. New client island `src/components/products/ProductDetailInteractive.tsx` owns image switching and variant selection, updating price/SKU and the variantId passed to `ProductDetailActions` (quote links carry the selected variant). The page itself stays server-rendered.
+- **Raw Postgres messages to clients (found by audit):** all ten `errorResponse(error.message)` sites across `settings`, `inventory`, `tax`, `sales`, `suppliers` routes now log raw detail server-side and return opaque tokens (via `mapPostgresError` or the console+opaque pattern used by the publish path).
+- **Admin shell CSS missing (found by audit):** the new `ManagementShell`/UI primitives had zero styles — fixed; see "Management shell CSS — 2026-09-27" below.
+- **Nav badge vs access mismatch (found by audit):** audit read access for admins is intentional (transparency; audit is read-only for everyone), so the audit nav item no longer carries the CEO-only badge. Users and settings stay CEO-only (mutations CEO-gated, admins see read-only UI). Finance admins keep read access via `viewFinance`. The overview page now calls `requireRole(["admin","ceo"])` itself like sibling pages.
+- **Lint hardening:** three `react-hooks/set-state-in-effect` errors fixed properly — sidebar collapse preference moved to a `useSyncExternalStore` localStorage store (hydration-safe via server snapshot), dialog/drawer first-open mounting moved to the sanctioned render-phase adjust pattern.
+
+Verified PASS without changes: stock invariants, adjust_stock atomicity, publish-invariant parity with app code, analytics/enquiry tamper-proofing, contact config sourcing (env → `get_public_contact_config()` RPC, zod-validated, `.env.example` ships empty), no public checkout anywhere (enquiry-only CTAs), `/api/enquiries` hardening (same-origin check, zod caps, 5/min per-IP in-memory rate limit, honeypot + time-trap silent drops), all mutation routes gated by `withManagementAuth` + DB-level role checks, audit rows server-generated and client-unforgeable, en/he message-file parity (197 keys each, zero missing).
+
+Commands run and status:
+
+- `npm ci` — passed (0 vulnerabilities)
+- `npm run format:write` / `format:check` — passed
+- `npm run lint` (`--max-warnings=0`) — passed
+- `npm run typecheck` — passed
+- `npm run build` (production) — passed (static + dynamic routes prerender fine)
+- `npx playwright test tests/enquiry.spec.ts` — 4/6 passed; see "Enquiry E2E Spec" entry (browser binary unavailable here)
+
+NOT run (environment lacks them):
+
+- SQL migrations/tests (`hardening.sql` et al.): no local PostgreSQL 17, docker, or Supabase CLI. Owner action: apply the three migrations to staging and run `supabase/tests/*.sql` before production deploy.
+- Full Playwright suite and `scripts/verify-admin-console.mjs`: need browsers plus throwaway admin credentials (owner action per earlier entries).
+- Live sale POST / enquiry insert against real Supabase (no credentials in this environment).
+
+Legal / privacy / accessibility notes:
+
+- Enquiry form collects name/email/phone/message into `service_requests` — privacy notice and retention policy must reference this before real submissions are accepted (owner/legal).
+- The in-memory per-IP rate limiter is per-instance only (ineffective across serverless/multiple instances); note for launch — acceptable for single-instance, revisit for scale.
+- Shell a11y primitives shipped (focus trap, Escape, scroll lock, aria labels in both locales) but manual screen-reader/keyboard pass remains an owner action; new `management.css` visual check in a browser is pending.
+
+## Enquiry E2E Spec — 2026-09-27
+
+What changed:
+
+- Added `tests/enquiry.spec.ts` covering the enquiry flow (`src/app/api/enquiries/route.ts` + `src/components/contact/contact-form.tsx`): `/en/contact` renders the form, client-side validation flags invalid input before submission, invalid payloads get the 400 `{ok:false, code, message}` envelope, honeypot submissions get the fake `{ok:true}` success, cross-origin `Origin` headers get 403, and the sixth POST within a minute from one IP gets 429.
+- API-level tests follow the existing `request` + `origin: baseURL` convention from `tests/auth.spec.ts`. Each rate-limited test uses its own `x-forwarded-for` IP because the limiter is an in-memory per-IP bucket and the suite runs `fullyParallel`. The rate-limit test posts intentionally invalid bodies so no `service_requests` rows are written.
+
+Commands run and status:
+
+- `npm run lint` — passed
+- `npm run typecheck` — passed
+- `npm run format:check` — passed
+- `npx playwright test tests/enquiry.spec.ts` — 4 API-level tests passed against the built server; the 2 browser tests could not launch (Playwright Chromium binary not installed in this environment, `NO_BROWSERS` marker present)
+
+Remaining owner actions:
+
+- Run `npx playwright install chromium` (or run in CI with browsers) to execute the two page-level tests.
+- No Supabase service client exists in the test fixtures, so the honeypot test asserts only the fake-success response; add a service-role DB check for the missing `service_requests` row if such a fixture is introduced.
 
 ## CEO Console Remediation — 2026-09-26
 
@@ -688,8 +752,8 @@ Phase 1 complete locally. Do not start Phase 2 until the owner asks for real aut
 
 - Real Supabase authentication.
 - Real roles, profiles, RLS policies and database migrations.
-- Real enquiry submission.
-- Real catalog/products/prices/checkout.
+- Real enquiry submission. (Superseded 2026-09-27: `/api/enquiries` + `contact-form.tsx` ship a real, hardened enquiry flow.)
+- Real catalog/products/prices/checkout. (Superseded in part 2026-09-27: catalog and prices are DB-driven in production and the mock fallback is dev-only; checkout remains intentionally absent — enquiry-only commerce.)
 - Real business contact details, address, service area, legal copy, reviews, projects and brand partnerships.
 
 ### Still Unverified
@@ -758,3 +822,12 @@ Phase 2 should implement real authentication and permissions:
 4. Enforce customer, worker and CEO route authorization on the server.
 5. Test direct access as visitor, customer A, customer B, worker and CEO.
 6. Keep public pages working when credentials are missing in development.
+
+## Management shell CSS — 2026-09-27
+
+- Added `src/styles/management.css`: complete styling for the management shell (`mgmt-shell`, `mgmt-sidebar`, `mgmt-nav`, `mgmt-topbar`, `mgmt-account`, `mgmt-role-badge`) and all `src/components/management/ui/` primitives (drawer, dialog, metric-card, data-table, status/badge tones, page-header, toolbar, empty/error states, notice, skeleton shimmer, detail-panel, date-range picker, form-section, `mgmt-visually-hidden`). Previously these classes had zero CSS and the admin console rendered unstyled.
+- RTL-aware: logical properties only; drawer slides from inline-start via a `--drawer-dir` variable flipped under `[dir="rtl"]`; collapsed sidebar driven by `[data-sidebar="collapsed"]`; sidebar/topbar sticky; sidebar hidden below 1023px with the topbar menu button opening the drawer.
+- Imported from `src/app/[locale]/(protected)/admin/layout.tsx` (`import "@/styles/management.css"`).
+- Fixed physical-property defect in `src/styles/workspace.css`: `.users-management__select` and `.sales-panel__variant-select` chevron "background-position: right ..." plus physical paddings converted to logical padding with `[dir="rtl"]` position overrides.
+- Gates: npm run lint — passed; npm run typecheck — passed; npm run format:check — passed.
+- Note: visual verification in a browser is still pending (owner/developer action before admin launch).

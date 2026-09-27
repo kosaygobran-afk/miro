@@ -52,7 +52,7 @@
 - Run `DESIGN_BASE_URL=http://127.0.0.1:<port> node scripts/verify-design.mjs` against a production server for responsive/theme/catalog regression review. It writes local screenshots to `/tmp/miro-design-review` by default.
 - If port 3000 is occupied, run smoke checks with both `PORT=<port>` and `PLAYWRIGHT_BASE_URL=http://127.0.0.1:<port>`; the URL alone does not change the server port.
 - A `next start` server can outlive its `npm` wrapper PID. Stop verification servers with `pkill -f 'next start'` (and confirm with `lsof -iTCP:<port>`) before starting a new one, or tests may silently hit a stale build.
-- Sample catalog fallback works without Supabase credentials. The live database read branch and existing authentication require a separately configured staging environment; never commit environment secrets.
+- Sample catalog fallback works without Supabase credentials in development only. Since 2026-09-27 the fallback returns an empty catalog in production builds, so a live deployment without a healthy database shows the honest empty state instead of demo products. The live database read branch and existing authentication require a separately configured staging environment; never commit environment secrets.
 
 ## Console verification scripts
 
@@ -60,7 +60,6 @@
   - Requires `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (or `NEXT_PUBLIC_SUPABASE_ANON_KEY`) and `SUPABASE_SERVICE_ROLE_KEY` in the environment or `.env.local`, Playwright's Chromium, and a running production server at `ADMIN_BASE_URL` (default `http://127.0.0.1:3105`; start it with `npm run build && npm run start -- --port 3105`).
   - Exits non-zero on any failure, including missing Supabase credentials — a silent pass is never acceptable. To skip intentionally (e.g. a machine without credentials), pass `--allow-skip`, which prints a skip notice and exits 0.
 - `python3 scripts/verify-bootstrap-ceo.py` is a read-only check of the bootstrap CEO state. It inspects `user_roles`/`profiles` for the `ceo` role, reports whether the bootstrap owner account holds the CEO role, and confirms the CEO SQL functions (`add_ceo`, `delete_own_ceo_account`, `manage_account`, `delete_user_account`, `require_recent_ceo_password`, `active_app_role`) exist. It requires `NEXT_PUBLIC_SUPABASE_URL` and the publishable (or anon) key plus the `supabase` Python package (`pip install supabase`); it uses only the anon key, so visibility into `auth.users` is limited and it never modifies the database. Missing credentials exit non-zero; the checks print a report of found/missing state with manual bootstrap steps when no CEO exists yet.
-
 
 ## Phase 2 account operations
 
@@ -80,3 +79,12 @@
 - Run `npx supabase@latest db push --linked --dry-run` before a reviewed migration rollout. Validate migrations locally/staging before applying them. `npx supabase@latest db lint --linked --fail-on error` validates the linked public schema.
 - `PORT=3102 PLAYWRIGHT_BASE_URL=http://127.0.0.1:3102 npm run test:e2e` builds and tests the website with isolated preview ports. Actual inbox delivery is a separate owner check.
 - Account deletion removes auth/profile and owned dependent records through foreign keys. Service/order/audit records may remain with the user link cleared; review contact fields, audit details and legally required retention before public launch. Existing Speed Insights from main remains enabled and should be covered by the privacy review.
+
+## Enquiry endpoint (/api/enquiries)
+
+- Public enquiry intake for the storefront contact form (`src/app/api/enquiries/route.ts`). Accepts localized POSTs with `name`, `email`, `phone`, `message`, optional `product`/`variant` context, plus a `company` honeypot field and a `startedAt` time trap.
+- Responses use the `{ ok: boolean, code?, message? }` envelope: `invalid_input` (400, with field `issues`), `unavailable` (403 non-same-origin or 503 misconfiguration), `rate_limited` (429). Honeypot/time-trap bot submissions receive a fake `{ ok: true }` and write nothing.
+- Rate limit: 5 POSTs per minute per client IP, enforced in memory per server instance. On multi-instance/serverless deployments this limiter is not global; add an edge-level limit (Vercel WAF / Supabase edge) if abuse appears.
+- Inserts land in `service_requests` with `status='new'` (a fail-closed DB trigger re-forces that status); they surface in the admin Requests page. DB-side length caps mirror the zod limits.
+- Manual verification: `curl -X POST http://127.0.0.1:3000/en/api/enquiries -H 'content-type: application/json' -H "origin: http://127.0.0.1:3000" -d '{"name":"Test","email":"t@example.com","phone":"+972500000000","message":"Hello there","startedAt":0}'` (expect `invalid_input` for the instant time trap; use a real form submission for a full happy path). Automated coverage: `npx playwright test tests/enquiry.spec.ts` (4 API-level tests run without browsers; the 2 browser tests need Playwright Chromium).
+- Privacy: enquiries store personal contact details; include them and their retention in the privacy review before launch (see LEGAL_CHECKLIST_IL.md).

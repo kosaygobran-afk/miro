@@ -38,3 +38,9 @@
 
 - A theme icon rendered differently on server and browser caused hydration errors.
 - The fix was to apply the theme before paint and render stable icon markup, then use CSS to show the correct icon.
+
+### 2026-09-27: setState in effects vs useSyncExternalStore
+
+- The new `react-hooks/set-state-in-effect` rule rejects reading `localStorage` and immediately calling `setState` inside a mount effect (cascading render).
+- The lint-clean, hydration-safe replacement for a persisted client-only preference is a tiny external store + `useSyncExternalStore` with a constant server snapshot (`() => false`); React then applies the stored value on hydration without a mismatch error.
+- "Adjust state during render" (guarded conditional `setState` during render) is the sanctioned pattern for first-open mounting flags that previously lived in an effect.
