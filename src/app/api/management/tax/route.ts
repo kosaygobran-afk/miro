@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   withManagementAuth,
   errorResponse,
+  mapPostgresError,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     .order("valid_from", { ascending: false });
 
   if (error) {
-    return errorResponse(error.message);
+    return mapPostgresError(error);
   }
 
   return NextResponse.json({ taxRates: data ?? [] });
@@ -59,7 +60,11 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("set_tax_rate failed:", error.code, error.message);
+    return NextResponse.json(
+      { error: "Failed to save tax rate" },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ taxRateId });

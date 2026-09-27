@@ -44,8 +44,16 @@ type LineItem = {
   variantId: string;
   quantity: number;
   unitPrice: number;
-  discount: number;
+  discountPerUnit: number;
   variant?: InventoryVariant;
+};
+
+type CustomerAccount = {
+  id: string;
+  full_name: string | null;
+  email: string;
+  phone: string | null;
+  account_status: string;
 };
 
 type OrderItemSnapshot = {
@@ -93,8 +101,12 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerAccountId, setCustomerAccountId] = useState("");
+  const [customerAccounts, setCustomerAccounts] = useState<CustomerAccount[]>(
+    [],
+  );
   const [lineItems, setLineItems] = useState<LineItem[]>([
-    { variantId: "", quantity: 1, unitPrice: 0, discount: 0 },
+    { variantId: "", quantity: 1, unitPrice: 0, discountPerUnit: 0 },
   ]);
   const [variants, setVariants] = useState<InventoryVariant[]>([]);
   const [variantsLoading, setVariantsLoading] = useState(true);
@@ -164,6 +176,39 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
       });
     return () => controller.abort();
   }, [he]);
+
+  // Fetch customer accounts for the account selector
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/management/customers", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!controller.signal.aborted && Array.isArray(data.customers)) {
+          setCustomerAccounts(
+            data.customers.filter(
+              (c: CustomerAccount) => c.account_status === "active",
+            ),
+          );
+        }
+      })
+      .catch(() => {
+        // Account selector is optional; a failed fetch only means no linked account
+      });
+    return () => controller.abort();
+  }, []);
+
+  const handleAccountSelect = (accountId: string) => {
+    setCustomerAccountId(accountId);
+    const account = customerAccounts.find((c) => c.id === accountId);
+    if (account) {
+      if (account.full_name) setCustomerName(account.full_name);
+      if (account.email) setCustomerEmail(account.email);
+      if (account.phone) setCustomerPhone(account.phone);
+    }
+  };
 
   // Fetch sales history
   const fetchOrders = useCallback(async () => {
@@ -267,7 +312,7 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
   const addLineItem = () => {
     setLineItems((prev) => [
       ...prev,
-      { variantId: "", quantity: 1, unitPrice: 0, discount: 0 },
+      { variantId: "", quantity: 1, unitPrice: 0, discountPerUnit: 0 },
     ]);
   };
 
@@ -313,13 +358,14 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
             name: customerName,
             email: customerEmail,
             phone: customerPhone || null,
+            userId: customerAccountId || null,
           },
           items: validItems.map(
-            ({ variantId, quantity, unitPrice, discount }) => ({
+            ({ variantId, quantity, unitPrice, discountPerUnit }) => ({
               variantId,
               quantity,
               unitPrice,
-              discount: discount || 0,
+              discountPerUnit: discountPerUnit || 0,
             }),
           ),
         }),
@@ -336,8 +382,9 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
         setCustomerName("");
         setCustomerEmail("");
         setCustomerPhone("");
+        setCustomerAccountId("");
         setLineItems([
-          { variantId: "", quantity: 1, unitPrice: 0, discount: 0 },
+          { variantId: "", quantity: 1, unitPrice: 0, discountPerUnit: 0 },
         ]);
         fetchOrders();
       } else {
@@ -385,7 +432,7 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
     0,
   );
   const totalDiscount = lineItems.reduce(
-    (sum, item) => sum + item.discount * item.quantity,
+    (sum, item) => sum + item.discountPerUnit * item.quantity,
     0,
   );
   const total = subtotal - totalDiscount;
@@ -434,6 +481,34 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
               {he ? "פרטי לקוח" : "Customer Details"}
             </legend>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {customerAccounts.length > 0 && (
+                <div>
+                  <label
+                    htmlFor="customer-account"
+                    className="block text-sm font-medium mb-1"
+                  >
+                    {he ? "חשבון לקוח" : "Customer account"}
+                  </label>
+                  <select
+                    id="customer-account"
+                    value={customerAccountId}
+                    onChange={(e) => handleAccountSelect(e.target.value)}
+                    disabled={submitting}
+                    className="miro-input"
+                  >
+                    <option value="">
+                      {he ? "— ללא חשבון —" : "— No account —"}
+                    </option>
+                    {customerAccounts.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.full_name
+                          ? `${account.full_name} — ${account.email}`
+                          : account.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label
                   htmlFor="customer-name"
@@ -655,12 +730,13 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
                           id={`discount-${index}`}
                           type="number"
                           min="0"
+                          max={item.unitPrice}
                           step="0.01"
-                          value={item.discount}
+                          value={item.discountPerUnit}
                           onChange={(e) =>
                             updateLineItem(
                               index,
-                              "discount",
+                              "discountPerUnit",
                               parseFloat(e.target.value) || 0,
                             )
                           }

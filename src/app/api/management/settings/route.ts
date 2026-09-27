@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   withManagementAuth,
   errorResponse,
+  mapPostgresError,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -29,7 +30,7 @@ export async function GET(request: Request) {
     .order("key");
 
   if (error) {
-    return errorResponse(error.message);
+    return mapPostgresError(error);
   }
 
   return NextResponse.json({ settings: data ?? [] });
@@ -66,7 +67,11 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("set_business_setting failed:", error.code, error.message);
+    return NextResponse.json(
+      { error: "Failed to save setting" },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ ok: true });

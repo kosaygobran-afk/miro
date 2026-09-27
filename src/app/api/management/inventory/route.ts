@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   withManagementAuth,
   errorResponse,
+  mapPostgresError,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
@@ -61,7 +62,7 @@ export async function GET(request: Request) {
       .eq("variant_id", variantId)
       .order("created_at", { ascending: false })
       .limit(200);
-    if (error) return errorResponse(error.message);
+    if (error) return mapPostgresError(error);
     return NextResponse.json({ movements: movements ?? [] });
   }
 
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
   const { data, error } = await query.range(offset, offset + limit - 1);
 
   if (error) {
-    return errorResponse(error.message);
+    return mapPostgresError(error);
   }
 
   let variants = data ?? [];
@@ -138,7 +139,11 @@ export async function POST(request: Request) {
     if (error.code === "42501") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("record_stock_movement failed:", error.code, error.message);
+    return NextResponse.json(
+      { error: "Failed to record stock movement" },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ movementId });
@@ -184,7 +189,11 @@ export async function PATCH(request: Request) {
     if (error.code === "42501") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("adjust_stock failed:", error.code, error.message);
+    return NextResponse.json(
+      { error: "Failed to adjust stock" },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ movementId });

@@ -6,20 +6,35 @@ import {
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-const saleItemSchema = z.object({
-  variantId: z.string().uuid(),
-  quantity: z.number().int().positive(),
-  unitPrice: z.number().nonnegative(),
-  discount: z.number().nonnegative().optional(),
-});
+const saleItemSchema = z
+  .object({
+    variantId: z.string().uuid(),
+    quantity: z.number().int().positive(),
+    unitPrice: z.number().nonnegative(),
+    discountPerUnit: z.number().nonnegative().optional(),
+    discount_per_unit: z.number().nonnegative().optional(),
+  })
+  .transform(({ discount_per_unit, discountPerUnit, ...rest }) => ({
+    ...rest,
+    discountPerUnit: discountPerUnit ?? discount_per_unit ?? 0,
+  }))
+  .refine((item) => item.discountPerUnit <= item.unitPrice, {
+    message: "discountPerUnit must be between 0 and unitPrice",
+  });
 
 const saleSchema = z.object({
-  customer: z.object({
-    name: z.string().min(1).max(255),
-    email: z.string().email(),
-    phone: z.string().optional().nullable(),
-    userId: z.string().uuid().optional().nullable(),
-  }),
+  customer: z
+    .object({
+      name: z.string().min(1).max(255),
+      email: z.string().email(),
+      phone: z.string().optional().nullable(),
+      userId: z.string().uuid().optional().nullable(),
+      customer_id: z.string().uuid().optional().nullable(),
+    })
+    .transform(({ userId, customer_id, ...rest }) => ({
+      ...rest,
+      userId: userId ?? customer_id ?? null,
+    })),
   items: z.array(saleItemSchema).min(1),
 });
 
@@ -104,13 +119,19 @@ export async function POST(request: Request) {
   }
 
   const client = await createServerSupabaseClient();
+  const { customer, items } = parsed.data;
   const { data: orderId, error } = await client.rpc("record_sale", {
-    p_customer: parsed.data.customer,
-    p_items: parsed.data.items.map((item) => ({
+    p_customer: {
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone ?? null,
+      customer_id: customer.userId ?? null,
+    },
+    p_items: items.map((item) => ({
       variant_id: item.variantId,
       quantity: item.quantity,
       unit_price: item.unitPrice,
-      discount: item.discount ?? 0,
+      discount_per_unit: item.discountPerUnit,
     })),
   });
 
@@ -141,7 +162,11 @@ export async function POST(request: Request) {
     if (error.code === "42501") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("record_sale failed:", error.code, error.message);
+    return NextResponse.json(
+      { error: "Failed to record sale" },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ orderId });

@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     .order("company_name");
 
   if (error) {
-    return errorResponse(error.message);
+    return mapPostgresError(error);
   }
 
   return NextResponse.json({ suppliers: data ?? [] });
