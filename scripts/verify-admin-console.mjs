@@ -119,13 +119,13 @@ async function checkPage(pg, path) {
   // Assert admin nav is visible
   await pg
     .locator(
-      'nav.admin-shell__nav, nav[aria-label="Admin navigation"], nav[aria-label="ניווט ניהול"]',
+      'nav.admin-shell__nav, nav.mgmt-nav, nav[aria-label="Admin navigation"], nav[aria-label="Management navigation"], nav[aria-label="ניווט ניהול"]',
     )
     .waitFor({ state: "visible", timeout: 10_000 })
     .catch(() => {});
   const navVisible = await pg
     .locator(
-      'nav.admin-shell__nav, nav[aria-label="Admin navigation"], nav[aria-label="ניווט ניהול"]',
+      'nav.admin-shell__nav, nav.mgmt-nav, nav[aria-label="Admin navigation"], nav[aria-label="Management navigation"], nav[aria-label="ניווט ניהול"]',
     )
     .isVisible()
     .catch(() => false);

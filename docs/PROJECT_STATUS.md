@@ -835,3 +835,11 @@ Phase 2 should implement real authentication and permissions:
 - Fixed physical-property defect in `src/styles/workspace.css`: `.users-management__select` and `.sales-panel__variant-select` chevron "background-position: right ..." plus physical paddings converted to logical padding with `[dir="rtl"]` position overrides.
 - Gates: npm run lint — passed; npm run typecheck — passed; npm run format:check — passed.
 - Note: visual verification in a browser is still pending (owner/developer action before admin launch).
+
+## Remote rollout + live verification — 2026-09-27
+
+- Supabase CLI 2.118.0 authenticated; project linked: `ffzemicpwwxmxptuwevo` ("miro network and security solutions", eu-central-1, PostgreSQL 17.6).
+- `npx supabase db push --linked` applied the four outstanding migrations to the live database: `20260926100000_ceo_console_fixes`, `20260927090000_sales_identity_discount`, `20260927100000_stock_publish_invariants`, `20260927110000_analytics_enquiries`. `npx supabase db lint --linked --fail-on error` — no schema errors. (No pre-push `db dump`: the CLI dump requires Docker, absent here; the pooler URL carries no password so a manual `pg_dump` could not connect. Owner note: enable scheduled backups / PITR in the Supabase dashboard if not already on.)
+- `scripts/verify-admin-console.mjs` against a local production build with real credentials (`ADMIN_BASE_URL=http://127.0.0.1:3105`): PASS — 14/14 admin pages in EN + HE, settings navigation, disposable admin account cleaned up. The script's nav selector was updated for the new management shell (`nav.mgmt-nav` / aria-label "Management navigation").
+- Live enquiry smoke: POST `/api/enquiries` returned `{ok:true}` and created the row with `status='new'`, `assigned_to=NULL` (fail-closed trigger confirmed on the live DB); the test row was deleted via the service key afterwards.
+- Remaining owner actions: legal/privacy sign-off for stored enquiry data (docs/LEGAL_CHECKLIST_IL.md); revoke/rotate nothing needed — `.env.local` stays untracked.
