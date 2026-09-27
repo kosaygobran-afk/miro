@@ -18,12 +18,19 @@ insert into public.categories(id, slug, name_he, name_en, is_active)
 values ('11111111-1111-1111-1111-111111111111', 'test-cat', 'קטגוריה', 'Category', true),
        ('66666666-6666-6666-6666-666666666666', 'inactive-cat', 'לא פעיל', 'Inactive', false);
 
-insert into public.products(id, category_id, slug, name_he, name_en, price, status, inventory_count, tracking_mode)
+-- Products must enter as 'draft' (enforced by products_enforce_insert_draft_trg),
+-- then transition state; direct fixture UPDATEs mirror real management flows.
+insert into public.products(id, category_id, slug, name_he, name_en, price, inventory_count, tracking_mode)
 values
-('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'product-a', 'מוצר א', 'Product A', 100.00, 'active', 10, 'none'),
-('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'product-b', 'מוצר ב', 'Product B', 200.00, 'active', 5, 'serial'),
-('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', 'product-draft', 'טיוטה', 'Draft', null, 'draft', 0, 'none'),
-('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'product-archived', 'ארכיון', 'Archived', null, 'archived', 0, 'serial');
+('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'product-a', 'מוצר א', 'Product A', 100.00, 10, 'none'),
+('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'product-b', 'מוצר ב', 'Product B', 200.00, 5, 'serial'),
+('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', 'product-draft', 'טיוטה', 'Draft', null, 0, 'none'),
+('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'product-archived', 'ארכיון', 'Archived', null, 0, 'serial');
+
+update public.products set status = 'active'
+where id in ('22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-333333333333');
+update public.products set status = 'archived'
+where id = '55555555-5555-5555-5555-555555555555';
 
 -- Create test variants for constraint testing (inserted before RLS role switch)
 -- Include a default variant for product-a to test the partial unique index
@@ -113,14 +120,17 @@ begin
     raise exception 'Oversell allowed';
   exception when sqlstate '22023' then null; end;
 
-  -- Negative stock allowed for manual_adjustment
-  v_movement_id := public.record_stock_movement('55555555-5555-5555-5555-555555555555', -20, 'manual_adjustment', null, 'Correction', null);
-  if (select stock_qty from public.product_variants where id = '55555555-5555-5555-5555-555555555555') <> -5 then
-    raise exception 'Manual adjustment negative not allowed';
-  end if;
+  -- Negative final stock rejected even for either-sign correction types
+  begin
+    perform public.record_stock_movement('55555555-5555-5555-5555-555555555555', -20, 'manual_adjustment', null, 'Would go negative', null);
+    raise exception 'Negative stock adjustment allowed';
+  exception when sqlstate '22023' then null; end;
 
-  -- Restore positive stock
-  perform public.record_stock_movement('55555555-5555-5555-5555-555555555555', 10, 'manual_adjustment', null, 'Restore', null);
+  -- Either-sign types may still move stock while the result stays non-negative
+  v_movement_id := public.record_stock_movement('55555555-5555-5555-5555-555555555555', -10, 'manual_adjustment', null, 'Correction', null);
+  if (select stock_qty from public.product_variants where id = '55555555-5555-5555-5555-555555555555') <> 5 then
+    raise exception 'Manual adjustment not applied';
+  end if;
 end $$;
 
 -- ============================================================
@@ -165,7 +175,7 @@ begin
   -- Record sale: 2 items at 100 each, no discount
   v_order_id := public.record_sale(
     '{"name": "Test Customer", "email": "test@example.com", "phone": "050-1234567"}'::jsonb,
-    '[{"variant_id": "66666666-6666-6666-6666-666666666666", "quantity": 2, "unit_price": 100.00, "discount": 0}]'::jsonb
+    '[{"variant_id": "66666666-6666-6666-6666-666666666666", "quantity": 2, "unit_price": 100.00, "discount_per_unit": 0}]'::jsonb
   );
 
   if v_order_id is null then raise exception 'Order ID not returned'; end if;
