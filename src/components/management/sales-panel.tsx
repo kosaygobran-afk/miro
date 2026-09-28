@@ -1,366 +1,458 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
+import { CheckCircle2, Plus, Trash2, X } from "lucide-react";
 import {
-  Plus,
-  Trash2,
-  Search,
-  RotateCcw,
-  AlertCircle,
-  CheckCircle,
-  User,
-  Package,
-} from "lucide-react";
-import { SalesHistory } from "./sales-history";
+  Dialog,
+  FormSection,
+  Notice,
+  PageHeader,
+} from "@/components/management/ui";
+import { salesCopy as copy } from "./sales-copy";
+import { SalesHistoryView } from "./sales-history-view";
+import {
+  computeLine,
+  formatIls,
+  type CatalogProduct,
+  type CatalogVariant,
+  type CustomerAccount,
+  type SaleLine,
+  type SaleOrder,
+} from "./sales-types";
+import styles from "./sales.module.css";
 
-type InventoryVariant = {
-  id: string;
-  sku: string;
-  barcode: string | null;
-  color_he: string | null;
-  color_en: string | null;
-  color_hex: string | null;
-  price_override: number | null;
-  cost_override: number | null;
-  stock_qty: number;
-  low_stock_threshold: number;
-  is_active: boolean;
-  products: {
-    id: string;
-    name_he: string;
-    name_en: string;
-    slug: string;
-    status: string;
-    price: number | null;
-    purchase_cost: number | null;
-  } | null;
-  suppliers: {
-    id: string;
-    company_name: string;
-  } | null;
-};
+const MAX_LINES = 10;
 
-type LineItem = {
-  variantId: string;
-  quantity: number;
-  unitPrice: number;
-  discountPerUnit: number;
-  variant?: InventoryVariant;
-};
+function newLine(key: string): SaleLine {
+  return {
+    key,
+    variantId: "",
+    quantity: 1,
+    unitPrice: 0,
+    discountPerUnit: 0,
+    product: null,
+    variant: null,
+  };
+}
 
-type CustomerAccount = {
-  id: string;
-  full_name: string | null;
-  email: string;
-  phone: string | null;
-  account_status: string;
-};
+/* ---------- Searchable customer account picker ---------- */
 
-type OrderItemSnapshot = {
-  id: string;
-  product_id: string;
-  variant_id: string;
-  quantity: number;
-  unit_price: number;
-  total_price: number;
-  sku_snapshot: string;
-  product_name_he: string;
-  product_name_en: string;
-  unit_cost: number;
-  vat_rate: number;
-  vat_amount: number;
-  discount_amount: number;
-  net_amount: number;
-};
+function CustomerSearch({
+  locale,
+  selected,
+  onSelect,
+  onClear,
+}: {
+  locale: "he" | "en";
+  selected: CustomerAccount | null;
+  onSelect: (account: CustomerAccount) => void;
+  onClear: () => void;
+}) {
+  const t = (map: Record<"he" | "en", string>) => map[locale];
+  const [input, setInput] = useState("");
+  const [open, setOpen] = useState(false);
+  const [options, setOptions] = useState<CustomerAccount[]>([]);
+  const [fetching, setFetching] = useState(false);
+  const cacheRef = useRef(new Map<string, CustomerAccount[]>());
 
-type Order = {
-  id: string;
-  order_number: string;
-  status: string;
-  currency: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone: string | null;
-  user_id: string | null;
-  source: string;
-  subtotal: number;
-  vat_total: number;
-  total: number;
-  net_total: number;
-  shipping_cost: number;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  order_items: OrderItemSnapshot[];
-};
+  useEffect(() => {
+    if (selected) return;
+    const handle = setTimeout(() => {
+      const term = input.trim();
+      const cached = cacheRef.current.get(term);
+      if (cached) {
+        setOptions(cached);
+        return;
+      }
+      setFetching(true);
+      fetch(
+        `/api/management/customers?q=${encodeURIComponent(term)}&limit=10&activeOnly=true`,
+        { cache: "no-store" },
+      )
+        .then((res) => (res.ok ? res.json() : { customers: [] }))
+        .then((data) => {
+          const list = Array.isArray(data.customers)
+            ? (data.customers as CustomerAccount[])
+            : [];
+          cacheRef.current.set(term, list);
+          setOptions(list);
+          setFetching(false);
+        })
+        .catch(() => setFetching(false));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [input, selected]);
+
+  if (selected) {
+    return (
+      <span className={styles.selectionPill}>
+        <span dir="auto">
+          {selected.full_name || selected.email}
+          {selected.full_name ? ` · ${selected.email}` : ""}
+        </span>
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label={t(copy.accountClear)}
+        >
+          <X size={13} aria-hidden="true" />
+        </button>
+      </span>
+    );
+  }
+
+  return (
+    <div
+      className={styles.combo}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <input
+        id="sale-customer-search"
+        type="search"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls="sale-customer-options"
+        aria-label={t(copy.accountSearchLabel)}
+        autoComplete="off"
+        className={`${styles.input} ${styles.comboInput}`}
+        value={input}
+        placeholder={t(copy.accountSearchPlaceholder)}
+        onChange={(event) => {
+          setInput(event.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+      />
+      {open ? (
+        <ul
+          className={styles.comboList}
+          role="listbox"
+          id="sale-customer-options"
+          aria-label={t(copy.accountSearchLabel)}
+        >
+          {fetching ? (
+            <li className={styles.comboStatus}>{t(copy.accountLoading)}</li>
+          ) : options.length === 0 ? (
+            <li className={styles.comboStatus}>{t(copy.accountNoResults)}</li>
+          ) : (
+            options.map((account) => (
+              <li key={account.id} role="option" aria-selected={false}>
+                <button
+                  type="button"
+                  className={styles.comboOption}
+                  onClick={() => {
+                    onSelect(account);
+                    setInput("");
+                    setOpen(false);
+                  }}
+                >
+                  <span dir="auto">
+                    {account.full_name
+                      ? `${account.full_name} — ${account.email}`
+                      : account.email}
+                  </span>
+                </button>
+              </li>
+            ))
+          )}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/* ---------- Searchable product/variant picker (per line) ---------- */
+
+function VariantSearch({
+  locale,
+  inputId,
+  disabled,
+  onPick,
+}: {
+  locale: "he" | "en";
+  inputId: string;
+  disabled: boolean;
+  onPick: (product: CatalogProduct, variant: CatalogVariant) => void;
+}) {
+  const he = locale === "he";
+  const t = (map: Record<"he" | "en", string>) => map[locale];
+  const [input, setInput] = useState("");
+  const [open, setOpen] = useState(false);
+  const [options, setOptions] = useState<
+    { product: CatalogProduct; variant: CatalogVariant }[]
+  >([]);
+  const [fetching, setFetching] = useState(false);
+  const cacheRef = useRef(
+    new Map<string, { product: CatalogProduct; variant: CatalogVariant }[]>(),
+  );
+
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const term = input.trim();
+      const cached = cacheRef.current.get(term);
+      if (cached) {
+        setOptions(cached);
+        return;
+      }
+      setFetching(true);
+      fetch(`/api/management/products?q=${encodeURIComponent(term)}&limit=20`, {
+        cache: "no-store",
+      })
+        .then((res) => (res.ok ? res.json() : { products: [] }))
+        .then((data) => {
+          const needle = term.toLowerCase();
+          const products = Array.isArray(data.products)
+            ? (data.products as CatalogProduct[])
+            : [];
+          const flattened = products
+            .filter((product) => product.status === "active")
+            .flatMap((product) =>
+              (product.product_variants ?? [])
+                .filter((variant) => variant.is_active)
+                .filter((variant) => {
+                  if (!needle) return true;
+                  const haystack = `${product.name_he} ${product.name_en} ${
+                    variant.sku
+                  } ${variant.barcode ?? ""}`.toLowerCase();
+                  return haystack.includes(needle);
+                })
+                .map((variant) => ({ product, variant })),
+            )
+            .slice(0, 20);
+          cacheRef.current.set(term, flattened);
+          setOptions(flattened);
+          setFetching(false);
+        })
+        .catch(() => setFetching(false));
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [input]);
+
+  return (
+    <div
+      className={styles.combo}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+          setOpen(false);
+        }
+      }}
+    >
+      <input
+        id={inputId}
+        type="search"
+        role="combobox"
+        aria-expanded={open}
+        aria-controls={`${inputId}-options`}
+        autoComplete="off"
+        disabled={disabled}
+        className={`${styles.input} ${styles.comboInput}`}
+        value={input}
+        placeholder={t(copy.productSearchPlaceholder)}
+        onChange={(event) => {
+          setInput(event.target.value);
+          setOpen(true);
+        }}
+        onFocus={() => setOpen(true)}
+      />
+      {open && !disabled ? (
+        <ul
+          className={styles.comboList}
+          role="listbox"
+          id={`${inputId}-options`}
+          aria-label={t(copy.productSearchLabel)}
+        >
+          {fetching ? (
+            <li className={styles.comboStatus}>{t(copy.productLoading)}</li>
+          ) : options.length === 0 ? (
+            <li className={styles.comboStatus}>{t(copy.productNoResults)}</li>
+          ) : (
+            options.map(({ product, variant }) => {
+              const name = he ? product.name_he : product.name_en;
+              const color = he ? variant.color_he : variant.color_en;
+              return (
+                <li key={variant.id} role="option" aria-selected={false}>
+                  <button
+                    type="button"
+                    className={styles.comboOption}
+                    onClick={() => {
+                      onPick(product, variant);
+                      setInput("");
+                      setOpen(false);
+                    }}
+                  >
+                    <span dir="auto">
+                      {name}
+                      {color ? ` · ${color}` : ""}
+                    </span>{" "}
+                    <span className={styles.mono} dir="ltr">
+                      {variant.sku}
+                    </span>
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+/* ---------- Sales panel ---------- */
 
 export function SalesPanel({ locale }: { locale: "he" | "en" }) {
   const he = locale === "he";
+  const t = (map: Record<"he" | "en", string>) => map[locale];
 
-  // Form state
+  // Customer
+  const [account, setAccount] = useState<CustomerAccount | null>(null);
   const [customerName, setCustomerName] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
-  const [customerAccountId, setCustomerAccountId] = useState("");
-  const [customerAccounts, setCustomerAccounts] = useState<CustomerAccount[]>(
-    [],
-  );
-  const [lineItems, setLineItems] = useState<LineItem[]>([
-    { variantId: "", quantity: 1, unitPrice: 0, discountPerUnit: 0 },
-  ]);
-  const [variants, setVariants] = useState<InventoryVariant[]>([]);
-  const [variantsLoading, setVariantsLoading] = useState(true);
-  const [variantsError, setVariantsError] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messageType, setMessageType] = useState<"success" | "error">(
-    "success",
-  );
 
-  // Sales history state (passed to SalesHistory)
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [ordersLoading, setOrdersLoading] = useState(true);
-  const [ordersError, setOrdersError] = useState("");
-  const [dateRange, setDateRange] = useState<{
-    from: string;
-    to: string;
-  } | null>(null);
-  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+  // Items
+  const lineCounter = useRef(0);
+  const nextKey = () => `line-${++lineCounter.current}`;
+  const [lines, setLines] = useState<SaleLine[]>(() => [newLine("line-0")]);
 
-  // Fetch variants for the picker
-  const fetchVariants = useCallback(async () => {
-    setVariantsLoading(true);
-    setVariantsError("");
-    try {
-      const res = await fetch("/api/management/inventory?limit=500", {
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setVariants(data.variants ?? []);
-      } else {
-        setVariantsError(
-          data.error ||
-            (he ? "לא ניתן לטעון מוצרים" : "Unable to load products"),
+  // Current VAT rate (for the review estimate; the DB remains authoritative)
+  const [vatRate, setVatRate] = useState<number | null>(null);
+
+  // Review + submit
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [saveError, setSaveError] = useState("");
+  const [successText, setSuccessText] = useState("");
+  const [historyReloadKey, setHistoryReloadKey] = useState(0);
+
+  // Load the current VAT rate once (both roles on this page have viewFinance).
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/management/tax", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : { taxRates: [] }))
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        const rows = Array.isArray(data.taxRates) ? data.taxRates : [];
+        const current = rows.find(
+          (row: { status?: string; is_active?: boolean }) =>
+            row.status === "current" && row.is_active !== false,
         );
-      }
-    } catch {
-      setVariantsError(he ? "שגיאת חיבור" : "Connection error");
-    } finally {
-      setVariantsLoading(false);
-    }
-  }, [he]);
-
-  useEffect(() => {
-    // Initial load - use AbortController to avoid setState-in-effect lint issue
-    const controller = new AbortController();
-    fetch("/api/management/inventory?limit=500", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          if (data.variants) {
-            setVariants(data.variants);
-          }
-          setVariantsLoading(false);
+        if (current && typeof current.rate === "number") {
+          setVatRate(current.rate);
         }
       })
       .catch(() => {
-        if (!controller.signal.aborted) {
-          setVariantsError(he ? "שגיאת חיבור" : "Connection error");
-          setVariantsLoading(false);
-        }
-      });
-    return () => controller.abort();
-  }, [he]);
-
-  // Fetch customer accounts for the account selector
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/management/customers", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!controller.signal.aborted && Array.isArray(data.customers)) {
-          setCustomerAccounts(
-            data.customers.filter(
-              (c: CustomerAccount) => c.account_status === "active",
-            ),
-          );
-        }
-      })
-      .catch(() => {
-        // Account selector is optional; a failed fetch only means no linked account
+        // VAT estimate unavailable — the review shows a note instead.
       });
     return () => controller.abort();
   }, []);
 
-  const handleAccountSelect = (accountId: string) => {
-    setCustomerAccountId(accountId);
-    const account = customerAccounts.find((c) => c.id === accountId);
-    if (account) {
-      if (account.full_name) setCustomerName(account.full_name);
-      if (account.email) setCustomerEmail(account.email);
-      if (account.phone) setCustomerPhone(account.phone);
-    }
-  };
-
-  // Fetch sales history
-  const fetchOrders = useCallback(async () => {
-    setOrdersLoading(true);
-    setOrdersError("");
-    try {
-      const params = new URLSearchParams();
-      if (dateRange?.from) params.set("from", dateRange.from);
-      if (dateRange?.to) params.set("to", dateRange.to);
-      const res = await fetch(`/api/management/sales?${params.toString()}`, {
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setOrders(data.orders ?? []);
-      } else {
-        setOrdersError(
-          data.error ||
-            (he
-              ? "לא ניתן לטעון היסטוריית מכירות"
-              : "Unable to load sales history"),
-        );
-      }
-    } catch {
-      setOrdersError(he ? "שגיאת חיבור" : "Connection error");
-    } finally {
-      setOrdersLoading(false);
-    }
-  }, [dateRange, he]);
-
+  // Confirm before leaving with an unsaved sale draft.
+  const dirty =
+    customerName !== "" ||
+    customerEmail !== "" ||
+    customerPhone !== "" ||
+    account !== null ||
+    lines.some((line) => line.variantId !== "");
   useEffect(() => {
-    // Initial load - use AbortController to avoid setState-in-effect lint issue
-    const controller = new AbortController();
-    const params = new URLSearchParams();
-    if (dateRange?.from) params.set("from", dateRange.from);
-    if (dateRange?.to) params.set("to", dateRange.to);
-    fetch(`/api/management/sales?${params.toString()}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          if (data.orders) {
-            setOrders(data.orders);
-          }
-          setOrdersLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setOrdersError(he ? "שגיאת חיבור" : "Connection error");
-          setOrdersLoading(false);
-        }
-      });
-    return () => controller.abort();
-  }, [dateRange, he]);
+    if (!dirty) return;
+    const handler = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
 
-  const showToast = (text: string, type: "success" | "error" = "success") => {
-    setMessage(text);
-    setMessageType(type);
-    setTimeout(() => setMessage(""), 5000);
+  const resetForm = () => {
+    setAccount(null);
+    setCustomerName("");
+    setCustomerEmail("");
+    setCustomerPhone("");
+    lineCounter.current = 0;
+    setLines([newLine("line-0")]);
+    setFormErrors({});
+    setSaveError("");
   };
 
-  // Variant picker helpers
-  const filteredVariants = variants
-    .filter((v) => v.is_active && v.products?.status === "active")
-    .filter((v) => {
-      if (!searchQuery) return true;
-      const q = searchQuery.toLowerCase();
-      const productName =
-        (v.products?.name_he ?? "") + " " + (v.products?.name_en ?? "");
-      return (
-        v.sku.toLowerCase().includes(q) ||
-        productName.toLowerCase().includes(q) ||
-        (v.barcode?.toLowerCase().includes(q) ?? false)
-      );
-    });
-
-  const getVariantDisplay = (variant: InventoryVariant) => {
-    const product = variant.products;
-    const name = he ? (product?.name_he ?? "") : (product?.name_en ?? "");
-    const price = variant.price_override ?? product?.price ?? 0;
-    const stock = variant.stock_qty;
-    const color = he ? variant.color_he : variant.color_en;
-    const colorPart = color ? ` • ${color}` : "";
-    return `${name}${colorPart} — SKU: ${variant.sku} — ${price.toFixed(2)} ILS — Stock: ${stock}`;
+  const handleAccountSelect = (selected: CustomerAccount) => {
+    setAccount(selected);
+    if (selected.full_name) setCustomerName(selected.full_name);
+    if (selected.email) setCustomerEmail(selected.email);
+    if (selected.phone) setCustomerPhone(selected.phone);
   };
 
-  const handleVariantSelect = (index: number, variantId: string) => {
-    const variant = variants.find((v) => v.id === variantId);
-    const product = variant?.products;
-    const price = variant?.price_override ?? product?.price ?? 0;
-    setLineItems((prev) =>
-      prev.map((item, i) =>
-        i === index ? { ...item, variantId, unitPrice: price, variant } : item,
-      ),
+  const updateLine = (key: string, patch: Partial<SaleLine>) => {
+    setLines((prev) =>
+      prev.map((line) => (line.key === key ? { ...line, ...patch } : line)),
     );
   };
 
-  const addLineItem = () => {
-    setLineItems((prev) => [
-      ...prev,
-      { variantId: "", quantity: 1, unitPrice: 0, discountPerUnit: 0 },
-    ]);
-  };
-
-  const removeLineItem = (index: number) => {
-    if (lineItems.length <= 1) return;
-    setLineItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateLineItem = (
-    index: number,
-    field: keyof LineItem,
-    value: number | string,
+  const handleVariantPick = (
+    key: string,
+    product: CatalogProduct,
+    variant: CatalogVariant,
   ) => {
-    setLineItems((prev) =>
-      prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
-    );
+    const price =
+      variant.price_override ?? product.sale_price ?? product.price ?? 0;
+    updateLine(key, {
+      variantId: variant.id,
+      product,
+      variant,
+      unitPrice: price,
+    });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerName.trim() || !customerEmail.trim()) {
-      showToast(
-        he ? "שם ואימייל נדרשים" : "Name and email are required",
-        "error",
-      );
-      return;
-    }
-    const validItems = lineItems.filter(
-      (item) => item.variantId && item.quantity > 0,
-    );
-    if (validItems.length === 0) {
-      showToast(he ? "הוסף לפחות פריט אחד" : "Add at least one item", "error");
-      return;
-    }
+  const validLines = lines.filter(
+    (line) => line.variantId && line.quantity > 0,
+  );
 
-    setSubmitting(true);
+  const validate = (): boolean => {
+    const errors: Record<string, string> = {};
+    if (!customerName.trim() || !customerEmail.trim()) {
+      errors.customer = t(copy.nameEmailRequired);
+    } else if (!/^\S+@\S+\.\S+$/.test(customerEmail.trim())) {
+      errors.customer = t(copy.emailInvalid);
+    }
+    if (validLines.length === 0) {
+      errors.items = t(copy.itemRequired);
+    }
+    for (const line of validLines) {
+      if (line.quantity <= 0) errors.items = t(copy.qtyPositive);
+      if (line.discountPerUnit > line.unitPrice) {
+        errors.items = t(copy.discountExceedsPrice);
+      }
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const openReview = () => {
+    setSaveError("");
+    if (validate()) setReviewOpen(true);
+  };
+
+  const recordSale = async () => {
+    if (saving) return;
+    setSaving(true);
+    setSaveError("");
     try {
       const res = await fetch("/api/management/sales", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           customer: {
-            name: customerName,
-            email: customerEmail,
-            phone: customerPhone || null,
-            userId: customerAccountId || null,
+            name: customerName.trim(),
+            email: customerEmail.trim(),
+            phone: customerPhone.trim() || null,
+            userId: account?.id ?? null,
           },
-          items: validItems.map(
+          items: validLines.map(
             ({ variantId, quantity, unitPrice, discountPerUnit }) => ({
               variantId,
               quantity,
@@ -370,492 +462,561 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
           ),
         }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(
-          he
-            ? `המכירה נרשמה — מספר הזמנה: ${data.orderId?.slice(0, 8) ?? "—"}`
-            : `Sale recorded — Order #: ${data.orderId?.slice(0, 8) ?? "—"}`,
-          "success",
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const code = data?.code;
+        setSaveError(
+          code === "insufficient_stock"
+            ? t(copy.insufficientStock)
+            : code === "invalid_product"
+              ? t(copy.invalidProduct)
+              : typeof data?.error === "string" && data.error
+                ? data.error
+                : t(copy.recordFailed),
         );
-        // Reset form
-        setCustomerName("");
-        setCustomerEmail("");
-        setCustomerPhone("");
-        setCustomerAccountId("");
-        setLineItems([
-          { variantId: "", quantity: 1, unitPrice: 0, discountPerUnit: 0 },
-        ]);
-        fetchOrders();
-      } else {
-        if (data.code === "insufficient_stock") {
-          showToast(
-            he
-              ? "מלאי לא מספיק לאחד הפריטים"
-              : "Insufficient stock for one or more items",
-            "error",
-          );
-        } else if (data.code === "invalid_product") {
-          showToast(
-            he ? "מוצר או גרסה לא תקינים" : "Invalid product or variant",
-            "error",
-          );
-        } else {
-          showToast(
-            data.error || (he ? "רישום המכירה נכשל" : "Failed to record sale"),
-            "error",
-          );
-        }
+        return;
       }
+
+      // The POST returns { orderId }; resolve the human-facing order_number
+      // (MIRO-YYMMDD-NNNNN) from a fresh bounded sales listing.
+      let orderNumber: string | null = null;
+      try {
+        const listRes = await fetch("/api/management/sales?limit=50", {
+          cache: "no-store",
+        });
+        const listData = await listRes.json().catch(() => ({}));
+        const found = ((listData.orders ?? []) as SaleOrder[]).find(
+          (order) => order.id === data.orderId,
+        );
+        orderNumber = found?.order_number ?? null;
+      } catch {
+        orderNumber = null;
+      }
+
+      setReviewOpen(false);
+      resetForm();
+      setSuccessText(
+        orderNumber
+          ? `${t(copy.saleRecorded)} · ${t(copy.orderNumberLabel)} ${orderNumber}`
+          : t(copy.saleRecorded),
+      );
+      setHistoryReloadKey((key) => key + 1);
     } catch {
-      showToast(he ? "שגיאת חיבור" : "Connection error", "error");
+      setSaveError(t(copy.connectionError));
     } finally {
-      setSubmitting(false);
+      setSaving(false);
     }
   };
 
-  const handleDateRangeChange = (
-    range: { from: string; to: string } | null,
-  ) => {
-    setDateRange(range);
-  };
-
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat(he ? "he-IL" : "en-IL", {
-      style: "currency",
-      currency: "ILS",
-      maximumFractionDigits: 2,
-    }).format(amount);
-
-  const subtotal = lineItems.reduce(
-    (sum, item) => sum + item.unitPrice * item.quantity,
-    0,
+  // Live totals (VAT-inclusive; mirrors record_sale when the rate is known)
+  const live = lines.reduce(
+    (acc, line) => {
+      acc.grossBefore += line.unitPrice * line.quantity;
+      acc.discounts += line.discountPerUnit * line.quantity;
+      acc.items += line.variantId ? line.quantity : 0;
+      return acc;
+    },
+    { grossBefore: 0, discounts: 0, items: 0 },
   );
-  const totalDiscount = lineItems.reduce(
-    (sum, item) => sum + item.discountPerUnit * item.quantity,
-    0,
+  const liveTotal = Math.max(live.grossBefore - live.discounts, 0);
+
+  const review = validLines.map((line) => ({
+    line,
+    totals: computeLine(line, vatRate ?? 0),
+  }));
+  const reviewTotals = review.reduce(
+    (acc, entry) => ({
+      net: acc.net + entry.totals.net,
+      vat: acc.vat + entry.totals.vat,
+      discount: acc.discount + entry.totals.lineDiscount,
+      gross: acc.gross + entry.totals.gross,
+    }),
+    { net: 0, vat: 0, discount: 0, gross: 0 },
   );
-  const total = subtotal - totalDiscount;
 
   return (
-    <div className="sales-panel space-y-6">
-      <div className="miro-card">
-        <div className="border-b border-border-subtle p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
+    <section>
+      <PageHeader title={t(copy.pageTitle)} subtitle={t(copy.pageSubtitle)} />
+
+      <FormSection
+        title={t(copy.recordSectionTitle)}
+        description={t(copy.recordSectionDescription)}
+      >
+        {successText ? (
+          <div className={styles.noticeWrap}>
+            <Notice
+              tone="success"
+              onDismiss={() => setSuccessText("")}
+              dismissLabel={t(copy.noticeDismiss)}
+            >
+              {successText}
+            </Notice>
+          </div>
+        ) : null}
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            openReview();
+          }}
+        >
+          {/* Customer */}
+          <fieldset>
+            <legend className={styles.fieldLabel}>
+              {t(copy.customerSectionTitle)}
+            </legend>
+            <div className={styles.formGrid}>
+              <div className={styles.field}>
+                {account ? (
+                  <span className={styles.fieldHint}>
+                    {t(copy.accountSearchLabel)}
+                  </span>
+                ) : (
+                  <label
+                    className={styles.fieldHint}
+                    htmlFor="sale-customer-search"
+                  >
+                    {t(copy.accountSearchLabel)}
+                  </label>
+                )}
+                <CustomerSearch
+                  locale={locale}
+                  selected={account}
+                  onSelect={handleAccountSelect}
+                  onClear={() => setAccount(null)}
+                />
+                <span className={styles.fieldHint}>
+                  {account ? t(copy.accountLinkedNote) : t(copy.guestNote)}
+                </span>
+              </div>
+              <div className={styles.field}>
+                <label
+                  className={styles.fieldLabel}
+                  htmlFor="sale-customer-name"
+                >
+                  {t(copy.fieldName)}
+                </label>
+                <input
+                  id="sale-customer-name"
+                  type="text"
+                  className={styles.input}
+                  value={customerName}
+                  disabled={saving}
+                  required
+                  aria-invalid={Boolean(formErrors.customer) || undefined}
+                  aria-describedby={
+                    formErrors.customer ? "sale-customer-error" : undefined
+                  }
+                  onChange={(event) => setCustomerName(event.target.value)}
+                />
+              </div>
+              <div className={styles.field}>
+                <label
+                  className={styles.fieldLabel}
+                  htmlFor="sale-customer-email"
+                >
+                  {t(copy.fieldEmail)}
+                </label>
+                <input
+                  id="sale-customer-email"
+                  type="email"
+                  dir="ltr"
+                  className={styles.input}
+                  value={customerEmail}
+                  disabled={saving}
+                  required
+                  aria-invalid={Boolean(formErrors.customer) || undefined}
+                  aria-describedby={
+                    formErrors.customer ? "sale-customer-error" : undefined
+                  }
+                  onChange={(event) => setCustomerEmail(event.target.value)}
+                />
+              </div>
+              <div className={styles.field}>
+                <label
+                  className={styles.fieldLabel}
+                  htmlFor="sale-customer-phone"
+                >
+                  {t(copy.fieldPhone)}
+                </label>
+                <input
+                  id="sale-customer-phone"
+                  type="tel"
+                  dir="ltr"
+                  className={styles.input}
+                  value={customerPhone}
+                  disabled={saving}
+                  onChange={(event) => setCustomerPhone(event.target.value)}
+                />
+              </div>
+            </div>
+            {formErrors.customer ? (
+              <p
+                id="sale-customer-error"
+                className={styles.fieldError}
+                role="alert"
+              >
+                {formErrors.customer}
+              </p>
+            ) : null}
+          </fieldset>
+
+          {/* Items */}
+          <fieldset className={styles.noticeWrap}>
+            <legend className={styles.fieldLabel}>
+              {t(copy.itemsSectionTitle)}
+            </legend>
+
+            {lines.map((line, index) => {
+              const tracked =
+                (line.product?.tracking_mode ?? "none") !== "none";
+              return (
+                <div key={line.key} className={styles.lineItem}>
+                  <div className={`${styles.field} ${styles.grow4}`}>
+                    {line.variant && line.product ? (
+                      <span className={styles.fieldHint}>
+                        {t(copy.productSearchLabel)}
+                      </span>
+                    ) : (
+                      <label
+                        className={styles.fieldHint}
+                        htmlFor={`sale-variant-${index}`}
+                      >
+                        {t(copy.productSearchLabel)}
+                      </label>
+                    )}
+                    {line.variant && line.product ? (
+                      <>
+                        <span className={styles.selectionPill}>
+                          <span dir="auto">
+                            {he ? line.product.name_he : line.product.name_en}
+                            {line.variant.color_he || line.variant.color_en
+                              ? ` · ${he ? line.variant.color_he : line.variant.color_en}`
+                              : ""}
+                          </span>
+                          <span className={styles.mono} dir="ltr">
+                            {line.variant.sku}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateLine(line.key, {
+                                variantId: "",
+                                product: null,
+                                variant: null,
+                                unitPrice: 0,
+                              })
+                            }
+                            disabled={saving}
+                            aria-label={t(copy.productClear)}
+                          >
+                            <X size={13} aria-hidden="true" />
+                          </button>
+                        </span>
+                        <span className={styles.fieldHint}>
+                          {tracked
+                            ? `${t(copy.stockAvailable)}: ${line.variant.stock_qty}`
+                            : t(copy.stockUntracked)}
+                        </span>
+                      </>
+                    ) : (
+                      <VariantSearch
+                        locale={locale}
+                        inputId={`sale-variant-${index}`}
+                        disabled={saving}
+                        onPick={(product, variant) =>
+                          handleVariantPick(line.key, product, variant)
+                        }
+                      />
+                    )}
+                  </div>
+
+                  <div className={`${styles.field} ${styles.grow2}`}>
+                    <label
+                      className={styles.fieldHint}
+                      htmlFor={`sale-qty-${index}`}
+                    >
+                      {t(copy.qty)}
+                    </label>
+                    <input
+                      id={`sale-qty-${index}`}
+                      type="number"
+                      min="1"
+                      step="1"
+                      // Untracked stock (tracking_mode "none") gets no
+                      // stock-based max; the server remains authoritative.
+                      max={tracked ? line.variant?.stock_qty : undefined}
+                      className={styles.input}
+                      value={line.quantity}
+                      disabled={saving}
+                      required
+                      onChange={(event) =>
+                        updateLine(line.key, {
+                          quantity: parseInt(event.target.value, 10) || 1,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className={`${styles.field} ${styles.grow2}`}>
+                    <label
+                      className={styles.fieldHint}
+                      htmlFor={`sale-price-${index}`}
+                    >
+                      {t(copy.unitPrice)}
+                    </label>
+                    <input
+                      id={`sale-price-${index}`}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      dir="ltr"
+                      className={styles.input}
+                      value={line.unitPrice}
+                      disabled={saving}
+                      onChange={(event) =>
+                        updateLine(line.key, {
+                          unitPrice: parseFloat(event.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className={`${styles.field} ${styles.grow2}`}>
+                    <label
+                      className={styles.fieldHint}
+                      htmlFor={`sale-discount-${index}`}
+                    >
+                      {t(copy.discountPerUnit)}
+                    </label>
+                    <input
+                      id={`sale-discount-${index}`}
+                      type="number"
+                      min="0"
+                      max={line.unitPrice}
+                      step="0.01"
+                      dir="ltr"
+                      className={styles.input}
+                      value={line.discountPerUnit}
+                      disabled={saving}
+                      onChange={(event) =>
+                        updateLine(line.key, {
+                          discountPerUnit: parseFloat(event.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className={`${styles.field} ${styles.grow2}`}>
+                    <button
+                      type="button"
+                      className={styles.iconButton}
+                      onClick={() =>
+                        setLines((prev) =>
+                          prev.length <= 1
+                            ? prev
+                            : prev.filter((entry) => entry.key !== line.key),
+                        )
+                      }
+                      disabled={saving || lines.length <= 1}
+                      aria-label={t(copy.removeItem)}
+                    >
+                      <Trash2 size={15} aria-hidden="true" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+            {lines.length < MAX_LINES ? (
+              <button
+                type="button"
+                className="mgmt-button mgmt-button--ghost"
+                onClick={() =>
+                  setLines((prev) => [...prev, newLine(nextKey())])
+                }
+                disabled={saving}
+              >
+                <Plus size={15} aria-hidden="true" />
+                {t(copy.addItem)}
+              </button>
+            ) : null}
+
+            {formErrors.items ? (
+              <p className={styles.fieldError} role="alert">
+                {formErrors.items}
+              </p>
+            ) : null}
+          </fieldset>
+
+          {/* Live totals */}
+          <div className={styles.summaryStrip}>
             <div>
-              <h2 className="text-2xl font-black">
-                {he ? "רישום מכירה" : "Record Sale"}
-              </h2>
-              <p className="mt-1 text-muted-foreground">
-                {he
-                  ? "צור הזמנת מכירה חדשה וניהול היסטוריית מכירות"
-                  : "Create a new sale order and manage sales history"}
+              <p className={styles.summaryLabel}>{t(copy.liveGross)}</p>
+              <p className={styles.summaryValue} dir="ltr">
+                {formatIls(live.grossBefore, locale)}
+              </p>
+            </div>
+            <div>
+              <p className={styles.summaryLabel}>{t(copy.liveDiscounts)}</p>
+              <p className={styles.summaryValue} dir="ltr">
+                -{formatIls(live.discounts, locale)}
+              </p>
+            </div>
+            <div>
+              <p className={styles.summaryLabel}>{t(copy.liveItems)}</p>
+              <p className={styles.summaryValue}>{live.items}</p>
+            </div>
+            <div>
+              <p className={styles.summaryLabel}>{t(copy.liveTotal)}</p>
+              <p className={styles.summaryValue} dir="ltr">
+                {formatIls(liveTotal, locale)}
               </p>
             </div>
           </div>
-          {message && (
-            <p className="mt-3 text-sm" role="status" aria-live="polite">
-              <span
-                className={`sales-panel__message ${
-                  messageType === "success"
-                    ? "sales-panel__message--success"
-                    : "sales-panel__message--error"
-                }`}
-              >
-                {messageType === "success" ? (
-                  <CheckCircle className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <AlertCircle className="h-4 w-4" aria-hidden="true" />
-                )}
-                {message}
-              </span>
-            </p>
-          )}
-        </div>
 
-        {/* Record Sale Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-          <fieldset className="space-y-4">
-            <legend className="text-lg font-semibold flex items-center gap-2">
-              <User className="h-5 w-5" aria-hidden="true" />
-              {he ? "פרטי לקוח" : "Customer Details"}
-            </legend>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {customerAccounts.length > 0 && (
-                <div>
-                  <label
-                    htmlFor="customer-account"
-                    className="block text-sm font-medium mb-1"
-                  >
-                    {he ? "חשבון לקוח" : "Customer account"}
-                  </label>
-                  <select
-                    id="customer-account"
-                    value={customerAccountId}
-                    onChange={(e) => handleAccountSelect(e.target.value)}
-                    disabled={submitting}
-                    className="miro-input"
-                  >
-                    <option value="">
-                      {he ? "— ללא חשבון —" : "— No account —"}
-                    </option>
-                    {customerAccounts.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.full_name
-                          ? `${account.full_name} — ${account.email}`
-                          : account.email}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              <div>
-                <label
-                  htmlFor="customer-name"
-                  className="block text-sm font-medium mb-1"
-                >
-                  {he ? "שם מלא *" : "Full name *"}
-                </label>
-                <input
-                  id="customer-name"
-                  type="text"
-                  value={customerName}
-                  onChange={(e) => setCustomerName(e.target.value)}
-                  className="miro-input"
-                  required
-                  placeholder={he ? "שם הלקוח" : "Customer name"}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="customer-email"
-                  className="block text-sm font-medium mb-1"
-                >
-                  {he ? "אימייל *" : "Email *"}
-                </label>
-                <input
-                  id="customer-email"
-                  type="email"
-                  value={customerEmail}
-                  onChange={(e) => setCustomerEmail(e.target.value)}
-                  className="miro-input"
-                  required
-                  placeholder={he ? "email@example.com" : "email@example.com"}
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="customer-phone"
-                  className="block text-sm font-medium mb-1"
-                >
-                  {he ? "טלפון" : "Phone"}
-                </label>
-                <input
-                  id="customer-phone"
-                  type="tel"
-                  value={customerPhone}
-                  onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="miro-input"
-                  placeholder={he ? "050-1234567" : "050-1234567"}
-                />
-              </div>
-            </div>
-          </fieldset>
-
-          <fieldset className="space-y-4 border-t border-border-subtle pt-6">
-            <legend className="text-lg font-semibold flex items-center gap-2">
-              <Package className="h-5 w-5" aria-hidden="true" />
-              {he ? "פריטי הזמנה" : "Order Items"}
-            </legend>
-
-            {variantsLoading && (
-              <div
-                className="sales-panel__loading"
-                role="status"
-                aria-live="polite"
-              >
-                <div className="sales-panel__spinner" aria-hidden="true" />
-                <p>{he ? "טוען מוצרים…" : "Loading products…"}</p>
-              </div>
-            )}
-
-            {variantsError && !variantsLoading && (
-              <div className="sales-panel__error" role="alert">
-                <AlertCircle
-                  className="h-5 w-5 text-error-text"
-                  aria-hidden="true"
-                />
-                <div>
-                  <p className="font-medium">
-                    {he ? "שגיאה בטעינת מוצרים" : "Failed to load products"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {variantsError}
-                  </p>
-                  <button
-                    type="button"
-                    className="miro-button miro-button-secondary text-sm mt-2"
-                    onClick={fetchVariants}
-                  >
-                    <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                    {he ? "נסה שוב" : "Retry"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {!variantsLoading && !variantsError && (
-              <>
-                <div className="sales-panel__search-wrapper">
-                  <label htmlFor="variant-search" className="sr-only">
-                    {he ? "חיפוש מוצר" : "Search product"}
-                  </label>
-                  <div className="relative">
-                    <Search
-                      className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-                      aria-hidden="true"
-                    />
-                    <input
-                      id="variant-search"
-                      type="search"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={
-                        he
-                          ? "חפש לפי שם, SKU או ברקוד…"
-                          : "Search by name, SKU or barcode…"
-                      }
-                      className="miro-input ps-10"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {lineItems.map((item, index) => (
-                    <div
-                      key={index}
-                      className="sales-panel__line-item grid grid-cols-1 md:grid-cols-12 gap-3 items-end p-4 border border-border-subtle rounded-xl bg-surface-muted"
-                    >
-                      <div className="md:col-span-4">
-                        <label
-                          htmlFor={`variant-${index}`}
-                          className="block text-sm font-medium mb-1"
-                        >
-                          {he ? "מוצר *" : "Product *"}
-                        </label>
-                        <select
-                          id={`variant-${index}`}
-                          value={item.variantId}
-                          onChange={(e) =>
-                            handleVariantSelect(index, e.target.value)
-                          }
-                          disabled={submitting}
-                          className="miro-input sales-panel__variant-select"
-                          aria-label={he ? "בחר מוצר" : "Select product"}
-                        >
-                          <option value="">
-                            {he ? "— בחר מוצר —" : "— Select product —"}
-                          </option>
-                          {filteredVariants.map((v) => (
-                            <option key={v.id} value={v.id}>
-                              {getVariantDisplay(v)}
-                            </option>
-                          ))}
-                        </select>
-                        {item.variant && (
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {he ? "מלאי זמין" : "Available stock"}:{" "}
-                            {item.variant.stock_qty}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label
-                          htmlFor={`qty-${index}`}
-                          className="block text-sm font-medium mb-1"
-                        >
-                          {he ? "כמות *" : "Qty *"}
-                        </label>
-                        <input
-                          id={`qty-${index}`}
-                          type="number"
-                          min="1"
-                          max={item.variant?.stock_qty ?? 9999}
-                          value={item.quantity}
-                          onChange={(e) =>
-                            updateLineItem(
-                              index,
-                              "quantity",
-                              parseInt(e.target.value) || 1,
-                            )
-                          }
-                          className="miro-input"
-                          required
-                        />
-                      </div>
-
-                      <div className="md:col-span-3">
-                        <label
-                          htmlFor={`price-${index}`}
-                          className="block text-sm font-medium mb-1"
-                        >
-                          {he ? "מחיר יחידה (ILS)" : "Unit price (ILS)"}
-                        </label>
-                        <input
-                          id={`price-${index}`}
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.unitPrice}
-                          onChange={(e) =>
-                            updateLineItem(
-                              index,
-                              "unitPrice",
-                              parseFloat(e.target.value) || 0,
-                            )
-                          }
-                          className="miro-input"
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <label
-                          htmlFor={`discount-${index}`}
-                          className="block text-sm font-medium mb-1"
-                        >
-                          {he ? "הנחה ליחידה (ILS)" : "Discount/unit (ILS)"}
-                        </label>
-                        <input
-                          id={`discount-${index}`}
-                          type="number"
-                          min="0"
-                          max={item.unitPrice}
-                          step="0.01"
-                          value={item.discountPerUnit}
-                          onChange={(e) =>
-                            updateLineItem(
-                              index,
-                              "discountPerUnit",
-                              parseFloat(e.target.value) || 0,
-                            )
-                          }
-                          className="miro-input"
-                        />
-                      </div>
-
-                      <div className="md:col-span-1">
-                        <button
-                          type="button"
-                          onClick={() => removeLineItem(index)}
-                          disabled={submitting || lineItems.length <= 1}
-                          className="miro-button miro-button-secondary h-10"
-                          aria-label={he ? "הסר פריט" : "Remove item"}
-                        >
-                          <Trash2 className="h-4 w-4" aria-hidden="true" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-
-                  {lineItems.length < 10 && (
-                    <button
-                      type="button"
-                      onClick={addLineItem}
-                      disabled={submitting}
-                      className="miro-button miro-button-secondary w-full justify-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" aria-hidden="true" />
-                      {he ? "הוסף פריט" : "Add item"}
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
-
-            {/* Order Summary */}
-            <div className="sales-panel__summary bg-surface p-4 rounded-xl border border-border-subtle">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    {he ? "סכום חלקי" : "Subtotal"}
-                  </p>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(subtotal)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    {he ? "סה״כ הנחות" : "Total discounts"}
-                  </p>
-                  <p className="text-xl font-bold text-error-text">
-                    -{formatCurrency(totalDiscount)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    {he ? "פריטים" : "Items"}
-                  </p>
-                  <p className="text-xl font-bold">
-                    {lineItems.reduce((sum, item) => sum + item.quantity, 0)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    {he ? "סה״כ לתשלום" : "Total due"}
-                  </p>
-                  <p className="text-xl font-black text-primary">
-                    {formatCurrency(total)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </fieldset>
-
-          <div className="flex justify-end pt-4 border-t border-border-subtle">
+          <div className={styles.formActions}>
             <button
               type="submit"
-              disabled={submitting}
-              className="miro-button miro-button-primary gap-2"
+              className="mgmt-button mgmt-button--primary"
+              disabled={saving}
             >
-              {submitting ? (
-                <>
-                  <div
-                    className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin"
-                    aria-hidden="true"
-                  />
-                  {he ? "רושם מכירה…" : "Recording sale…"}
-                </>
-              ) : (
-                <>
-                  <CheckCircle className="h-4 w-4" aria-hidden="true" />
-                  {he ? "רשום מכירה" : "Record Sale"}
-                </>
-              )}
+              <CheckCircle2 size={15} aria-hidden="true" />
+              {t(copy.reviewButton)}
             </button>
           </div>
         </form>
-      </div>
+      </FormSection>
 
-      {/* Sales History Section */}
-      <SalesHistory
-        locale={locale}
-        orders={orders}
-        loading={ordersLoading}
-        error={ordersError}
-        onRetry={fetchOrders}
-        dateRange={dateRange}
-        onDateRangeChange={handleDateRangeChange}
-        expandedOrders={expandedOrders}
-        onToggleExpand={(orderId) => {
-          setExpandedOrders((prev) => {
-            const next = new Set(prev);
-            if (next.has(orderId)) next.delete(orderId);
-            else next.add(orderId);
-            return next;
-          });
+      {/* Pre-submit review */}
+      <Dialog
+        open={reviewOpen}
+        onClose={() => {
+          if (!saving) setReviewOpen(false);
         }}
-      />
-    </div>
+        title={t(copy.reviewTitle)}
+        description={t(copy.reviewDescription)}
+        size="lg"
+        closeLabel={t(copy.cancelLabel)}
+        footer={
+          <div className="mgmt-dialog__actions">
+            <button
+              type="button"
+              className="mgmt-button mgmt-button--ghost"
+              onClick={() => setReviewOpen(false)}
+              disabled={saving}
+            >
+              {t(copy.cancelLabel)}
+            </button>
+            <button
+              type="button"
+              className="mgmt-button mgmt-button--primary"
+              onClick={() => void recordSale()}
+              disabled={saving}
+              aria-busy={saving || undefined}
+            >
+              <CheckCircle2 size={15} aria-hidden="true" />
+              {saving ? t(copy.recording) : t(copy.confirmRecord)}
+            </button>
+          </div>
+        }
+      >
+        <div className={styles.reviewCustomer}>
+          <strong dir="auto">{customerName}</strong>
+          <span dir="ltr">{customerEmail}</span>
+          {customerPhone ? <span dir="ltr">{customerPhone}</span> : null}
+          <span className={styles.reviewAccountBadge}>
+            {account ? t(copy.reviewAccountLinked) : t(copy.reviewAccountGuest)}
+          </span>
+        </div>
+
+        <div className={styles.reviewTableWrap}>
+          <table className={styles.reviewTable}>
+            <caption className={styles.fieldHint}>
+              {t(copy.reviewItemsTitle)}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">{t(copy.colProduct)}</th>
+                <th scope="col">{t(copy.colSku)}</th>
+                <th scope="col">{t(copy.colQty)}</th>
+                <th scope="col">{t(copy.colUnitPrice)}</th>
+                <th scope="col">{t(copy.colDiscountUnit)}</th>
+                <th scope="col">{t(copy.colLineDiscount)}</th>
+                <th scope="col">{t(copy.colGross)}</th>
+                <th scope="col">{t(copy.colVat)}</th>
+                <th scope="col">{t(copy.colNet)}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {review.map(({ line, totals }) => (
+                <tr key={line.key}>
+                  <td dir="auto">
+                    {line.product
+                      ? he
+                        ? line.product.name_he
+                        : line.product.name_en
+                      : "—"}
+                    {line.variant &&
+                    (line.variant.color_he || line.variant.color_en)
+                      ? ` · ${he ? line.variant.color_he : line.variant.color_en}`
+                      : ""}
+                  </td>
+                  <td>
+                    <span className={styles.mono} dir="ltr">
+                      {line.variant?.sku ?? "—"}
+                    </span>
+                  </td>
+                  <td>{line.quantity}</td>
+                  <td dir="ltr">{formatIls(line.unitPrice, locale)}</td>
+                  <td dir="ltr">{formatIls(line.discountPerUnit, locale)}</td>
+                  <td dir="ltr">{formatIls(totals.lineDiscount, locale)}</td>
+                  <td dir="ltr">{formatIls(totals.gross, locale)}</td>
+                  <td dir="ltr">
+                    {vatRate === null ? "—" : formatIls(totals.vat, locale)}
+                  </td>
+                  <td dir="ltr">
+                    {vatRate === null ? "—" : formatIls(totals.net, locale)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className={styles.reviewTotals}>
+          <div className={styles.reviewTotalsRow}>
+            <span>{t(copy.reviewSubtotalNet)}</span>
+            <span dir="ltr">
+              {vatRate === null ? "—" : formatIls(reviewTotals.net, locale)}
+            </span>
+          </div>
+          <div className={styles.reviewTotalsRow}>
+            <span>{t(copy.reviewDiscount)}</span>
+            <span dir="ltr">-{formatIls(reviewTotals.discount, locale)}</span>
+          </div>
+          <div className={styles.reviewTotalsRow}>
+            <span>{t(copy.reviewVat)}</span>
+            <span dir="ltr">
+              {vatRate === null ? "—" : formatIls(reviewTotals.vat, locale)}
+            </span>
+          </div>
+          <div className={styles.reviewTotalsRow} data-strong>
+            <span>{t(copy.reviewTotal)}</span>
+            <span dir="ltr">{formatIls(reviewTotals.gross, locale)}</span>
+          </div>
+        </div>
+
+        <p className={styles.fieldHint}>
+          {vatRate === null
+            ? t(copy.vatRateUnavailable)
+            : `${t(copy.vatRateNotePrefix)} ${vatRate}% · ${t(copy.vatEstimateNote)}`}
+        </p>
+
+        {saveError ? <Notice tone="danger">{saveError}</Notice> : null}
+      </Dialog>
+
+      <SalesHistoryView locale={locale} reloadKey={historyReloadKey} />
+    </section>
   );
 }

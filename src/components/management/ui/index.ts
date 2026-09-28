@@ -31,6 +31,11 @@ export {
 } from "./dialog";
 export { FormSection, type FormSectionProps } from "./form-section";
 export {
+  FormField,
+  type FormFieldProps,
+  type FormFieldControlProps,
+} from "./form-field";
+export {
   DetailPanel,
   type DetailPanelProps,
   type DetailRow,

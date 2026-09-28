@@ -51,6 +51,9 @@ insert into public.product_images(id, product_id, image_url, sort_order) values
 ('99999999-0000-0000-0000-000000000001', 'eeeeeeee-0000-0000-0000-000000000006', 'https://example.invalid/a.jpg', 0),
 ('99999999-0000-0000-0000-000000000002', 'eeeeeeee-0000-0000-0000-000000000006', 'https://example.invalid/b.jpg', 1);
 
+insert into public.suppliers(id, company_name) values
+('bbbbbbbb-0000-0000-0000-000000000001', 'PU Supplier');
+
 -- ============================================================
 -- 1. Authorization: customers / anonymous cannot call the RPCs
 -- ============================================================
@@ -172,7 +175,8 @@ end $$;
 -- ============================================================
 do $$ begin
   begin
-    perform public.update_product('eeeeeeee-0000-0000-0000-000000000001', '{"tracking_mode":"serial"}'::jsonb);
+    -- inventory_count is a real column but a legacy ledger-era field: not editable
+    perform public.update_product('eeeeeeee-0000-0000-0000-000000000001', '{"inventory_count":99}'::jsonb);
     raise exception 'Non-whitelisted field accepted';
   exception when sqlstate '22023' then null; end;
   begin
@@ -655,6 +659,128 @@ begin
       order by created_at desc limit 1) <> '00000000-0000-0000-0000-000000000302' then
     raise exception 'CEO audit actor mismatch';
   end if;
+end $$;
+
+reset role;
+
+-- ============================================================
+-- 14. Extended whitelists (20260927240000, ticket DB-4)
+-- Newly-whitelisted product fields persist (status unchanged) and
+-- reorder fields persist through update_variant.
+-- ============================================================
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000301',true); -- admin
+
+do $$
+declare
+  v_row public.products;
+  v_variant public.product_variants;
+begin
+  v_row := public.update_product(
+    'eeeeeeee-0000-0000-0000-000000000001',
+    '{
+      "image_url": "https://example.invalid/p1.jpg",
+      "specifications": {"channels": 8, "resolution": "4K"},
+      "metadata": {"import_ref": "PU-1"},
+      "currency": "ILS",
+      "recommended_price": 219.90,
+      "expected_restock_date": "2026-12-01",
+      "tracking_mode": "serial",
+      "supplier_id": "bbbbbbbb-0000-0000-0000-000000000001"
+    }'::jsonb
+  );
+
+  if v_row.status <> 'draft' then raise exception 'Extended save changed status'; end if;
+  if v_row.image_url <> 'https://example.invalid/p1.jpg'
+     or v_row.specifications <> '{"channels":8,"resolution":"4K"}'::jsonb
+     or v_row.metadata <> '{"import_ref":"PU-1"}'::jsonb
+     or v_row.currency <> 'ILS'
+     or v_row.recommended_price <> 219.90
+     or v_row.expected_restock_date <> date '2026-12-01'
+     or v_row.tracking_mode <> 'serial'
+     or v_row.supplier_id <> 'bbbbbbbb-0000-0000-0000-000000000001' then
+    raise exception 'Extended product fields not persisted: %', v_row;
+  end if;
+
+  -- field-level clearing works for the new nullable fields too
+  v_row := public.update_product(
+    'eeeeeeee-0000-0000-0000-000000000001',
+    '{"expected_restock_date": null, "supplier_id": null, "recommended_price": null}'::jsonb
+  );
+  if v_row.expected_restock_date is not null or v_row.supplier_id is not null
+     or v_row.recommended_price is not null then
+    raise exception 'Null patch values not persisted for extended fields';
+  end if;
+
+  -- validation on the new fields (22023, same style as existing rules)
+  begin
+    perform public.update_product('eeeeeeee-0000-0000-0000-000000000001', '{"tracking_mode":"quantum"}'::jsonb);
+    raise exception 'Invalid tracking_mode accepted';
+  exception when sqlstate '22023' then null; end;
+  begin
+    perform public.update_product('eeeeeeee-0000-0000-0000-000000000001', '{"currency":"ils"}'::jsonb);
+    raise exception 'Invalid currency accepted';
+  exception when sqlstate '22023' then null; end;
+  begin
+    perform public.update_product('eeeeeeee-0000-0000-0000-000000000001', '{"specifications":"nope"}'::jsonb);
+    raise exception 'Non-object specifications accepted';
+  exception when sqlstate '22023' then null; end;
+  begin
+    perform public.update_product('eeeeeeee-0000-0000-0000-000000000001', '{"metadata": null}'::jsonb);
+    raise exception 'Null metadata accepted';
+  exception when sqlstate '22023' then null; end;
+  begin
+    perform public.update_product('eeeeeeee-0000-0000-0000-000000000001', '{"expected_restock_date": "not-a-date"}'::jsonb);
+    raise exception 'Invalid expected_restock_date accepted';
+  exception when sqlstate '22023' then null; end;
+  begin
+    perform public.update_product('eeeeeeee-0000-0000-0000-000000000001', '{"supplier_id": "not-a-uuid"}'::jsonb);
+    raise exception 'Invalid supplier_id accepted';
+  exception when sqlstate '22023' then null; end;
+  begin
+    perform public.update_product(
+      'eeeeeeee-0000-0000-0000-000000000001',
+      '{"supplier_id": "bbbbbbbb-9999-9999-9999-999999999999"}'::jsonb
+    );
+    raise exception 'Unknown supplier accepted';
+  exception when sqlstate '22023' then null; end;
+
+  -- audit row lists the extended fields
+  if not exists (
+    select 1 from public.audit_events
+    where action = 'product_updated'
+      and entity_id = 'eeeeeeee-0000-0000-0000-000000000001'
+      and details->'changed_fields' ? 'specifications'
+      and details->'changed_fields' ? 'tracking_mode'
+  ) then
+    raise exception 'Extended-field audit row missing';
+  end if;
+
+  -- update_variant: reorder fields persist, with range validation
+  v_variant := public.update_variant(
+    'ffffffff-0000-0000-0000-000000000001',
+    '{"reorder_point": 5, "reorder_qty": 20}'::jsonb
+  );
+  if v_variant.reorder_point <> 5 or v_variant.reorder_qty <> 20 then
+    raise exception 'Reorder fields not persisted: %', v_variant;
+  end if;
+
+  v_variant := public.update_variant(
+    'ffffffff-0000-0000-0000-000000000001',
+    '{"reorder_point": null, "reorder_qty": null}'::jsonb
+  );
+  if v_variant.reorder_point is not null or v_variant.reorder_qty is not null then
+    raise exception 'Null reorder patch values not persisted';
+  end if;
+
+  begin
+    perform public.update_variant('ffffffff-0000-0000-0000-000000000001', '{"reorder_qty": 0}'::jsonb);
+    raise exception 'Zero reorder_qty accepted';
+  exception when sqlstate '22023' then null; end;
+  begin
+    perform public.update_variant('ffffffff-0000-0000-0000-000000000001', '{"reorder_point": -1}'::jsonb);
+    raise exception 'Negative reorder_point accepted';
+  exception when sqlstate '22023' then null; end;
 end $$;
 
 reset role;

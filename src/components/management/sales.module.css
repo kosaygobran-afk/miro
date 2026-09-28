@@ -1,0 +1,414 @@
+/* Sales panel + history — page-specific styles (logical properties only). */
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.fieldLabel {
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.fieldHint {
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground, rgb(128 128 128));
+}
+
+.fieldError {
+  font-size: 0.75rem;
+  color: var(--color-error-text, #dc2626);
+}
+
+.input,
+.select {
+  font: inherit;
+  font-size: 0.875rem;
+  padding-block: 0.5rem;
+  padding-inline: 0.625rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border-subtle, rgb(128 128 128 / 0.35));
+  background: var(--color-surface, transparent);
+  color: inherit;
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--color-error-text, #dc2626);
+}
+
+.input:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--color-primary, #d9a509);
+  outline-offset: 1px;
+}
+
+.combo {
+  position: relative;
+  min-inline-size: 14rem;
+}
+
+.comboInput {
+  inline-size: 100%;
+}
+
+.comboList {
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: calc(100% + 0.25rem);
+  z-index: 30;
+  inline-size: 100%;
+  min-inline-size: 16rem;
+  max-block-size: 18rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.25rem;
+  list-style: none;
+  border-radius: 0.625rem;
+  border: 1px solid var(--color-border-subtle, rgb(128 128 128 / 0.35));
+  background: var(--color-surface-elevated, var(--color-surface, Canvas));
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.18);
+}
+
+.comboOption {
+  display: block;
+  inline-size: 100%;
+  text-align: start;
+  padding-block: 0.5rem;
+  padding-inline: 0.625rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+
+.comboOption:hover,
+.comboOption:focus-visible {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  outline: none;
+}
+
+.comboStatus {
+  padding: 0.5rem 0.625rem;
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground, rgb(128 128 128));
+}
+
+.selectionPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-block: 0.4375rem;
+  padding-inline: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-primary, #d9a509);
+  background: color-mix(
+    in srgb,
+    var(--color-primary, #d9a509) 12%,
+    transparent
+  );
+  font-size: 0.8125rem;
+}
+
+.selectionPill button {
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  line-height: 1;
+  padding: 0.125rem;
+}
+
+.lineItem {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+  padding: 1rem;
+  margin-block-end: 0.75rem;
+  border: 1px solid var(--color-border-subtle, rgb(128 128 128 / 0.25));
+  border-radius: 0.75rem;
+  background: var(
+    --color-surface-muted,
+    color-mix(in srgb, currentColor 4%, transparent)
+  );
+}
+
+.lineItem > .grow4 {
+  grid-column: span 4;
+}
+
+.lineItem > .grow2 {
+  grid-column: span 2;
+}
+
+.lineItem > .grow1 {
+  grid-column: span 1;
+}
+
+@media (max-width: 48rem) {
+  .lineItem > .grow4,
+  .lineItem > .grow2 {
+    grid-column: span 6;
+  }
+  .lineItem > .grow1 {
+    grid-column: span 6;
+  }
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2.5rem;
+  block-size: 2.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-border-subtle, rgb(128 128 128 / 0.35));
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.iconButton:hover:not(:disabled) {
+  border-color: var(--color-error-text, #dc2626);
+  color: var(--color-error-text, #dc2626);
+}
+
+.iconButton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--color-primary, #d9a509);
+  outline-offset: 1px;
+}
+
+.summaryStrip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-border-subtle, rgb(128 128 128 / 0.25));
+  background: var(
+    --color-surface-muted,
+    color-mix(in srgb, currentColor 4%, transparent)
+  );
+  text-align: center;
+}
+
+.summaryValue {
+  font-size: 1.125rem;
+  font-weight: 800;
+}
+
+.summaryLabel {
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground, rgb(128 128 128));
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-block-start: 1rem;
+  border-block-start: 1px solid
+    var(--color-border-subtle, rgb(128 128 128 / 0.25));
+}
+
+/* ---------- Review dialog ---------- */
+
+.reviewCustomer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: var(
+    --color-surface-muted,
+    color-mix(in srgb, currentColor 4%, transparent)
+  );
+  margin-block-end: 1rem;
+}
+
+.reviewAccountBadge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding-block: 0.0625rem;
+  padding-inline: 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(
+    in srgb,
+    var(--color-primary, #d9a509) 16%,
+    transparent
+  );
+}
+
+.reviewTableWrap {
+  overflow-x: auto;
+}
+
+.reviewTable {
+  inline-size: 100%;
+  min-inline-size: 42rem;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.reviewTable th,
+.reviewTable td {
+  text-align: start;
+  padding-block: 0.5rem;
+  padding-inline: 0.5rem;
+  border-block-end: 1px solid var(--color-border-subtle, rgb(128 128 128 / 0.2));
+}
+
+.reviewTable th {
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground, rgb(128 128 128));
+  font-weight: 600;
+}
+
+.reviewTable td {
+  font-variant-numeric: tabular-nums;
+}
+
+.reviewTotals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.375rem 1.5rem;
+  margin-block-start: 1rem;
+  padding: 0.875rem;
+  border-radius: 0.75rem;
+  background: var(
+    --color-surface-muted,
+    color-mix(in srgb, currentColor 4%, transparent)
+  );
+}
+
+.reviewTotalsRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.reviewTotalsRow[data-strong] {
+  grid-column: span 2;
+  font-size: 1rem;
+  font-weight: 900;
+  padding-block-start: 0.5rem;
+  border-block-start: 1px solid
+    var(--color-border-subtle, rgb(128 128 128 / 0.25));
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Sales history ---------- */
+
+.historyFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-block-end: 1rem;
+}
+
+.expandedCell {
+  padding: 0.75rem 1rem 1rem;
+  background: var(
+    --color-surface-muted,
+    color-mix(in srgb, currentColor 3%, transparent)
+  );
+}
+
+.itemsTable {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+
+.itemsTable th,
+.itemsTable td {
+  text-align: start;
+  padding-block: 0.4375rem;
+  padding-inline: 0.5rem;
+  border-block-end: 1px solid
+    var(--color-border-subtle, rgb(128 128 128 / 0.15));
+}
+
+.itemsTable th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted-foreground, rgb(128 128 128));
+}
+
+.customerCell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+}
+
+.customerEmail {
+  font-size: 0.75rem;
+  color: var(--color-muted-foreground, rgb(128 128 128));
+}
+
+.expandButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border-subtle, rgb(128 128 128 / 0.35));
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.expandButton svg {
+  transition: transform 0.15s ease;
+}
+
+.expandButton[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block-start: 0.75rem;
+}
+
+.paginationInfo {
+  font-size: 0.8125rem;
+  color: var(--color-muted-foreground, rgb(128 128 128));
+}
+
+.paginationButtons {
+  display: inline-flex;
+  gap: 0.5rem;
+}
+
+.noticeWrap {
+  margin-block: 0.75rem;
+}

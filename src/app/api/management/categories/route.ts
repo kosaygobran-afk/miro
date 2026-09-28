@@ -40,14 +40,24 @@ export async function GET(request: Request) {
   const { admin } = auth;
   const { data, error: categoriesError } = await admin
     .from("categories")
-    .select("*")
+    .select("*, products(count)")
     .order("sort_order");
 
   if (categoriesError) {
     return errorResponse(categoriesError.message);
   }
 
-  return NextResponse.json({ categories: data ?? [] });
+  // Flatten the bounded count embed into a plain product_count per row so the
+  // management UI can gate hard deletes on "zero products" without a join.
+  const categories = (data ?? []).map(({ products: productCount, ...row }) => ({
+    ...row,
+    product_count:
+      Array.isArray(productCount) && productCount[0]
+        ? (productCount[0] as { count: number }).count
+        : 0,
+  }));
+
+  return NextResponse.json({ categories });
 }
 
 export async function POST(request: Request) {

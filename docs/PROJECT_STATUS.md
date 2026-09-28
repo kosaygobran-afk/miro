@@ -1,6 +1,31 @@
 # Project Status
 
-Last updated: 2026-09-27 (production hardening)
+Last updated: 2026-09-28 (UI-1 product editor)
+
+## UI-1: Full-page product editor — 2026-09-28
+
+Scope: management UI ticket UI-1 (product editor flagship). No API/DB changes.
+
+- New full-page editor at `src/app/[locale]/(protected)/admin/products/[id]/page.tsx` (+ `new/page.tsx` for the minimal draft-creation form) with the client tree in `src/components/management/product-editor/` (`product-editor.tsx`, `media-gallery.tsx`, `variants-section.tsx`, `role-prices-section.tsx`, `new-product-form.tsx`, `copy.ts` bilingual maps, `types.ts`, `product-editor.module.css` — logical CSS properties only).
+- Left-nav sections: General (category select, HE/EN names, slug, brand, model, tag chips), Content (HE/EN short/full descriptions + warranty), Media (lazy gallery via `GET product-images?productId=`, multipart `/upload` with per-file XHR progress, alt HE/EN dialog, up/down reorder, set-primary badge = first tile, delete with ConfirmationDialog), Variants (DataTable + Dialog editor: SKU, barcode, color HE/EN/hex, supplier + supplier SKU, price/cost override, low-stock threshold, is_active, is_default radio atomically flipped via RPC), Inventory (read-only per-variant stock + thresholds), Pricing (base/compare-at/sale/purchase cost + per-role prices via product-prices API), SEO (HE/EN title/description), Publishing (status select draft/active/hidden/archived, out_of_stock_policy enum, featured, sort_order).
+- Save sends ONE `PATCH /api/management/products` with only changed, whitelist-safe fields (diffed against the last-saved snapshot). Publish failures surface the RPC `publish_incomplete` details as a persistent danger Notice and jump to the Publishing section; price-constraint messages map to field errors. Sticky header: Back (dirty-guard ConfirmationDialog + beforeunload), product name, StatusBadge, "View storefront" link (published products only), Save (disabled unless dirty, busy-guarded).
+- New shared primitive `src/components/management/ui/form-field.tsx` (exported from `ui/index.ts`): id/label/error/description/required wrapper wiring htmlFor + aria-invalid/aria-describedby, used for every editor input.
+- `src/components/management/product-management.tsx`: the giant edit modal and its tab system removed; Edit navigates to `/[locale]/admin/products/[id]`, Add navigates to `/new`. Dead `product.product_images` assumptions removed (wave-2 GET no longer returns them). List/status-toggle/delete behaviours preserved; status changes use the same PATCH and surface `publish_incomplete` reasons.
+
+Deliberately omitted (NOT in the wave-2 PATCH whitelist; sending them would 400): `specifications` (column exists, but not patchable), `expected_restock_date`, `tracking_mode`, `recommended_price`, `supplier_id`, `currency`, variant `reorder_point`/`reorder_qty` (create-only per schema; omitted from the variant dialog entirely for consistency). Media uploads no longer set `is_primary` beyond the first image of an empty gallery — primary is `sort_order`-derived via `upsert_product_image_meta`.
+
+Commands run (all against my owned paths; PASS):
+
+- `npx eslint` on product-editor/, ui/, product-management.tsx, admin products pages — clean
+- `npm run typecheck` — passed (repo-wide, after parallel workers' fixes)
+- `npx prettier --check` on owned files — clean (repo-wide `format:check` still flags other tickets' files: categories/, services/, visual-picker, two API routes)
+- `npm run build` — passed (exit 0; `[locale]/admin/products/[id]` and `/new` routes registered)
+
+Remaining blockers / owner actions:
+
+- Repo-wide `npm run lint` currently fails on `categories/categories-manager.tsx` and `services/services-manager.tsx` (other tickets, not edited here).
+- Specifications editor for products stays out of the UI until the PATCH whitelist accepts `specifications`.
+- Manual RTL/LTR + browser verification of the editor is still pending.
 
 ## DB-3: Services CMS, canonical product media, storage bucket — 2026-09-27
 

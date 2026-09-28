@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Boxes,
+  FolderTree,
   Inbox,
   Landmark,
   LayoutDashboard,
@@ -11,6 +12,7 @@ import {
   ShoppingCart,
   Truck,
   Users,
+  Wrench,
   type LucideIcon,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
@@ -21,6 +23,8 @@ export type MgmtNavSectionKey =
 export type MgmtNavItemKey =
   | "overview"
   | "products"
+  | "categories"
+  | "services"
   | "inventory"
   | "suppliers"
   | "sales"
@@ -76,6 +80,20 @@ export const mgmtNavSections: MgmtNavSection[] = [
         href: "/admin/products",
         section: "commerce",
         icon: Package,
+        ceoOnly: false,
+      },
+      {
+        key: "categories",
+        href: "/admin/categories",
+        section: "commerce",
+        icon: FolderTree,
+        ceoOnly: false,
+      },
+      {
+        key: "services",
+        href: "/admin/services",
+        section: "commerce",
+        icon: Wrench,
         ceoOnly: false,
       },
       {
@@ -184,6 +202,8 @@ const sectionLabels: Record<MgmtNavSectionKey, LocalizedText> = {
 const itemLabels: Record<MgmtNavItemKey, LocalizedText> = {
   overview: { he: "סקירה", en: "Overview" },
   products: { he: "מוצרים", en: "Products" },
+  categories: { he: "קטגוריות", en: "Categories" },
+  services: { he: "שירותים", en: "Services" },
   inventory: { he: "מלאי", en: "Inventory" },
   suppliers: { he: "ספקים", en: "Suppliers" },
   sales: { he: "מכירות", en: "Sales" },
@@ -204,6 +224,14 @@ const itemSubtitles: Record<MgmtNavItemKey, LocalizedText> = {
   products: {
     he: "פריטי קטלוג, סטטוסים, תמחור ופרסום.",
     en: "Catalog items, statuses, pricing and publishing.",
+  },
+  categories: {
+    he: "עץ קטגוריות הקטלוג, היררכיה וסדר תצוגה.",
+    en: "Catalog category tree, hierarchy and display order.",
+  },
+  services: {
+    he: "עמודי השירותים והפתרונות של האתר הציבורי.",
+    en: "Service and solution pages on the public site.",
   },
   inventory: {
     he: "רמות מלאי, ספי התראה ותנועות מלאי.",

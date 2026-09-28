@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     .select(
       `
       id, order_number, status, currency, customer_name, customer_email, customer_phone,
-      user_id, source, subtotal, vat_total, total, net_total, shipping_cost, notes,
+      user_id, recorded_by, source, subtotal, vat_total, total, net_total, shipping_cost, notes,
       created_at, updated_at,
       order_items (id, product_id, variant_id, quantity, unit_price, total_price,
         sku_snapshot, product_name_he, product_name_en, unit_cost, vat_rate,
@@ -100,8 +100,46 @@ export async function GET(request: Request) {
 
   const { count } = await countQuery;
 
+  // recorded_by has no FK into public.profiles (it references auth.users), so
+  // staff display names are resolved with one bounded lookup for the page,
+  // mirroring the requests list assignee resolution.
+  const orderRows = (orders ?? []) as unknown as {
+    recorded_by: string | null;
+  }[];
+  const recorderIds = [
+    ...new Set(
+      orderRows
+        .map((row) => row.recorded_by)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const recorderNames = new Map<string, string>();
+  if (recorderIds.length > 0) {
+    const { data: profiles, error: profilesError } = await admin
+      .from("profiles")
+      .select("id, display_name, full_name")
+      .in("id", recorderIds);
+    if (profilesError) return errorResponse(profilesError.message);
+    for (const profile of (profiles ?? []) as unknown as {
+      id: string;
+      display_name: string | null;
+      full_name: string | null;
+    }[]) {
+      const displayName = profile.display_name || profile.full_name;
+      if (displayName) recorderNames.set(profile.id, displayName);
+    }
+  }
+
   return NextResponse.json({
-    orders: orders ?? [],
+    orders: orderRows.map((row) => ({
+      ...row,
+      recordedBy: row.recorded_by
+        ? {
+            id: row.recorded_by,
+            displayName: recorderNames.get(row.recorded_by) ?? null,
+          }
+        : null,
+    })),
     totalCount: count ?? 0,
     limit,
     offset,

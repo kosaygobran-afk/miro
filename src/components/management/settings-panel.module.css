@@ -1,0 +1,116 @@
+/* Settings console sections: public contact, catalog defaults, finance
+   summary and tax schedule. Logical properties only. */
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.noticeSlot {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 20;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.invalid {
+  border-color: var(--error-text) !important;
+}
+
+.errorText {
+  font-size: 0.75rem;
+  color: var(--error-text);
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-block-start: 1rem;
+}
+
+.readOnlyNote {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+/* Big current-rate readout in the tax section. */
+.taxCurrent {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.taxRate {
+  font-size: 2.25rem;
+  font-weight: 800;
+  color: var(--primary);
+}
+
+.taxSince {
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.taxName {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.coverageNote {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+  padding-block: 0.5rem;
+  padding-inline: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+}
+
+.dialogForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.financeRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  max-width: 24rem;
+}
+
+.financeLink {
+  align-self: flex-start;
+}
+
+.ltrValue {
+  direction: ltr;
+  text-align: start;
+}
+
+.taxAnchor {
+  scroll-margin-block-start: 5rem;
+}

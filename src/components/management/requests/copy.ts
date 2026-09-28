@@ -1,0 +1,106 @@
+import type { RequestStatus } from "./types";
+
+type LocaleCode = "he" | "en";
+type CopyMap = Record<string, Record<LocaleCode, string>>;
+
+export const requestStatusLabels: Record<
+  RequestStatus,
+  Record<LocaleCode, string>
+> = {
+  new: { he: "חדש", en: "New" },
+  in_progress: { he: "בטיפול", en: "In progress" },
+  waiting_customer: { he: "ממתין ללקוח", en: "Waiting for customer" },
+  closed: { he: "סגור", en: "Closed" },
+  spam: { he: "דואר זבל", en: "Spam" },
+};
+
+export const requestsQueueCopy = {
+  pageTitle: { he: "תור פניות", en: "Requests queue" },
+  pageSubtitle: {
+    he: "לידים ופניות שירות מחכים לטיפול",
+    en: "Leads and service requests waiting to be worked",
+  },
+  searchPlaceholder: {
+    he: "חיפוש לפי שם, אימייל, טלפון, הודעה או SKU…",
+    en: "Search name, email, phone, message or SKU…",
+  },
+  searchLabel: { he: "חיפוש פניות", en: "Search requests" },
+  statusFilterLabel: { he: "סינון לפי סטטוס", en: "Filter by status" },
+  statusAll: { he: "הכול", en: "All" },
+  assigneeLabel: { he: "אחראי", en: "Assignee" },
+  assigneeAny: { he: "כל האחראים", en: "Any assignee" },
+  assigneeUnassigned: { he: "לא משויך", en: "Unassigned" },
+  assigneeMe: { he: "אני", en: "Me" },
+  sourceLabel: { he: "מקור", en: "Source" },
+  sourceAny: { he: "כל המקורות", en: "All sources" },
+  localeLabel: { he: "שפה", en: "Locale" },
+  localeAny: { he: "כל השפות", en: "All locales" },
+  productLabel: { he: "מוצר", en: "Product" },
+  productSearchPlaceholder: {
+    he: "חיפוש מוצר לסינון…",
+    en: "Search product to filter…",
+  },
+  productClear: { he: "ניקוי מוצר", en: "Clear product filter" },
+  productNoResults: { he: "לא נמצאו מוצרים", en: "No products found" },
+  productLoading: { he: "טוען מוצרים…", en: "Loading products…" },
+  dateFilterToggle: { he: "סינון לפי תאריכים", en: "Filter by dates" },
+  dateFilterClear: { he: "ניקוי תאריכים", en: "Clear dates" },
+  colContact: { he: "איש קשר", en: "Contact" },
+  colProduct: { he: "מוצר", en: "Product" },
+  colReceived: { he: "התקבלה", en: "Received" },
+  colStatus: { he: "סטטוס", en: "Status" },
+  colAssignee: { he: "אחראי", en: "Assignee" },
+  colOpen: { he: "פתיחה", en: "Open" },
+  openDetails: { he: "פתיחת פרטי פנייה", en: "Open request details" },
+  noProduct: { he: "ללא מוצר", en: "No product" },
+  unassignedShort: { he: "לא משויך", en: "Unassigned" },
+  emptyTitle: { he: "אין פניות להצגה", en: "No requests to show" },
+  emptyDescription: {
+    he: "נסה לשנות את המסננים או את החיפוש.",
+    en: "Try changing the filters or the search term.",
+  },
+  errorTitle: { he: "טעינת הפניות נכשלה", en: "Failed to load requests" },
+  errorRetry: { he: "נסה שוב", en: "Try again" },
+  staffError: {
+    he: "לא ניתן לטעון את רשימת הצוות",
+    en: "Unable to load staff",
+  },
+  prevPage: { he: "הקודם", en: "Previous" },
+  nextPage: { he: "הבא", en: "Next" },
+  paginationOf: { he: "מתוך", en: "of" },
+  tableCaption: { he: "פניות ולידים", en: "Requests and leads" },
+  resultsCount: { he: "פניות", en: "requests" },
+  ageDays: { he: "ימים", en: "d" },
+  ageHours: { he: "שעות", en: "h" },
+  whatsappAction: { he: "וואטסאפ", en: "WhatsApp" },
+  callAction: { he: "שיחה", en: "Call" },
+  emailAction: { he: "אימייל", en: "Email" },
+} satisfies CopyMap;
+
+export const requestDrawerCopy = {
+  closeLabel: { he: "סגירה", en: "Close" },
+  contactTitle: { he: "פרטי קשר", en: "Contact" },
+  callAction: requestsQueueCopy.callAction,
+  emailAction: requestsQueueCopy.emailAction,
+  whatsappAction: requestsQueueCopy.whatsappAction,
+  detailsTitle: { he: "פרטי הפנייה", en: "Request details" },
+  sourceRow: { he: "מקור", en: "Source" },
+  localeRow: { he: "שפה", en: "Locale" },
+  receivedRow: { he: "התקבלה", en: "Received" },
+  requestIdRow: { he: "מזהה פנייה", en: "Request ID" },
+  customerAccountRow: { he: "חשבון לקוח מקושר", en: "Linked customer account" },
+  linkedYes: { he: "כן", en: "Yes" },
+  linkedNo: { he: "לא", en: "No" },
+  productTitle: { he: "מוצר מקושר", en: "Linked product" },
+  openProductEditor: { he: "פתיחת עורך המוצר", en: "Open product editor" },
+  messageTitle: { he: "הודעת הלקוח", en: "Customer message" },
+  assignmentTitle: { he: "שיוך אחראי", en: "Assignment" },
+  assignmentLabel: { he: "בחירת אחראי", en: "Select assignee" },
+  unassignedOption: { he: "ללא שיוך", en: "Unassigned" },
+  statusActionsTitle: { he: "סטטוס", en: "Status" },
+  saving: { he: "שומר…", en: "Saving…" },
+  saveSuccess: { he: "העדכון נשמר", en: "Update saved" },
+  saveError: { he: "העדכון נכשל", en: "Update failed" },
+  unknownStaff: { he: "חבר צוות", en: "Staff member" },
+  meSuffix: { he: "אני", en: "me" },
+} satisfies CopyMap;
