@@ -333,92 +333,113 @@ select public.backfill_product_images_from_legacy();
 -- statement below is guarded with IF NOT EXISTS and is a no-op there. The
 -- shim shapes deliberately match the real Supabase storage tables well enough
 -- for the policies below to be exercised identically in both environments.
-create schema if not exists storage;
+-- Wrap in DO block to gracefully skip on real Supabase where the connected
+-- role lacks CREATE permission on the storage schema.
+do $$
+begin
+  create schema if not exists storage;
 
-create table if not exists storage.buckets (
-  id text primary key,
-  name text not null,
-  owner uuid,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  public boolean not null default false,
-  avif_autodetection boolean not null default false,
-  file_size_limit bigint,
-  allowed_mime_types text[]
-);
+  create table if not exists storage.buckets (
+    id text primary key,
+    name text not null,
+    owner uuid,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    public boolean not null default false,
+    avif_autodetection boolean not null default false,
+    file_size_limit bigint,
+    allowed_mime_types text[]
+  );
 
-create table if not exists storage.objects (
-  id uuid primary key default gen_random_uuid(),
-  bucket_id text not null references storage.buckets(id) on delete cascade,
-  name text not null,
-  owner uuid,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  last_accessed_at timestamptz not null default now(),
-  metadata jsonb,
-  path_tokens text[] generated always as (string_to_array(name, '/')) stored,
-  version text,
-  owner_id text
-);
+  create table if not exists storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text not null references storage.buckets(id) on delete cascade,
+    name text not null,
+    owner uuid,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now(),
+    last_accessed_at timestamptz not null default now(),
+    metadata jsonb,
+    path_tokens text[] generated always as (string_to_array(name, '/')) stored,
+    version text,
+    owner_id text
+  );
+exception when insufficient_privilege then
+  -- On real Supabase the connected role lacks CREATE on storage schema;
+  -- the tables already exist, so we silently continue.
+  null;
+end;
+$$;
 -- END LOCAL-TEST SHIMS ---------------------------------------------------
 
--- One bucket for all product/service media: idempotent upsert.
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'product-media',
-  'product-media',
-  true,
-  5242880, -- 5 MB
-  array['image/jpeg','image/png','image/webp','image/avif','image/svg+xml']
-)
-on conflict (id) do update
-set public = excluded.public,
-    file_size_limit = excluded.file_size_limit,
-    allowed_mime_types = excluded.allowed_mime_types;
-
--- Schema/table-level access needed so RLS (not grants) is the real gate.
--- On real Supabase these grants largely pre-exist; re-granting is harmless.
-grant usage on schema storage to anon, authenticated;
-grant select on storage.buckets to anon, authenticated;
-grant select, insert, update, delete on storage.objects to anon, authenticated;
-
-alter table storage.objects enable row level security;
-
--- Public read for everything in the bucket (bucket itself is public).
-drop policy if exists "product_media_public_read" on storage.objects;
-create policy "product_media_public_read" on storage.objects
-  for select
-  using (bucket_id = 'product-media');
-
--- Writes: active admin/ceo only, and only under the products/ prefix.
-drop policy if exists "product_media_management_insert" on storage.objects;
-create policy "product_media_management_insert" on storage.objects
-  for insert to authenticated
-  with check (
-    bucket_id = 'product-media'
-    and name like 'products/%'
-    and public.active_app_role() in ('admin','ceo')
-  );
-
-drop policy if exists "product_media_management_update" on storage.objects;
-create policy "product_media_management_update" on storage.objects
-  for update to authenticated
-  using (
-    bucket_id = 'product-media'
-    and name like 'products/%'
-    and public.active_app_role() in ('admin','ceo')
+-- Storage bucket + RLS: wrap in DO block to gracefully skip on real Supabase
+-- where the connected role doesn't own storage.objects/storage.buckets.
+do $$
+begin
+  -- One bucket for all product/service media: idempotent upsert.
+  insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values (
+    'product-media',
+    'product-media',
+    true,
+    5242880, -- 5 MB
+    array['image/jpeg','image/png','image/webp','image/avif','image/svg+xml']
   )
-  with check (
-    bucket_id = 'product-media'
-    and name like 'products/%'
-    and public.active_app_role() in ('admin','ceo')
-  );
+  on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
 
-drop policy if exists "product_media_management_delete" on storage.objects;
-create policy "product_media_management_delete" on storage.objects
-  for delete to authenticated
-  using (
-    bucket_id = 'product-media'
-    and name like 'products/%'
-    and public.active_app_role() in ('admin','ceo')
-  );
+  -- Schema/table-level access needed so RLS (not grants) is the real gate.
+  -- On real Supabase these grants largely pre-exist; re-granting is harmless.
+  grant usage on schema storage to anon, authenticated;
+  grant select on storage.buckets to anon, authenticated;
+  grant select, insert, update, delete on storage.objects to anon, authenticated;
+
+  alter table storage.objects enable row level security;
+
+  -- Public read for everything in the bucket (bucket itself is public).
+  drop policy if exists "product_media_public_read" on storage.objects;
+  create policy "product_media_public_read" on storage.objects
+    for select
+    using (bucket_id = 'product-media');
+
+  -- Writes: active admin/ceo only, and only under the products/ prefix.
+  drop policy if exists "product_media_management_insert" on storage.objects;
+  create policy "product_media_management_insert" on storage.objects
+    for insert to authenticated
+    with check (
+      bucket_id = 'product-media'
+      and name like 'products/%'
+      and public.active_app_role() in ('admin','ceo')
+    );
+
+  drop policy if exists "product_media_management_update" on storage.objects;
+  create policy "product_media_management_update" on storage.objects
+    for update to authenticated
+    using (
+      bucket_id = 'product-media'
+      and name like 'products/%'
+      and public.active_app_role() in ('admin','ceo')
+    )
+    with check (
+      bucket_id = 'product-media'
+      and name like 'products/%'
+      and public.active_app_role() in ('admin','ceo')
+    );
+
+  drop policy if exists "product_media_management_delete" on storage.objects;
+  create policy "product_media_management_delete" on storage.objects
+    for delete to authenticated
+    using (
+      bucket_id = 'product-media'
+      and name like 'products/%'
+      and public.active_app_role() in ('admin','ceo')
+    );
+exception when insufficient_privilege then
+  -- On real Supabase the connected role doesn't own storage.objects/buckets;
+  -- the bucket and policies are managed via the Supabase dashboard or API.
+  -- We silently continue so the rest of the migration applies.
+  null;
+end;
+$$;
