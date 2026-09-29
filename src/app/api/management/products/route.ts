@@ -9,6 +9,33 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
+// List query schema
+const listQuerySchema = z.object({
+  id: z.string().uuid().optional(), // For single product lookup (backward compat)
+  q: z.string().trim().max(200).optional(),
+  status: z
+    .enum(["draft", "active", "hidden", "archived", "all"])
+    .optional()
+    .default("all"),
+  category: z.string().uuid().optional(),
+  supplier: z.string().uuid().optional(),
+  sort: z
+    .enum([
+      "created_at",
+      "updated_at",
+      "name_he",
+      "name_en",
+      "sort_order",
+      "price",
+    ])
+    .optional()
+    .default("created_at"),
+  order: z.enum(["asc", "desc"]).optional().default("desc"),
+  page: z.coerce.number().int().positive().optional().default(1),
+  limit: z.coerce.number().int().positive().max(100).optional().default(25),
+});
+
+// Product creation schema
 const productSchema = z.object({
   id: z.string().uuid().optional(),
   category_id: z.string().uuid().nullable().optional(),
@@ -124,16 +151,28 @@ async function revalidateCatalog() {
   revalidatePath("/en/store/[category]", "page");
 }
 
+// Helper to sanitize text for ilike queries
+function sanitizeSearchTerm(term: string): string {
+  return term.replace(/[%_]/g, "");
+}
+
 export async function GET(request: Request) {
   const auth = await withManagementAuth(request, "manageCatalog");
   if (!auth.ok) return auth.response;
 
+  const { searchParams } = new URL(request.url);
+  const parsed = listQuerySchema.safeParse(Object.fromEntries(searchParams));
+  if (!parsed.success) {
+    return errorResponse("Invalid query params", 400, parsed.error.flatten());
+  }
+
+  const { id, q, status, category, supplier, sort, order, page, limit } =
+    parsed.data;
   const { admin } = auth;
-  const [
-    { data: products, error: productsError },
-    { data: categories, error: categoriesError },
-  ] = await Promise.all([
-    admin
+
+  // If ID is provided, return single product (backward compat)
+  if (id) {
+    const { data: product, error } = await admin
       .from("products")
       .select(
         `
@@ -145,27 +184,91 @@ export async function GET(request: Request) {
         sort_order, currency, purchase_cost, recommended_price, out_of_stock_policy,
         expected_restock_date, tracking_mode, supplier_id, status,
         categories (id, slug, name_he, name_en, sort_order, is_active),
+        product_images (id, image_url, alt_he, alt_en, sort_order),
         product_prices (role, price),
         product_variants (id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, supplier_id, supplier_sku, is_default, is_active, stock_qty, low_stock_threshold, reorder_point, reorder_qty),
         suppliers (id, company_name)
       `,
       )
-      .order("created_at", { ascending: false }),
-    admin
-      .from("categories")
-      .select("id, slug, name_he, name_en, sort_order, is_active")
-      .order("sort_order"),
-  ]);
+      .eq("id", id)
+      .maybeSingle();
 
-  if (productsError || categoriesError) {
-    return errorResponse(
-      productsError?.message ?? categoriesError?.message ?? "Database error",
-    );
+    if (error) return mapPostgresError(error);
+    if (!product) {
+      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    }
+    return NextResponse.json({ product });
+  }
+
+  // Build list query
+  let query = admin
+    .from("products")
+    .select(
+      `
+      id, slug, category_id, name_he, name_en, short_description_he, short_description_en,
+      description_he, description_en, price, compare_at_price, sale_price, inventory_count,
+      is_active, is_featured, image_url, metadata, created_at, updated_at,
+      brand, model_number, tags, specifications, warranty_he, warranty_en,
+      seo_title_he, seo_title_en, seo_description_he, seo_description_en,
+      sort_order, currency, purchase_cost, recommended_price, out_of_stock_policy,
+      expected_restock_date, tracking_mode, supplier_id, status,
+      categories (id, slug, name_he, name_en, sort_order, is_active),
+      product_images (id, image_url, alt_he, alt_en, sort_order),
+      product_prices (role, price),
+      product_variants (id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, supplier_id, supplier_sku, is_default, is_active, stock_qty, low_stock_threshold, reorder_point, reorder_qty),
+      suppliers (id, company_name)
+    `,
+      { count: "exact" },
+    )
+    .order(sort, { ascending: order === "asc" });
+
+  // Apply filters
+  if (status !== "all") {
+    query = query.eq("status", status);
+  }
+  if (category) {
+    query = query.eq("category_id", category);
+  }
+  if (supplier) {
+    query = query.eq("supplier_id", supplier);
+  }
+  if (q) {
+    const term = sanitizeSearchTerm(q.trim());
+    if (term) {
+      query = query.or(
+        `name_he.ilike.%${term}%,name_en.ilike.%${term}%,slug.ilike.%${term}%,sku.ilike.%${term}%`,
+      );
+    }
+  }
+
+  // Pagination
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  query = query.range(from, to);
+
+  const { data: products, error: productsError, count } = await query;
+
+  if (productsError) {
+    return mapPostgresError(productsError);
+  }
+
+  // Fetch categories for dropdowns
+  const { data: categories, error: categoriesError } = await admin
+    .from("categories")
+    .select("id, slug, name_he, name_en, sort_order, is_active")
+    .order("sort_order");
+
+  if (categoriesError) {
+    return mapPostgresError(categoriesError);
   }
 
   return NextResponse.json({
     products: products ?? [],
     categories: categories ?? [],
+    totalCount: count ?? 0,
+    page,
+    limit,
+    totalPages: Math.ceil((count ?? 0) / limit),
   });
 }
 

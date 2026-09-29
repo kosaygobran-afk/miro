@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { getPublishedServices } from "@/lib/public-services";
 import {
   CapabilityStrip,
   ConnectedSystem,
@@ -36,6 +37,10 @@ export default async function ServicesPage({
   const { locale: rawLocale } = await params;
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
   const he = locale === "he";
+
+  // Fetch published services from database
+  const services = await getPublishedServices();
+
   return (
     <>
       <section className="experience-services-hero">
@@ -114,7 +119,7 @@ export default async function ServicesPage({
                 : "Four complementary disciplines. One plan that considers them all."}
             </p>
           </div>
-          <ServiceCategoryGrid locale={locale} />
+          <ServiceCategoryGrid locale={locale} services={services} />
         </div>
       </section>
       <section className="experience-section experience-muted-section">

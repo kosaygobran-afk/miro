@@ -8,6 +8,8 @@ export type FormFieldControlProps = {
   "aria-invalid"?: true | undefined;
   /** References the description and error elements; wire to the control. */
   "aria-describedby"?: string | undefined;
+  /** Marks the control as disabled. */
+  disabled?: boolean;
 };
 
 export type FormFieldProps = {
@@ -19,6 +21,8 @@ export type FormFieldProps = {
   description?: ReactNode;
   /** Marks the field as required (visual marker + control `required` prop). */
   required?: boolean;
+  /** Marks the field as disabled (label styling + control `disabled` prop). */
+  disabled?: boolean;
   /** Explicit control id; a stable generated id is used when omitted. */
   id?: string;
   className?: string;
@@ -35,6 +39,7 @@ export function FormField({
   error,
   description,
   required = false,
+  disabled = false,
   id,
   className,
   children,
@@ -50,7 +55,15 @@ export function FormField({
 
   return (
     <div className={["w-full", className].filter(Boolean).join(" ")}>
-      <label htmlFor={fieldId} className="mb-1 block text-sm font-medium">
+      <label
+        htmlFor={fieldId}
+        className={[
+          "mb-1 block text-sm font-medium",
+          disabled && "text-muted-foreground/60",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
         {label}
         {required ? (
           <span className="ms-1 text-destructive" aria-hidden="true">
@@ -61,6 +74,7 @@ export function FormField({
       {children({
         id: fieldId,
         required,
+        disabled,
         "aria-invalid": error ? true : undefined,
         "aria-describedby": describedBy,
       })}

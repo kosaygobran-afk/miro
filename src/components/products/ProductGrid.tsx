@@ -20,7 +20,7 @@ export function ProductGrid({
 }) {
   if (!products.length) return <p className="sf-empty">{emptyLabel}</p>;
   return (
-    <div className="sf-product-grid">
+    <div className="sf-catalog-grid">
       {products.map((product) => (
         <ProductCard
           key={product.id}

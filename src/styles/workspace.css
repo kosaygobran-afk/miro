@@ -567,232 +567,6 @@
 }
 
 /* ============================================================================
-   ADMIN SHELL — sticky glass header, nav, role badge, storefront link, logout
-   ============================================================================ */
-
-.admin-shell {
-  display: grid;
-  grid-template-rows: auto auto 1fr;
-  min-height: 100vh;
-  background: var(--background);
-}
-
-.admin-shell__header {
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--header-surface);
-  backdrop-filter: blur(18px);
-  box-shadow: var(--shadow-soft);
-}
-
-.admin-shell__header-inner {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem 1rem;
-  padding: 0.75rem 1.5rem;
-  max-width: 112rem;
-  margin-inline: auto;
-}
-
-@media (max-width: 1199px) {
-  .admin-shell__header-inner {
-    flex-wrap: wrap;
-  }
-  .admin-shell__nav {
-    order: 3;
-    flex-basis: 100%;
-    border-block-start: 1px solid var(--border-subtle);
-  }
-}
-
-.admin-shell__brand {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.admin-shell__storefront-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-height: 44px;
-  padding: 0.5rem 0.85rem;
-  border-radius: var(--radius-lg);
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--muted-foreground);
-  transition:
-    background-color 140ms ease,
-    color 140ms ease;
-}
-
-.admin-shell__storefront-link:hover {
-  background: var(--surface-hover);
-  color: var(--foreground);
-}
-
-.admin-shell__storefront-link:focus-visible {
-  outline: 3px solid var(--accent-text);
-  outline-offset: 3px;
-}
-
-.admin-shell__user {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.admin-shell__role-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0.25rem 0.625rem;
-  border-radius: 999px;
-  font-size: 0.6875rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
-  color: var(--primary);
-  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
-}
-
-.admin-shell__role-badge--ceo {
-  background: color-mix(in srgb, var(--primary) 18%, transparent);
-  color: var(--primary);
-  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-}
-
-.admin-shell__role-badge--admin {
-  background: color-mix(in srgb, var(--badge-admin) 18%, transparent);
-  color: var(--badge-admin);
-  border-color: color-mix(in srgb, var(--badge-admin) 30%, transparent);
-}
-
-.admin-shell__logout-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0.5rem 0.85rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  font-size: 0.875rem;
-  font-weight: 700;
-  color: var(--muted-foreground);
-  background: var(--surface);
-  cursor: pointer;
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease;
-}
-
-.admin-shell__logout-button:hover {
-  background: var(--surface-hover);
-  border-color: var(--border-control);
-  color: var(--foreground);
-}
-
-.admin-shell__logout-button:focus-visible {
-  outline: 3px solid var(--accent-text);
-  outline-offset: 3px;
-}
-
-.admin-shell__main {
-  max-width: 112rem;
-  margin-inline: auto;
-  padding: 1.5rem;
-  width: 100%;
-}
-
-.admin-shell__nav {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-.admin-shell__nav-scroller {
-  max-width: none;
-  margin-inline: 0;
-  padding-inline: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--primary) 60%, transparent)
-    transparent;
-}
-
-.admin-shell__nav-scroller::-webkit-scrollbar {
-  height: 6px;
-}
-
-.admin-shell__nav-scroller::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.admin-shell__nav-scroller::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 70%, #e6d282);
-}
-
-.admin-shell__nav-list {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: stretch;
-  gap: 0.25rem;
-  min-height: 52px;
-  padding: 0.5rem 0;
-  margin: 0;
-  list-style: none;
-  role: tablist;
-}
-
-.admin-shell__nav-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
-  padding: 0.625rem 1rem;
-  border-radius: var(--radius-lg);
-  font-size: 0.875rem;
-  font-weight: 700;
-  white-space: nowrap;
-  color: var(--muted-foreground);
-  text-decoration: none;
-  transition:
-    background-color 140ms ease,
-    color 140ms ease,
-    border-color 140ms ease;
-  border: 1px solid transparent;
-}
-
-.admin-shell__nav-link:hover {
-  background: var(--surface-muted);
-  color: var(--foreground);
-}
-
-.admin-shell__nav-link:focus-visible {
-  outline: 3px solid var(--accent-text);
-  outline-offset: 3px;
-}
-
-.admin-shell__nav-link--active {
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
-  color: var(--accent-text);
-  border-color: color-mix(in srgb, var(--primary) 28%, transparent);
-}
-
-.admin-shell__nav-link--active:hover {
-  background: color-mix(in srgb, var(--primary) 20%, transparent);
-  color: var(--primary);
-}
-
-/* ============================================================================
    OVERVIEW PANEL — stat cards, tables, badges
    ============================================================================ */
 
@@ -3981,8 +3755,10 @@
 }
 
 @media (prefers-contrast: more) {
-  .admin-shell__header,
-  .admin-shell__nav,
+  .mgmt-shell header,
+  .mgmt-shell nav,
+  .mgmt-topbar,
+  .mgmt-nav__link,
   .overview-panel__stat-card,
   .overview-panel__table-card,
   .inventory-manager__card,
@@ -3993,7 +3769,8 @@
     border-color: var(--border-control);
   }
 
-  .admin-shell__nav-link,
+  .mgmt-topbar__storefront-link,
+  .mgmt-nav__link,
   .role-badge,
   .status-badge,
   .overview-panel__action-badge,
@@ -4025,30 +3802,15 @@
 }
 
 /* Focus visible base - applies to admin workspace interactive elements */
-.admin-shell :focus-visible {
+.mgmt-shell :focus-visible {
   outline: 3px solid var(--accent-text);
   outline-offset: 3px;
 }
 
-/* Ensure minimum 44px touch targets for admin workspace interactive elements */
-.admin-shell button,
-.admin-shell a,
-.admin-shell input,
-.admin-shell select,
-.admin-shell textarea,
-.admin-shell [role="button"],
-.admin-shell [role="tab"],
-.admin-shell [role="menuitem"],
-.admin-shell [role="option"],
-.admin-shell summary {
-  min-height: 44px;
-  min-width: 44px;
-}
-
 /* Small inputs keep natural sizing */
-.admin-shell input[type="checkbox"],
-.admin-shell input[type="radio"],
-.admin-shell input[type="range"] {
+.mgmt-shell input[type="checkbox"],
+.mgmt-shell input[type="radio"],
+.mgmt-shell input[type="range"] {
   min-height: auto;
   min-width: auto;
 }
@@ -4057,12 +3819,10 @@
 
 /* Print styles for admin */
 @media print {
-  .admin-shell__header,
-  .admin-shell__nav,
-  .admin-shell__header__actions,
-  .admin-shell__logout-button,
-  .mgmt-modal-overlay,
-  .customers-manager__drawer-overlay,
+  .mgmt-shell header,
+  .mgmt-shell nav,
+  .mgmt-shell [role="dialog"],
+  .mgmt-drawer-overlay,
   .inventory-manager__actions,
   .sales-panel__actions,
   .settings-panel__actions,
@@ -4074,11 +3834,11 @@
     display: none !important;
   }
 
-  .admin-shell__main {
+  .mgmt-shell__main {
     padding: 0;
   }
 
-  .admin-shell {
+  .mgmt-shell {
     display: block;
   }
 
@@ -4096,17 +3856,64 @@
   }
 }
 
+/* High contrast mode for admin */
+@media (prefers-contrast: more) {
+  .mgmt-shell header,
+  .mgmt-shell nav,
+  .mgmt-topbar,
+  .mgmt-nav__link,
+  .overview-panel__stat-card,
+  .overview-panel__table-card,
+  .inventory-manager__card,
+  .suppliers-manager__card,
+  .customers-manager__card,
+  .sales-history__card,
+  .miro-card {
+    border-color: var(--border-control);
+  }
+
+  .mgmt-topbar__storefront-link,
+  .mgmt-nav__link,
+  .role-badge,
+  .status-badge,
+  .overview-panel__action-badge,
+  .overview-panel__movement-badge,
+  .inventory-manager__stock,
+  .inventory-manager__badge,
+  .suppliers-manager__currency-badge,
+  .inventory-manager__history-type {
+    border-width: 2px;
+  }
+
+  :focus-visible {
+    outline-width: 4px;
+    outline-offset: 3px;
+  }
+}
+
 /* Ensure tables are readable at small sizes */
 @media (max-width: 1023px) {
-  .admin-shell__main {
+  .mgmt-shell__main {
     padding: 1rem;
   }
+}
 
-  .admin-shell__header-inner {
-    padding: 0.75rem 1rem;
+/* Mobile responsive adjustments for admin */
+@media (max-width: 639px) {
+  .mgmt-shell__main {
+    padding: 0.75rem;
   }
 
-  .admin-shell__nav-scroller {
-    padding-inline: 1rem;
+  .mgmt-topbar {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .mgmt-page-header__title {
+    font-size: 1.25rem;
+  }
+
+  .mgmt-detail-panel__row {
+    grid-template-columns: 1fr;
+    gap: 0.1rem;
   }
 }

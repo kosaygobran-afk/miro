@@ -105,9 +105,17 @@ export function NewProductForm({ locale }: { locale: Locale }) {
       });
       const body = (await response.json().catch(() => ({}))) as {
         error?: string;
+        code?: string;
         product?: { id: string };
       };
       if (!response.ok || !body.product?.id) {
+        // Specific feedback for duplicate slug
+        if (body.error === "duplicate_slug" || body.code === "duplicate_slug") {
+          setErrors((prev) => ({
+            ...prev,
+            slug: validationCopy.slugDuplicate?.[locale] ?? validationCopy.slugInvalid[locale],
+          }));
+        }
         setSubmitError(
           body.error === "Duplicate value"
             ? validationCopy.slugInvalid[locale]
@@ -118,6 +126,7 @@ export function NewProductForm({ locale }: { locale: Locale }) {
       router.push(`/${locale}/admin/products/${body.product.id}`);
     } catch {
       setSubmitError(editorCopy.saveFailed[locale]);
+    } finally {
       setSaving(false);
     }
   }
@@ -175,7 +184,7 @@ export function NewProductForm({ locale }: { locale: Locale }) {
                   {...control}
                   type="text"
                   className="miro-input"
-                  dir="auto"
+                  dir="rtl"
                   value={nameHe}
                   maxLength={255}
                   onChange={(e) => setNameHe(e.target.value)}
@@ -194,7 +203,7 @@ export function NewProductForm({ locale }: { locale: Locale }) {
                   {...control}
                   type="text"
                   className="miro-input"
-                  dir="auto"
+                  dir="ltr"
                   value={nameEn}
                   maxLength={255}
                   onChange={(e) => {

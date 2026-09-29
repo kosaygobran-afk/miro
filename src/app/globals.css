@@ -6,18 +6,68 @@
   --space-panel: 1.25rem;
   --type-section: 1.5rem;
   color-scheme: dark;
-  --background: #05070a;
-  --surface: #101418;
-  --surface-muted: #171d24;
-  --surface-hover: #222a31;
-  --foreground: #f8fafc;
-  --muted-foreground: #b4bcc3;
-  --border-subtle: #2a3340;
-  --border-control: #7d8a96;
-  --primary: #f2c21d;
-  --primary-hover: #ffd95d;
-  --primary-foreground: #090909;
-  --accent-text: #ffd65c;
+  /* New Dark: High contrast, pure black, luminous gold, neon turquoise */
+  --background: #000000;
+  --surface: #080808;
+  --surface-muted: #101010;
+  --surface-hover: #1a1a1a;
+  --foreground: #ffffff;
+  --muted-foreground: #c8c8c8;
+  --border-subtle: #595959;
+  --border-control: #969696;
+  --primary: #ffd700;
+  --primary-hover: #ffe766;
+  --primary-foreground: #000000;
+  --accent-text: #ffe44d;
+  --secondary-accent: #00ffe0;
+  --success-text: #5cff95;
+  --error-text: #ff767f;
+  --badge-admin: #d998ff;
+  --badge-worker: #69c7ff;
+  --badge-customer: #5cff95;
+  --badge-suspended: #ffdf4d;
+  --hero-glow: rgba(255, 215, 0, 0.1);
+  --header-surface: #000000;
+  --header-surface-strong: #000000;
+
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.125rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-full: 9999px;
+  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-lift: 0 18px 38px rgba(0, 0, 0, 0.75);
+  --shadow-glow:
+    0 0 0 1px rgba(255, 215, 0, 0.7), 0 0 12px rgba(255, 215, 0, 0.2),
+    0 0 24px rgba(255, 215, 0, 0.08);
+  /* Dark-specific tokens */
+  --focus-ring: #00ffe0;
+  --gold-highlight: #fff3b0;
+  --turquoise-highlight: #a6fff4;
+  --turquoise-glow:
+    0 0 10px rgba(0, 255, 224, 0.2), 0 0 22px rgba(0, 255, 224, 0.08);
+}
+
+[data-theme="medium"] {
+  /* Medium now holds the former Dark appearance */
+  color-scheme: dark;
+  --space-section: 3rem;
+  --space-panel: 1.25rem;
+  --type-section: 1.5rem;
+  --background: #090b0d;
+  --surface: #121518;
+  --surface-muted: #1b1f23;
+  --surface-hover: #23282c;
+  --foreground: #f5f6f7;
+  --muted-foreground: #aeb5bc;
+  --border-subtle: #2c3238;
+  --border-control: #7e8a95;
+  --primary: #ffca28;
+  --primary-hover: #ffda66;
+  --primary-foreground: #111214;
+  --accent-text: #ffce42;
   --secondary-accent: #69e1d3;
   --success-text: #7fe5a2;
   --error-text: #ff9a9a;
@@ -26,7 +76,7 @@
   --badge-customer: #4ade80;
   --badge-suspended: #fbbf24;
   --hero-glow: rgba(242, 194, 29, 0.22);
-  --header-surface: rgba(9, 12, 15, 0.82);
+  --header-surface: rgba(11, 14, 16, 0.94);
   --header-surface-strong: rgba(12, 16, 19, 0.92);
 
   --radius-xs: 0.375rem;
@@ -36,65 +86,27 @@
   --radius-xl: 1.5rem;
   --radius-2xl: 2rem;
   --radius-full: 9999px;
-  --shadow-soft: 0 18px 44px rgba(0, 0, 0, 0.34);
-  --shadow-lift: 0 28px 72px rgba(0, 0, 0, 0.42);
-  --shadow-glow:
-    0 0 0 1px rgba(242, 194, 29, 0.32), 0 14px 34px rgba(242, 194, 29, 0.16);
-}
-
-[data-theme="medium"] {
-  color-scheme: light;
-  --background: #edf1f3;
-  --surface: #f7f9fa;
-  --surface-muted: #e7ebee;
-  --surface-hover: #dde5eb;
-  --foreground: #171d22;
-  --muted-foreground: #58656e;
-  --border-subtle: #d3dae0;
-  --border-control: #6d7e8c;
-  --primary: #f2c21d;
-  --primary-hover: #dca914;
-  --primary-foreground: #171717;
-  --accent-text: #8a6700;
-  --secondary-accent: #0f6f69;
-  --success-text: #176a3a;
-  --error-text: #ba2a2a;
-  --badge-admin: #7e22ce;
-  --badge-worker: #1d4ed8;
-  --badge-customer: #15803d;
-  --badge-suspended: #b45309;
-  --hero-glow: rgba(242, 194, 29, 0.12);
-  --header-surface: rgba(247, 249, 250, 0.78);
-  --header-surface-strong: rgba(255, 255, 255, 0.9);
-
-  --radius-xs: 0.375rem;
-  --radius-sm: 0.625rem;
-  --radius-md: 0.875rem;
-  --radius-lg: 1.125rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
-  --radius-full: 9999px;
-  --shadow-soft: 0 18px 38px rgba(21, 30, 36, 0.08);
-  --shadow-lift: 0 24px 46px rgba(21, 30, 36, 0.12);
-  --shadow-glow:
-    0 0 0 1px rgba(242, 194, 29, 0.28), 0 14px 34px rgba(242, 194, 29, 0.12);
+  --shadow-soft: 0 8px 24px rgb(0 0 0 / 12%);
+  --shadow-lift: 0 18px 38px rgb(0 0 0 / 20%);
+  --shadow-glow: 0 3px 12px rgb(255 202 40 / 9%);
+  --focus-ring: #ffca28;
 }
 
 [data-theme="light"] {
   color-scheme: light;
-  --background: #f8faf8;
+  --background: #f7f8fa;
   --surface: #ffffff;
   --surface-muted: #edf2ef;
   --surface-hover: #e1e7e4;
-  --foreground: #101418;
-  --muted-foreground: #4f5c66;
-  --border-subtle: #d6dfd9;
-  --border-control: #768391;
+  --foreground: #151b22;
+  --muted-foreground: #3a4652;
+  --border-subtle: #c4ccd5;
+  --border-control: #748391;
   --primary: #f2c21d;
   --primary-hover: #d8a90d;
   --primary-foreground: #141414;
-  --accent-text: #7a5a00;
-  --secondary-accent: #0d6d64;
+  --accent-text: #765300;
+  --secondary-accent: #0d6d60;
   --success-text: #0d6f3d;
   --error-text: #b12323;
   --badge-admin: #7e22ce;
@@ -104,6 +116,7 @@
   --hero-glow: rgba(242, 194, 29, 0.14);
   --header-surface: rgba(255, 255, 255, 0.84);
   --header-surface-strong: rgba(255, 255, 255, 0.96);
+  --focus-ring: #f2c21d;
 
   --radius-xs: 0.375rem;
   --radius-sm: 0.625rem;
@@ -116,6 +129,16 @@
   --shadow-lift: 0 24px 42px rgba(19, 28, 35, 0.12);
   --shadow-glow:
     0 0 0 1px rgba(242, 194, 29, 0.28), 0 14px 34px rgba(242, 194, 29, 0.12);
+}
+
+/* Management-scoped Light theme tokens for stronger contrast in admin */
+[data-theme="light"] .mgmt-shell {
+  --mgmt-sidebar-bg: #eef1f5;
+  --mgmt-panel-border: #c4ccd5;
+  --mgmt-active-bg: #f5e6a0;
+  --mgmt-active-fg: #5a3f00;
+  --mgmt-active-border: #8a6500;
+  --mgmt-hover-bg: #e2e8ef;
 }
 
 @theme inline {
@@ -133,6 +156,7 @@
   --color-accent-text: var(--accent-text);
   --color-success-text: var(--success-text);
   --color-error-text: var(--error-text);
+  --color-destructive: var(--error-text);
 
   /* Border Radius Tokens */
   --radius-xs: var(--radius-xs);
@@ -1268,6 +1292,18 @@ header a {
 .miro-button:active {
   transform: translateY(1px);
 }
+
+/* Auth panel - constrained width for login/signup/reset forms */
+.miro-auth-panel {
+  inline-size: 100%;
+  max-inline-size: 28rem;
+  margin-inline: auto;
+}
+
+.miro-auth-panel > * + * {
+  margin-block-start: var(--space-panel);
+}
+
 summary {
   list-style-position: outside;
   margin-inline-start: 18px;

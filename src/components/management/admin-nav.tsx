@@ -74,7 +74,7 @@ export function AdminNav({
                       .filter(Boolean)
                       .join(" ")}
                     aria-current={isActive ? "page" : undefined}
-                    title={
+                    aria-label={
                       collapsed
                         ? restricted
                           ? `${label} · ${mgmtShellCopy.ceoOnlyBadge[locale]}`

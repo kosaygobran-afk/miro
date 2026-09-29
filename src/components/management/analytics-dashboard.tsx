@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
+  Activity,
   BarChart2,
   Eye,
   MessageSquare,
@@ -31,6 +32,7 @@ import {
   formatPercent,
   t,
 } from "./analytics-dashboard.copy";
+import { ActivityChart } from "./ui/activity-chart";
 import styles from "./analytics-dashboard.module.css";
 
 type AnalyticsResponse = {
@@ -78,13 +80,7 @@ type AnalyticsResponse = {
     name: { he: string | null; en: string | null };
     views: number;
   }[];
-  dailySeries: Record<
-    string,
-    Record<
-      string,
-      { events: number; uniqueSessions: number; uniqueUsers: number }
-    >
-  >;
+  dailySeries: Record<string, Record<string, { events: number }>>;
   partial: { uniqueViewersCapped: boolean };
 };
 
@@ -99,6 +95,47 @@ function rangeToIso(value: { from: string; to: string }): {
     return null;
   }
   return { from: from.toISOString(), to: to.toISOString() };
+}
+
+function RankingCard({
+  title,
+  emptyLabel,
+  items,
+  locale,
+}: {
+  title: string;
+  emptyLabel: string;
+  items: { key: string; label: string; value: number }[];
+  locale: Locale;
+}) {
+  const max = Math.max(1, ...items.map((item) => item.value));
+  return (
+    <div className={styles.cardField}>
+      <h2 className={styles.sectionTitle}>{title}</h2>
+      {items.length > 0 ? (
+        <ol className={styles.rankingList}>
+          {items.map((item) => (
+            <li key={item.key} className={styles.rankingItem}>
+              <span className={styles.rankingLabel} dir="auto">
+                {item.label}
+              </span>
+              <span className={styles.rankingValue}>
+                {formatCount(item.value, locale)}
+              </span>
+              <span className={styles.rankingTrack} aria-hidden="true">
+                <span
+                  className={styles.rankingFill}
+                  style={{ inlineSize: `${(item.value / max) * 100}%` }}
+                />
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className={styles.note}>{emptyLabel}</p>
+      )}
+    </div>
+  );
 }
 
 export function AnalyticsDashboard({ locale }: { locale: Locale }) {
@@ -167,6 +204,29 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
       (value) => value && value.toLowerCase().includes(q),
     );
   });
+  const dailyActivity = Object.entries(data?.dailySeries ?? {})
+    .map(([day, eventGroups]) => ({
+      day,
+      events: Object.values(eventGroups).reduce(
+        (sum, group) => sum + group.events,
+        0,
+      ),
+    }))
+    .sort((first, second) => first.day.localeCompare(second.day));
+  const activityTotal = dailyActivity.reduce(
+    (sum, point) => sum + point.events,
+    0,
+  );
+  const peakDay = dailyActivity.reduce<(typeof dailyActivity)[number] | null>(
+    (peak, point) => (!peak || point.events > peak.events ? point : peak),
+    null,
+  );
+  const topSearches = [...(data?.perSearchTerm ?? [])]
+    .sort((first, second) => second.searches - first.searches)
+    .slice(0, 5);
+  const topCategories = [...(data?.perCategory ?? [])]
+    .sort((first, second) => second.views - first.views)
+    .slice(0, 5);
 
   const rangeLabel = data
     ? `${new Date(`${range.from}T00:00:00`).toLocaleDateString(he ? "he-IL" : "en-IL")} – ${new Date(`${range.to}T00:00:00`).toLocaleDateString(he ? "he-IL" : "en-IL")}`
@@ -178,6 +238,17 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
         title={t(locale, analyticsCopy.title)}
         subtitle={t(locale, analyticsCopy.subtitle)}
       />
+      {data?.range.generatedAt ? (
+        <p className={styles.note}>
+          {he ? "עודכן" : "Updated"}:{" "}
+          <time dateTime={data.range.generatedAt}>
+            {new Date(data.range.generatedAt).toLocaleString(
+              he ? "he-IL" : "en-IL",
+              { dateStyle: "medium", timeStyle: "short" },
+            )}
+          </time>
+        </p>
+      ) : null}
 
       {refreshError && !data ? (
         <ErrorState
@@ -226,7 +297,6 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
 
           <div
             className={styles.headerGrid}
-            role="list"
             aria-label={t(locale, analyticsCopy.title)}
             aria-busy={!totals}
           >
@@ -312,7 +382,120 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
                   : undefined
               }
             />
+            <MetricCard
+              icon={<Eye size={18} />}
+              label={he ? "מוצרים עם צפיות" : "Products with detail views"}
+              value={
+                data
+                  ? formatCount(
+                      data.perProduct.filter((product) => product.views > 0)
+                        .length,
+                      locale,
+                    )
+                  : "—"
+              }
+              footer={
+                he
+                  ? "מוצרים שונים שנצפו בטווח שנבחר"
+                  : "Distinct products viewed in the selected range"
+              }
+            />
           </div>
+
+          <section className={styles.insightsGrid}>
+            <div className={`${styles.cardField} ${styles.activityCard}`}>
+              <div>
+                <h2 className={styles.sectionTitle}>
+                  <Activity size={18} aria-hidden="true" />
+                  {t(locale, analyticsCopy.activityTitle)}
+                </h2>
+                <p className={styles.note}>
+                  {t(locale, analyticsCopy.activityDescription)}
+                </p>
+              </div>
+              {dailyActivity.length > 0 ? (
+                <>
+                  <div className={styles.activitySummary}>
+                    <div>
+                      <span>{he ? "אירועים בטווח" : "Events in range"}</span>
+                      <strong>{formatCount(activityTotal, locale)}</strong>
+                    </div>
+                    <div>
+                      <span>
+                        {he ? "ימים עם פעילות" : "Days with activity"}
+                      </span>
+                      <strong>
+                        {formatCount(
+                          dailyActivity.filter((point) => point.events > 0)
+                            .length,
+                          locale,
+                        )}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>{he ? "היום הפעיל ביותר" : "Busiest day"}</span>
+                      <strong>
+                        {peakDay && peakDay.events > 0
+                          ? new Date(
+                              `${peakDay.day}T12:00:00Z`,
+                            ).toLocaleDateString(he ? "he-IL" : "en-IL", {
+                              day: "numeric",
+                              month: "short",
+                              timeZone: "UTC",
+                            })
+                          : "—"}
+                      </strong>
+                    </div>
+                  </div>
+                  <ActivityChart
+                    days={dailyActivity.map((point) => point.day)}
+                    series={[
+                      {
+                        label: t(locale, analyticsCopy.events),
+                        values: dailyActivity.map((point) => point.events),
+                        tone: "gold",
+                      },
+                    ]}
+                    locale={locale}
+                    unit={he ? "מספר אירועים" : "Event count"}
+                    note={
+                      he
+                        ? "סיכומים יומיים לפי UTC. אין כאן פירוט לפי שעה; ימים ללא אירועים אינם מוצגים."
+                        : "Daily totals in UTC. Hourly detail is not available here; days without recorded events are omitted."
+                    }
+                  />
+                </>
+              ) : (
+                <p className={styles.note}>
+                  {t(locale, analyticsCopy.noRankingData)}
+                </p>
+              )}
+            </div>
+
+            <RankingCard
+              title={t(locale, analyticsCopy.topSearchesTitle)}
+              emptyLabel={t(locale, analyticsCopy.noRankingData)}
+              items={topSearches.map((item) => ({
+                key: item.searchQuery,
+                label: item.searchQuery,
+                value: item.searches,
+              }))}
+              locale={locale}
+            />
+            <RankingCard
+              title={t(locale, analyticsCopy.topCategoriesTitle)}
+              emptyLabel={t(locale, analyticsCopy.noRankingData)}
+              items={topCategories.map((item, index) => ({
+                key: item.categoryId ?? `unknown-${index}`,
+                label:
+                  (he ? item.name.he : item.name.en) ??
+                  (he ? item.name.en : item.name.he) ??
+                  t(locale, analyticsCopy.unknownCategory),
+                value: item.views,
+              }))}
+              locale={locale}
+            />
+          </section>
 
           <div className={styles.cardField}>
             <h2 className={styles.sectionTitle}>

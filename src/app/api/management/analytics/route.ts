@@ -1,3 +1,4 @@
+import { aggregateDailyEvents } from "@/lib/analytics-daily";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -64,9 +65,57 @@ function toNumber(value: unknown): number {
   return typeof num === "number" && Number.isFinite(num) ? num : 0;
 }
 
+// Per-IP rate limiting for management read endpoints (tiered: 60/min, 300/hour)
+async function checkManagementReadRateLimit(
+  admin: ReturnType<typeof import("@/lib/supabase/admin").createAdminClient>,
+  ip: string,
+): Promise<"ok" | "limited" | "error"> {
+  const buckets = [
+    { key: `mgmt:read:ip:1m:${ip}`, limit: 60, window: "1 minute" },
+    { key: `mgmt:read:ip:1h:${ip}`, limit: 300, window: "1 hour" },
+  ] as const;
+  for (const bucket of buckets) {
+    const { data: allowed, error } = await admin.rpc("check_rate_limit", {
+      p_key: bucket.key,
+      p_limit: bucket.limit,
+      p_window: bucket.window,
+    });
+    if (error) {
+      console.error("check_rate_limit failed:", error.code, error.message);
+      return "error";
+    }
+    if (allowed !== true) return "limited";
+  }
+  return "ok";
+}
+
+function getClientIp(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
 export async function GET(request: Request) {
   const auth = await withManagementAuth(request, "viewAnalytics");
   if (!auth.ok) return auth.response;
+
+  // Rate limit management read endpoints per IP
+  const rateLimit = await checkManagementReadRateLimit(
+    auth.admin,
+    getClientIp(request),
+  );
+  if (rateLimit === "error") {
+    return errorResponse("Unable to process request", 503);
+  }
+  if (rateLimit === "limited") {
+    return NextResponse.json(
+      { error: "Too many requests", code: "rate_limited" },
+      { status: 429 },
+    );
+  }
 
   const { searchParams } = new URL(request.url);
   const parsed = analyticsParamsSchema.safeParse(
@@ -254,32 +303,7 @@ export async function GET(request: Request) {
     .order("day", { ascending: true });
   if (dailyError) return mapPostgresError(dailyError);
 
-  const dailySeries = (
-    (dailyData ?? []) as unknown as {
-      day: string | null;
-      event_type: string | null;
-      events: number | null;
-      unique_sessions: number | null;
-      unique_users: number | null;
-    }[]
-  ).reduce<
-    Record<
-      string,
-      Record<
-        string,
-        { events: number; uniqueSessions: number; uniqueUsers: number }
-      >
-    >
-  >((acc, row) => {
-    const day = row.day?.split("T")[0] ?? "unknown";
-    if (!acc[day]) acc[day] = {};
-    acc[day][row.event_type ?? "unknown"] = {
-      events: row.events ?? 0,
-      uniqueSessions: row.unique_sessions ?? 0,
-      uniqueUsers: row.unique_users ?? 0,
-    };
-    return acc;
-  }, {});
+  const dailySeries = aggregateDailyEvents(dailyData ?? []);
 
   const uniqueSessions = toNumber(totals.unique_sessions);
   const enquiriesSubmitted = toNumber(totals.service_requests);

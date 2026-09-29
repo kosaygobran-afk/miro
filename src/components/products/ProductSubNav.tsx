@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowUpLeft,
+  ArrowLeft,
+  ArrowRight,
   Camera,
   Cable,
   KeyRound,
@@ -12,6 +13,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
+import { isLocale, type Locale } from "@/lib/i18n";
 
 const categoryIcons: Record<string, typeof Camera> = {
   cameras: Camera,
@@ -24,24 +26,45 @@ const categoryIcons: Record<string, typeof Camera> = {
   intercom: KeyRound,
 };
 
+function getCategoryKeyFromPath(pathname: string): string | null {
+  // Extract category from paths like /en/store/cameras or /he/store/alarms
+  const match = pathname.match(/\/[a-z]{2}\/store\/([^/]+)/);
+  return match ? match[1] : null;
+}
+
 export function ProductSubNav({
   categories,
+  locale,
   ariaLabel = "Store categories",
 }: {
   categories: Array<{ key: string; href: string; label: string }>;
+  locale: Locale;
   ariaLabel?: string;
 }) {
   const pathname = usePathname();
+  const currentCategory = getCategoryKeyFromPath(pathname);
+  const isRtl = isLocale(locale) ? locale === "he" : false;
+  const Arrow = isRtl ? ArrowLeft : ArrowRight;
+
   return (
     <nav className="sf-departments" aria-label={ariaLabel}>
       <div className="miro-container sf-department-grid">
         {categories.map((category) => {
           const Icon = categoryIcons[category.key] ?? ShieldCheck;
+          const isActive = category.key === currentCategory;
+          const isDescendant =
+            currentCategory && pathname.startsWith(category.href);
+          const ariaCurrent = isActive
+            ? "page"
+            : isDescendant
+              ? "location"
+              : undefined;
+
           return (
             <Link
               key={category.key}
               href={category.href}
-              aria-current={pathname === category.href ? "page" : undefined}
+              aria-current={ariaCurrent}
               className="sf-department"
             >
               <Icon
@@ -51,7 +74,7 @@ export function ProductSubNav({
                 aria-hidden="true"
               />
               <span>{category.label}</span>
-              <ArrowUpLeft
+              <Arrow
                 className="sf-department-arrow"
                 size={17}
                 aria-hidden="true"

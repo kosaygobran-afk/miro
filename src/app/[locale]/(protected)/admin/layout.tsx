@@ -23,7 +23,7 @@ export default async function AdminLayout({
     context.profile?.full_name?.trim() || context.user.email || "";
 
   return (
-    <div className="admin-shell mgmt-shell-root" dir={getDirection(safeLocale)}>
+    <div className="mgmt-shell-root" dir={getDirection(safeLocale)}>
       <ManagementShell
         locale={safeLocale}
         role={context.role}

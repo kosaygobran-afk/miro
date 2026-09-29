@@ -6,16 +6,22 @@ import {
   Edit,
   Trash2,
   RotateCcw,
-  AlertCircle,
-  ShieldCheck,
-  X,
   Building2,
-  Phone,
-  Mail,
   Clock,
   DollarSign,
   CheckCircle,
 } from "lucide-react";
+import {
+  DataTable,
+  EmptyState,
+  ErrorState,
+  FormField,
+  Dialog,
+  ConfirmationDialog,
+  Notice,
+  PageHeader,
+} from "@/components/management/ui";
+import type { Locale } from "@/lib/i18n";
 
 type Supplier = {
   id: string;
@@ -44,12 +50,23 @@ type SupplierFormData = {
 
 const currencies = ["ILS", "USD", "EUR", "GBP"] as const;
 
-export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
+const getCurrencyLabel = (code: string, locale: Locale) => {
+  const labels: Record<string, { he: string; en: string }> = {
+    ILS: { he: "שקל חדש (₪)", en: "Israeli Shekel (₪)" },
+    USD: { he: "דולר אמריקאי ($)", en: "US Dollar ($)" },
+    EUR: { he: "אירו (€)", en: "Euro (€)" },
+    GBP: { he: "לירה שטרלינג (£)", en: "British Pound (£)" },
+  };
+  const label = labels[code] ?? { he: code, en: code };
+  return locale === "he" ? label.he : label.en;
+};
+
+export function SuppliersManager({ locale }: { locale: Locale }) {
   const he = locale === "he";
   const [busy, setBusy] = useState(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [formError, setFormError] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">(
     "success",
@@ -71,10 +88,11 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
     text: string;
   } | null>(null);
 
+  // Load suppliers with proper error handling
   const loadSuppliers = useCallback(
     async (showLoading = false) => {
-      if (showLoading) setLoading(true);
-      setError("");
+      if (showLoading) setLoadError("");
+      setLoadError("");
       try {
         const response = await fetch("/api/management/suppliers", {
           cache: "no-store",
@@ -82,17 +100,17 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
         const data = await response.json();
         if (response.ok) {
           setSuppliers(data.suppliers ?? []);
-          setError("");
+          setLoadError("");
         } else {
-          setError(
+          setLoadError(
             data.error ||
               (he ? "לא ניתן לטעון ספקים" : "Unable to load suppliers"),
           );
         }
       } catch {
-        setError(he ? "שגיאת חיבור" : "Connection error");
+        setLoadError(he ? "שגיאת חיבור" : "Connection error");
       } finally {
-        if (showLoading) setLoading(false);
+        if (showLoading) setBusy(false);
       }
     },
     [he],
@@ -108,11 +126,17 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
         if (!ignore && response.ok) {
           const data = await response.json();
           if (!ignore) setSuppliers(data.suppliers ?? []);
+        } else if (!ignore) {
+          const data = await response.json().catch(() => ({}));
+          setLoadError(
+            data.error ||
+              (he ? "לא ניתן לטעון ספקים" : "Unable to load suppliers"),
+          );
         }
       } catch {
-        if (!ignore) setError(he ? "שגיאת חיבור" : "Connection error");
+        if (!ignore) setLoadError(he ? "שגיאת חיבור" : "Connection error");
       } finally {
-        if (!ignore) setLoading(false);
+        if (!ignore) setBusy(false);
       }
     }
     void init();
@@ -139,6 +163,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
       is_active: true,
     });
     setEditingSupplier(null);
+    setFormError("");
   };
 
   const openCreateForm = () => {
@@ -158,6 +183,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
       is_active: supplier.is_active,
     });
     setEditingSupplier(supplier);
+    setFormError("");
     setShowForm(true);
   };
 
@@ -170,7 +196,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
 
   const submitForm = async () => {
     setBusy(true);
-    setError("");
+    setFormError("");
     try {
       const method = editingSupplier ? "PATCH" : "POST";
       const url = "/api/management/suppliers";
@@ -208,7 +234,7 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
       resetForm();
       await loadSuppliers();
     } catch (err) {
-      setError(
+      setFormError(
         err instanceof Error
           ? err.message
           : he
@@ -264,589 +290,399 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
     setDeleteConfirm({ id, text: "" });
   };
 
-  const updateDeleteConfirm = (text: string) => {
-    setDeleteConfirm((prev) => (prev ? { ...prev, text } : null));
-  };
-
   const clearDeleteConfirm = () => setDeleteConfirm(null);
 
-  const getCurrencyLabel = (code: string) => {
-    const labels: Record<string, { he: string; en: string }> = {
-      ILS: { he: "שקל חדש (₪)", en: "Israeli Shekel (₪)" },
-      USD: { he: "דולר אמריקאי ($)", en: "US Dollar ($)" },
-      EUR: { he: "אירו (€)", en: "Euro (€)" },
-      GBP: { he: "לירה שטרלינג (£)", en: "British Pound (£)" },
-    };
-    const label = labels[code] ?? { he: code, en: code };
-    return he ? label.he : label.en;
+  const toggleActive = async (supplier: Supplier, newActive: boolean) => {
+    setBusy(true);
+    try {
+      const response = await fetch("/api/management/suppliers", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: supplier.id,
+          is_active: newActive,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        showToast(
+          newActive
+            ? he
+              ? "הספק הופעל"
+              : "Supplier activated"
+            : he
+              ? "הספק הושבת"
+              : "Supplier deactivated",
+        );
+        await loadSuppliers();
+      } else {
+        showToast(data.error || (he ? "עדכון נכשל" : "Update failed"), "error");
+        await loadSuppliers(); // Revert UI
+      }
+    } catch {
+      showToast(he ? "שגיאת חיבור" : "Connection error", "error");
+      await loadSuppliers(); // Revert UI
+    } finally {
+      setBusy(false);
+    }
   };
 
-  if (loading) {
+  if (loadError && suppliers.length === 0) {
     return (
-      <div
-        className="miro-card suppliers-manager__loading"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="suppliers-manager__spinner" aria-hidden="true" />
-        <p>{he ? "טוען ספקים…" : "Loading suppliers…"}</p>
-      </div>
-    );
-  }
-
-  if (error && suppliers.length === 0) {
-    return (
-      <div className="suppliers-manager__error" role="alert">
-        <AlertCircle
-          className="suppliers-manager__error-icon h-5 w-5"
-          aria-hidden="true"
-        />
-        <div className="suppliers-manager__error-content">
-          <p className="suppliers-manager__error-title">
-            {he ? "שגיאה בטעינת הספקים" : "Failed to load suppliers"}
-          </p>
-          <p className="suppliers-manager__error-message">{error}</p>
-          <button
-            className="miro-button miro-button-secondary suppliers-manager__retry-button"
-            onClick={() => loadSuppliers(true)}
-          >
-            <RotateCcw className="h-4 w-4" aria-hidden="true" />
-            {he ? "נסה שוב" : "Retry"}
-          </button>
-        </div>
-      </div>
+      <ErrorState
+        title={he ? "שגיאה בטעינת הספקים" : "Failed to load suppliers"}
+        description={loadError}
+        onRetry={() => loadSuppliers(true)}
+        retryLabel={he ? "נסה שוב" : "Retry"}
+      />
     );
   }
 
   return (
     <div className="suppliers-manager space-y-6">
-      <div className="miro-card">
-        <div className="border-b border-border-subtle p-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-black">
-                {he ? "ניהול ספקים" : "Supplier Management"}
-              </h2>
-              <p className="mt-1 text-muted-foreground">
-                {he
-                  ? "צפייה, הוספה, עריכה ומחיקה של ספקים"
-                  : "View, add, edit, and delete suppliers"}
-              </p>
-            </div>
-            <button
-              className="miro-button miro-button-primary"
-              onClick={openCreateForm}
-            >
-              <Plus className="me-2 h-4 w-4" />
-              {he ? "הוסף ספק" : "Add Supplier"}
-            </button>
-          </div>
-          {message && (
-            <p className="mt-3 text-sm" role="status" aria-live="polite">
-              <span
-                className={`suppliers-manager__message ${
-                  messageType === "success"
-                    ? "suppliers-manager__message--success"
-                    : "suppliers-manager__message--error"
-                }`}
-              >
-                {messageType === "success" ? (
-                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <AlertCircle className="h-4 w-4" aria-hidden="true" />
-                )}
-                {message}
-              </span>
-            </p>
-          )}
-        </div>
+      {message && (
+        <Notice
+          tone={messageType === "success" ? "success" : "danger"}
+          onDismiss={() => setMessage("")}
+          dismissLabel={he ? "סגור" : "Close"}
+        >
+          {message}
+        </Notice>
+      )}
 
+      <PageHeader
+        title={he ? "ניהול ספקים" : "Supplier Management"}
+        subtitle={
+          he
+            ? "צפייה, הוספה, עריכה ומחיקה של ספקים"
+            : "View, add, edit, and delete suppliers"
+        }
+        actions={
+          <button
+            className="miro-button miro-button-primary"
+            onClick={openCreateForm}
+            disabled={busy}
+          >
+            <Plus className="me-2 h-4 w-4" />
+            {he ? "הוסף ספק" : "Add Supplier"}
+          </button>
+        }
+      />
+
+      <section className="miro-card">
         {suppliers.length === 0 ? (
-          <div className="suppliers-manager__empty" role="status">
-            {he ? "אין ספקים במערכת" : "No suppliers in the system"}
-          </div>
+          <EmptyState
+            icon={<Building2 size={24} />}
+            title={he ? "אין ספקים במערכת" : "No suppliers in the system"}
+            description={
+              he
+                ? "לחצו על 'הוסף ספק' כדי להתחיל"
+                : "Click 'Add Supplier' to get started"
+            }
+            action={
+              <button
+                className="miro-button miro-button-primary"
+                onClick={openCreateForm}
+              >
+                {he ? "הוסף ספק" : "Add Supplier"}
+              </button>
+            }
+          />
         ) : (
           <>
-            {/* Desktop Table */}
-            <div className="suppliers-manager__table-wrapper">
-              <table className="suppliers-manager__table" role="grid">
-                <caption className="sr-only">
-                  {he ? "טבלת ניהול ספקים" : "Supplier management table"}
-                </caption>
-                <thead className="suppliers-manager__thead">
+            {/* Desktop Table (≥768px) */}
+            <div className="hidden md:block">
+              <DataTable
+                stickyHeader
+                caption={he ? "טבלת ניהול ספקים" : "Supplier management table"}
+                isEmpty={suppliers.length === 0}
+                emptyState={
+                  <EmptyState
+                    compact
+                    title={
+                      he ? "אין ספקים במערכת" : "No suppliers in the system"
+                    }
+                  />
+                }
+                head={
                   <tr>
-                    <th className="suppliers-manager__th" scope="col">
-                      {he ? "שם חברה" : "Company Name"}
-                    </th>
-                    <th className="suppliers-manager__th" scope="col">
-                      {he ? "איש קשר" : "Contact Person"}
-                    </th>
-                    <th className="suppliers-manager__th" scope="col">
-                      {he ? "טלפון" : "Phone"}
-                    </th>
-                    <th className="suppliers-manager__th" scope="col">
-                      {he ? "אימייל" : "Email"}
-                    </th>
-                    <th className="suppliers-manager__th" scope="col">
+                    <th scope="col">{he ? "שם חברה" : "Company Name"}</th>
+                    <th scope="col">{he ? "איש קשר" : "Contact Person"}</th>
+                    <th scope="col">{he ? "טלפון" : "Phone"}</th>
+                    <th scope="col">{he ? "אימייל" : "Email"}</th>
+                    <th scope="col">
                       {he ? "זמן אספקה (ימים)" : "Lead Time (days)"}
                     </th>
-                    <th className="suppliers-manager__th" scope="col">
-                      {he ? "מטבע" : "Currency"}
-                    </th>
-                    <th className="suppliers-manager__th" scope="col">
-                      {he ? "סטטוס" : "Status"}
-                    </th>
-                    <th className="suppliers-manager__th" scope="col">
-                      {he ? "פעולות" : "Actions"}
-                    </th>
+                    <th scope="col">{he ? "מטבע" : "Currency"}</th>
+                    <th scope="col">{he ? "סטטוס" : "Status"}</th>
+                    <th scope="col">{he ? "פעולות" : "Actions"}</th>
                   </tr>
-                </thead>
-                <tbody>
-                  {suppliers.map((supplier) => (
-                    <tr key={supplier.id}>
-                      <td className="suppliers-manager__td">
-                        <div className="suppliers-manager__supplier-info">
-                          <div className="flex items-center gap-2">
-                            <Building2
-                              className="h-4 w-4 text-muted-foreground"
-                              aria-hidden="true"
-                            />
-                            <p className="suppliers-manager__supplier-name">
-                              {supplier.company_name}
-                            </p>
-                          </div>
-                          <p className="suppliers-manager__supplier-id">
-                            {supplier.id.slice(0, 8)}…
-                          </p>
-                        </div>
-                      </td>
-                      <td className="suppliers-manager__td">
-                        {supplier.contact_person ? (
-                          <p>{supplier.contact_person}</p>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {he ? "לא צוין" : "Not specified"}
-                          </span>
-                        )}
-                      </td>
-                      <td className="suppliers-manager__td">
-                        {supplier.phone ? (
-                          <a
-                            href={`tel:${supplier.phone}`}
-                            className="suppliers-manager__phone"
-                          >
-                            <Phone
-                              className="h-3 w-3 inline-block align-middle ms-1"
-                              aria-hidden="true"
-                            />
-                            {supplier.phone}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="suppliers-manager__td">
-                        {supplier.email ? (
-                          <a
-                            href={`mailto:${supplier.email}`}
-                            className="suppliers-manager__email"
-                          >
-                            <Mail
-                              className="h-3 w-3 inline-block align-middle ms-1"
-                              aria-hidden="true"
-                            />
-                            {supplier.email}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="suppliers-manager__td">
-                        {supplier.default_lead_time_days !== null ? (
-                          <>
-                            <Clock
-                              className="h-3 w-3 inline-block align-middle ms-1"
-                              aria-hidden="true"
-                            />
-                            {supplier.default_lead_time_days}
-                          </>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </td>
-                      <td className="suppliers-manager__td">
-                        <span className="suppliers-manager__currency-badge">
-                          <DollarSign
+                }
+              >
+                {suppliers.map((supplier) => (
+                  <tr key={supplier.id}>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Building2
+                          className="h-4 w-4 text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                        <p className="font-medium">{supplier.company_name}</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-mono">
+                        {supplier.id.slice(0, 8)}…
+                      </p>
+                    </td>
+                    <td className="p-4">
+                      {supplier.contact_person ? (
+                        <p>{supplier.contact_person}</p>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          {he ? "לא צוין" : "Not specified"}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {supplier.phone ? (
+                        <a
+                          href={`tel:${supplier.phone}`}
+                          className="text-primary hover:underline"
+                        >
+                          {supplier.phone}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {supplier.email ? (
+                        <a
+                          href={`mailto:${supplier.email}`}
+                          className="text-primary hover:underline"
+                        >
+                          {supplier.email}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {supplier.default_lead_time_days !== null ? (
+                        <>
+                          <Clock
                             className="h-3 w-3 inline-block align-middle ms-1"
                             aria-hidden="true"
                           />
-                          {getCurrencyLabel(supplier.currency)}
+                          {supplier.default_lead_time_days}
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border">
+                        <DollarSign className="h-3 w-3" aria-hidden="true" />
+                        {getCurrencyLabel(supplier.currency, locale)}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <label className="inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={supplier.is_active}
+                          onChange={(e) =>
+                            toggleActive(supplier, e.target.checked)
+                          }
+                          disabled={busy}
+                          className="rounded border-border-subtle"
+                          aria-label={
+                            he
+                              ? "הפעל/השבת ספק"
+                              : "Activate/deactivate supplier"
+                          }
+                        />
+                        <span className="ms-2 text-sm">
+                          {supplier.is_active
+                            ? he
+                              ? "פעיל"
+                              : "Active"
+                            : he
+                              ? "לא פעיל"
+                              : "Inactive"}
                         </span>
-                      </td>
-                      <td className="suppliers-manager__td">
-                        <label className="suppliers-manager__toggle">
-                          <input
-                            type="checkbox"
-                            checked={supplier.is_active}
-                            onChange={(e) => {
-                              const newActive = e.target.checked;
-                              handleFormChange("is_active", newActive);
-                              // We need to submit just the is_active change
-                              setBusy(true);
-                              fetch("/api/management/suppliers", {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  id: supplier.id,
-                                  is_active: newActive,
-                                }),
-                              })
-                                .then(async (response) => {
-                                  const data = await response.json();
-                                  if (response.ok) {
-                                    showToast(
-                                      newActive
-                                        ? he
-                                          ? "הספק הופעל"
-                                          : "Supplier activated"
-                                        : he
-                                          ? "הספק הושבת"
-                                          : "Supplier deactivated",
-                                    );
-                                    loadSuppliers();
-                                  } else {
-                                    showToast(
-                                      data.error ||
-                                        (he ? "עדכון נכשל" : "Update failed"),
-                                      "error",
-                                    );
-                                    loadSuppliers(); // Revert UI
-                                  }
-                                })
-                                .catch(() => {
-                                  showToast(
-                                    he ? "שגיאת חיבור" : "Connection error",
-                                    "error",
-                                  );
-                                  loadSuppliers(); // Revert UI
-                                })
-                                .finally(() => setBusy(false));
-                            }}
-                            disabled={busy}
-                            className="suppliers-manager__toggle-input"
-                            aria-label={
-                              he
-                                ? "הפעל/השבת ספק"
-                                : "Activate/deactivate supplier"
-                            }
-                          />
-                          <span
-                            className="suppliers-manager__toggle-slider"
-                            aria-hidden="true"
-                          />
-                          <span className="suppliers-manager__toggle-label">
-                            {supplier.is_active
-                              ? he
-                                ? "פעיל"
-                                : "Active"
-                              : he
-                                ? "לא פעיל"
-                                : "Inactive"}
+                      </label>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="miro-button miro-button-secondary text-sm"
+                          onClick={() => openEditForm(supplier)}
+                          disabled={busy}
+                          aria-label={he ? "ערוך ספק" : "Edit supplier"}
+                        >
+                          <Edit className="h-3 w-3" aria-hidden="true" />
+                          <span className="hidden sm:inline">
+                            {he ? "עריכה" : "Edit"}
                           </span>
-                        </label>
-                      </td>
-                      <td className="suppliers-manager__td">
-                        <div className="suppliers-manager__actions">
-                          <button
-                            className="miro-button miro-button-secondary text-sm"
-                            onClick={() => openEditForm(supplier)}
-                            disabled={busy}
-                            aria-label={he ? "ערוך ספק" : "Edit supplier"}
-                          >
-                            <Edit className="h-3 w-3" aria-hidden="true" />
-                            <span className="hidden sm:inline">
-                              {he ? "עריכה" : "Edit"}
-                            </span>
-                          </button>
-                          {deleteConfirm?.id === supplier.id ? (
-                            <div className="suppliers-manager__delete-confirm">
-                              <input
-                                type="text"
-                                value={deleteConfirm.text}
-                                placeholder={
-                                  he ? "הקלידו DELETE" : "Type DELETE"
-                                }
-                                onChange={(e) =>
-                                  updateDeleteConfirm(e.target.value)
-                                }
-                                className="suppliers-manager__delete-input miro-input"
-                                autoFocus
-                                aria-label={
-                                  he ? "אישור מחיקה" : "Confirm deletion"
-                                }
-                              />
-                              <button
-                                type="button"
-                                disabled={
-                                  busy ||
-                                  deleteConfirm.text.trim().toUpperCase() !==
-                                    "DELETE"
-                                }
-                                className="miro-button miro-button-secondary text-sm text-destructive"
-                                onClick={() => handleDelete(supplier.id)}
-                              >
-                                {he ? "מחיקה" : "Delete"}
-                              </button>
-                              <button
-                                type="button"
-                                className="miro-button miro-button-secondary text-sm text-destructive"
-                                onClick={clearDeleteConfirm}
-                                aria-label={he ? "ביטול" : "Cancel"}
-                              >
-                                <X className="h-4 w-4" aria-hidden="true" />
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              disabled={busy}
-                              className="miro-button miro-button-secondary text-sm text-destructive hover:bg-destructive/10"
-                              onClick={() => startDeleteConfirm(supplier.id)}
-                              aria-label={he ? "מחיקת ספק" : "Delete supplier"}
-                            >
-                              <Trash2 className="h-3 w-3" aria-hidden="true" />
-                              <span className="hidden sm:inline">
-                                {he ? "מחיקה" : "Delete"}
-                              </span>
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                        </button>
+                        <button
+                          className="miro-button miro-button-secondary text-sm text-destructive hover:bg-destructive/10"
+                          onClick={() => startDeleteConfirm(supplier.id)}
+                          disabled={busy}
+                          aria-label={he ? "מחיקת ספק" : "Delete supplier"}
+                        >
+                          <Trash2 className="h-3 w-3" aria-hidden="true" />
+                          <span className="hidden sm:inline">
+                            {he ? "מחיקה" : "Delete"}
+                          </span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </DataTable>
             </div>
 
-            {/* Mobile Card View */}
-            <div className="suppliers-manager__card-list" role="list">
-              {suppliers.map((supplier) => (
-                <article
-                  key={supplier.id}
-                  className="suppliers-manager__card"
-                  role="listitem"
-                >
-                  <div className="suppliers-manager__card-header">
-                    <div>
+            {/* Mobile Card View (<768px) */}
+            <div className="md:hidden">
+              <div className="space-y-4" role="list">
+                {suppliers.map((supplier) => (
+                  <article
+                    key={supplier.id}
+                    className="miro-card p-4"
+                    role="listitem"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
                       <div className="flex items-center gap-2">
                         <Building2
                           className="h-5 w-5 text-muted-foreground"
                           aria-hidden="true"
                         />
-                        <p className="suppliers-manager__card-name">
-                          {supplier.company_name}
-                        </p>
+                        <p className="font-semibold">{supplier.company_name}</p>
                       </div>
-                      <p className="suppliers-manager__card-id">
-                        {supplier.id.slice(0, 8)}…
-                      </p>
-                    </div>
-                    <label className="suppliers-manager__card-toggle">
-                      <input
-                        type="checkbox"
-                        checked={supplier.is_active}
-                        onChange={(e) => {
-                          const newActive = e.target.checked;
-                          setBusy(true);
-                          fetch("/api/management/suppliers", {
-                            method: "PATCH",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              id: supplier.id,
-                              is_active: newActive,
-                            }),
-                          })
-                            .then(async (response) => {
-                              const data = await response.json();
-                              if (response.ok) {
-                                showToast(
-                                  newActive
-                                    ? he
-                                      ? "הספק הופעל"
-                                      : "Supplier activated"
-                                    : he
-                                      ? "הספק הושבת"
-                                      : "Supplier deactivated",
-                                );
-                                loadSuppliers();
-                              } else {
-                                showToast(
-                                  data.error ||
-                                    (he ? "עדכון נכשל" : "Update failed"),
-                                  "error",
-                                );
-                                loadSuppliers();
-                              }
-                            })
-                            .catch(() => {
-                              showToast(
-                                he ? "שגיאת חיבור" : "Connection error",
-                                "error",
-                              );
-                              loadSuppliers();
-                            })
-                            .finally(() => setBusy(false));
-                        }}
-                        disabled={busy}
-                        className="suppliers-manager__toggle-input"
-                        aria-label={
-                          he ? "הפעל/השבת ספק" : "Activate/deactivate supplier"
-                        }
-                      />
-                      <span
-                        className="suppliers-manager__toggle-slider"
-                        aria-hidden="true"
-                      />
-                    </label>
-                  </div>
-                  <div className="suppliers-manager__card-body">
-                    <div className="suppliers-manager__card-field">
-                      <span className="suppliers-manager__card-label">
-                        {he ? "איש קשר" : "Contact Person"}
-                      </span>
-                      <span className="suppliers-manager__card-value">
-                        {supplier.contact_person || (
-                          <span className="text-muted-foreground">
-                            {he ? "לא צוין" : "Not specified"}
-                          </span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="suppliers-manager__card-field">
-                      <span className="suppliers-manager__card-label">
-                        {he ? "טלפון" : "Phone"}
-                      </span>
-                      <span className="suppliers-manager__card-value">
-                        {supplier.phone ? (
-                          <a href={`tel:${supplier.phone}`}>{supplier.phone}</a>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="suppliers-manager__card-field">
-                      <span className="suppliers-manager__card-label">
-                        {he ? "אימייל" : "Email"}
-                      </span>
-                      <span className="suppliers-manager__card-value">
-                        {supplier.email ? (
-                          <a href={`mailto:${supplier.email}`}>
-                            {supplier.email}
-                          </a>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="suppliers-manager__card-field">
-                      <span className="suppliers-manager__card-label">
-                        {he ? "זמן אספקה" : "Lead Time"}
-                      </span>
-                      <span className="suppliers-manager__card-value">
-                        {supplier.default_lead_time_days !== null ? (
-                          `${supplier.default_lead_time_days} ${he ? "ימים" : "days"}`
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </span>
-                    </div>
-                    <div className="suppliers-manager__card-field">
-                      <span className="suppliers-manager__card-label">
-                        {he ? "מטבע" : "Currency"}
-                      </span>
-                      <span className="suppliers-manager__card-value">
-                        <span className="suppliers-manager__currency-badge">
-                          <DollarSign
-                            className="h-3 w-3 inline-block align-middle ms-1"
-                            aria-hidden="true"
-                          />
-                          {getCurrencyLabel(supplier.currency)}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="suppliers-manager__card-field">
-                      <span className="suppliers-manager__card-label">
-                        {he ? "הערות" : "Notes"}
-                      </span>
-                      <span className="suppliers-manager__card-value">
-                        {supplier.notes || (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="suppliers-manager__card-actions">
-                    <button
-                      className="miro-button miro-button-secondary text-sm"
-                      onClick={() => openEditForm(supplier)}
-                      disabled={busy}
-                    >
-                      <Edit className="h-4 w-4" aria-hidden="true" />
-                      {he ? "עריכה" : "Edit"}
-                    </button>
-                    {deleteConfirm?.id === supplier.id ? (
-                      <div
-                        className="suppliers-manager__delete-confirm"
-                        style={{
-                          flex: "1 1 100%",
-                          display: "flex",
-                          gap: "0.5rem",
-                        }}
-                      >
+                      <label className="inline-flex items-center cursor-pointer">
                         <input
-                          type="text"
-                          value={deleteConfirm.text}
-                          placeholder={he ? "הקלידו DELETE" : "Type DELETE"}
-                          onChange={(e) => updateDeleteConfirm(e.target.value)}
-                          className="suppliers-manager__delete-input miro-input"
-                          autoFocus
-                          aria-label={he ? "אישור מחיקה" : "Confirm deletion"}
-                        />
-                        <button
-                          type="button"
-                          disabled={
-                            busy ||
-                            deleteConfirm.text.trim().toUpperCase() !== "DELETE"
+                          type="checkbox"
+                          checked={supplier.is_active}
+                          onChange={(e) =>
+                            toggleActive(supplier, e.target.checked)
                           }
-                          className="miro-button miro-button-secondary text-sm text-destructive"
-                          onClick={() => handleDelete(supplier.id)}
-                        >
-                          {he ? "מחיקה" : "Delete"}
-                        </button>
-                        <button
-                          type="button"
-                          className="miro-button miro-button-secondary text-sm text-destructive"
-                          onClick={clearDeleteConfirm}
-                          aria-label={he ? "ביטול" : "Cancel"}
-                        >
-                          <X className="h-4 w-4" aria-hidden="true" />
-                        </button>
+                          disabled={busy}
+                          className="rounded border-border-subtle"
+                          aria-label={
+                            he
+                              ? "הפעל/השבת ספק"
+                              : "Activate/deactivate supplier"
+                          }
+                        />
+                        <span className="ms-2 text-sm">
+                          {supplier.is_active
+                            ? he
+                              ? "פעיל"
+                              : "Active"
+                            : he
+                              ? "לא פעיל"
+                              : "Inactive"}
+                        </span>
+                      </label>
+                    </div>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-muted-foreground min-w-[80px]">
+                          {he ? "איש קשר:" : "Contact:"}
+                        </span>
+                        <span>
+                          {supplier.contact_person ||
+                            (he ? "לא צוין" : "Not specified")}
+                        </span>
                       </div>
-                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-muted-foreground min-w-[80px]">
+                          {he ? "טלפון:" : "Phone:"}
+                        </span>
+                        <span>
+                          {supplier.phone ? (
+                            <a
+                              href={`tel:${supplier.phone}`}
+                              className="text-primary hover:underline"
+                            >
+                              {supplier.phone}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-muted-foreground min-w-[80px]">
+                          {he ? "אימייל:" : "Email:"}
+                        </span>
+                        <span>
+                          {supplier.email ? (
+                            <a
+                              href={`mailto:${supplier.email}`}
+                              className="text-primary hover:underline"
+                            >
+                              {supplier.email}
+                            </a>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-muted-foreground min-w-[80px]">
+                          {he ? "זמן אספקה:" : "Lead Time:"}
+                        </span>
+                        <span>
+                          {supplier.default_lead_time_days !== null ? (
+                            `${supplier.default_lead_time_days} ${he ? "ימים" : "days"}`
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-muted-foreground min-w-[80px]">
+                          {he ? "מטבע:" : "Currency:"}
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border">
+                          <DollarSign className="h-3 w-3" aria-hidden="true" />
+                          {getCurrencyLabel(supplier.currency, locale)}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="text-muted-foreground min-w-[80px]">
+                          {he ? "הערות:" : "Notes:"}
+                        </span>
+                        <span>
+                          {supplier.notes || (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-border-subtle">
                       <button
-                        type="button"
+                        className="miro-button miro-button-secondary text-sm flex-1 min-w-0"
+                        onClick={() => openEditForm(supplier)}
                         disabled={busy}
-                        className="miro-button miro-button-secondary text-sm text-destructive hover:bg-destructive/10"
+                      >
+                        <Edit className="h-4 w-4" aria-hidden="true" />
+                        {he ? "עריכה" : "Edit"}
+                      </button>
+                      <button
+                        className="miro-button miro-button-secondary text-sm text-destructive hover:bg-destructive/10 flex-1 min-w-0"
                         onClick={() => startDeleteConfirm(supplier.id)}
-                        aria-label={he ? "מחיקת ספק" : "Delete supplier"}
+                        disabled={busy}
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
                         {he ? "מחיקה" : "Delete"}
                       </button>
-                    )}
-                  </div>
-                </article>
-              ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
             </div>
 
             <div className="p-4 border-t border-border-subtle">
@@ -859,206 +695,257 @@ export function SuppliersManager({ locale }: { locale: "he" | "en" }) {
           </>
         )}
 
-        {/* Add/Edit Modal */}
-        {showForm && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() => setShowForm(false)}
-          >
-            <div
-              className="bg-background rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="border-b border-border-subtle p-6 flex items-center justify-between">
-                <h3 className="text-xl font-black">
-                  {editingSupplier
-                    ? he
-                      ? "ערוך ספק"
-                      : "Edit Supplier"
-                    : he
-                      ? "הוסף ספק"
-                      : "Add Supplier"}
-                </h3>
-                <button
-                  className="text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowForm(false)}
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void submitForm();
+        {/* Add/Edit Form Dialog */}
+        <Dialog
+          open={showForm}
+          onClose={() => {
+            setShowForm(false);
+            resetForm();
+          }}
+          title={
+            editingSupplier
+              ? he
+                ? "ערוך ספק"
+                : "Edit Supplier"
+              : he
+                ? "הוסף ספק"
+                : "Add Supplier"
+          }
+          size="lg"
+          footer={
+            <div className="mgmt-dialog__actions">
+              <button
+                type="button"
+                className="mgmt-button mgmt-button--ghost"
+                onClick={() => {
+                  setShowForm(false);
+                  resetForm();
                 }}
-                className="p-6 space-y-6"
+                disabled={busy}
               >
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      {he ? "שם חברה *" : "Company Name *"}
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.company_name}
-                      onChange={(e) =>
-                        handleFormChange("company_name", e.target.value)
-                      }
-                      className="miro-input"
-                      required
-                      placeholder={he ? "שם החברה" : "Company name"}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      {he ? "איש קשר" : "Contact Person"}
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.contact_person}
-                      onChange={(e) =>
-                        handleFormChange("contact_person", e.target.value)
-                      }
-                      className="miro-input"
-                      placeholder={he ? "שם איש הקשר" : "Contact person name"}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      {he ? "טלפון" : "Phone"}
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) =>
-                        handleFormChange("phone", e.target.value)
-                      }
-                      className="miro-input"
-                      placeholder={he ? "050-1234567" : "050-1234567"}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      {he ? "אימייל" : "Email"}
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) =>
-                        handleFormChange("email", e.target.value)
-                      }
-                      className="miro-input"
-                      placeholder="email@example.com"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      {he
-                        ? "זמן אספקה ברירת מחדל (ימים)"
-                        : "Default Lead Time (days)"}
-                    </label>
-                    <input
-                      type="number"
-                      min="0"
-                      value={formData.default_lead_time_days ?? ""}
-                      onChange={(e) =>
-                        handleFormChange(
-                          "default_lead_time_days",
-                          e.target.value ? parseInt(e.target.value, 10) : null,
-                        )
-                      }
-                      className="miro-input"
-                      placeholder={he ? "למשל: 7" : "e.g. 7"}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">
-                      {he ? "מטבע" : "Currency"}
-                    </label>
-                    <select
-                      value={formData.currency}
-                      onChange={(e) =>
-                        handleFormChange("currency", e.target.value)
-                      }
-                      className="miro-input"
-                    >
-                      {currencies.map((curr) => (
-                        <option key={curr} value={curr}>
-                          {getCurrencyLabel(curr)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "הערות" : "Notes"}
-                  </label>
-                  <textarea
-                    value={formData.notes}
-                    onChange={(e) => handleFormChange("notes", e.target.value)}
-                    className="miro-input"
-                    rows={3}
-                    placeholder={
-                      he
-                        ? "הערות פנימיות על הספק..."
-                        : "Internal notes about supplier..."
-                    }
-                  />
-                </div>
-
-                <div className="flex flex-wrap gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_active}
-                      onChange={(e) =>
-                        handleFormChange("is_active", e.target.checked)
-                      }
-                      className="rounded border-border-subtle"
-                    />
-                    <span>{he ? "פעיל" : "Active"}</span>
-                  </label>
-                </div>
-
-                <div className="flex justify-end gap-3 border-t border-border-subtle pt-6">
-                  <button
-                    type="button"
-                    className="miro-button miro-button-secondary"
-                    onClick={() => setShowForm(false)}
-                  >
-                    {he ? "ביטול" : "Cancel"}
-                  </button>
-                  <button
-                    type="submit"
-                    className="miro-button miro-button-primary"
-                    disabled={busy}
-                  >
-                    {busy ? (
-                      <>
-                        <RotateCcw className="me-2 h-4 w-4 animate-spin" />
-                        {he ? "שומר..." : "Saving..."}
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="me-2 h-4 w-4" />
-                        {he ? "שמור" : "Save"}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
+                {he ? "ביטול" : "Cancel"}
+              </button>
+              <button
+                type="button"
+                className="mgmt-button mgmt-button--primary"
+                onClick={() => void submitForm()}
+                disabled={busy}
+                aria-busy={busy || undefined}
+              >
+                {busy ? (
+                  <>
+                    <RotateCcw className="me-2 h-4 w-4 animate-spin" />
+                    {he ? "שומר..." : "Saving..."}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="me-2 h-4 w-4" />
+                    {he ? "שמור" : "Save"}
+                  </>
+                )}
+              </button>
             </div>
-          </div>
-        )}
-      </div>
+          }
+        >
+          {formError && (
+            <Notice
+              tone="danger"
+              onDismiss={() => setFormError("")}
+              dismissLabel={he ? "סגור" : "Close"}
+            >
+              {formError}
+            </Notice>
+          )}
+          <form
+            className="space-y-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submitForm();
+            }}
+          >
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                id="supplier-company-name"
+                label={he ? "שם חברה *" : "Company Name *"}
+                required
+                error={
+                  formError && !formData.company_name
+                    ? he
+                      ? "נדרש שם חברה"
+                      : "Company name required"
+                    : undefined
+                }
+              >
+                {(control) => (
+                  <input
+                    {...control}
+                    type="text"
+                    className="miro-input"
+                    value={formData.company_name}
+                    onChange={(e) =>
+                      handleFormChange("company_name", e.target.value)
+                    }
+                    required
+                    placeholder={he ? "שם החברה" : "Company name"}
+                  />
+                )}
+              </FormField>
+              <FormField
+                id="supplier-contact-person"
+                label={he ? "איש קשר" : "Contact Person"}
+              >
+                {(control) => (
+                  <input
+                    {...control}
+                    type="text"
+                    className="miro-input"
+                    value={formData.contact_person}
+                    onChange={(e) =>
+                      handleFormChange("contact_person", e.target.value)
+                    }
+                    placeholder={he ? "שם איש הקשר" : "Contact person name"}
+                  />
+                )}
+              </FormField>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField id="supplier-phone" label={he ? "טלפון" : "Phone"}>
+                {(control) => (
+                  <input
+                    {...control}
+                    type="tel"
+                    className="miro-input"
+                    value={formData.phone}
+                    onChange={(e) => handleFormChange("phone", e.target.value)}
+                    placeholder={he ? "050-1234567" : "050-1234567"}
+                  />
+                )}
+              </FormField>
+              <FormField id="supplier-email" label={he ? "אימייל" : "Email"}>
+                {(control) => (
+                  <input
+                    {...control}
+                    type="email"
+                    className="miro-input"
+                    value={formData.email}
+                    onChange={(e) => handleFormChange("email", e.target.value)}
+                    placeholder="email@example.com"
+                  />
+                )}
+              </FormField>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <FormField
+                id="supplier-lead-time"
+                label={
+                  he
+                    ? "זמן אספקה ברירת מחדל (ימים)"
+                    : "Default Lead Time (days)"
+                }
+              >
+                {(control) => (
+                  <input
+                    {...control}
+                    type="number"
+                    min="0"
+                    className="miro-input"
+                    value={formData.default_lead_time_days ?? ""}
+                    onChange={(e) =>
+                      handleFormChange(
+                        "default_lead_time_days",
+                        e.target.value ? parseInt(e.target.value, 10) : null,
+                      )
+                    }
+                    placeholder={he ? "למשל: 7" : "e.g. 7"}
+                  />
+                )}
+              </FormField>
+              <FormField
+                id="supplier-currency"
+                label={he ? "מטבע" : "Currency"}
+              >
+                {(control) => (
+                  <select
+                    {...control}
+                    className="miro-input"
+                    value={formData.currency}
+                    onChange={(e) =>
+                      handleFormChange("currency", e.target.value)
+                    }
+                  >
+                    {currencies.map((curr) => (
+                      <option key={curr} value={curr}>
+                        {getCurrencyLabel(curr, locale)}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </FormField>
+            </div>
+
+            <FormField id="supplier-notes" label={he ? "הערות" : "Notes"}>
+              {(control) => (
+                <textarea
+                  {...control}
+                  className="miro-input"
+                  rows={3}
+                  value={formData.notes}
+                  onChange={(e) => handleFormChange("notes", e.target.value)}
+                  placeholder={
+                    he
+                      ? "הערות פנימיות על הספק..."
+                      : "Internal notes about supplier..."
+                  }
+                />
+              )}
+            </FormField>
+
+            <FormField
+              id="supplier-active"
+              label={
+                <span className="flex items-center gap-2">
+                  {he ? "פעיל" : "Active"}
+                </span>
+              }
+            >
+              {(control) => (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    {...control}
+                    type="checkbox"
+                    checked={formData.is_active}
+                    onChange={(e) =>
+                      handleFormChange("is_active", e.target.checked)
+                    }
+                    className="rounded border-border-subtle"
+                  />
+                  <span>{he ? "פעיל" : "Active"}</span>
+                </label>
+              )}
+            </FormField>
+          </form>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <ConfirmationDialog
+          open={!!deleteConfirm}
+          onConfirm={() => deleteConfirm && handleDelete(deleteConfirm.id)}
+          onCancel={clearDeleteConfirm}
+          title={he ? "מחיקת ספק" : "Delete Supplier"}
+          description={
+            he
+              ? "האם אתם בטוחים שברצונכם למחוק ספק זה? ספקים עם הפניות במוצרים יושבתו במקום להימחק."
+              : "Are you sure you want to delete this supplier? Suppliers referenced by products will be deactivated instead of deleted."
+          }
+          confirmLabel={he ? "מחיקה" : "Delete"}
+          cancelLabel={he ? "ביטול" : "Cancel"}
+          tone="danger"
+          busy={busy}
+          closeLabel={he ? "סגור" : "Close"}
+        />
+      </section>
     </div>
   );
 }

@@ -1,0 +1,79 @@
+.root {
+  min-inline-size: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+}
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.legend i {
+  inline-size: 0.65rem;
+  block-size: 0.65rem;
+  border-radius: 3px;
+}
+.scroll {
+  overflow-x: auto;
+  max-inline-size: 100%;
+}
+.chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  direction: ltr;
+}
+.chart text {
+  fill: var(--muted-foreground);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.grid {
+  stroke: var(--border-subtle);
+  stroke-dasharray: 3 4;
+}
+.gold {
+  fill: var(--accent-text);
+  background: var(--accent-text);
+}
+.teal {
+  fill: var(--secondary-accent);
+  background: var(--secondary-accent);
+}
+.note {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+.details {
+  border-block-start: 1px solid var(--border-subtle);
+  padding-block-start: 0.75rem;
+  font-size: 0.8125rem;
+}
+.details summary {
+  cursor: pointer;
+  color: var(--accent-text);
+  padding-block: 0.25rem;
+}
+.details table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block-start: 0.75rem;
+  text-align: start;
+  font-variant-numeric: tabular-nums;
+}
+.details th,
+.details td {
+  padding: 0.65rem;
+  border-block-end: 1px solid var(--border-subtle);
+  text-align: start;
+  white-space: nowrap;
+}

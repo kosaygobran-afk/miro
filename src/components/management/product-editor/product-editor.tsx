@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
+  CheckCircle2,
   ExternalLink,
   Loader2,
   Save,
@@ -39,6 +40,7 @@ import { VariantsSection } from "./variants-section";
 import {
   OUT_OF_STOCK_POLICIES,
   STATUS_OPTIONS,
+  PRICE_ROLES,
   type Category,
   type Locale,
   type OutOfStockPolicy,
@@ -46,6 +48,7 @@ import {
   type ProductStatus,
   type ProductVariant,
   type Supplier,
+  type PriceRole,
 } from "./types";
 import styles from "./product-editor.module.css";
 
@@ -220,24 +223,100 @@ export function ProductEditor({
   const [confirmBack, setConfirmBack] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [reloadToken, setReloadToken] = useState(0);
+  const [images, setImages] = useState(product?.product_images ?? []);
+
+  // Role prices state (lifted up to survive section changes)
+  const [rolePrices, setRolePrices] = useState<
+    Partial<Record<PriceRole, number>>
+  >({});
+  const [rolePriceInputs, setRolePriceInputs] = useState<
+    Record<PriceRole, string>
+  >({} as Record<PriceRole, string>);
+  const [rolePriceSavingRole, setRolePriceSavingRole] =
+    useState<PriceRole | null>(null);
+  const [rolePriceErrors, setRolePriceErrors] = useState<
+    Partial<Record<PriceRole, string>>
+  >({});
+
+  const stickyBarRef = useRef<HTMLDivElement>(null);
+  const measureRafRef = useRef<number | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
+  // Measure stickyBar height for sticky coordination with topbar (border-box)
+  // Uses a callback ref to measure when the element is actually mounted
+  const setStickyBarRef = useCallback((element: HTMLDivElement | null) => {
+    stickyBarRef.current = element;
+
+    // Clean up previous observer
+    if (resizeObserverRef.current) {
+      resizeObserverRef.current.disconnect();
+      resizeObserverRef.current = null;
+    }
+
+    if (!element) {
+      document.documentElement.style.removeProperty("--mgmt-stickybar-height");
+      return;
+    }
+
+    const measure = () => {
+      const height = element.getBoundingClientRect().height;
+      document.documentElement.style.setProperty(
+        "--mgmt-stickybar-height",
+        `${height}px`,
+      );
+    };
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height =
+          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+        document.documentElement.style.setProperty(
+          "--mgmt-stickybar-height",
+          `${height}px`,
+        );
+      }
+    });
+
+    resizeObserver.observe(element, { box: "border-box" });
+    resizeObserverRef.current = resizeObserver;
+    measure();
+  }, []);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      const observer = resizeObserverRef.current;
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const raf = measureRafRef.current;
+      if (observer) {
+        observer.disconnect();
+        resizeObserverRef.current = null;
+      }
+      if (raf) cancelAnimationFrame(raf);
+      document.documentElement.style.removeProperty("--mgmt-stickybar-height");
+    };
+  }, []);
 
   useEffect(() => {
     let ignore = false;
     async function load() {
       try {
-        const [productsRes, categoriesRes, suppliersRes] = await Promise.all([
-          fetch("/api/management/products", { cache: "no-store" }),
+        // Fetch single product by ID using the new detail endpoint
+        const [productRes, categoriesRes, suppliersRes] = await Promise.all([
+          fetch(`/api/management/products/${productId}`, { cache: "no-store" }),
           fetch("/api/management/categories", { cache: "no-store" }),
           fetch("/api/management/suppliers", { cache: "no-store" }),
         ]);
         if (ignore) return;
-        if (!productsRes.ok || !categoriesRes.ok || !suppliersRes.ok) {
-          setLoadState("error");
+        if (!productRes.ok || !categoriesRes.ok || !suppliersRes.ok) {
+          if (productRes.status === 404) {
+            setLoadState("notfound");
+          } else {
+            setLoadState("error");
+          }
           return;
         }
-        const productsData = (await productsRes.json()) as {
-          products?: Product[];
-        };
+        const productData = (await productRes.json()) as { product?: Product };
         const categoriesData = (await categoriesRes.json()) as {
           categories?: Category[];
         };
@@ -245,9 +324,7 @@ export function ProductEditor({
           suppliers?: Supplier[];
         };
         if (ignore) return;
-        const found =
-          productsData.products?.find((entry) => entry.id === productId) ??
-          null;
+        const found = productData.product ?? null;
         if (!found) {
           setLoadState("notfound");
           return;
@@ -256,9 +333,22 @@ export function ProductEditor({
         setSuppliers(suppliersData.suppliers ?? []);
         setProduct(found);
         setVariants(found.product_variants ?? []);
+        setImages(found.product_images ?? []);
         const nextForm = toForm(found);
         setForm(nextForm);
         setInitialForm(nextForm);
+
+        // Initialize role prices from product data
+        const pricesMap: Partial<Record<PriceRole, number>> = {};
+        const inputsMap = {} as Record<PriceRole, string>;
+        for (const role of PRICE_ROLES) {
+          const price = found.product_prices?.find((p) => p.role === role);
+          pricesMap[role] = price?.price ?? undefined;
+          inputsMap[role] = price ? String(price.price) : "";
+        }
+        setRolePrices(pricesMap);
+        setRolePriceInputs(inputsMap);
+
         setLoadState("ready");
       } catch {
         if (!ignore) setLoadState("error");
@@ -429,12 +519,35 @@ export function ProductEditor({
         setSaveError(body.error || editorCopy.saveFailed[locale]);
         return;
       }
-      setProduct((prev) =>
-        prev ? { ...prev, ...(body.product ?? {}), ...patch } : prev,
-      );
-      setInitialForm(form);
+      // Re-fetch canonical data to ensure we have the authoritative server state
+      const refetch = await fetch(`/api/management/products?id=${product.id}`, {
+        cache: "no-store",
+      });
+      if (refetch.ok) {
+        const data = (await refetch.json()) as { product?: Product };
+        if (data.product) {
+          setProduct(data.product);
+          setVariants(data.product.product_variants ?? []);
+          const nextForm = toForm(data.product);
+          setForm(nextForm);
+          setInitialForm(nextForm);
+        } else {
+          // Fallback: merge patch if refetch doesn't return full product
+          setProduct((prev) =>
+            prev ? { ...prev, ...(body.product ?? {}), ...patch } : prev,
+          );
+          setInitialForm(form);
+        }
+      } else {
+        // Fallback: merge patch if refetch fails
+        setProduct((prev) =>
+          prev ? { ...prev, ...(body.product ?? {}), ...patch } : prev,
+        );
+        setInitialForm(form);
+      }
       setSaveOk(true);
-    } catch {
+    } catch (err) {
+      console.error("Save failed:", err);
       setSaveError(editorCopy.saveFailed[locale]);
     } finally {
       setSaving(false);
@@ -499,7 +612,7 @@ export function ProductEditor({
 
   return (
     <div>
-      <div className={styles.stickyBar}>
+      <div ref={setStickyBarRef} className={styles.stickyBar}>
         <button
           type="button"
           className="miro-button miro-button-ghost"
@@ -552,9 +665,9 @@ export function ProductEditor({
           ) : null}
           <button
             type="button"
-            className="miro-button miro-button-primary"
+            className={`miro-button ${saveOk && !dirty ? styles.saveButtonSaved : "miro-button-primary"}`}
             onClick={() => void save()}
-            disabled={saving || !dirty}
+            disabled={saving || (!dirty && !saveOk)}
             aria-busy={saving || undefined}
           >
             {saving ? (
@@ -564,6 +677,11 @@ export function ProductEditor({
                   aria-hidden="true"
                 />
                 {editorCopy.saving[locale]}
+              </>
+            ) : saveOk && !dirty ? (
+              <>
+                <CheckCircle2 className="me-2 h-4 w-4" aria-hidden="true" />
+                {editorCopy.savedButton[locale]}
               </>
             ) : (
               <>
@@ -639,7 +757,7 @@ export function ProductEditor({
                       {...control}
                       type="text"
                       className="miro-input"
-                      dir="auto"
+                      dir="rtl"
                       value={form.name_he}
                       maxLength={255}
                       onChange={(e) => setField("name_he", e.target.value)}
@@ -657,7 +775,7 @@ export function ProductEditor({
                       {...control}
                       type="text"
                       className="miro-input"
-                      dir="auto"
+                      dir="ltr"
                       value={form.name_en}
                       maxLength={255}
                       onChange={(e) => setField("name_en", e.target.value)}
@@ -808,7 +926,7 @@ export function ProductEditor({
                     <textarea
                       {...control}
                       className="miro-input"
-                      dir="auto"
+                      dir="rtl"
                       rows={2}
                       maxLength={500}
                       value={form.short_description_he}
@@ -826,7 +944,7 @@ export function ProductEditor({
                     <textarea
                       {...control}
                       className="miro-input"
-                      dir="auto"
+                      dir="ltr"
                       rows={2}
                       maxLength={500}
                       value={form.short_description_en}
@@ -845,7 +963,7 @@ export function ProductEditor({
                       <textarea
                         {...control}
                         className="miro-input"
-                        dir="auto"
+                        dir="rtl"
                         rows={5}
                         maxLength={20000}
                         value={form.description_he}
@@ -865,7 +983,7 @@ export function ProductEditor({
                       <textarea
                         {...control}
                         className="miro-input"
-                        dir="auto"
+                        dir="ltr"
                         rows={5}
                         maxLength={20000}
                         value={form.description_en}
@@ -884,7 +1002,7 @@ export function ProductEditor({
                     <textarea
                       {...control}
                       className="miro-input"
-                      dir="auto"
+                      dir="rtl"
                       rows={2}
                       maxLength={1000}
                       value={form.warranty_he}
@@ -900,7 +1018,7 @@ export function ProductEditor({
                     <textarea
                       {...control}
                       className="miro-input"
-                      dir="auto"
+                      dir="ltr"
                       rows={2}
                       maxLength={1000}
                       value={form.warranty_en}
@@ -915,9 +1033,13 @@ export function ProductEditor({
           {activeSection === "media" ? (
             <FormSection
               title={sectionLabels.media[locale]}
-              description={sectionDescriptions.media[locale]}
+              description={`${sectionDescriptions.media[locale]} · ${images.length} ${he ? "תמונות" : images.length === 1 ? "image" : "images"}`}
             >
-              <MediaGallery locale={locale} productId={product.id} />
+              <MediaGallery
+                locale={locale}
+                productId={product.id}
+                onImagesChange={setImages}
+              />
             </FormSection>
           ) : null}
 
@@ -1092,7 +1214,14 @@ export function ProductEditor({
                 <RolePricesSection
                   locale={locale}
                   productId={product.id}
-                  initialPrices={product.product_prices ?? []}
+                  prices={rolePrices}
+                  inputs={rolePriceInputs}
+                  onPricesChange={setRolePrices}
+                  onInputsChange={setRolePriceInputs}
+                  savingRole={rolePriceSavingRole}
+                  setSavingRole={setRolePriceSavingRole}
+                  errors={rolePriceErrors}
+                  setErrors={setRolePriceErrors}
                 />
               </FormSection>
             </>
@@ -1113,7 +1242,7 @@ export function ProductEditor({
                       {...control}
                       type="text"
                       className="miro-input"
-                      dir="auto"
+                      dir="rtl"
                       maxLength={255}
                       value={form.seo_title_he}
                       onChange={(e) => setField("seo_title_he", e.target.value)}
@@ -1129,7 +1258,7 @@ export function ProductEditor({
                       {...control}
                       type="text"
                       className="miro-input"
-                      dir="auto"
+                      dir="ltr"
                       maxLength={255}
                       value={form.seo_title_en}
                       onChange={(e) => setField("seo_title_en", e.target.value)}
@@ -1145,7 +1274,7 @@ export function ProductEditor({
                       <textarea
                         {...control}
                         className="miro-input"
-                        dir="auto"
+                        dir="rtl"
                         rows={2}
                         maxLength={1000}
                         value={form.seo_description_he}
@@ -1165,7 +1294,7 @@ export function ProductEditor({
                       <textarea
                         {...control}
                         className="miro-input"
-                        dir="auto"
+                        dir="ltr"
                         rows={2}
                         maxLength={1000}
                         value={form.seo_description_en}

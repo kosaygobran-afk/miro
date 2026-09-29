@@ -524,7 +524,7 @@ export function VariantsSection({
                   {...control}
                   type="text"
                   className="miro-input"
-                  dir="auto"
+                  dir="rtl"
                   value={form.color_he}
                   maxLength={100}
                   onChange={(e) => setField("color_he", e.target.value)}
@@ -541,7 +541,7 @@ export function VariantsSection({
                   {...control}
                   type="text"
                   className="miro-input"
-                  dir="auto"
+                  dir="ltr"
                   value={form.color_en}
                   maxLength={100}
                   onChange={(e) => setField("color_en", e.target.value)}

@@ -5,7 +5,9 @@ import Image from "next/image";
 import {
   ArrowDown,
   ArrowUp,
+  CheckCircle2,
   ImageIcon,
+  Link2,
   Loader2,
   Pencil,
   Star,
@@ -29,6 +31,16 @@ type UploadItem = {
   name: string;
   progress: number;
   error: string | null;
+};
+
+type UrlUploadState = {
+  url: string;
+  altHe: string;
+  altEn: string;
+  loading: boolean;
+  error: string;
+  previewLoaded: boolean;
+  previewError: boolean;
 };
 
 function uploadFile(
@@ -69,9 +81,11 @@ function uploadFile(
 export function MediaGallery({
   locale,
   productId,
+  onImagesChange,
 }: {
   locale: Locale;
   productId: string;
+  onImagesChange?: (images: ProductImage[]) => void;
 }) {
   const he = locale === "he";
   const fileInputId = useId();
@@ -79,6 +93,7 @@ export function MediaGallery({
   const [images, setImages] = useState<ProductImage[] | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [savedNotice, setSavedNotice] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ProductImage | null>(null);
@@ -88,6 +103,17 @@ export function MediaGallery({
   const [altEn, setAltEn] = useState("");
   const [altSaving, setAltSaving] = useState(false);
   const [altError, setAltError] = useState("");
+  // URL upload state
+  const [urlUploadOpen, setUrlUploadOpen] = useState(false);
+  const [urlUpload, setUrlUpload] = useState<UrlUploadState>({
+    url: "",
+    altHe: "",
+    altEn: "",
+    loading: false,
+    error: "",
+    previewLoaded: false,
+    previewError: false,
+  });
 
   const loadImages = useCallback(async () => {
     setError("");
@@ -102,12 +128,137 @@ export function MediaGallery({
         return;
       }
       const data = (await response.json()) as { images?: ProductImage[] };
-      setImages(data.images ?? []);
+      const nextImages = data.images ?? [];
+      setImages(nextImages);
+      onImagesChange?.(nextImages);
     } catch {
       setError(mediaCopy.imageOperationFailed[locale]);
       setImages([]);
     }
-  }, [productId, locale]);
+  }, [productId, locale, onImagesChange]);
+
+  function announceSaved() {
+    setSavedNotice(false);
+    window.requestAnimationFrame(() => setSavedNotice(true));
+  }
+
+  // URL upload handlers
+  function resetUrlUpload() {
+    setUrlUpload({
+      url: "",
+      altHe: "",
+      altEn: "",
+      loading: false,
+      error: "",
+      previewLoaded: false,
+      previewError: false,
+    });
+  }
+
+  function handleUrlChange(value: string) {
+    setUrlUpload((prev) => {
+      const newState = {
+        ...prev,
+        url: value,
+        error: "",
+        previewLoaded: false,
+        previewError: false,
+      };
+      // Reset preview when URL changes
+      if (value.trim() && value.trim() !== prev.url.trim()) {
+        newState.previewLoaded = false;
+        newState.previewError = false;
+      }
+      return newState;
+    });
+  }
+
+  function validateUrl(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed) return mediaCopy.urlInvalid[locale];
+    try {
+      const url = new URL(trimmed);
+      if (url.protocol !== "http:" && url.protocol !== "https:") {
+        return mediaCopy.urlInvalid[locale];
+      }
+      return null;
+    } catch {
+      return mediaCopy.urlInvalid[locale];
+    }
+  }
+
+  async function addImageByUrl() {
+    const urlError = validateUrl(urlUpload.url);
+    if (urlError) {
+      setUrlUpload((prev) => ({ ...prev, error: urlError }));
+      return;
+    }
+    setUrlUpload((prev) => ({ ...prev, loading: true, error: "" }));
+    try {
+      const nextSort =
+        (images?.reduce((max, img) => Math.max(max, img.sort_order), -1) ??
+          -1) + 1;
+      const response = await fetch("/api/management/product-images", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: productId,
+          image_url: urlUpload.url.trim(),
+          alt_he: urlUpload.altHe || null,
+          alt_en: urlUpload.altEn || null,
+          sort_order: nextSort,
+        }),
+      });
+      if (!response.ok) {
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        throw new Error(body.error || mediaCopy.imageOperationFailed[locale]);
+      }
+      resetUrlUpload();
+      setUrlUploadOpen(false);
+      await loadImages();
+      announceSaved();
+    } catch (err) {
+      setUrlUpload((prev) => ({
+        ...prev,
+        loading: false,
+        error:
+          err instanceof Error
+            ? err.message
+            : mediaCopy.imageOperationFailed[locale],
+      }));
+    }
+  }
+
+  function openUrlUpload() {
+    resetUrlUpload();
+    setUrlUploadOpen(true);
+  }
+
+  function closeUrlUpload() {
+    if (!urlUpload.loading) {
+      setUrlUploadOpen(false);
+      resetUrlUpload();
+    }
+  }
+
+  function handleUrlLoad() {
+    setUrlUpload((prev) => ({
+      ...prev,
+      previewLoaded: true,
+      previewError: false,
+    }));
+  }
+
+  function handleUrlError() {
+    setUrlUpload((prev) => ({
+      ...prev,
+      previewLoaded: false,
+      previewError: true,
+      error: mediaCopy.urlFetchFailed[locale],
+    }));
+  }
 
   useEffect(() => {
     void loadImages();
@@ -125,6 +276,7 @@ export function MediaGallery({
       progress: 0,
       error: null,
     }));
+    let uploadedCount = 0;
     setUploads((prev) => [...prev, ...batch]);
 
     for (let i = 0; i < files.length; i += 1) {
@@ -144,6 +296,7 @@ export function MediaGallery({
             );
           },
         );
+        uploadedCount += 1;
         setUploads((prev) => prev.filter((u) => u.key !== item.key));
       } catch (err) {
         setUploads((prev) =>
@@ -164,6 +317,7 @@ export function MediaGallery({
     }
     if (fileInputRef.current) fileInputRef.current.value = "";
     await loadImages();
+    if (uploadedCount > 0) announceSaved();
   }
 
   async function patchImage(
@@ -180,13 +334,28 @@ export function MediaGallery({
         body: JSON.stringify({ id, ...patch }),
       });
       if (!response.ok) {
-        setNotice(failureNotice);
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setNotice(body.error || failureNotice);
+        // Log storage-related failures for observability
+        if (
+          body.error?.includes("storage") ||
+          body.error?.includes("cleanup")
+        ) {
+          console.warn(
+            "[MediaGallery] Storage issue during patch:",
+            body.error,
+          );
+        }
         return false;
       }
       await loadImages();
+      announceSaved();
       return true;
-    } catch {
+    } catch (err) {
       setNotice(failureNotice);
+      console.error("[MediaGallery] Patch error:", err);
       return false;
     } finally {
       setBusyId(null);
@@ -208,12 +377,20 @@ export function MediaGallery({
       { sort_order: target },
       mediaCopy.imageOperationFailed[locale],
     );
-    if (!okFirst) return;
-    await patchImage(
+    if (!okFirst) {
+      // Revert on failure
+      setImages(images);
+      return;
+    }
+    const okSecond = await patchImage(
       second.id,
       { sort_order: index },
       mediaCopy.imageOperationFailed[locale],
     );
+    if (!okSecond) {
+      // Revert on failure
+      setImages(images);
+    }
   }
 
   async function confirmDelete() {
@@ -225,13 +402,29 @@ export function MediaGallery({
         { method: "DELETE" },
       );
       if (!response.ok) {
-        setNotice(mediaCopy.imageOperationFailed[locale]);
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        // On failure, keep item visible and show specific error
+        setNotice(body.error || mediaCopy.imageOperationFailed[locale]);
+        // Log storage cleanup failures for observability (non-blocking)
+        if (
+          body.error?.includes("storage") ||
+          body.error?.includes("cleanup")
+        ) {
+          console.warn(
+            "[MediaGallery] Storage cleanup issue during delete:",
+            body.error,
+          );
+        }
         return;
       }
       setPendingDelete(null);
       await loadImages();
-    } catch {
+      announceSaved();
+    } catch (err) {
       setNotice(mediaCopy.imageOperationFailed[locale]);
+      console.error("[MediaGallery] Delete error:", err);
     } finally {
       setDeleting(false);
     }
@@ -259,13 +452,18 @@ export function MediaGallery({
         }),
       });
       if (!response.ok) {
-        setAltError(mediaCopy.imageOperationFailed[locale]);
+        const body = (await response.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setAltError(body.error || mediaCopy.imageOperationFailed[locale]);
         return;
       }
       setAltEdit(null);
       await loadImages();
-    } catch {
+      announceSaved();
+    } catch (err) {
       setAltError(mediaCopy.imageOperationFailed[locale]);
+      console.error("[MediaGallery] Save alt error:", err);
     } finally {
       setAltSaving(false);
     }
@@ -295,8 +493,14 @@ export function MediaGallery({
           {notice}
         </Notice>
       ) : null}
+      {savedNotice ? (
+        <div className={styles.mediaSaved} role="status" aria-live="polite">
+          <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+          <span>{mediaCopy.autoSaved[locale]}</span>
+        </div>
+      ) : null}
 
-      <div>
+      <div className={styles.uploadActions}>
         <input
           ref={fileInputRef}
           id={fileInputId}
@@ -313,6 +517,14 @@ export function MediaGallery({
           <Upload className="h-4 w-4" aria-hidden="true" />
           {mediaCopy.uploadLabel[locale]}
         </label>
+        <button
+          type="button"
+          className="miro-button miro-button-secondary inline-flex items-center gap-2 cursor-pointer"
+          onClick={openUrlUpload}
+        >
+          <Link2 className="h-4 w-4" aria-hidden="true" />
+          {mediaCopy.addByUrlLabel[locale]}
+        </button>
         <p className={styles.statusNote} role="note">
           {mediaCopy.uploadHint[locale]}
         </p>
@@ -389,7 +601,7 @@ export function MediaGallery({
                     src={image.image_url}
                     alt={altText}
                     fill
-                    className="object-cover"
+                    className="object-contain"
                     sizes="(max-width: 640px) 50vw, 176px"
                     unoptimized={image.image_url.endsWith(".svg")}
                   />
@@ -499,7 +711,7 @@ export function MediaGallery({
                 {...control}
                 type="text"
                 className="miro-input"
-                dir="auto"
+                dir="rtl"
                 value={altHe}
                 maxLength={300}
                 onChange={(e) => setAltHe(e.target.value)}
@@ -513,11 +725,120 @@ export function MediaGallery({
                 {...control}
                 type="text"
                 className="miro-input"
-                dir="auto"
+                dir="ltr"
                 value={altEn}
                 maxLength={300}
                 onChange={(e) => setAltEn(e.target.value)}
                 disabled={altSaving}
+              />
+            )}
+          </FormField>
+        </div>
+      </Dialog>
+
+      <Dialog
+        open={urlUploadOpen}
+        onClose={closeUrlUpload}
+        title={mediaCopy.urlDialogTitle[locale]}
+        size="md"
+        closeLabel={editorCopy.close[locale]}
+        footer={
+          <>
+            <button
+              type="button"
+              className="miro-button miro-button-secondary"
+              onClick={closeUrlUpload}
+              disabled={urlUpload.loading}
+            >
+              {editorCopy.cancel[locale]}
+            </button>
+            <button
+              type="button"
+              className="miro-button miro-button-primary"
+              onClick={() => void addImageByUrl()}
+              disabled={urlUpload.loading}
+              aria-busy={urlUpload.loading || undefined}
+            >
+              {urlUpload.loading
+                ? mediaCopy.adding[locale]
+                : mediaCopy.addButton[locale]}
+            </button>
+          </>
+        }
+      >
+        <div className={styles.sectionStack}>
+          {urlUpload.error ? (
+            <Notice tone="danger">{urlUpload.error}</Notice>
+          ) : null}
+          <FormField
+            id="image-url"
+            label={mediaCopy.urlLabel[locale]}
+            description={mediaCopy.urlHint[locale]}
+            required
+          >
+            {(control) => (
+              <input
+                {...control}
+                type="url"
+                className={`miro-input ${styles.ltrText}`}
+                dir="ltr"
+                value={urlUpload.url}
+                placeholder={mediaCopy.urlPlaceholder[locale]}
+                maxLength={2000}
+                onChange={(e) => handleUrlChange(e.target.value)}
+                disabled={urlUpload.loading}
+                aria-invalid={urlUpload.previewError || undefined}
+              />
+            )}
+          </FormField>
+          {urlUpload.url.trim() && !urlUpload.previewError && (
+            <div className={styles.urlPreview}>
+              <Image
+                src={urlUpload.url}
+                alt={mediaCopy.previewAlt[locale]}
+                width={200}
+                height={150}
+                className={styles.previewImage}
+                unoptimized
+                onLoad={handleUrlLoad}
+                onError={handleUrlError}
+              />
+            </div>
+          )}
+          {urlUpload.previewError && (
+            <p className={`${styles.statusNote} text-destructive`} role="alert">
+              {mediaCopy.urlFetchFailed[locale]}
+            </p>
+          )}
+          <FormField id="image-url-alt-he" label={mediaCopy.altHe[locale]}>
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                className="miro-input"
+                dir="auto"
+                value={urlUpload.altHe}
+                maxLength={300}
+                onChange={(e) =>
+                  setUrlUpload((prev) => ({ ...prev, altHe: e.target.value }))
+                }
+                disabled={urlUpload.loading}
+              />
+            )}
+          </FormField>
+          <FormField id="image-url-alt-en" label={mediaCopy.altEn[locale]}>
+            {(control) => (
+              <input
+                {...control}
+                type="text"
+                className="miro-input"
+                dir="auto"
+                value={urlUpload.altEn}
+                maxLength={300}
+                onChange={(e) =>
+                  setUrlUpload((prev) => ({ ...prev, altEn: e.target.value }))
+                }
+                disabled={urlUpload.loading}
               />
             )}
           </FormField>

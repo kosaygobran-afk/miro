@@ -82,7 +82,7 @@ export function CheckEmailClient({
   };
 
   return (
-    <div className="miro-card p-8 text-center" suppressHydrationWarning>
+    <div className="p-8 text-center" suppressHydrationWarning>
       {/* Animated Mail Icon */}
       <div className="mx-auto mb-6 relative">
         <div className="w-20 h-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">

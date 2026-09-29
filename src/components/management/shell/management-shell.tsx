@@ -12,6 +12,7 @@ import { roleLabel, type AppRole } from "@/lib/roles";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { AdminNav } from "@/components/management/admin-nav";
 import { Drawer } from "@/components/management/ui/drawer";
+import { OverlayStackProvider } from "@/components/management/ui/overlay-stack";
 import { ManagementTopbar } from "./management-topbar";
 import { mgmtShellCopy } from "./nav-config";
 
@@ -101,88 +102,90 @@ export function ManagementShell({
       .toUpperCase() || "?";
 
   return (
-    <div
-      className="mgmt-shell"
-      data-sidebar={collapsed ? "collapsed" : "expanded"}
-    >
-      <aside
-        className="mgmt-sidebar"
-        aria-label={mgmtShellCopy.navLabel[locale]}
+    <OverlayStackProvider>
+      <div
+        className="mgmt-shell"
+        data-sidebar={collapsed ? "collapsed" : "expanded"}
       >
-        <div className="mgmt-sidebar__brand">
-          <Link
-            href={withLocale(locale, "admin")}
-            className="mgmt-sidebar__brand-link"
-          >
-            <span className="mgmt-sidebar__brand-mark" aria-hidden="true">
-              M
-            </span>
-            <span className="mgmt-sidebar__brand-text">
-              <span className="mgmt-sidebar__brand-name">
-                {mgmtShellCopy.brandName[locale]}
+        <aside
+          className="mgmt-sidebar"
+          aria-label={mgmtShellCopy.navLabel[locale]}
+        >
+          <div className="mgmt-sidebar__brand">
+            <Link
+              href={withLocale(locale, "admin")}
+              className="mgmt-sidebar__brand-link"
+            >
+              <span className="mgmt-sidebar__brand-mark" aria-hidden="true">
+                M
               </span>
-              <span className="mgmt-sidebar__brand-tagline">
-                {mgmtShellCopy.brandTagline[locale]}
+              <span className="mgmt-sidebar__brand-text">
+                <span className="mgmt-sidebar__brand-name">
+                  {mgmtShellCopy.brandName[locale]}
+                </span>
+                <span className="mgmt-sidebar__brand-tagline">
+                  {mgmtShellCopy.brandTagline[locale]}
+                </span>
+              </span>
+            </Link>
+            <button
+              type="button"
+              className="mgmt-sidebar__collapse"
+              onClick={toggleCollapsed}
+              aria-label={
+                collapsed
+                  ? mgmtShellCopy.expandSidebar[locale]
+                  : mgmtShellCopy.collapseSidebar[locale]
+              }
+              aria-expanded={!collapsed}
+            >
+              <CollapseIcon
+                size={16}
+                aria-hidden="true"
+                className="mgmt-sidebar__collapse-icon"
+              />
+            </button>
+          </div>
+          <div className="mgmt-sidebar__nav">
+            <AdminNav locale={locale} role={role} collapsed={collapsed} />
+          </div>
+          <div className="mgmt-sidebar__footer">
+            <span className="mgmt-sidebar__avatar" aria-hidden="true">
+              {initials}
+            </span>
+            <span className="mgmt-sidebar__identity">
+              <span className="mgmt-sidebar__identity-name">
+                {userName || userEmail}
+              </span>
+              <span className={`mgmt-role-badge mgmt-role-badge--${role}`}>
+                {roleLabel(role, locale)}
               </span>
             </span>
-          </Link>
-          <button
-            type="button"
-            className="mgmt-sidebar__collapse"
-            onClick={toggleCollapsed}
-            aria-label={
-              collapsed
-                ? mgmtShellCopy.expandSidebar[locale]
-                : mgmtShellCopy.collapseSidebar[locale]
-            }
-            aria-expanded={!collapsed}
-          >
-            <CollapseIcon
-              size={16}
-              aria-hidden="true"
-              className="mgmt-sidebar__collapse-icon"
-            />
-          </button>
-        </div>
-        <div className="mgmt-sidebar__nav">
-          <AdminNav locale={locale} role={role} collapsed={collapsed} />
-        </div>
-        <div className="mgmt-sidebar__footer">
-          <span className="mgmt-sidebar__avatar" aria-hidden="true">
-            {initials}
-          </span>
-          <span className="mgmt-sidebar__identity">
-            <span className="mgmt-sidebar__identity-name">
-              {userName || userEmail}
-            </span>
-            <span className={`mgmt-role-badge mgmt-role-badge--${role}`}>
-              {roleLabel(role, locale)}
-            </span>
-          </span>
-        </div>
-      </aside>
+          </div>
+        </aside>
 
-      <div className="mgmt-shell__body">
-        <ManagementTopbar
-          locale={locale}
-          role={role}
-          userName={userName}
-          userEmail={userEmail}
-          onOpenNav={() => setDrawerOpen(true)}
-        />
-        <main className="mgmt-shell__main">{children}</main>
+        <div className="mgmt-shell__body">
+          <ManagementTopbar
+            locale={locale}
+            role={role}
+            userName={userName}
+            userEmail={userEmail}
+            onOpenNav={() => setDrawerOpen(true)}
+          />
+          <div className="mgmt-shell__main">{children}</div>
+        </div>
+
+        <Drawer
+          open={drawerOpen}
+          onClose={closeDrawer}
+          title={mgmtShellCopy.brandTagline[locale]}
+          side="start"
+          closeLabel={mgmtShellCopy.closeNavigation[locale]}
+          className="mgmt-drawer--nav"
+        >
+          <AdminNav locale={locale} role={role} onNavigate={closeDrawer} />
+        </Drawer>
       </div>
-
-      <Drawer
-        open={drawerOpen}
-        onClose={closeDrawer}
-        title={mgmtShellCopy.brandTagline[locale]}
-        side="start"
-        closeLabel={mgmtShellCopy.closeNavigation[locale]}
-        className="mgmt-drawer--nav"
-      >
-        <AdminNav locale={locale} role={role} onNavigate={closeDrawer} />
-      </Drawer>
-    </div>
+    </OverlayStackProvider>
   );
 }

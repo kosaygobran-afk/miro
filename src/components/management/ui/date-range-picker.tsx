@@ -10,9 +10,11 @@ import type { Locale } from "@/lib/i18n";
  * - "last7": rolling window, from = today − 6 days, to = today.
  * - "week": THIS CALENDAR week, Sunday → Saturday (Israeli locale week).
  * - "month": current calendar month, 1st → last day.
+ * - "all": no date filter (all time).
  * - "custom": explicit from/to entered by the user.
  */
-export type DateRangePreset = "today" | "last7" | "week" | "month" | "custom";
+export type DateRangePreset =
+  "today" | "last7" | "week" | "month" | "all" | "custom";
 
 /** Inclusive range as ISO date strings (yyyy-mm-dd, local dates). */
 export type DateRangeValue = {
@@ -27,6 +29,7 @@ export type DateRangeLabels = {
   last7: string;
   week: string;
   month: string;
+  all: string;
   custom: string;
   fromLabel: string;
   toLabel: string;
@@ -40,6 +43,7 @@ export function dateRangeLabels(locale: Locale): DateRangeLabels {
         last7: "7 הימים האחרונים",
         week: "השבוע",
         month: "החודש",
+        all: "הכל",
         custom: "מותאם אישית",
         fromLabel: "מתאריך",
         toLabel: "עד תאריך",
@@ -50,6 +54,7 @@ export function dateRangeLabels(locale: Locale): DateRangeLabels {
         last7: "Last 7 days",
         week: "This week",
         month: "This month",
+        all: "All",
         custom: "Custom",
         fromLabel: "From",
         toLabel: "To",
@@ -110,6 +115,7 @@ const presetOrder: readonly Exclude<DateRangePreset, "custom">[] = [
   "last7",
   "week",
   "month",
+  "all",
 ];
 
 /**
@@ -129,11 +135,17 @@ export function DateRangePicker({
     last7: labels.last7,
     week: labels.week,
     month: labels.month,
+    all: labels.all,
   };
 
   const selectPreset = (preset: DateRangePreset) => {
     if (preset === "custom") {
       onChange({ preset, from: value.from, to: value.to });
+      return;
+    }
+    if (preset === "all") {
+      // Clear date range - no filter
+      onChange({ preset, from: "", to: "" });
       return;
     }
     const range = resolveDateRange(preset);
@@ -200,6 +212,7 @@ export function DateRangePicker({
               onChange={(event) =>
                 onChange({ ...value, from: event.target.value })
               }
+              dir="ltr"
             />
           </label>
           <label className="mgmt-date-range__field">
@@ -214,6 +227,7 @@ export function DateRangePicker({
               onChange={(event) =>
                 onChange({ ...value, to: event.target.value })
               }
+              dir="ltr"
             />
           </label>
         </div>

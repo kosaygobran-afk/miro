@@ -49,15 +49,34 @@ function failureResponse(
   );
 }
 
-// Per-IP rate limiting is enforced by the shared check_rate_limit RPC
-// (rate_limit_events table in Postgres), so limits hold across server
-// instances: tier 1 = 5/min, tier 2 = 30/hour.
-type RateLimitOutcome = "ok" | "limited" | "error";
+function getClientIp(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
+}
 
+function localeFromBody(body: unknown): "he" | "en" {
+  if (body && typeof body === "object") {
+    const value = (body as { locale?: unknown }).locale;
+    if (value === "en") return "en";
+  }
+  return "he";
+}
+
+// Build rate limit key for the RPC (IP-based, matches RPC's fallback)
+function buildRateLimitKey(ip: string): string {
+  return `enquiry:ip:${ip}`;
+}
+
+// Check rate limits at API level (before validation) to match original behavior
+// and ensure invalid requests still count towards the limit.
 async function checkRateLimits(
   supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
   ip: string,
-): Promise<RateLimitOutcome> {
+): Promise<"ok" | "limited" | "error"> {
   const buckets = [
     { key: `enquiry:ip:1m:${ip}`, limit: 5, window: "1 minute" },
     { key: `enquiry:ip:1h:${ip}`, limit: 30, window: "1 hour" },
@@ -77,23 +96,6 @@ async function checkRateLimits(
   return "ok";
 }
 
-function getClientIp(request: NextRequest): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return request.headers.get("x-real-ip")?.trim() || "unknown";
-}
-
-function localeFromBody(body: unknown): "he" | "en" {
-  if (body && typeof body === "object") {
-    const value = (body as { locale?: unknown }).locale;
-    if (value === "en") return "en";
-  }
-  return "he";
-}
-
 export async function POST(request: NextRequest) {
   if (!hasSameOrigin(request)) {
     return NextResponse.json(
@@ -110,10 +112,9 @@ export async function POST(request: NextRequest) {
   }
   const locale = localeFromBody(body);
 
-  const rateLimit = await checkRateLimits(
-    await createServerSupabaseClient(),
-    getClientIp(request),
-  );
+  // Rate limit check BEFORE validation (matches original behavior)
+  const ip = getClientIp(request);
+  const rateLimit = await checkRateLimits(await createServerSupabaseClient(), ip);
   if (rateLimit === "error") {
     // Never silently allow unlimited submissions when the limiter is down.
     return failureResponse("unavailable", 503, locale);
@@ -143,28 +144,38 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Anon server client: insertion relies on the service_requests RLS
-    // anonymous-insert policy with its database-side length caps.
     const supabase = await createServerSupabaseClient();
-    const phone = data.phone?.trim();
-    const { error } = await supabase.from("service_requests").insert({
-      name: data.name,
-      email: data.email,
-      phone: phone || null,
-      message: data.message,
-      locale: data.locale,
-      source: data.source,
-      product_id: data.productId ?? null,
-      variant_id: data.variantId ?? null,
-      status: "new",
+    const rateLimitKey = buildRateLimitKey(ip);
+    const phone = data.phone?.trim() || null;
+
+    // Call the RPC for service request creation (enforces validation, audit)
+    // Rate limiting already checked at API level; RPC provides defense in depth.
+    const { data: requestId, error } = await supabase.rpc("create_service_request", {
+      p_name: data.name,
+      p_email: data.email,
+      p_phone: phone,
+      p_message: data.message,
+      p_locale: data.locale,
+      p_source: data.source,
+      p_product_id: data.productId ?? null,
+      p_variant_id: data.variantId ?? null,
+      p_metadata: {},
+      p_rate_limit_key: rateLimitKey,
     });
 
     if (error) {
-      console.error("Enquiry insert failed", error.message);
+      // Map RPC errors to user-facing codes
+      if (error.code === "42001" || error.message?.includes("Rate limited")) {
+        return failureResponse("rate_limited", 429, locale);
+      }
+      if (error.code === "22023") {
+        return failureResponse("invalid_input", 400, locale);
+      }
+      console.error("create_service_request failed:", error.code, error.message);
       return failureResponse("unavailable", 503, locale);
     }
 
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: true, requestId });
   } catch (error) {
     console.error("Enquiry submission failed", error);
     return failureResponse("unavailable", 503, locale);

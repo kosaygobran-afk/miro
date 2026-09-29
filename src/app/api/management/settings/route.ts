@@ -55,6 +55,18 @@ const publicContactSchema = z
   })
   .strict();
 
+// Inventory defaults validation schema
+// The global default out_of_stock_policy must be a RESOLVED value (not "inherit")
+// since it's the fallback for products that use "inherit".
+const inventoryDefaultsSchema = z
+  .object({
+    low_stock_threshold: z.number().int().min(0).max(10000).default(3),
+    out_of_stock_policy: z
+      .enum(["keep_visible_contact", "keep_visible_restock", "hide_from_public"])
+      .default("keep_visible_contact"),
+  })
+  .strict();
+
 type PublicContactFields = {
   phone: string | null;
   whatsapp: string | null;
@@ -167,6 +179,31 @@ export async function POST(request: Request) {
       if (fieldValue !== undefined) cleaned[field] = fieldValue;
     }
     valueToSave = { ...rawContact, ...cleaned };
+  }
+
+  if (parsed.data.key === "inventory_defaults") {
+    const inventoryParsed = inventoryDefaultsSchema.safeParse(parsed.data.value);
+    if (!inventoryParsed.success) {
+      return errorResponse("Invalid input", 400, inventoryParsed.error.flatten());
+    }
+    // Merge with existing values for any omitted fields
+    const { data: existingRows, error: readError } = await auth.admin
+      .from("business_settings")
+      .select("key, value");
+    if (readError) {
+      console.error(
+        "settings POST read before merge failed:",
+        readError.code,
+        readError.message,
+      );
+      return errorResponse("Failed to save setting", 500);
+    }
+    const existingRow = existingRows?.find((r) => r.key === "inventory_defaults");
+    const existingValue =
+      existingRow && typeof existingRow.value === "object" && existingRow.value !== null
+        ? (existingRow.value as Record<string, unknown>)
+        : {};
+    valueToSave = { ...existingValue, ...inventoryParsed.data };
   }
 
   const client = await createServerSupabaseClient();

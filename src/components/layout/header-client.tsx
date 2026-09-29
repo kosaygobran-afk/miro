@@ -92,6 +92,7 @@ export function HeaderClient({
   const menuButton = useRef<HTMLButtonElement>(null);
   const productsButton = useRef<HTMLButtonElement>(null);
   const productsMenu = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const themeMode = useSyncExternalStore(
     subscribeTheme,
     readTheme,
@@ -119,12 +120,12 @@ export function HeaderClient({
     {
       value: "dark" as const,
       icon: Moon,
-      label: he ? "מצב כהה" : "Dark theme",
+      label: he ? "מצב כהה — ניגודיות גבוהה" : "Dark theme — high contrast",
     },
     {
       value: "medium" as const,
       icon: SunMoon,
-      label: he ? "מצב אפור" : "Medium theme",
+      label: he ? "מצב ביניים" : "Mid theme",
     },
     {
       value: "light" as const,
@@ -132,6 +133,36 @@ export function HeaderClient({
       label: he ? "מצב בהיר" : "Light theme",
     },
   ];
+
+  // Measure header height for sticky coordination
+  useEffect(() => {
+    const element = headerRef.current;
+    if (!element) return;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Use borderBoxSize.blockSize if available (Chrome 84+), fallback to contentRect.height
+        const height =
+          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
+        document.documentElement.style.setProperty(
+          "--header-sticky-offset",
+          `${height}px`,
+        );
+      }
+    });
+
+    resizeObserver.observe(element, { box: "border-box" });
+    // Set initial height using border-box
+    document.documentElement.style.setProperty(
+      "--header-sticky-offset",
+      `${element.getBoundingClientRect().height}px`,
+    );
+
+    return () => {
+      resizeObserver.unobserve(element);
+      document.documentElement.style.removeProperty("--header-sticky-offset");
+    };
+  }, []);
 
   useEffect(() => {
     if (!open && !productsOpen) return;
@@ -287,6 +318,7 @@ export function HeaderClient({
         </div>
       </div>
       <header
+        ref={headerRef}
         className="miro-site-header premium-header"
         suppressHydrationWarning
       >

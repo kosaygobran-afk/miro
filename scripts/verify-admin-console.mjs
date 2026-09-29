@@ -45,15 +45,15 @@ let stage = "create disposable admin account";
 
 const adminPagesEn = [
   "/en/admin",
+  "/en/admin/requests",
+  "/en/admin/analytics",
+  "/en/admin/finance",
   "/en/admin/products",
   "/en/admin/inventory",
   "/en/admin/suppliers",
   "/en/admin/sales",
   "/en/admin/customers",
-  "/en/admin/analytics",
-  "/en/admin/finance",
   "/en/admin/users",
-  "/en/admin/requests",
   "/en/admin/audit",
   "/en/admin/settings",
 ];
@@ -64,6 +64,12 @@ const errorPatterns = [
   "No intl context found",
   "Application error",
   "Internal Server Error",
+  "Failed to load requests",
+  "Failed to load analytics data",
+  "Failed to load finance data",
+  "טעינת הפניות נכשלה",
+  "לא ניתן לטעון נתוני אנליטיקה",
+  "שגיאה בטעינת נתונים פיננסיים",
 ];
 
 const ignoredConsolePatterns = [

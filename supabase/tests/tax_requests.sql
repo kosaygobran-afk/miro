@@ -351,5 +351,15 @@ do $$ begin
   end if;
 end $$;
 
+-- server-side management routes call the limiter with the service-role client
+reset role;
+set local role service_role;
+select set_config('request.jwt.claim.sub','',true);
+do $$ begin
+  if not public.check_rate_limit('tr-rl-service', 1, interval '1 minute') then
+    raise exception 'Service-role call denied';
+  end if;
+end $$;
+
 reset role;
 rollback;

@@ -13,7 +13,10 @@ import {
   EyeOff,
   Archive,
   RotateCcw,
+  ImageIcon,
+  CalendarDays,
 } from "lucide-react";
+import { PageHeader } from "./ui";
 
 type ProductVariant = {
   id: string;
@@ -54,6 +57,14 @@ type Category = {
 };
 
 type Supplier = { id: string; company_name: string; is_active?: boolean };
+
+type ProductImage = {
+  id: string;
+  image_url: string;
+  alt_he: string | null;
+  alt_en: string | null;
+  sort_order: number;
+};
 
 type Product = {
   id: string;
@@ -101,6 +112,7 @@ type Product = {
   categories: Category | null;
   product_prices: RolePrice[];
   product_variants: ProductVariant[];
+  product_images: ProductImage[];
   suppliers: Supplier | null;
 };
 
@@ -278,6 +290,16 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
       .reduce((sum, v) => sum + v.stock_qty, 0);
   };
 
+  const getPrimaryImage = (product: Product) =>
+    [...(product.product_images ?? [])].sort(
+      (first, second) => first.sort_order - second.sort_order,
+    )[0] ?? null;
+
+  const formatDate = (date: string) =>
+    new Intl.DateTimeFormat(he ? "he-IL" : "en-IL", {
+      dateStyle: "medium",
+    }).format(new Date(date));
+
   const formatPrice = (price: number | null | undefined) => {
     if (price === null || price === undefined)
       return he ? "לא פורסם" : "Unpublished";
@@ -301,25 +323,23 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black">
-            {he ? "ניהול מוצרים" : "Product Management"}
-          </h2>
-          <p className="mt-1 text-muted-foreground">
-            {he
-              ? "הוסף, ערוך ומחק מוצרים, נהל סטטוסים ופרסום"
-              : "Add, edit, delete products and manage statuses and publishing"}
-          </p>
-        </div>
-        <Link
-          href={`/${locale}/admin/products/new`}
-          className="miro-button miro-button-primary"
-        >
-          <Plus className="me-2 h-4 w-4" />
-          {he ? "הוסף מוצר" : "Add Product"}
-        </Link>
-      </div>
+      <PageHeader
+        title={he ? "ניהול מוצרים" : "Product Management"}
+        subtitle={
+          he
+            ? "הוסף, ערוך ומחק מוצרים, נהל סטטוסים ופרסום"
+            : "Add, edit, delete products and manage statuses and publishing"
+        }
+        actions={
+          <Link
+            href={`/${locale}/admin/products/new`}
+            className="miro-button miro-button-primary"
+          >
+            <Plus className="me-2 h-4 w-4" />
+            {he ? "הוסף מוצר" : "Add Product"}
+          </Link>
+        }
+      />
 
       {error && (
         <div className="miro-card border-destructive/50 bg-destructive/5 p-4">
@@ -348,6 +368,7 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                 <th className="p-4">{he ? "סטטוס" : "Status"}</th>
                 <th className="p-4">{he ? "מומלץ" : "Featured"}</th>
                 <th className="p-4">{he ? "סה״כ מלאי" : "Total Stock"}</th>
+                <th className="p-4">{he ? "עודכן" : "Updated"}</th>
                 <th className="p-4">{he ? "פעולות" : "Actions"}</th>
               </tr>
             </thead>
@@ -356,22 +377,41 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                 const defaultVariant = getDefaultVariant(product);
                 const effectivePrice = getEffectivePrice(product);
                 const totalStock = getTotalStock(product);
+                const primaryImage = getPrimaryImage(product);
                 return (
                   <tr
                     key={product.id}
                     className="border-b border-border-subtle hover:bg-surface-muted/50"
                   >
                     <td className="p-4">
-                      {product.image_url && (
-                        <div className="relative h-12 w-12 overflow-hidden rounded-lg bg-surface-muted">
+                      {primaryImage ? (
+                        <div className="relative h-14 w-14 overflow-hidden rounded-xl border border-border-subtle bg-surface-muted shadow-sm">
                           <Image
-                            src={product.image_url}
-                            alt={product.name_en || product.name_he}
+                            src={primaryImage.image_url}
+                            alt={
+                              (he
+                                ? primaryImage.alt_he
+                                : primaryImage.alt_en) ??
+                              (he ? product.name_he : product.name_en)
+                            }
                             fill
                             className="object-cover"
-                            sizes="48px"
+                            sizes="56px"
+                            unoptimized={primaryImage.image_url.endsWith(
+                              ".svg",
+                            )}
                           />
                         </div>
+                      ) : (
+                        <span
+                          className="inline-flex h-14 w-14 items-center justify-center rounded-xl border border-dashed border-border-subtle bg-surface-muted text-muted-foreground"
+                          title={he ? "אין תמונה" : "No image"}
+                        >
+                          <ImageIcon className="h-5 w-5" aria-hidden="true" />
+                          <span className="sr-only">
+                            {he ? "אין תמונה" : "No image"}
+                          </span>
+                        </span>
                       )}
                     </td>
                     <td className="p-4">
@@ -419,6 +459,17 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                     <td className="p-4">
                       <span className="font-mono font-medium">
                         {totalStock}
+                      </span>
+                    </td>
+                    <td className="p-4">
+                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
+                        <CalendarDays
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                        <time dateTime={product.updated_at}>
+                          {formatDate(product.updated_at)}
+                        </time>
                       </span>
                     </td>
                     <td className="p-4">

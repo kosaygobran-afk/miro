@@ -89,6 +89,7 @@ export type Product = {
   categories: Category | null;
   product_prices: RolePrice[];
   product_variants: ProductVariant[];
+  product_images?: ProductImage[];
 };
 
 export const STATUS_OPTIONS: ProductStatus[] = [

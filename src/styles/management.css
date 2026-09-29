@@ -3,6 +3,91 @@
    primitives for the admin console. RTL-aware: logical properties only.
    ============================================================================ */
 
+:root {
+  /* Management design tokens — sizing, spacing, typography */
+  --mgmt-content-padding: clamp(1rem, 2.4vw, 2rem);
+  --mgmt-section-gap: 1.5rem;
+  --mgmt-card-padding: clamp(1rem, 1.5vw, 1.5rem);
+  --mgmt-field-gap: 1rem;
+  --mgmt-label-field-gap: 0.5rem;
+  --mgmt-action-gap: 0.75rem;
+  --mgmt-toolbar-group-gap: 1rem;
+  --mgmt-body-font-size: 1rem;
+  --mgmt-nav-font-size: 0.9375rem;
+  --mgmt-label-font-size: 0.875rem;
+  --mgmt-supporting-font-size: 0.875rem;
+  --mgmt-section-heading-size: 1.25rem;
+  --mgmt-page-heading-size: clamp(1.5rem, 2vw, 1.75rem);
+  --mgmt-kpi-size: clamp(1.75rem, 2.5vw, 2.25rem);
+  --mgmt-control-min-height: 2.75rem;
+  --mgmt-icon-btn-size: 2.75rem;
+  --mgmt-icon-size: 1.125rem;
+  --mgmt-metric-icon-size: 2.75rem;
+  --mgmt-radius-control: 0.625rem;
+  --mgmt-radius-card: 0.875rem;
+  --mgmt-radius-dialog: 1.125rem;
+  --mgmt-transition-fast: 140ms ease;
+  --mgmt-transition-normal: 180ms ease;
+}
+
+/* Management design tokens for Dark theme completeness */
+[data-theme="dark"] {
+  --mgmt-sidebar-bg: #080808;
+  --mgmt-panel-border: #595959;
+  --mgmt-active-bg: color-mix(in srgb, var(--primary) 15%, transparent);
+  --mgmt-active-fg: var(--accent-text);
+  --mgmt-active-border: var(--primary);
+  --mgmt-hover-bg: #1a1a1a;
+}
+
+[data-theme="medium"] {
+  --mgmt-sidebar-bg: #121518;
+  --mgmt-panel-border: #2c3238;
+  --mgmt-active-bg: color-mix(in srgb, var(--primary) 15%, transparent);
+  --mgmt-active-fg: var(--accent-text);
+  --mgmt-active-border: var(--primary);
+  --mgmt-hover-bg: #23282c;
+}
+
+[data-theme="light"] .mgmt-shell {
+  --mgmt-sidebar-bg: #eef1f5;
+  --mgmt-panel-border: #c4ccd5;
+  --mgmt-active-bg: #fff1bf;
+  --mgmt-active-fg: #654700;
+  --mgmt-active-border: #927000;
+  --mgmt-hover-bg: #e2e8ef;
+}
+
+/* ---------- Sticky layout variables ---------- */
+
+:root {
+  --mgmt-topbar-height: 0px;
+  --mgmt-stickybar-height: 0px;
+  --mgmt-sticky-stack-height: calc(
+    var(--mgmt-topbar-height, 0px) + var(--mgmt-stickybar-height, 0px) + 1rem
+  );
+}
+
+/* Scope scroll-margin rules to management-owned targets only */
+.mgmt-shell [role="region"],
+.mgmt-shell [aria-labelledby],
+.mgmt-shell section[id],
+.mgmt-shell div[id] {
+  scroll-margin-block-start: var(--mgmt-sticky-stack-height);
+}
+
+/* ---------- Layer scale (documented) ---------- */
+/*
+  Layer ordering inside stacking contexts:
+  1. Content (default)
+  2. Section sticky actions (--mgmt-stickybar-height area)
+  3. Shell topbar (--mgmt-topbar-height, z-index: 40)
+  4. Popovers / dropdowns (z-index: 50-60)
+  5. Modal overlays (z-index: 120-130)
+  Note: z-index only orders inside stacking contexts; trace ancestor
+  transforms/filter/containment before changing it.
+*/
+
 /* ---------- Utilities ---------- */
 
 .mgmt-visually-hidden {
@@ -117,7 +202,7 @@
   width: 100%;
   max-width: 112rem;
   margin-inline: auto;
-  padding: clamp(1rem, 2.4vw, 2rem);
+  padding: var(--mgmt-content-padding);
 }
 
 /* ---------- Sidebar ---------- */
@@ -128,9 +213,9 @@
   display: flex;
   height: 100dvh;
   flex-direction: column;
-  border-inline-end: 1px solid var(--border-subtle);
-  background: color-mix(in srgb, var(--surface) 94%, var(--background));
-  padding: 1rem 0.75rem;
+  border-inline-end: 1px solid var(--mgmt-panel-border);
+  background: var(--mgmt-sidebar-bg);
+  padding: var(--mgmt-card-padding);
   transition: padding 180ms ease;
 }
 
@@ -278,20 +363,21 @@
   padding-inline-start: 0;
 }
 
-.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar__brand-text,
-.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar__identity,
-.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar__avatar,
-.mgmt-shell[data-sidebar="collapsed"] .mgmt-nav__section-label,
-.mgmt-shell[data-sidebar="collapsed"] .mgmt-nav__label {
+/* Collapsed sidebar only affects the desktop sidebar, not the mobile drawer */
+.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar .mgmt-sidebar__brand-text,
+.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar .mgmt-sidebar__identity,
+.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar .mgmt-sidebar__avatar,
+.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar .mgmt-nav__section-label,
+.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar .mgmt-nav__label {
   display: none;
 }
 
-.mgmt-shell[data-sidebar="collapsed"] .mgmt-nav__link {
+.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar .mgmt-nav__link {
   justify-content: center;
   padding-inline: 0;
 }
 
-.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar__footer {
+.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar .mgmt-sidebar__footer {
   justify-content: center;
   padding: 0.75rem 0 0;
 }
@@ -300,7 +386,7 @@
 
 .mgmt-nav {
   display: grid;
-  gap: 1.25rem;
+  gap: var(--mgmt-section-gap);
 }
 
 .mgmt-nav--collapsed {
@@ -313,9 +399,9 @@
 }
 
 .mgmt-nav__section-label {
-  padding-inline: 0.65rem;
+  padding-inline: var(--mgmt-label-field-gap);
   color: var(--muted-foreground);
-  font-size: 0.68rem;
+  font-size: var(--mgmt-label-font-size);
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -325,12 +411,12 @@
   min-height: 0.4rem;
   margin-block-start: 0.25rem;
   padding: 0;
-  border-block-start: 1px solid var(--border-subtle);
+  border-block-start: 1px solid var(--mgmt-panel-border);
 }
 
 .mgmt-nav__list {
   display: grid;
-  gap: 0.15rem;
+  gap: 0.125rem;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -339,14 +425,14 @@
 .mgmt-nav__link {
   position: relative;
   display: flex;
-  min-height: 2.6rem;
+  min-height: var(--mgmt-control-min-height);
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--mgmt-action-gap);
   border: 1px solid transparent;
-  border-radius: var(--radius-lg);
-  padding: 0.55rem 0.65rem;
+  border-radius: var(--mgmt-radius-control);
+  padding: 0.5rem var(--mgmt-field-gap);
   color: var(--muted-foreground);
-  font-size: 0.875rem;
+  font-size: var(--mgmt-nav-font-size);
   font-weight: 750;
   transition:
     background-color 140ms ease,
@@ -356,15 +442,16 @@
 
 .mgmt-nav__link:hover {
   border-color: color-mix(in srgb, var(--border-control) 72%, transparent);
-  background: var(--surface-hover);
+  background: var(--mgmt-hover-bg);
   color: var(--foreground);
 }
 
 .mgmt-nav__link--active,
 .mgmt-nav__link--active:hover {
   border-color: color-mix(in srgb, var(--primary) 30%, transparent);
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
-  color: var(--accent-text);
+  background: var(--mgmt-active-bg);
+  color: var(--mgmt-active-fg);
+  border-inline-start: 3px solid var(--mgmt-active-border);
 }
 
 .mgmt-nav__icon {
@@ -543,20 +630,20 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .mgmt-topbar__storefront-link {
   display: inline-flex;
-  min-height: 2.6rem;
+  min-height: var(--mgmt-control-min-height);
   align-items: center;
-  gap: 0.45rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  gap: 0.5rem;
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: var(--mgmt-radius-control);
   background: var(--surface);
   padding: 0.5rem 0.75rem;
   color: var(--muted-foreground);
-  font-size: 0.82rem;
+  font-size: var(--mgmt-nav-font-size);
   font-weight: 800;
   transition:
     background-color 140ms ease,
@@ -565,9 +652,85 @@
 }
 
 .mgmt-topbar__storefront-link:hover {
+  background: var(--mgmt-hover-bg);
+  border-color: var(--border-control);
+  color: var(--foreground);
+}
+
+/* Theme selector in topbar */
+.mgmt-topbar__theme-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem;
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: 9999px;
+  background: var(--surface);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.mgmt-topbar__theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  color: var(--muted-foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.mgmt-topbar__theme-btn:hover {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+
+.mgmt-topbar__theme-btn[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-glow);
+}
+
+.mgmt-topbar__theme-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Language selector in topbar */
+.mgmt-topbar__lang-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--mgmt-control-min-height);
+  min-width: 3rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: var(--mgmt-radius-control);
+  background: var(--surface);
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
+}
+
+.mgmt-topbar__lang-btn:hover {
   background: var(--surface-hover);
   border-color: var(--border-control);
   color: var(--foreground);
+}
+
+.mgmt-topbar__lang-btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 /* ---------- Role badge ---------- */
@@ -974,45 +1137,61 @@
 }
 
 /* ---------- Metric card ---------- */
-
 .mgmt-metric-card {
   display: grid;
-  gap: 0.5rem;
+  grid-template-columns: minmax(0, 1fr) 2.5rem;
+  grid-template-areas: "content icon" "footer footer";
   align-content: start;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--surface) 92%, var(--background));
+  align-items: start;
+  gap: 1rem;
+  min-inline-size: 0;
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: var(--mgmt-radius-card);
+  background: var(--surface);
   box-shadow: var(--shadow-soft);
-  padding: 1rem;
-}
-
-.mgmt-metric-card__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.mgmt-metric-card__label {
-  color: var(--muted-foreground);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
+  padding: 1.25rem;
 }
 
 .mgmt-metric-card__icon {
+  grid-area: icon;
   display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
   place-items: center;
-  border-radius: var(--radius-lg);
+  border-radius: var(--mgmt-radius-control);
   background: color-mix(in srgb, var(--primary) 12%, transparent);
   color: var(--primary);
 }
 
+.mgmt-metric-card__content {
+  grid-area: content;
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.mgmt-metric-card__label {
+  color: var(--muted-foreground);
+  font-size: var(--mgmt-label-font-size);
+  font-weight: 550;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.mgmt-metric-card__value {
+  color: var(--foreground);
+  font-size: var(--mgmt-kpi-size);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
 .mgmt-metric-card--default {
   border-inline-start: 3px solid
-    color-mix(in srgb, var(--border-control) 55%, transparent);
+    color-mix(in srgb, var(--mgmt-panel-border) 55%, transparent);
 }
 
 .mgmt-metric-card--accent {
@@ -1057,9 +1236,11 @@
 
 .mgmt-metric-card__value {
   color: var(--foreground);
-  font-size: 1.9rem;
-  font-weight: 900;
-  line-height: 1.1;
+  font-size: var(--mgmt-kpi-size);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1083,25 +1264,17 @@
   color: var(--muted-foreground);
 }
 
-.mgmt-metric-card__loading {
-  display: grid;
-  gap: 0.5rem;
-  padding-block-start: 0.25rem;
-}
-
-.mgmt-metric-card__skeleton-value {
-  height: 1.9rem;
-}
-
-.mgmt-metric-card__skeleton-delta {
-  height: 0.85rem;
-  max-width: 6rem;
+.mgmt-metric-card__content :where(.mgmt-skeleton) {
+  width: 100%;
 }
 
 .mgmt-metric-card__footer {
+  grid-area: footer;
+  min-inline-size: 0;
+  line-height: 1.6;
   margin-block-start: 0.25rem;
   padding-block-start: 0.65rem;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--mgmt-panel-border);
   color: var(--muted-foreground);
   font-size: 0.75rem;
 }
@@ -1109,8 +1282,8 @@
 /* ---------- Data table ---------- */
 
 .mgmt-table {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: var(--mgmt-radius-card);
   background: color-mix(in srgb, var(--surface) 92%, var(--background));
   box-shadow: var(--shadow-soft);
   overflow: hidden;
@@ -1126,7 +1299,7 @@
 .mgmt-table__table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: var(--mgmt-body-font-size);
 }
 
 .mgmt-table__caption {
@@ -1249,7 +1422,7 @@
 .mgmt-page-header {
   display: grid;
   gap: 0.5rem;
-  margin-block-end: 1.25rem;
+  margin-block-end: var(--mgmt-section-gap);
 }
 
 .mgmt-page-header__breadcrumb {
@@ -1298,7 +1471,7 @@
 }
 
 .mgmt-page-header__title {
-  font-size: 1.5rem;
+  font-size: var(--mgmt-page-heading-size);
   line-height: 1.25;
   font-weight: 900;
   color: var(--foreground);
@@ -1307,7 +1480,7 @@
 .mgmt-page-header__subtitle {
   max-width: 70ch;
   color: var(--muted-foreground);
-  font-size: 0.875rem;
+  font-size: var(--mgmt-supporting-font-size);
   line-height: 1.6;
 }
 
@@ -1315,24 +1488,24 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--mgmt-action-gap);
 }
 
 /* ---------- Toolbar ---------- */
 
 .mgmt-toolbar {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: var(--mgmt-radius-card);
   background: color-mix(in srgb, var(--surface) 92%, var(--background));
   box-shadow: var(--shadow-soft);
-  padding: 0.75rem;
+  padding: var(--mgmt-field-gap);
 }
 
 .mgmt-toolbar__row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.65rem;
+  gap: var(--mgmt-toolbar-group-gap);
 }
 
 .mgmt-toolbar__search {
@@ -1352,14 +1525,14 @@
 
 .mgmt-toolbar__search-input {
   width: 100%;
-  min-height: 2.75rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
+  min-height: var(--mgmt-control-min-height);
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: var(--mgmt-radius-control);
   background: var(--background);
   color: var(--foreground);
   padding-block: 0.5rem;
   padding-inline: 2.5rem 0.85rem;
-  font-size: 0.875rem;
+  font-size: var(--mgmt-body-font-size);
   transition:
     border-color 140ms ease,
     box-shadow 140ms ease,
@@ -1702,12 +1875,12 @@
 
 .mgmt-date-range__preset {
   display: inline-flex;
-  min-height: 2.4rem;
+  min-height: var(--mgmt-control-min-height);
   align-items: center;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-full);
+  border-radius: var(--mgmt-radius-control);
   background: var(--surface);
-  padding: 0.4rem 0.8rem;
+  padding: 0.5rem 0.85rem;
   color: var(--muted-foreground);
   font-size: 0.78rem;
   font-weight: 800;
@@ -1734,6 +1907,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
+  align-items: flex-end;
 }
 
 .mgmt-date-range__field {
@@ -1750,9 +1924,9 @@
 
 .mgmt-date-range__input {
   width: 100%;
-  min-height: 2.75rem;
+  min-height: var(--mgmt-control-min-height);
   border: 1px solid var(--border-control);
-  border-radius: var(--radius-lg);
+  border-radius: var(--mgmt-radius-control);
   background: var(--background);
   color: var(--foreground);
   padding-block: 0.5rem;
@@ -1805,6 +1979,9 @@
 }
 
 .mgmt-form-section__title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--foreground);
@@ -1882,4 +2059,251 @@
   .mgmt-form-section {
     border-color: var(--border-control);
   }
+}
+
+/* Disable secondary stickiness on short landscape screens */
+@media (max-height: 500px) and (orientation: landscape) {
+  .mgmt-shell .mgmt-sticky-bar {
+    position: static;
+  }
+  .mgmt-shell {
+    --mgmt-stickybar-height: 0px;
+  }
+}
+
+/* ---------- Form field grid ---------- */
+
+.mgmt-field-grid {
+  display: grid;
+  gap: var(--mgmt-field-gap);
+  grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr));
+}
+
+.mgmt-field-grid > *:last-child.lg\:col-span-3 {
+  grid-column: 1 / -1;
+}
+
+@media (min-width: 1024px) {
+  .mgmt-field-grid > .lg\:col-span-3 {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- Form actions ---------- */
+
+.mgmt-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-start: var(--mgmt-action-gap);
+}
+
+/* ---------- Input ---------- */
+
+.mgmt-input {
+  width: 100%;
+  min-height: var(--mgmt-control-min-height);
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: var(--mgmt-radius-control);
+  background: var(--background);
+  color: var(--foreground);
+  padding: 0.5rem 0.85rem;
+  font-size: var(--mgmt-body-font-size);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    background-color 140ms ease;
+}
+
+.mgmt-input::placeholder {
+  color: var(--muted-foreground);
+}
+
+.mgmt-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+  outline: none;
+}
+
+.mgmt-input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+  background: var(--surface-muted);
+}
+
+/* ---------- Finance dashboard chart ---------- */
+
+.finance-dashboard__chart {
+  min-height: 16rem;
+}
+
+.finance-dashboard__chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  height: 12rem;
+  padding-block-end: 2.5rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--primary) 60%, transparent)
+    transparent;
+}
+
+.finance-dashboard__bar-group {
+  display: grid;
+  flex: 1 1 3rem;
+  min-width: 3rem;
+  align-content: end;
+  gap: 0.35rem;
+}
+
+.finance-dashboard__bar-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: 0.15rem;
+  height: 100%;
+}
+
+.finance-dashboard__bar {
+  border-radius: var(--radius-xs) var(--radius-xs) 0 0;
+  transition: opacity 140ms ease;
+}
+
+.finance-dashboard__bar--gross {
+  background: linear-gradient(
+    180deg,
+    var(--primary),
+    color-mix(in srgb, var(--primary) 70%, transparent)
+  );
+  opacity: 0.85;
+}
+
+.finance-dashboard__bar--net {
+  background: linear-gradient(
+    180deg,
+    var(--secondary-accent),
+    color-mix(in srgb, var(--secondary-accent) 70%, transparent)
+  );
+  opacity: 0.9;
+}
+
+.finance-dashboard__bar:hover {
+  opacity: 1;
+}
+
+.finance-dashboard__bar-labels {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+}
+
+.finance-dashboard__bar-day {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.finance-dashboard__bar-orders {
+  font-variant-numeric: tabular-nums;
+}
+
+.finance-dashboard__chart-legend {
+  flex-wrap: wrap;
+}
+
+.finance-dashboard__legend-gross {
+  background: linear-gradient(
+    135deg,
+    var(--primary),
+    color-mix(in srgb, var(--primary) 70%, transparent)
+  );
+}
+
+.finance-dashboard__legend-net {
+  background: linear-gradient(
+    135deg,
+    var(--secondary-accent),
+    color-mix(in srgb, var(--secondary-accent) 70%, transparent)
+  );
+}
+
+/* Metric card grid for finance dashboard */
+.mgmt-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 639px) {
+  .mgmt-stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  }
+
+  .finance-dashboard__chart-bars {
+    gap: 0.35rem;
+  }
+
+  .finance-dashboard__bar-group {
+    min-width: 2.5rem;
+  }
+}
+
+/* Shared panels also cover settings, finance and customer detail surfaces. */
+.mgmt-card {
+  min-inline-size: 0;
+  border: 1px solid var(--mgmt-panel-border);
+  border-radius: var(--mgmt-radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+.mgmt-card--padded {
+  padding: var(--mgmt-card-padding);
+}
+.mgmt-shell .mgmt-toolbar__search-input {
+  padding-inline: 2.75rem 0.85rem;
+}
+.mgmt-toolbar__search-icon {
+  z-index: 1;
+}
+.mgmt-metric-card__icon svg {
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+}
+.mgmt-metric-card__icon,
+.mgmt-metric-card--accent .mgmt-metric-card__icon {
+  color: var(--accent-text);
+}
+.mgmt-section-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-block: 1.5rem;
+  color: var(--muted-foreground);
+}
+.ceo-security {
+  display: grid;
+  gap: 1.25rem;
+  margin-block-start: 1.5rem;
+}
+.ceo-security h2 {
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+.ceo-security h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+.ceo-security p {
+  line-height: 1.6;
+}
+.ceo-security form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.ceo-security form > button {
+  align-self: start;
+  margin-block-start: auto;
 }

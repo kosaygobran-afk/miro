@@ -343,9 +343,10 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
-            <div className="relative flex-1 min-w-[250px]">
+            <div className="mgmt-toolbar__search">
               <Search
-                className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                className="mgmt-toolbar__search-icon"
+                size={18}
                 aria-hidden="true"
               />
               <input
@@ -357,7 +358,7 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
                     ? "חפש לפי שם, אימייל או טלפון…"
                     : "Search by name, email or phone…"
                 }
-                className="miro-input ps-10"
+                className="mgmt-toolbar__search-input"
                 aria-label={he ? "חיפוש לקוחות" : "Search customers"}
               />
             </div>
@@ -503,7 +504,7 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
             {/* Mobile Card View */}
             <div className="customers-manager__card-list" role="list">
               {filteredCustomers.map((customer) => (
-                <article
+                <div
                   key={customer.id}
                   className="customers-manager__card"
                   role="listitem"
@@ -581,7 +582,7 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
                       {he ? "צפה בפרטים" : "View details"}
                     </button>
                   </div>
-                </article>
+                </div>
               ))}
             </div>
           </>

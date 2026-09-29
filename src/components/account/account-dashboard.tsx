@@ -8,6 +8,12 @@ import { type AuthContext } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { roleHome } from "@/lib/roles";
+import {
+  getSavedProductsWithCanonicalData,
+  type StoreViewer,
+} from "@/lib/store-data";
+import { formatPrice } from "@/lib/catalog/pricing";
+import { storeCopy } from "@/features/catalog/store-copy";
 
 export async function AccountDashboard({
   locale,
@@ -19,40 +25,13 @@ export async function AccountDashboard({
   const supabase = await createServerSupabaseClient();
   const [
     { data: orders, error: orderError },
-    { data: savedProducts, error: savedError },
     { data: requests, error: requestError },
     { data: invoices, error: invoiceError },
+    { data: savedProductsRaw, error: savedError },
   ] = await Promise.all([
     supabase
       .from("orders")
       .select("id, order_number, status, total, currency, created_at")
-      .eq("user_id", context.user.id)
-      .order("created_at", { ascending: false })
-      .limit(10),
-    supabase
-      .from("saved_products")
-      .select(
-        `
-        product_id,
-        created_at,
-        products (
-          id,
-          name_he,
-          name_en,
-          short_description_he,
-          short_description_en,
-          price,
-          image_url,
-          is_featured,
-          category_id,
-          categories (
-            slug,
-            name_he,
-            name_en
-          )
-        )
-      `,
-      )
       .eq("user_id", context.user.id)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -70,7 +49,24 @@ export async function AccountDashboard({
       .eq("user_id", context.user.id)
       .order("created_at", { ascending: false })
       .limit(10),
+    supabase
+      .from("saved_products")
+      .select("product_id, created_at")
+      .eq("user_id", context.user.id)
+      .order("created_at", { ascending: false })
+      .limit(10),
   ]);
+
+  // Fetch saved products with canonical data (images, pricing, stock)
+  const viewer: StoreViewer = {
+    role: context.role,
+    savedProductIds: (savedProductsRaw ?? []).map((sp) => sp.product_id),
+  };
+  const savedProducts = await getSavedProductsWithCanonicalData(
+    locale,
+    context.user.id,
+    viewer.role,
+  );
 
   const roleLabel =
     locale === "he"
@@ -78,45 +74,6 @@ export async function AccountDashboard({
           context.role
         ]
       : context.role;
-
-  // Format saved products with locale-appropriate names. PostgREST returns the
-  // many-to-one join as a single object, but tolerate an array shape as well.
-  const formattedSavedProducts = (savedProducts ?? [])
-    .map((sp) => {
-      type SavedProduct = {
-        id: string;
-        name_he: string | null;
-        name_en: string | null;
-        short_description_he: string | null;
-        short_description_en: string | null;
-        price: number | null;
-        image_url: string | null;
-        is_featured: boolean;
-        category_id: string | null;
-        categories:
-          | { slug: string; name_he: string; name_en: string }
-          | Array<{ slug: string; name_he: string; name_en: string }>
-          | null;
-      };
-      const joined = sp.products as unknown as SavedProduct | SavedProduct[];
-      const product = Array.isArray(joined) ? joined[0] : joined;
-      if (!product) return null;
-      const category = Array.isArray(product.categories)
-        ? product.categories[0]
-        : product.categories;
-      return {
-        productId: sp.product_id,
-        savedAt: sp.created_at,
-        name:
-          locale === "he"
-            ? (product.name_he ?? product.name_en ?? "")
-            : (product.name_en ?? product.name_he ?? ""),
-        price: product.price,
-        imageUrl: product.image_url,
-        category: category?.slug ?? "",
-      };
-    })
-    .filter((item): item is NonNullable<typeof item> => item !== null);
 
   return (
     <section className="miro-section">
@@ -220,7 +177,7 @@ export async function AccountDashboard({
         </div>
 
         {/* Saved Products Panel */}
-        {formattedSavedProducts.length > 0 && (
+        {savedProducts.length > 0 && (
           <div className="miro-card p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-black">
@@ -234,7 +191,7 @@ export async function AccountDashboard({
               </Link>
             </div>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {formattedSavedProducts.map((item) => (
+              {savedProducts.map((item) => (
                 <article
                   key={item.productId}
                   className="miro-card p-4 flex flex-col"
@@ -251,25 +208,18 @@ export async function AccountDashboard({
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mb-1">
-                    {item.category}
+                    {item.categoryLabel ?? item.category}
                   </p>
                   <h3 className="font-bold text-sm mb-2 line-clamp-1">
                     {item.name}
                   </h3>
                   <div className="mt-auto flex items-center justify-between">
                     <span className="text-lg font-black">
-                      {item.price
-                        ? new Intl.NumberFormat(
-                            locale === "he" ? "he-IL" : "en-IL",
-                            {
-                              style: "currency",
-                              currency: "ILS",
-                              maximumFractionDigits: 0,
-                            },
-                          ).format(item.price)
-                        : locale === "he"
-                          ? "לפי הצעה"
-                          : "Price on request"}
+                      {formatPrice(
+                        item.price,
+                        locale,
+                        storeCopy[locale].priceUnpublished,
+                      )}
                     </span>
                     <RemoveSavedButton
                       productId={item.productId}

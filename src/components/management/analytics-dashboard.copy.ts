@@ -26,8 +26,8 @@ export const analyticsCopy = {
     en: "Search & listing impressions",
   },
   impressionsNote: {
-    he: "אירועי product_impression בקבוצות ותוצאות חיפוש",
-    en: "product_impression events in listings and search results",
+    he: "הופעות מוצרים בקטלוג ובתוצאות חיפוש",
+    en: "Product appearances in listings and search results",
   },
   metricUniqueSessions: {
     he: "צופים ייחודיים",
@@ -64,6 +64,15 @@ export const analyticsCopy = {
     en: "Based on enquiry clicks out of product detail views",
   },
   enquiryClickCount: { he: "קליקי פנייה", en: "enquiry clicks" },
+  activityTitle: { he: "פעילות יומית", en: "Daily activity" },
+  activityDescription: {
+    he: "כל אירועי המעורבות שנמדדו בחנות לפי יום.",
+    en: "All measured storefront engagement events by day.",
+  },
+  topSearchesTitle: { he: "חיפושים מובילים", en: "Top searches" },
+  topCategoriesTitle: { he: "קטגוריות נצפות", en: "Viewed categories" },
+  noRankingData: { he: "אין נתונים בטווח הזה", en: "No data in this range" },
+  events: { he: "אירועים", en: "events" },
   // Per-product table
   tableTitle: { he: "ביצועים לפי מוצר", en: "Per-product performance" },
   tableCaption: {
