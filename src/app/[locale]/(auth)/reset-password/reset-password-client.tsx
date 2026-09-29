@@ -91,8 +91,8 @@ export function ResetPasswordClient({
   if (loading) {
     return (
       <section className="miro-section">
-        <div className="miro-container max-w-md">
-          <div className="miro-card p-6 text-center">
+        <div className="miro-container">
+          <div className="miro-auth-panel miro-card p-6 text-center">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
             <p role="status" className="mt-4 text-muted-foreground">
               {locale === "he" ? "טוען..." : "Loading..."}
@@ -107,8 +107,8 @@ export function ResetPasswordClient({
 
   return (
     <section className="miro-section">
-      <div className="miro-container max-w-md">
-        <div className="miro-card p-6">
+      <div className="miro-container">
+        <div className="miro-auth-panel miro-card p-6">
           <p className="mb-3 text-sm font-black uppercase tracking-[0.24em] text-accent-text">
             {noticeTitle}
           </p>

@@ -115,6 +115,8 @@ export const storeCopy = {
     contactForProduct: "Contact us about this product",
     callForProduct: "Call about this product",
     whatsappForProduct: "WhatsApp about this product",
+    thumbnailLabel: "Image",
+    productImagesLabel: "Product images",
   },
   he: {
     eyebrow: "הקולקציה של MIRO",
@@ -218,6 +220,8 @@ export const storeCopy = {
     contactForProduct: "ליצירת קשר על מוצר זה",
     callForProduct: "לשיחה על מוצר זה",
     whatsappForProduct: "לוואטסאפ על מוצר זה",
+    thumbnailLabel: "תמונה",
+    productImagesLabel: "תמונות המוצר",
   },
 } as const;
 

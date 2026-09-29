@@ -369,11 +369,13 @@ export type Database = {
           customer_name: string | null;
           customer_phone: string | null;
           id: string;
+          idempotency_key: string | null;
           net_total: number | null;
           notes: string | null;
           order_number: string;
           payment_provider: string | null;
           payment_reference: string | null;
+          recorded_by: string | null;
           shipping_address: Json;
           shipping_cost: number;
           source: string;
@@ -391,11 +393,13 @@ export type Database = {
           customer_name?: string | null;
           customer_phone?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           net_total?: number | null;
           notes?: string | null;
           order_number: string;
           payment_provider?: string | null;
           payment_reference?: string | null;
+          recorded_by?: string | null;
           shipping_address?: Json;
           shipping_cost?: number;
           source?: string;
@@ -413,11 +417,13 @@ export type Database = {
           customer_name?: string | null;
           customer_phone?: string | null;
           id?: string;
+          idempotency_key?: string | null;
           net_total?: number | null;
           notes?: string | null;
           order_number?: string;
           payment_provider?: string | null;
           payment_reference?: string | null;
+          recorded_by?: string | null;
           shipping_address?: Json;
           shipping_cost?: number;
           source?: string;
@@ -1117,6 +1123,10 @@ export type Database = {
         Args: { p_from: string; p_to: string };
         Returns: Json;
       };
+      management_finance_overview: {
+        Args: { p_from: string; p_to: string };
+        Returns: Json;
+      };
       management_inventory_list: {
         Args: {
           p_page?: number;
@@ -1132,7 +1142,7 @@ export type Database = {
       };
       publish_product: { Args: { p_product: string }; Returns: undefined };
       record_sale: {
-        Args: { p_customer: Json; p_items: Json };
+        Args: { p_customer: Json; p_items: Json; p_idempotency_key?: string | null };
         Returns: string;
       };
       record_stock_movement: {

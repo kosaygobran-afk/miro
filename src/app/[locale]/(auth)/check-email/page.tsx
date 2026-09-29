@@ -46,19 +46,21 @@ export default async function CheckEmailPage({
 
   return (
     <section className="miro-section min-h-[70vh] flex items-center justify-center">
-      <div className="miro-container max-w-md">
-        <CheckEmailClient
-          locale={locale}
-          email={email}
-          title={title}
-          subtitle={subtitle}
-          stepsInbox={stepsInbox}
-          stepsSpam={stepsSpam}
-          stepsClick={stepsClick}
-          resendLabel={resendLabel}
-          differentEmail={differentEmail}
-          backToLogin={backToLogin}
-        />
+      <div className="miro-container">
+        <div className="miro-auth-panel">
+          <CheckEmailClient
+            locale={locale}
+            email={email}
+            title={title}
+            subtitle={subtitle}
+            stepsInbox={stepsInbox}
+            stepsSpam={stepsSpam}
+            stepsClick={stepsClick}
+            resendLabel={resendLabel}
+            differentEmail={differentEmail}
+            backToLogin={backToLogin}
+          />
+        </div>
       </div>
     </section>
   );

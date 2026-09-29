@@ -35,10 +35,15 @@ export interface Product {
   stockQty: number;
   stockState: "in_stock" | "low" | "out";
   outOfStockPolicy:
+    | "keep_visible_contact"
+    | "keep_visible_restock"
+    | "hide_from_public";
+  rawOutOfStockPolicy?:
     | "inherit"
     | "keep_visible_contact"
     | "keep_visible_restock"
     | "hide_from_public";
+  trackingMode: "none" | "serial" | "lot";
   expectedRestockDate: string | null;
   slug: string;
   brand?: string;
@@ -104,6 +109,7 @@ function baseProduct(
     stockQty === 0 ? "out" : stockQty <= 5 ? "low" : "in_stock";
   const outOfStockPolicy =
     price === null ? "hide_from_public" : "keep_visible_contact";
+  const trackingMode: "none" | "serial" | "lot" = "none";
 
   return {
     id,
@@ -120,6 +126,8 @@ function baseProduct(
     stockQty,
     stockState,
     outOfStockPolicy,
+    rawOutOfStockPolicy: outOfStockPolicy,
+    trackingMode,
     expectedRestockDate: price === null ? "2026-11-15" : null,
     slug,
     brand: "MIRO",

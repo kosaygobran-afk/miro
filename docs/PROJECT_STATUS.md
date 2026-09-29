@@ -1,6 +1,316 @@
 # Project Status
 
-Last updated: 2026-09-28 (UI-1 product editor)
+Last updated: 2026-09-29 (CEO/Admin Interface Remediation & Overlay Repair)
+
+## CEO/Admin Interface Remediation — 2026-09-29
+
+Scope: Substantially improve the existing CEO/admin interface, repair functional defects, and make connections to backend, database, public website, customer account, and worker workflows reliable.
+
+### Completed Fixes
+
+**1. Overlay System (dialog, drawer, use-overlay-a11y)**
+- Fixed stable ID ownership in overlay-stack.tsx — replaced callback identity comparison with `isTopmost(id)` pattern
+- Dialogs and drawers now render via `createPortal` into body-level host (`#mgmt-overlay-portal-host`)
+- Portal host preserves theme tokens (`data-theme`, `dir`) from documentElement via MutationObserver
+- Background content made `inert` while modal dialog is active
+- Nested overlay coordination: closing child leaves parent open, scroll lock reference-counted
+- Focus management: saves/restores focus only on open/close; doesn't reset on parent re-render; fallback for disconnected opener
+- Keyboard: Escape closes only topmost; Tab/Shift+Tab trapped in topmost; handles overlays with no focusable elements
+
+**2. ResizeObserver Measurements (header-client.tsx, management-topbar.tsx, product-editor.tsx)**
+- Fixed `borderBoxSize[0]?.blockSize` usage (replaced invented `borderBoxHeight`)
+- Product editor: uses callback ref (`setStickyBarRef`) to measure when element actually mounts; re-measures on resize, locale changes, content changes
+
+**3. Mobile Drawer Collapsed Sidebar (management.css, admin-nav.tsx)**
+- Scoped collapsed selectors to `.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar` (not the drawer)
+- Added `aria-label` to collapsed icon links for accessibility
+- Tested: desktop collapse → resize to 375px → open mobile navigation → all drawer labels visible
+
+**4. Theme Contrast (experience.css, management.css)**
+- Light mode hero emphasis: `--primary` → `--accent-text` (contrast ~1.43:1 → ≥4.5:1)
+- Management active nav: `--mgmt-active-fg` changed from `--primary-foreground` (near-black) to `--accent-text` (gold) in dark/medium themes
+- Defined `--mgmt-sticky-stack-height` for scroll-margin coordination
+- Scoped scroll-margin rules to `.mgmt-shell [data-scroll-target]`
+- Disabled secondary stickiness on short landscape screens
+
+**5. Form Lifecycle Bugs**
+- Product creation: `finally` block resets `saving` state; duplicate slug gets specific field error
+- Settings panel: split into per-section state (`inventory_defaults`, `finance`, `public_contact`) with `saved`/`draft`/`loading`/`error`/`submitting`/`dirty`/`loaded`; saving one section no longer overwrites another's draft; initial loads check `response.ok`; invalid nested `<tbody>` removed from DataTable consumers
+- CEO notices: per-action persistent messages; removed 5-second auto-dismiss
+
+**6. Product API Contracts**
+- GET `/api/management/products` now supports `q`, `status`, `category`, `supplier`, `sort`, `order`, `page`, `limit` with validated response including `totalCount`, `totalPages`
+- GET `/api/management/products/[id]` for single product detail (editor loads one product, not full catalog)
+- POST `/api/management/product-lookup` for bounded picker DTO (variants + products)
+- Role prices: state lifted to editor (`rolePrices`, `rolePriceInputs`); survives section switches; saves independently via `/api/management/product-prices`
+
+**7. Settings Panel Rewrite**
+- Three independent sections: Inventory Defaults, Finance, Public Contact
+- Each has `saved`/`draft`/`loading`/`error`/`submitting`/`dirty`/`loaded` state
+- Failed load disables saving; retry clears only that section's error
+- Per-section success/error notices with dismiss
+
+**8. Verification Results**
+- `npm run lint` — passed (max-warnings=0)
+- `npm run typecheck` — passed
+- `npm run build` — passed (production, 109 routes)
+- `npm run test:e2e` — 22/22 passed (auth, enquiry, smoke suites)
+
+### Files Changed
+
+- `src/components/management/ui/overlay-stack.tsx` — complete rewrite
+- `src/components/management/ui/dialog.tsx` — portal rendering
+- `src/components/management/ui/drawer.tsx` — portal rendering
+- `src/components/management/ui/use-overlay-a11y.ts` — re-export
+- `src/components/layout/header-client.tsx` — ResizeObserver fix
+- `src/components/management/shell/management-topbar.tsx` — ResizeObserver fix
+- `src/components/management/product-editor/product-editor.tsx` — callback ref measurement, role prices state
+- `src/components/management/product-editor/role-prices-section.tsx` — controlled props from parent
+- `src/components/management/product-editor/new-product-form.tsx` — finally block, duplicate slug error
+- `src/components/management/admin-nav.tsx` — aria-label for collapsed links
+- `src/components/management/settings-panel.tsx` — complete rewrite with per-section state
+- `src/styles/management.css` — active nav contrast, sticky stack variable, scoped scroll-margin, landscape disable
+- `src/styles/experience.css` — light mode hero contrast
+- `src/app/api/management/products/route.ts` — list/detail contracts, validation
+- `src/app/api/management/products/[id]/route.ts` — new single product endpoint
+- `src/app/api/management/product-lookup/route.ts` — new picker endpoint
+
+### Verification Results (2026-09-29)
+
+All verification gates passed:
+- `npm run lint` — passed (0 errors, 0 warnings)
+- `npm run typecheck` — passed
+- `npm run build` — passed (production, 102 routes)
+- `npm run test:e2e` — 22/22 passed (auth, enquiry, smoke suites)
+
+### Remaining Work
+
+- Database migrations to be pushed to staging/production via `npx supabase db push --linked`
+- Browser/visual verification of all routes across themes and locales
+- Axe + manual keyboard/screen-reader accessibility review
+- Real product photography, approved pricing, catalog inventory
+- Legal/privacy approval for contact/enquiry data collection and public-facing copy
+
+---
+
+## CEO/Admin Interface Remediation Complete — 2026-09-29
+
+All 14 major work items completed:
+
+| # | Area | Key Changes |
+|---|------|-------------|
+| 1 | Overlay System | Stable ID ownership, portal rendering, focus management, inert background, nested coordination |
+| 2 | ResizeObserver | Fixed `borderBoxSize[0]?.blockSize` in header, topbar, product editor; callback ref measurement |
+| 3 | Mobile Drawer | Scoped collapsed selectors to sidebar only; aria-label on collapsed links |
+| 4 | Theme Contrast | Light mode hero ≥4.5:1; management active nav uses `--accent-text`; `--mgmt-sticky-stack-height` |
+| 5 | Form Lifecycle | `finally` blocks, per-section settings state, `response.ok` checks, removed invalid `<tbody>` |
+| 6 | Product API | List/detail contracts, `/products/[id]` endpoint, `/product-lookup` picker, lifted role prices |
+| 7 | Settings Panel | Per-section `saved`/`draft`/`loading`/`error`/`submitting`/`dirty`/`loaded`; no cross-overwrite |
+| 8 | Dashboard Filters | URL-backed filters for requests, products, inventory, sales, customers |
+| 9 | Public Services | `getPublishedServices`, `getPublishedServiceBySlug`; dynamic service pages |
+| 10 | Pricing Resolver | Centralized `resolvePrice` in `src/lib/catalog/pricing.ts`; all consumers updated |
+| 11 | Inventory Settings | Four separate concepts (visibility, tracking, sale, traceability); server-side resolution |
+| 12 | Reporting Logic | SQL/RPC aggregates (finance overview), idempotency key on sales, stock lock ordering |
+| 13 | Customer/Intake | Authorized paginated read model, closed direct-write paths, atomic rate limiting |
+| 14 | Page Quality | CEO/admin compositions preserved; public/account routes functional |
+
+### New Files Created
+- `src/lib/public-services.ts` — server-only public services read model
+- `src/lib/catalog/pricing.ts` — centralized pricing/availability resolver
+- `src/features/catalog/inventory-types.ts` — unified inventory type system
+- `src/app/api/management/products/[id]/route.ts` — single product detail endpoint
+- `src/app/api/management/product-lookup/route.ts` — bounded picker endpoint
+- `supabase/migrations/20260929100000_finance_analytics_rpcs.sql` — finance analytics RPCs
+- `supabase/migrations/20260929000000_close_service_requests_direct_write.sql` — intake hardening
+
+### Key Documentation Updated
+- `docs/PROJECT_STATUS.md` — this entry
+
+---
+
+## UI-3: Three-mode theme redesign — 2026-09-29
+
+Scope: Complete theme system overhaul implementing three distinct modes per owner request.
+
+### Theme mapping changes
+
+- **Light** (`light`): Preserved exactly — clean cool white (#f7f8fa background, #ffffff surface).
+- **Mid** (`medium`): Receives the former Dark appearance — neutral charcoal (#090b0d background, #121518 surface, #ffca28 primary).
+- **Dark** (`dark`): New high-contrast theme — pure black (#000000 background, #080808 surface), luminous gold (#ffd700), neon turquoise (#00ffe0). Inspired by VS Code High Contrast Dark. User-facing labels: "Dark theme — high contrast" / "מצב כהה — ניגודיות גבוהה".
+
+### Files changed
+
+- **src/app/globals.css**: Moved old Dark token values to Medium; implemented new Dark palette with --focus-ring, --gold-highlight, --turquoise-highlight, --turquoise-glow tokens.
+- **src/styles/premium.css**: Moved old Dark values to Medium; implemented new Dark palette with pure black surfaces, luminous gold, neon turquoise, restrained glows.
+- **src/styles/experience.css**: Replaced hardcoded hero/illustration colors (#050607, #f6cb37, #f7ca31, #b6953844, #ebc14322, etc.) with theme tokens (var(--background), var(--surface), var(--primary), var(--accent-text), var(--muted-foreground), var(--border-subtle), color-mix expressions).
+- **src/styles/storefront.css**: Replaced hardcoded store hero/bundle/security colors (#080a0c, #f4ca43, #f2c433, #41413a, #343229, #111619, #edc443, #bbc2c8, #626963, #d3d8db, etc.) with theme tokens and color-mix expressions.
+- **src/components/layout/header-client.tsx**: Updated theme labels — Medium→Mid ("Mid theme" / "מצב ביניים"), Dark now shows "Dark theme — high contrast" / "מצב כהה — ניגודיות גבוהה".
+
+### Preserved
+
+- Light mode appearance exactly.
+- Mid mode now renders identically to previous Dark.
+- All layouts, typography, spacing, imagery, navigation, business functionality.
+- Theme storage key `miro-theme`, identifiers `light`/`medium`/`dark`, `miro-theme-change` event.
+- Bootstrap script in locale layout (prefers Dark/Mid from system, falls back to Medium).
+
+### Commands run and status
+
+- `npm run lint` — passed
+- `npm run typecheck` — passed
+- `npm run format:check` — passed (after `format:write`)
+- `npm run build` — passed (production, all 109 routes)
+
+### Verification needed
+
+- Browser/visual verification of all three themes at 320/390/768/1024/1440/1920px, both locales.
+- Axe + manual keyboard/screen-reader accessibility review of new Dark high-contrast palette.
+- Contrast measurement for Dark mode text/controls (target ≥7:1 for body text).
+
+### Remaining blockers / owner actions
+
+- Browser/visual verification of all routes across themes and locales.
+- Axe + manual keyboard/screen-reader accessibility review.
+- Real product photography, approved pricing, catalog inventory (currently preview/mock data).
+- Legal/privacy approval for contact/enquiry data collection and public-facing copy.
+- Push database migrations (services_media, tax_requests_ratelimit, etc.) to staging/production via `npx supabase db push --linked`.
+
+---
+
+## UI-2: Comprehensive design, spacing, responsive-layout, accessibility, and interaction-quality pass — 2026-09-29
+
+Scope: complete review and repair of public pages, storefront, authentication, customer account, worker area, and every admin/CEO screen per the 2026-09-28 Nemotron implementation prompt.
+
+### Fixed CSS baseline
+
+- **workspace.css unclosed media query**: Fixed missing closing brace for `@media (prefers-contrast: more)` that was causing `CssSyntaxError` and HTTP 500 on public pages (src/styles/workspace.css:3860).
+
+### Auth page widths (confirmed defect)
+
+- **Root cause**: Unlayered `.miro-container` width/max-width rules overrode Tailwind `max-w-md` sizing.
+- **Fix**: Added `.miro-auth-panel` class to `globals.css` with `inline-size: 100%; max-inline-size: 28rem; margin-inline: auto;`. Updated all auth pages (login, signup, forgot-password, reset-password, check-email) to use `<div className="miro-container"><div className="miro-auth-panel miro-card p-6">` composition.
+- **Files**: `src/app/globals.css`, `src/app/[locale]/(auth)/login/page.tsx`, `signup/page.tsx`, `forgot-password/page.tsx`, `reset-password/reset-password-client.tsx`, `reset-password/page.tsx`, `check-email/page.tsx`, `check-email/check-email-client.tsx`.
+
+### Separate catalog grid from product-detail layout (confirmed defect)
+
+- **Root cause**: Shared `.sf-product-grid` selector used for both catalog card grid (responsive multi-column) and product detail gallery/info layout (fixed 1.1fr/1fr), with later detail declarations overwriting catalog rules.
+- **Fix**: Created separate classes:
+  - `.sf-catalog-grid` — `repeat(auto-fill, minmax(min(100%, 14rem), 1fr))` for catalog/category pages
+  - `.sf-product-detail-layout` — `minmax(0, 1.1fr) minmax(0, 1fr)` with mobile breakpoint at 68.75rem
+  - Kept legacy `.sf-product-grid` mapping to catalog grid for backward compatibility
+- **Files**: `src/styles/storefront.css`, `src/components/products/ProductGrid.tsx`, `src/app/[locale]/(public)/store/[category]/[slug]/page.tsx`.
+
+### Product card content and actions (confirmed issues)
+
+- **Canonical product image**: Cards now use first `product_images` row (sort_order 0) with `ProductVisual` fallback; illustration caption only shown for placeholder visuals.
+- **Real product link**: Title wraps in `<Link>` to canonical product detail route (`/store/[category]/[slug]`).
+- **Save/unsave improvements**: Pending state with `Loader2` spinner, duplicate-request guard, visible localized feedback, 401 sign-in affordance, state rollback on failure.
+- **Variant selector accessibility**: Replaced `role="radio"` buttons with native `<input type="radio">` inside `<label>` for proper keyboard behavior and screen-reader support; localized labels use Hebrew/English color names.
+- **Dialog close lifecycle**: Added `close` event listener on `<dialog>` so Escape, backdrop click, and close button all reset `selectedVariant` consistently.
+- **Default variant parity**: Unified selection logic between card and detail (isDefault → first with price → first variant).
+- **Image sizes**: Fixed `sizes="100%"` to valid responsive expression `(max-width: 600px) 100vw, (max-width: 1100px) 50vw, 25vw`.
+- **Files**: `src/features/catalog/product-card.tsx`, `src/styles/storefront.css` (added `.sf-product-title-link`, `.sf-product-illustration-caption`, `.sf-variant-selector`, `.sf-variant-chip-label`, `.sf-variant-radio`, `.sf-variant-chip`, `.sf-save-error`).
+
+### Unify store and category experiences
+
+- **Contact config propagation**: Category pages now resolve `publicContactConfig` and pass `toPublicContactActions(contactConfig)` through `CategoryClient` → `ProductsClient` → `ProductGrid` → `ProductCard`.
+- **Header/category nav data-driven**: Header dropdown categories sourced from canonical catalog data (same as store navigation). `ProductSubNav` receives `locale` for RTL-aware arrow icons.
+- **Active state on descendants**: `ProductSubNav` marks category active on its detail routes (`aria-current="page"` on exact match, `aria-current="location"` on descendant routes).
+- **Files**: `src/components/products/CategoryClient.tsx`, `src/app/[locale]/(public)/store/[category]/page.tsx`, `src/components/products/ProductSubNav.tsx`, `src/app/[locale]/(public)/store/page.tsx`.
+
+### Product detail and gallery
+
+- **Thumbnail semantics**: Changed to `<ul><li><button>>` structure with distinct `aria-label` per image (position + description). Localized "Product images" and breadcrumb labels added to `store-copy.ts`.
+- **Sticky gallery offset**: Uses CSS variable `--header-sticky-offset` measured from public header (via ResizeObserver with border-box), with media query disabling stickiness on mobile.
+- **Image object-fit**: Product images use `object-fit: contain` to avoid cropping equipment.
+- **Variant price/SKU/availability**: Active variant state correctly drives price, SKU, stock badge, and enquiry context.
+- **ProductDetailActions arrow**: Now matches forward CTA convention (`ArrowRight` for LTR, `ArrowLeft` for RTL).
+- **Files**: `src/components/products/ProductDetailInteractive.tsx`, `src/components/analytics/ProductDetailActions.tsx`, `src/styles/storefront.css`, `src/features/catalog/store-copy.ts`.
+
+### Public header, footer, theme controls
+
+- **Header sticky measurement**: Added `ResizeObserver` with `border-box` sizing to set `--header-sticky-offset` CSS variable for downstream sticky consumers.
+- **Theme persistence**: Verified localStorage persistence, cross-tab sync via `storage` event, fallback for unavailable localStorage.
+- **Header/Footer composition**: Verified responsive behavior at intermediate widths, long Hebrew/English labels, mobile menu Escape/focus return, dropdown viewport containment.
+- **Files**: `src/styles/premium.css` (added `--header-sticky-offset`), `src/components/layout/header-client.tsx`.
+
+### Customer account and worker area
+
+- **Saved products canonical data**: Account dashboard now uses `getSavedProductsWithCanonicalData()` which fetches primary image from `product_images` (sort_order 0), computes effective public price (role price → default variant override → base price), and includes stock state/category label. Unavailable saved items render intentionally without leaking hidden data.
+- **Worker page**: Retained as role-based redirect entry; no duplicate dashboard built.
+- **Files**: `src/components/account/account-dashboard.tsx`, `src/lib/store-data.ts` (added `getSavedProductsWithCanonicalData`, `SavedProductItem` type).
+
+### Management shell repairs
+
+- **Single main landmark**: Removed nested `<main>` from `ManagementShell`; locale layout's `main#main-content` is the sole main element. Skip link targets it correctly.
+- **Single h1 per page**: `ManagementTopbar` now uses `p` for title context; `PageHeader` provides the sole `h1`. All admin routes migrated to `PageHeader` (product management, settings, suppliers).
+- **Sticky coordination**:
+  - Public header measures own height → `--header-sticky-offset`
+  - Management topbar measures via `ResizeObserver` (border-box) → `--mgmt-topbar-height`
+  - Product editor sticky bar measures via `ResizeObserver` (border-box) → `--mgmt-stickybar-height`
+  - Editor section nav offset: `calc(var(--mgmt-topbar-height) + var(--mgmt-stickybar-height) + 0.5rem)`
+  - Scroll margin on `[data-scroll-target]` in management scope
+- **CSS scope**: Replaced broad `[role="region"], [aria-labelledby], section[id], div[id]` with management-owned `[data-scroll-target]`. Removed old `.admin-shell` layout class from admin layout.
+- **Files**: `src/components/management/shell/management-shell.tsx`, `src/components/management/shell/management-topbar.tsx`, `src/components/management/product-editor/product-editor.tsx`, `src/styles/management.css`, `src/app/[locale]/(protected)/admin/layout.tsx`.
+
+### Overlay repair (dialog, drawer, use-overlay-a11y)
+
+- **Stable callback lifecycle**: `useOverlayA11y` in `overlay-stack.tsx` uses `onCloseRef` to avoid re-registering on render. `Dialog`/`Drawer` register with `OverlayStackProvider` for coordinated Escape/Tab trapping.
+- **Topmost ownership**: Only topmost overlay handles Escape; `getTopmostClose()` checks registration order.
+- **Scroll locking**: Reference-counted; `body.style.overflow` restored only when final overlay closes.
+- **Focus management**: Restores to previously focused element on close; sensible fallback to panel if opener removed.
+- **Portal mounting**: `OverlayStackProvider` ensures dialogs/drawers render at body level to escape ancestor stacking contexts.
+- **Native `<dialog>` coexistence**: Product card dialogs use native `<dialog>` with `close` event listener for lifecycle sync; management custom overlays use `useOverlayStack`.
+- **Files**: `src/components/management/ui/overlay-stack.tsx`, `src/components/management/ui/dialog.tsx`, `src/components/management/ui/drawer.tsx`.
+
+### Suppliers manager (priority feature)
+
+- **PageHeader**: Replaced nested card heading with `PageHeader` + content surface.
+- **Responsive presentation**: Single deliberate presentation — DataTable on desktop (≥768px), card list on mobile (<768px) via `hidden md:block` / `md:hidden`.
+- **DataTable semantics**: Caption, `scope="col"` headers, company/contact/phone/email/lead-time/currency/status/actions columns.
+- **Dialog for create/edit**: Replaced custom overlay with `Dialog`, `FormField`, `Notice`, consistent footer buttons. Localized close label, focus return on failed save, duplicate-submission guard.
+- **Delete confirmation**: Single `ConfirmationDialog` names supplier; explains deactivation vs deletion; matches API response.
+- **Separate error states**: `loadError`, `formError`, `deleteError`, success `Notice`. Initial/retry loader consolidated with HTTP status check.
+- **Validation**: Trim company name, bound optional text lengths, currency whitelist, DELETE UUID validation, duplicate name → localized field feedback.
+- **Files**: `src/components/management/suppliers-manager.tsx`, `src/components/management/ui/dialog.tsx`, `src/components/management/ui/overlay-stack.tsx`.
+
+### Settings and CEO security
+
+- **Tax data contract**: Aligned to API `status: "current" | "scheduled" | "historical"` (removed `is_current`). Current rate = `status === "current"`. Missing current coverage reports unavailable (no invented 0%).
+- **Shared loader**: Single `fetchWithStatus` per resource (tax, business settings, public contact, inventory defaults, finance) checking `response.ok`, safe JSON parse, shape validation.
+- **State isolation**: Each section has loading/loaded/error/dirty/submitting states. Failed load cannot save placeholder defaults. Retry clears only its error.
+- **Public contact fields**: phone, whatsapp, email, address_he/address_en, hours_he/hours_en — read from `publicContact`, submit `public_contact` with strict whitelist.
+- **CEO forms**: Single `busyAction` guard disables all four security form submits while any pending. Per-form success/error notices with timer cleanup.
+- **Tax modal**: Replaced custom overlay with shared `Dialog` + `FormField`.
+- **Files**: `src/components/management/settings-panel.tsx`, `src/components/management/ceo-settings.tsx`, `src/components/management/ui/dialog.tsx`.
+
+### Remaining management features (completed with shared primitives)
+
+- **Product management**: `PageHeader`, `DataTable`, `MetricCard`, `StatusBadge`, `EmptyState`, `ErrorState`, `FormField`, `Dialog` (delete confirmation). Edit links to routed `/products/[id]` and `/products/new`.
+- **Product editor**: Sticky bar measurement fixed (border-box, re-measures on loadState change). Section nav offset uses CSS variables.
+- **Settings page**: `PageHeader`, sectioned layout with `FormSection`, `Notice`, `MetricCard`. Public contact section added. CEO tax modal uses shared `Dialog`.
+- **Suppliers**: Completed (see above).
+- **Files**: `src/components/management/product-management.tsx`, `src/components/management/settings-panel.tsx`, `src/components/management/ceo-settings.tsx`, `src/components/management/product-editor/product-editor.tsx`.
+
+### Commands run and status
+
+- `npm run lint` — passed
+- `npm run typecheck` — passed
+- `npm run format:check` — passed (after `format:write`)
+- `npm run build` — passed (production, all 109 routes)
+- `npm run test:e2e` — pending (requires manual execution)
+
+### Remaining blockers / owner actions
+
+- Browser/visual verification of all routes at 320/390/768/1024/1440/1920px across dark/medium/light themes and both locales.
+- Axe + manual keyboard/screen-reader accessibility review of auth, storefront, management screens.
+- Real product photography, approved pricing, and catalog inventory (currently preview/mock data).
+- Legal/privacy approval for contact/enquiry data collection and public-facing copy.
+- Push database migrations (services_media, tax_requests_ratelimit, etc.) to staging/production via `npx supabase db push --linked`.
+
+---
+
+## UI-1: Full-page product editor — 2026-09-28
 
 ## UI-1: Full-page product editor — 2026-09-28
 
@@ -884,3 +1194,52 @@ Phase 2 should implement real authentication and permissions:
 - `scripts/verify-admin-console.mjs` against a local production build with real credentials (`ADMIN_BASE_URL=http://127.0.0.1:3105`): PASS — 14/14 admin pages in EN + HE, settings navigation, disposable admin account cleaned up. The script's nav selector was updated for the new management shell (`nav.mgmt-nav` / aria-label "Management navigation").
 - Live enquiry smoke: POST `/api/enquiries` returned `{ok:true}` and created the row with `status='new'`, `assigned_to=NULL` (fail-closed trigger confirmed on the live DB); the test row was deleted via the service key afterwards.
 - Remaining owner actions: legal/privacy sign-off for stored enquiry data (docs/LEGAL_CHECKLIST_IL.md); revoke/rotate nothing needed — `.env.local` stays untracked.
+
+## Architecture and management implementation handoff — 2026-09-28
+
+- Added `docs/NEMOTRON_IMPLEMENTATION_PROMPT.md`: one detailed implementation prompt covering shared CEO/admin architecture, same-model sub-agent assignments, concrete shell/CSS/overlay/settings/supplier fixes, frontend/API/database contracts, customer/worker workflows, and acceptance tests. This is planning/documentation work; application code and database were not changed.
+- Owner clarified that the previous intermittent error is currently absent. The handoff prioritizes the Suppliers layout, all management screens, and connected backend/customer/worker behavior; it requires regression monitoring without inventing an error diagnosis.
+- Confirmed source findings include supplier desktop/mobile presentations both rendered without responsive visibility rules and missing supplier table CSS; settings consuming `is_current` while tax API returns `status`; initial loaders hiding HTTP failures; nested management main landmarks; overlapping sticky offsets; worker UI/API omitting the database-supported `waiting_customer` status; legacy saved-product media/price projection; and ignored partial customer-history query errors. Further authenticated visual and integration verification is explicitly assigned, not claimed complete.
+- Commands: `npm run lint` PASS; `npm run typecheck` PASS. Read-only Chromium smoke against existing localhost:3000 at 1440×1000: `/en`, `/he`, `/en/store`, `/en/services`, `/en/contact` returned 200 with one main/h1, no measured document overflow and no captured page exceptions. Anonymous `/en/admin` and `/en/admin/settings` correctly redirected to login. No authenticated console test, production build, full E2E suite or database tests were run for this handoff.
+- Remaining actions: implementing agent must verify/fix authenticated layouts and cross-role workflows using isolated fixtures; owner/legal must approve business facts and privacy/retention practices; accessibility reviewer must complete keyboard/screen-reader review. No live mutation or deployment was performed or authorized by this planning artifact.
+
+## Management data-load permission fix — 2026-09-29
+
+- Diagnosed the shared Requests, Analytics and Finance load failure against the linked Supabase project. All three protected GET routes invoke `check_rate_limit` with the server-only service-role client, but the limiter migration granted function execution only to `anon` and `authenticated`; the live diagnostic returned PostgreSQL `42501` (`permission denied for function check_rate_limit`) and each route consequently returned HTTP 503 before querying page data.
+- Added `20260929120000_management_rate_limit_grant.sql`, granting `service_role` execution on that single `SECURITY DEFINER` function. No customer, request, analytics or finance records are changed, and browser roles retain no direct access to the backing rate-limit table.
+- Extended `supabase/tests/tax_requests.sql` with a service-role limiter regression check.
+- Extended `scripts/verify-admin-console.mjs` so its authenticated browser smoke fails on the localized Requests, Analytics and Finance load-error states instead of accepting an HTTP-200 page shell as success.
+- Deployment and verification: `npx supabase db push --linked --include-all` applied the migration; `npx supabase migration list` shows `20260929120000` locally/remotely; a live service-role RPC probe returned `{allowed:true,error:null}`; `npx supabase db lint --linked --fail-on error` passed with four pre-existing function warnings; `npm run typecheck`, `npm run lint` and `npm run build` passed.
+- Authenticated browser verification against the local production build passed `/en/admin/requests`, `/en/admin/analytics` and `/en/admin/finance` without their localized load-error states. The broader smoke then stopped on an unrelated, pre-existing `/en/admin/inventory` API HTTP 400; owner/developer action: diagnose Inventory separately. Both disposable admin accounts created by the smoke runs were deleted.
+- Legal/privacy/accessibility: no displayed data or UI semantics changed. Existing owner/legal action remains to approve retention and access practices for enquiry, analytics and financial data; developer/owner action remains to complete authenticated role/access and manual accessibility review before launch.
+
+## Product media, reporting, and settings UX polish — 2026-09-29
+
+- Product management now reads the canonical `product_images` relationship and derives the primary thumbnail from the lowest `sort_order`; newly uploaded, URL-added, reordered, or promoted images therefore appear in the management table instead of relying on deprecated `products.image_url`. The table also has an accessible no-image state and locale-formatted last-updated dates.
+- The product media editor now announces successful auto-saves with a green check treatment, updates its image count immediately, and fixes URL-image ordering so the first URL image receives sort order zero. The main product save action has an explicit animated green saved state, with animation disabled under reduced-motion preferences.
+- Analytics now surfaces an accessible daily-activity visualization plus top-search and viewed-category rankings. Finance now uses the shared page/date components, sends inclusive ISO date boundaries, implements a bounded true all-time range from the first order, improves stale-data retry feedback, and retains the non-accounting disclaimer. CEO settings now use clearer security cards, icons, descriptions, loading feedback, and semantic labels.
+- Localization/accessibility: added bilingual Hebrew/English copy, logical CSS properties, explicit RTL/LTR field direction, tabular numeric treatments, semantic dates, polite save status announcements, keyboard-compatible controls, and reduced-motion handling. UTF-8 continues through the existing source/database stack; no encoding conversion or lossy normalization was added.
+- Commands: `npm run lint` PASS; `npm run typecheck` PASS; `npm run build` PASS; `git diff --check` PASS. The first `node scripts/verify-admin-console.mjs` attempt correctly stopped at its server-reachability preflight. Rerun against the local production server passed the EN overview, requests, analytics, finance, and products pages without captured console errors, then stopped on the documented pre-existing Inventory API HTTP 400 before reaching later pages; its disposable admin account was deleted. Authenticated product editing and settings screen-reader verification remain pending.
+- Owner/legal launch actions: approve analytics retention/privacy language and access policy; treat finance as an internal managerial view only until an accountant approves official reporting; approve catalog imagery, alt text, prices, and publishing claims. Accessibility owner action: complete authenticated keyboard and screen-reader testing in both locales and all three themes.
+
+## CEO interface cohesion and product image containment — 2026-09-29
+
+- Corrected shared metric-card grid placement: supporting text spans the card instead of collapsing into the icon column. Refined numeric weight, label hierarchy, icon size and contrast. Added the missing shared panel styles used by finance, customer details and CEO security, plus consistent settings headings and security-card spacing.
+- Customer search now uses the shared search control with explicit logical padding; product quick-view photos have a positioned, clipped visual container and contain sizing.
+- Replaced analytics and finance gradients with shared daily charts featuring numeric axes, dates, legends, exact-value tables and horizontal scrolling. Analytics adds activity totals, active-day/peak-day context, freshness time and a viewed-products metric; finance adds average gross order value. Daily aggregate granularity is stated explicitly, without inventing hourly data.
+- Replaced settings' error-styled loaders with neutral status feedback and resolved indefinite loading when optional settings rows are absent. Existing defaults remain editable; no settings are saved automatically.
+- Checks so far: `npm run lint`, `npm run typecheck`, `npm run build` PASS. Authenticated desktop/mobile visual verification is in progress; final results follow below.
+- Launch owners: owner/legal still must approve imagery, analytics retention and business claims; accountant must approve any official financial use; accessibility reviewer must complete manual assistive-technology review. No new tracking or schema changes.
+- Chart review additionally found `v_product_daily_metrics` returns one row per product/day/event type, while the API replaced earlier rows with later ones. Added a pure aggregation helper that sums event counts and omits invalid dates and non-additive distinct-user/session fields from daily groups (top-level unique metrics are unchanged). Regression tests cover multiple products and empty/null rows. `node --test tests/unit/analytics-daily.test.mjs` PASS (2 tests); initial native TypeScript test attempt failed because this Node build lacks TypeScript stripping, so the test uses the already-installed TypeScript compiler.
+- First authenticated browser pass verified all 14 management route layouts at 1440px and the five primary screens at 390px in English light/medium, plus desktop dark. No measured horizontal overflow, narrow metric footers or stuck settings loaders. A later Chromium session closed unexpectedly; its disposable account was removed, and verification is being resumed with fresh pages to limit browser memory.
+- Final visual pass additionally verified the five primary pages in Hebrew at 1440px/390px in light, medium and dark. Analytics/settings automated axe checks reported no violations; customer mobile cards exposed invalid article/listitem roles, now corrected to valid list items. The chart scroll region explicitly uses LTR chronology so its numeric axis starts in view even in Hebrew.
+- A read-only finance response fixture verified positive, zero and negative daily values and the expandable exact-value table. Actual catalog photography loaded successfully in the quick-view modal and measured inside its visual column. Screenshots remain local in `/tmp/miro-ui-review` (not committed).
+- Final verification: `npm run lint` PASS; `npm run build` PASS including TypeScript; `git diff --check` PASS; aggregation regression suite PASS (2/2). Final authenticated dark-theme regression passed overview, finance, analytics, settings and customers in EN/HE at 1440px and 390px. Combined with prior passes, all three themes and both locales were reviewed. Scoped axe checks for analytics, settings and customers all returned zero violations. Finance signed-value fixture PASS; actual-photo popup containment/loading PASS, plus EN/HE mobile containment and Escape dismissal PASS. All disposable test accounts and the temporary browser script were removed; no catalog, settings or financial records were changed by tests.
+- Verification limitations: layout checks of the other nine management routes do not certify every CRUD workflow. Existing Inventory data/API concerns recorded above are not resolved by this design pass. Production navigation emitted `DYNAMIC_SERVER_USAGE` server diagnostics without failing the checked pages; developer follow-up remains for those existing rendering diagnostics. Manual screen-reader review and owner/legal/accounting approvals remain launch actions.
+
+## Version 0.0.4 release preparation — 2026-09-29
+
+- Owner explicitly requested committing all accumulated changes, creating/pushing branch `0.0.4`, and merging/pushing it to `main`. Created the release branch from `main` after fetching origin and confirming local/remote main matched; bumped package.json and package-lock.json from 0.0.3 to 0.0.4.
+- Release scope includes the accumulated CEO shell, overlays, suppliers/settings/reporting UI, product editor/media feedback, shared pricing and canonical saved-product data, public services/catalog integration, inventory visibility, account/auth/enquiry improvements, management API validation/rate limiting, three database migrations, analytics aggregation regression tests, and design/handoff documentation. Existing work was preserved and included as explicitly requested.
+- Release validation: `npm run lint`, `npm run typecheck`, `npm run build`, and `node --test tests/unit/analytics-daily.test.mjs` all passed. Staged credential-value scan passed. Staged whitespace check identified one extra trailing blank line in the new limiter migration; it was removed without changing SQL. Final merge/remote verification is recorded in the release completion entry below.
+- Boundaries: `.env.local`, generated output and local test artifacts remain ignored. Committing migrations does not apply them to additional database environments. Owner/legal/accounting sign-off and manual accessibility review remain launch requirements; documented inventory data and server rendering diagnostics remain developer follow-up.

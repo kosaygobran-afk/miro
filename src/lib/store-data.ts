@@ -9,6 +9,12 @@ import type {
   ProductVariant,
   ProductImage,
 } from "@/features/catalog/product-data";
+import type {
+  InventoryDefaults,
+  TrackingMode,
+  OutOfStockPolicy,
+  ResolvedOutOfStockPolicy,
+} from "@/features/catalog/inventory-types";
 
 export type StoreCategory = {
   id: string;
@@ -28,6 +34,76 @@ export type StoreViewer = {
   role: UserRole;
   savedProductIds: string[];
 };
+
+/**
+ * Global inventory defaults fetched from business_settings.
+ * Cached for the request lifetime.
+ */
+let inventoryDefaultsCache: InventoryDefaults | null = null;
+
+async function getInventoryDefaults(): Promise<InventoryDefaults> {
+  if (inventoryDefaultsCache) return inventoryDefaultsCache;
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("business_settings")
+      .select("value")
+      .eq("key", "inventory_defaults")
+      .maybeSingle();
+    if (error || !data) {
+      inventoryDefaultsCache = {
+        low_stock_threshold: 3,
+        out_of_stock_policy: "keep_visible_contact",
+      };
+      return inventoryDefaultsCache;
+    }
+    const value = data.value as Record<string, unknown>;
+    inventoryDefaultsCache = {
+      low_stock_threshold:
+        typeof value.low_stock_threshold === "number"
+          ? Math.max(0, Math.floor(value.low_stock_threshold))
+          : 3,
+      out_of_stock_policy:
+        typeof value.out_of_stock_policy === "string" &&
+        ["keep_visible_contact", "keep_visible_restock", "hide_from_public"].includes(
+          value.out_of_stock_policy,
+        )
+          ? (value.out_of_stock_policy as ResolvedOutOfStockPolicy)
+          : "keep_visible_contact",
+    };
+    return inventoryDefaultsCache;
+  } catch {
+    inventoryDefaultsCache = {
+      low_stock_threshold: 3,
+      out_of_stock_policy: "keep_visible_contact",
+    };
+    return inventoryDefaultsCache;
+  }
+}
+
+function resolveOutOfStockPolicy(
+  policy: OutOfStockPolicy,
+  defaults: InventoryDefaults,
+): ResolvedOutOfStockPolicy {
+  if (policy === "inherit") return defaults.out_of_stock_policy;
+  return policy as ResolvedOutOfStockPolicy;
+}
+
+function computeStockState(
+  stockQty: number,
+  lowStockThreshold: number,
+): "in_stock" | "low" | "out" {
+  if (stockQty <= 0) return "out";
+  if (lowStockThreshold > 0 && stockQty <= lowStockThreshold) return "low";
+  return "in_stock";
+}
+
+function shouldHideFromPublic(
+  policy: ResolvedOutOfStockPolicy,
+  stockQty: number,
+): boolean {
+  return policy === "hide_from_public" && stockQty <= 0;
+}
 
 export async function getStoreViewer(): Promise<StoreViewer> {
   const empty: StoreViewer = { role: null, savedProductIds: [] };
@@ -136,26 +212,6 @@ function computeEffectivePrice(
   return productPrice;
 }
 
-function computeStockState(
-  stockQty: number,
-  variants: ProductVariant[],
-): "in_stock" | "low" | "out" {
-  if (stockQty <= 0) return "out";
-  const maxThreshold = Math.max(
-    0,
-    ...variants.map((v) => v.lowStockThreshold ?? 0),
-  );
-  if (maxThreshold > 0 && stockQty <= maxThreshold) return "low";
-  return "in_stock";
-}
-
-function shouldHideFromPublic(
-  policy: Product["outOfStockPolicy"],
-  stockQty: number,
-): boolean {
-  return policy === "hide_from_public" && stockQty <= 0;
-}
-
 export function getFallbackStoreCatalog(locale: "he" | "en"): StoreCatalog {
   if (process.env.NODE_ENV === "production") {
     return { categories: [], products: [] };
@@ -244,6 +300,9 @@ export async function getStoreCatalog(
   try {
     const supabase = await createServerSupabaseClient();
 
+    // Fetch inventory defaults first (needed for policy resolution)
+    const inventoryDefaults = await getInventoryDefaults();
+
     const [categoriesResult, productsResult, variantsResult, imagesResult] =
       await Promise.all([
         supabase
@@ -254,7 +313,7 @@ export async function getStoreCatalog(
         supabase
           .from("products")
           .select(
-            "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order",
+            "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order",
           )
           .eq("status", "active")
           .order("is_featured", { ascending: false })
@@ -360,8 +419,9 @@ export async function getStoreCatalog(
           (sum, v) => sum + v.stockQty,
           0,
         );
-        const policy = product.out_of_stock_policy ?? "inherit";
-        return !shouldHideFromPublic(policy, stockQty);
+        const rawPolicy = (product.out_of_stock_policy ?? "inherit") as OutOfStockPolicy;
+        const resolvedPolicy = resolveOutOfStockPolicy(rawPolicy, inventoryDefaults);
+        return !shouldHideFromPublic(resolvedPolicy, stockQty);
       })
       .map((product) => {
         const productVariants = variantsByProduct.get(product.id) ?? [];
@@ -377,9 +437,18 @@ export async function getStoreCatalog(
           (sum, v) => sum + v.stockQty,
           0,
         );
-        const stockState = computeStockState(stockQty, productVariants);
+        const maxThreshold = Math.max(
+          0,
+          ...productVariants.map((v) => v.lowStockThreshold ?? 0),
+        );
+        const stockState = computeStockState(stockQty, maxThreshold);
         const categorySlug = categoryMap.get(product.category_id) ?? "cameras";
         const categoryKey = getCategoryKeyFromSlug(categorySlug);
+
+        // Resolve inventory settings server-side
+        const rawPolicy = (product.out_of_stock_policy ?? "inherit") as OutOfStockPolicy;
+        const trackingMode = (product.tracking_mode ?? "none") as TrackingMode;
+        const resolvedPolicy = resolveOutOfStockPolicy(rawPolicy, inventoryDefaults);
 
         return {
           id: product.id as string,
@@ -422,7 +491,9 @@ export async function getStoreCatalog(
           variants: productVariants,
           stockQty,
           stockState,
-          outOfStockPolicy: product.out_of_stock_policy ?? "inherit",
+          outOfStockPolicy: resolvedPolicy, // Resolved, no "inherit"
+          rawOutOfStockPolicy: rawPolicy, // Original value for admin reference
+          trackingMode, // Expose tracking mode
           expectedRestockDate: product.expected_restock_date ?? null,
           slug: product.slug ?? product.id,
           brand: product.brand ?? undefined,
@@ -469,5 +540,172 @@ export async function getStoreCatalog(
   } catch (error) {
     console.error("Supabase catalog read failed.", error);
     return getFallbackStoreCatalog(locale);
+  }
+}
+
+export type SavedProductItem = {
+  productId: string;
+  savedAt: string;
+  name: string;
+  price: number | null;
+  imageUrl: string | null;
+  category: string;
+  categoryLabel: string | undefined;
+};
+
+/**
+ * Fetches saved products with canonical public-safe data (images from product_images,
+ * effective public pricing, stock state). Used by account dashboard.
+ */
+export async function getSavedProductsWithCanonicalData(
+  locale: "he" | "en",
+  userId: string,
+  role: UserRole = null,
+): Promise<SavedProductItem[]> {
+  try {
+    const supabase = await createServerSupabaseClient();
+
+    const { data: savedProducts, error } = await supabase
+      .from("saved_products")
+      .select("product_id, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+
+    if (error || !savedProducts?.length) return [];
+
+    const productIds = savedProducts.map((sp) => sp.product_id);
+
+    const [productsResult, imagesResult, variantsResult] = await Promise.all([
+      supabase
+        .from("products")
+        .select(
+          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order",
+        )
+        .in("id", productIds)
+        .eq("status", "active"),
+      supabase
+        .from("product_images")
+        .select("id, product_id, image_url, alt_he, alt_en, sort_order")
+        .in("product_id", productIds)
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("product_variants")
+        .select(
+          "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, is_default, is_active, stock_qty, low_stock_threshold",
+        )
+        .in("product_id", productIds)
+        .eq("is_active", true),
+    ]);
+
+    if (productsResult.error || imagesResult.error || variantsResult.error) {
+      return [];
+    }
+
+    const imagesByProduct = new Map<string, typeof imagesResult.data>();
+    for (const img of imagesResult.data ?? []) {
+      const list = imagesByProduct.get(img.product_id) ?? [];
+      list.push(img);
+      imagesByProduct.set(img.product_id, list);
+    }
+
+    const variantsByProduct = new Map<string, typeof variantsResult.data>();
+    for (const variant of variantsResult.data ?? []) {
+      const list = variantsByProduct.get(variant.product_id) ?? [];
+      list.push(variant);
+      variantsByProduct.set(variant.product_id, list);
+    }
+
+    const categoryResult = await supabase
+      .from("categories")
+      .select("id, slug, name_he, name_en, sort_order")
+      .eq("is_active", true);
+
+    const categoryMap = new Map(
+      (categoryResult.data ?? []).map((c) => [c.id, c]),
+    );
+
+    // Fetch role-based prices if role is provided
+    let rolePrices = new Map<string, number>();
+    if (role) {
+      const { data: pricesData } = await supabase
+        .from("product_prices")
+        .select("product_id, price")
+        .eq("role", role);
+
+      if (pricesData) {
+        rolePrices = new Map(
+          pricesData.map((p) => [p.product_id, Number(p.price)]),
+        );
+      }
+    }
+
+    const result: SavedProductItem[] = [];
+
+    for (const sp of savedProducts) {
+      const product = productsResult.data?.find((p) => p.id === sp.product_id);
+      if (!product) continue;
+
+      const productImages = imagesByProduct.get(product.id) ?? [];
+      const productVariants = variantsByProduct.get(product.id) ?? [];
+
+      // Get primary image (lowest sort_order)
+      const primaryImage = productImages[0] ?? null;
+
+      // Compute effective price
+      const productPrice =
+        product.price !== null && product.price !== undefined
+          ? Number(product.price)
+          : null;
+      const defaultVariant =
+        productVariants.find((v) => v.is_default) ??
+        productVariants.find(
+          (v) => v.price_override !== null && v.price_override !== undefined,
+        ) ??
+        productVariants[0] ??
+        null;
+      const variantPrice =
+        defaultVariant?.price_override !== null &&
+        defaultVariant?.price_override !== undefined
+          ? Number(defaultVariant.price_override)
+          : null;
+      const effectivePrice =
+        rolePrices.get(product.id) ?? variantPrice ?? productPrice;
+
+      const stockQty = productVariants.reduce(
+        (sum, v) => sum + (v.stock_qty ?? 0),
+        0,
+      );
+      const policy = product.out_of_stock_policy ?? "inherit";
+
+      // Skip if should be hidden from public
+      if (policy === "hide_from_public" && stockQty <= 0) {
+        continue;
+      }
+
+      const category = categoryMap.get(product.category_id);
+      const categorySlug = category?.slug ?? "cameras";
+      const categoryKey = getCategoryKeyFromSlug(categorySlug);
+      const categoryLabel =
+        (locale === "he" ? category?.name_he : category?.name_en) ??
+        categorySlug;
+
+      result.push({
+        productId: product.id,
+        savedAt: sp.created_at,
+        name:
+          locale === "he"
+            ? (product.name_he ?? product.name_en ?? "")
+            : (product.name_en ?? product.name_he ?? ""),
+        price: effectivePrice,
+        imageUrl: primaryImage?.image_url ?? product.image_url ?? null,
+        category: categoryKey,
+        categoryLabel,
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Failed to fetch saved products with canonical data.", error);
+    return [];
   }
 }

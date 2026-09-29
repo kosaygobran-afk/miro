@@ -118,7 +118,11 @@ export default async function ProductsPage({
         </div>
       </section>
 
-      <ProductSubNav categories={categories} ariaLabel={copy.category} />
+      <ProductSubNav
+        categories={categories}
+        locale={locale}
+        ariaLabel={copy.category}
+      />
 
       <section
         className="sf-collection-section"

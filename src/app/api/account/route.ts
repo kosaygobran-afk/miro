@@ -17,7 +17,13 @@ const input = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("updateRequest"),
     id: z.string().uuid(),
-    status: z.enum(["new", "in_progress", "closed", "spam"]),
+    status: z.enum([
+      "new",
+      "in_progress",
+      "waiting_customer",
+      "closed",
+      "spam",
+    ]),
     worker: z.string().uuid().nullable(),
   }),
 ]);

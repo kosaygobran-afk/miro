@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Loader2, Trash2 } from "lucide-react";
 import { FormField } from "../ui";
 import { editorCopy, priceCopy, roleLabels } from "./copy";
@@ -8,47 +7,42 @@ import {
   PRICE_ROLES,
   type Locale,
   type PriceRole,
-  type RolePrice,
 } from "./types";
 import styles from "./product-editor.module.css";
+
+export type RolePricesState = Partial<Record<PriceRole, number>>;
+export type RolePricesInputs = Record<PriceRole, string>;
+export type RolePricesInputsUpdater = (prev: RolePricesInputs) => RolePricesInputs;
 
 export function RolePricesSection({
   locale,
   productId,
-  initialPrices,
+  prices,
+  inputs,
+  onPricesChange,
+  onInputsChange,
+  savingRole,
+  setSavingRole,
+  errors,
+  setErrors,
 }: {
   locale: Locale;
   productId: string;
-  initialPrices: RolePrice[];
+  prices: RolePricesState;
+  inputs: RolePricesInputs;
+  onPricesChange: (prices: RolePricesState | ((prev: RolePricesState) => RolePricesState)) => void;
+  onInputsChange: (inputs: RolePricesInputs | RolePricesInputsUpdater) => void;
+  savingRole: PriceRole | null;
+  setSavingRole: (role: PriceRole | null) => void;
+  errors: Partial<Record<PriceRole, string>>;
+  setErrors: (errors: Partial<Record<PriceRole, string>> | ((prev: Partial<Record<PriceRole, string>>) => Partial<Record<PriceRole, string>>)) => void;
 }) {
-  const [prices, setPrices] = useState<Partial<Record<PriceRole, number>>>(
-    () => {
-      const map: Partial<Record<PriceRole, number>> = {};
-      for (const entry of initialPrices) {
-        if ((PRICE_ROLES as readonly string[]).includes(entry.role)) {
-          map[entry.role as PriceRole] = entry.price;
-        }
-      }
-      return map;
-    },
-  );
-  const [inputs, setInputs] = useState<Record<PriceRole, string>>(() => {
-    const map = {} as Record<PriceRole, string>;
-    for (const role of PRICE_ROLES) {
-      const price = initialPrices.find((p) => p.role === role);
-      map[role] = price ? String(price.price) : "";
-    }
-    return map;
-  });
-  const [savingRole, setSavingRole] = useState<PriceRole | null>(null);
-  const [errors, setErrors] = useState<Partial<Record<PriceRole, string>>>({});
-
   async function saveRolePrice(role: PriceRole) {
     if (savingRole) return;
     const raw = inputs[role].trim();
     const parsed = Number(raw);
     if (raw === "" || !Number.isFinite(parsed) || parsed <= 0) {
-      setErrors((prev) => ({
+      setErrors((prev: Partial<Record<PriceRole, string>>) => ({
         ...prev,
         [role]: priceCopy.priceMustBePositive[locale],
       }));
@@ -65,16 +59,16 @@ export function RolePricesSection({
         const err = (await response.json().catch(() => ({}))) as {
           error?: string;
         };
-        setErrors((prev) => ({
+        setErrors((prev: Partial<Record<PriceRole, string>>) => ({
           ...prev,
           [role]: err.error || priceCopy.saveFailed[locale],
         }));
         return;
       }
-      setPrices((prev) => ({ ...prev, [role]: parsed }));
-      setErrors((prev) => ({ ...prev, [role]: undefined }));
+      onPricesChange((prev: Partial<Record<PriceRole, number>>) => ({ ...prev, [role]: parsed }));
+      setErrors((prev: Partial<Record<PriceRole, string>>) => ({ ...prev, [role]: undefined }));
     } catch {
-      setErrors((prev) => ({ ...prev, [role]: priceCopy.saveFailed[locale] }));
+      setErrors((prev: Partial<Record<PriceRole, string>>) => ({ ...prev, [role]: priceCopy.saveFailed[locale] }));
     } finally {
       setSavingRole(null);
     }
@@ -89,17 +83,19 @@ export function RolePricesSection({
         { method: "DELETE" },
       );
       if (!response.ok) {
-        setErrors((prev) => ({
+        setErrors((prev: Partial<Record<PriceRole, string>>) => ({
           ...prev,
           [role]: priceCopy.removeFailed[locale],
         }));
         return;
       }
-      setPrices((prev) => ({ ...prev, [role]: undefined }));
-      setInputs((prev) => ({ ...prev, [role]: "" }));
-      setErrors((prev) => ({ ...prev, [role]: undefined }));
+      const nextPrices = { ...prices };
+      delete nextPrices[role];
+      onPricesChange(nextPrices);
+      onInputsChange((prev: Record<PriceRole, string>) => ({ ...prev, [role]: "" }));
+      setErrors((prev: Partial<Record<PriceRole, string>>) => ({ ...prev, [role]: undefined }));
     } catch {
-      setErrors((prev) => ({
+      setErrors((prev: Partial<Record<PriceRole, string>>) => ({
         ...prev,
         [role]: priceCopy.removeFailed[locale],
       }));
@@ -121,11 +117,14 @@ export function RolePricesSection({
               label={roleLabels[role][locale]}
               description={
                 prices[role] !== undefined
-                  ? new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
-                      style: "currency",
-                      currency: "ILS",
-                      maximumFractionDigits: 2,
-                    }).format(prices[role] as number)
+                  ? new Intl.NumberFormat(
+                      locale === "he" ? "he-IL" : "en-IL",
+                      {
+                        style: "currency",
+                        currency: "ILS",
+                        maximumFractionDigits: 2,
+                      },
+                    ).format(prices[role] as number)
                   : priceCopy.noPriceSet[locale]
               }
               error={errors[role]}
@@ -140,7 +139,7 @@ export function RolePricesSection({
                   step="0.01"
                   value={inputs[role]}
                   onChange={(e) =>
-                    setInputs((prev) => ({ ...prev, [role]: e.target.value }))
+                    onInputsChange((prev) => ({ ...prev, [role]: e.target.value }))
                   }
                   disabled={savingRole !== null}
                 />

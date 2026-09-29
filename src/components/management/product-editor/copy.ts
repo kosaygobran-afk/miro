@@ -19,6 +19,7 @@ export const editorCopy = {
   save: { he: "שמור", en: "Save" },
   saving: { he: "שומר...", en: "Saving..." },
   saved: { he: "השינויים נשמרו.", en: "Changes saved." },
+  savedButton: { he: "נשמר", en: "Saved" },
   noChanges: { he: "אין שינויים לשמירה.", en: "No changes to save." },
   saveFailed: { he: "שמירה נכשלה", en: "Save failed" },
   loadFailed: { he: "לא ניתן לטעון נתונים", en: "Failed to load data" },
@@ -190,6 +191,10 @@ export const validationCopy = {
     en: "Slug may contain lowercase letters, digits and hyphens only",
   },
   slugRequired: { he: "Slug הוא שדה חובה", en: "Slug is required" },
+  slugDuplicate: {
+    he: "מזהה זה כבר קיים. בחר מזהה אחר.",
+    en: "This slug already exists. Choose a different one.",
+  },
   priceMustBePositive: {
     he: "המחיר חייב להיות גדול מ-0",
     en: "Price must be greater than 0",
@@ -215,6 +220,7 @@ export const validationCopy = {
 export const mediaCopy = {
   title: { he: "תמונות מוצר", en: "Product images" },
   uploadLabel: { he: "העלאת תמונות", en: "Upload images" },
+  addByUrlLabel: { he: "הוסף מכתובת", en: "Add by URL" },
   uploadHint: {
     he: "PNG, JPG, WebP או SVG עד 5MB לקובץ. ניתן לבחור מספר קבצים.",
     en: "PNG, JPG, WebP or SVG up to 5 MB per file. Multiple files allowed.",
@@ -235,6 +241,10 @@ export const mediaCopy = {
     he: "התמונה תימחק מהמוצר ומהאחסון. לא ניתן לשחזר.",
     en: "The image will be removed from the product and storage. This cannot be undone.",
   },
+  deleteFailed: {
+    he: "מחיקת התמונה נכשלה. התמונה נשארה במקומה.",
+    en: "Failed to delete image. The image was kept.",
+  },
   altHe: { he: "טקסט חלופי (עברית)", en: "Alt text (Hebrew)" },
   altEn: { he: "טקסט חלופי (אנגלית)", en: "Alt text (English)" },
   altDialogTitle: { he: "טקסט חלופי לתמונה", en: "Image alt text" },
@@ -242,6 +252,33 @@ export const mediaCopy = {
   uploading: { he: "מעלה...", en: "Uploading..." },
   uploadFailed: { he: "העלאה נכשלה", en: "Upload failed" },
   imageOperationFailed: { he: "הפעולה נכשלה", en: "Operation failed" },
+  // URL upload
+  urlDialogTitle: { he: "הוסף תמונה מכתובת", en: "Add image by URL" },
+  urlLabel: { he: "כתובת תמונה (URL)", en: "Image URL" },
+  urlPlaceholder: {
+    he: "https://example.com/image.jpg",
+    en: "https://example.com/image.jpg",
+  },
+  urlHint: {
+    he: "הכתובת חייבת להיות HTTP או HTTPS.",
+    en: "URL must be HTTP or HTTPS.",
+  },
+  urlInvalid: {
+    he: "כתובת לא תקינה. נדרש HTTP או HTTPS.",
+    en: "Invalid URL. HTTP or HTTPS required.",
+  },
+  urlFetchFailed: {
+    he: "לא ניתן לטעון תצוגה מקדימה מהכתובת.",
+    en: "Could not load preview from URL.",
+  },
+  previewAlt: { he: "תצוגה מקדימה", en: "Preview" },
+  addButton: { he: "הוסף תמונה", en: "Add image" },
+  adding: { he: "מוסיף...", en: "Adding..." },
+  addFailed: { he: "הוספת תמונה נכשלה", en: "Failed to add image" },
+  autoSaved: {
+    he: "התמונה נשמרה ותופיע מיד ברשימת המוצרים ובחנות.",
+    en: "Image saved. It now appears in the product list and storefront.",
+  },
 } as const satisfies Record<string, LocalizedText>;
 
 export const variantCopy = {

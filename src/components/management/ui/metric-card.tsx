@@ -52,32 +52,34 @@ export function MetricCard({
         .join(" ")}
       aria-busy={loading || undefined}
     >
-      <div className="mgmt-metric-card__top">
-        <span className="mgmt-metric-card__label">{label}</span>
-        {icon ? (
-          <span className="mgmt-metric-card__icon" aria-hidden="true">
-            {icon}
-          </span>
-        ) : null}
-      </div>
-      {loading ? (
-        <div className="mgmt-metric-card__loading" aria-hidden="true">
-          <span className="mgmt-skeleton mgmt-skeleton--text mgmt-metric-card__skeleton-value" />
-          <span className="mgmt-skeleton mgmt-skeleton--text mgmt-metric-card__skeleton-delta" />
-        </div>
+      {icon ? (
+        <span className="mgmt-metric-card__icon" aria-hidden="true">
+          {icon}
+        </span>
       ) : (
-        <>
-          <div className="mgmt-metric-card__value">{value}</div>
-          {delta ? (
-            <div
-              className={`mgmt-metric-card__delta mgmt-metric-card__delta--${deltaTone}`}
-            >
-              <DeltaIcon size={14} aria-hidden="true" />
-              <span>{delta}</span>
-            </div>
-          ) : null}
-        </>
+        <span className="mgmt-metric-card__icon" aria-hidden="true" />
       )}
+      <div className="mgmt-metric-card__content">
+        {loading ? (
+          <>
+            <span className="mgmt-skeleton mgmt-skeleton--text mgmt-metric-card__skeleton-value" />
+            <span className="mgmt-skeleton mgmt-skeleton--text mgmt-metric-card__skeleton-delta" />
+          </>
+        ) : (
+          <>
+            <span className="mgmt-metric-card__label">{label}</span>
+            <div className="mgmt-metric-card__value">{value}</div>
+            {delta ? (
+              <div
+                className={`mgmt-metric-card__delta mgmt-metric-card__delta--${deltaTone}`}
+              >
+                <DeltaIcon size={14} aria-hidden="true" />
+                <span>{delta}</span>
+              </div>
+            ) : null}
+          </>
+        )}
+      </div>
       {footer ? <div className="mgmt-metric-card__footer">{footer}</div> : null}
     </article>
   );

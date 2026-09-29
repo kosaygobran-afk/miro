@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { serviceIcons } from "@/lib/service-content";
+import type { PublishedService } from "@/lib/public-services";
 
 // Editable presentation content. Confirm scope and wording with the business owner before launch.
 export const experienceCategories = {
@@ -98,23 +99,73 @@ export function DirectionArrow({
   return <Icon className={className} aria-hidden="true" />;
 }
 
+type ServiceItem = PublishedService | (typeof experienceCategories.he[number]);
+
+function getServiceName(service: ServiceItem, locale: Locale): string {
+  if ("name_he" in service) {
+    return locale === "he" ? service.name_he : service.name_en;
+  }
+  return service.title;
+}
+
+function getServiceDescription(
+  service: ServiceItem,
+  locale: Locale,
+  compact: boolean,
+): string {
+  if ("name_he" in service) {
+    const s = service as PublishedService;
+    if (compact) {
+      return locale === "he"
+        ? s.short_description_he ?? s.description_he ?? ""
+        : s.short_description_en ?? s.description_en ?? "";
+    }
+    return locale === "he"
+      ? s.description_he ?? s.short_description_he ?? ""
+      : s.description_en ?? s.short_description_en ?? "";
+  }
+  return compact ? service.description : service.detail;
+}
+
+function getServiceSlug(service: ServiceItem): string {
+  if ("slug" in service) {
+    return service.slug;
+  }
+  return service.id;
+}
+
+function getServiceCtaText(service: ServiceItem, locale: Locale): string | null {
+  if ("content" in service) {
+    const s = service as PublishedService;
+    return s.content?.cta
+      ? locale === "he"
+        ? s.content.cta.text_he
+        : s.content.cta.text_en
+      : null;
+  }
+  return service.tag;
+}
+
 export function ServiceCategoryGrid({
   locale,
   compact = false,
+  services,
 }: {
   locale: Locale;
   compact?: boolean;
+  services?: PublishedService[];
 }) {
+  const displayServices = services ?? experienceCategories[locale];
   return (
     <div
       className={`experience-category-grid${compact ? " experience-category-grid-compact" : ""}`}
     >
-      {experienceCategories[locale].map((category, index) => {
-        const Icon = serviceIcons[category.id] || LockKeyhole;
+      {displayServices.map((service, index) => {
+        const Icon = serviceIcons[getServiceSlug(service)] || LockKeyhole;
         return (
           <Link
-            href={withLocale(locale, `services/${category.id}`)}
-            key={category.id}
+            href={withLocale(locale, `services/${getServiceSlug(service)}`)}
+            key={getServiceSlug(service)}
             className="experience-category-card"
           >
             <div className="experience-category-top">
@@ -126,15 +177,15 @@ export function ServiceCategoryGrid({
               </span>
             </div>
             <div>
-              <h3>{category.title}</h3>
-              <p>{compact ? category.description : category.detail}</p>
+              <h3>{getServiceName(service, locale)}</h3>
+              <p>{getServiceDescription(service, locale, compact)}</p>
             </div>
             <span className="experience-card-link">
               {compact ? (
                 <DirectionArrow locale={locale} />
               ) : (
                 <>
-                  {category.tag}
+                  {getServiceCtaText(service, locale)}
                   <DirectionArrow locale={locale} />
                 </>
               )}

@@ -34,9 +34,54 @@ function sanitizeSearchTerm(q: string): string {
     .trim();
 }
 
+// Per-IP rate limiting for management read endpoints (tiered: 60/min, 300/hour)
+async function checkManagementReadRateLimit(
+  admin: ReturnType<typeof createAdminClient>,
+  ip: string,
+): Promise<"ok" | "limited" | "error"> {
+  const buckets = [
+    { key: `mgmt:read:ip:1m:${ip}`, limit: 60, window: "1 minute" },
+    { key: `mgmt:read:ip:1h:${ip}`, limit: 300, window: "1 hour" },
+  ] as const;
+  for (const bucket of buckets) {
+    const { data: allowed, error } = await admin.rpc("check_rate_limit", {
+      p_key: bucket.key,
+      p_limit: bucket.limit,
+      p_window: bucket.window,
+    });
+    if (error) {
+      console.error("check_rate_limit failed:", error.code, error.message);
+      return "error";
+    }
+    if (allowed !== true) return "limited";
+  }
+  return "ok";
+}
+
+function getClientIp(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
+}
+
 export async function GET(request: Request) {
   const auth = await withManagementAuth(request, "viewUsers");
   if (!auth.ok) return auth.response;
+
+  // Rate limit management read endpoints per IP
+  const rateLimit = await checkManagementReadRateLimit(auth.admin, getClientIp(request));
+  if (rateLimit === "error") {
+    return errorResponse("Unable to process request", 503);
+  }
+  if (rateLimit === "limited") {
+    return NextResponse.json(
+      { error: "Too many requests", code: "rate_limited" },
+      { status: 429 },
+    );
+  }
 
   const url = new URL(request.url);
   const rawQ = (url.searchParams.get("q") ?? "").trim().slice(0, 100);
@@ -46,13 +91,12 @@ export async function GET(request: Request) {
   const status = statuses.find((value) => value === statusParam);
   const { limit, offset } = parsePagination(url);
 
-  const client = await createServerSupabaseClient();
-  const admin = createAdminClient();
+  const { admin } = auth;
 
   // Role filtering happens through user_roles ids (no FK join across to auth).
   let roleIds: string[] | null = null;
   if (role) {
-    const { data, error } = await client
+    const { data, error } = await admin
       .from("user_roles")
       .select("user_id")
       .eq("role", role);
@@ -87,7 +131,7 @@ export async function GET(request: Request) {
       .map((user) => user.id);
   }
 
-  let query = client
+  let query = admin
     .from("profiles")
     .select("id, full_name, phone, account_status, created_at", {
       count: "exact",
@@ -130,7 +174,7 @@ export async function GET(request: Request) {
   const pageIds = page.map((profile) => profile.id);
   const { data: roleRows, error: rolesError } =
     pageIds.length > 0
-      ? await client
+      ? await admin
           .from("user_roles")
           .select("user_id, role")
           .in("user_id", pageIds)

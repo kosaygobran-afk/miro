@@ -11,19 +11,12 @@ import type {
 } from "@/features/catalog/product-data";
 import type { ProductVisualKind } from "@/features/catalog/product-visual-kind";
 import type { PublicContactActions } from "@/lib/contact-config";
-
-function formatPrice(
-  price: number | null,
-  locale: "he" | "en",
-  copy: StoreCopy,
-) {
-  if (price === null || price === undefined) return copy.priceUnpublished;
-  return new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
-    style: "currency",
-    currency: "ILS",
-    maximumFractionDigits: 0,
-  }).format(price);
-}
+import {
+  formatPrice,
+  getDefaultVariant,
+  resolvePrice,
+  type PricingInputs,
+} from "@/lib/catalog/pricing";
 
 interface ProductDetailInteractiveProps {
   productId: string;
@@ -63,17 +56,31 @@ export function ProductDetailInteractive({
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     null,
   );
-  const defaultVariant =
-    variants.find((v) => v.id === defaultVariantId) ??
-    variants.find((v) => v.price !== null) ??
-    variants[0] ??
-    null;
-  const activeVariant =
-    variants.find((v) => v.id === selectedVariantId) ?? defaultVariant;
-  const effectivePrice = activeVariant?.price ?? basePrice;
-  const displayPrice = formatPrice(effectivePrice, locale, copy);
-  const displaySku = activeVariant?.sku;
+
+  // Centralized default variant resolution
+  const defaultVariant = getDefaultVariant(variants, defaultVariantId);
+
+  // Centralized price resolution
+  const pricingInputs: PricingInputs = {
+    basePrice,
+    variants,
+    selectedVariantId,
+    defaultVariantId: defaultVariant?.id ?? null,
+    roleOverride: null, // Role override handled at catalog fetch level
+    variantOverride: null,
+  };
+  const priceResult = resolvePrice(pricingInputs);
+  const displayPrice = formatPrice(priceResult.effectivePrice, locale, copy.priceUnpublished);
+  const displaySku = priceResult.pricingVariant?.sku ?? defaultVariant?.sku;
   const activeImage = images[activeImageIndex];
+
+  // Generate distinct thumbnail names
+  const getThumbnailLabel = (index: number, image: ProductImage) => {
+    const position = index + 1;
+    const alt = locale === "he" ? image.altHe : image.altEn;
+    const description = alt ?? productName;
+    return `${copy.thumbnailLabel} ${position}: ${description}`;
+  };
 
   return (
     <>
@@ -92,6 +99,7 @@ export function ProductDetailInteractive({
               sizes="(max-width: 1200px) 100vw, 800px"
               priority
               className="sf-product-main-image"
+              style={{ objectFit: "contain" }}
             />
           ) : (
             <div className="sf-product-visual-placeholder" aria-hidden="true">
@@ -103,32 +111,29 @@ export function ProductDetailInteractive({
         {images.length > 1 && (
           <div
             className="sf-thumbnail-strip"
-            role="list"
-            aria-label="Product images"
+            aria-label={copy.productImagesLabel}
           >
-            {images.map((image, index) => (
-              <button
-                key={image.id}
-                type="button"
-                role="listitem"
-                className={`sf-thumbnail ${index === activeImageIndex ? "is-active" : ""}`}
-                aria-label={
-                  locale === "he"
-                    ? (image.altHe ?? productName)
-                    : (image.altEn ?? productName)
-                }
-                aria-current={index === activeImageIndex ? "true" : "false"}
-                onClick={() => setActiveImageIndex(index)}
-              >
-                <Image
-                  src={image.url}
-                  alt=""
-                  width={120}
-                  height={90}
-                  className="sf-thumbnail-image"
-                />
-              </button>
-            ))}
+            <ul className="sf-thumbnail-list" role="list">
+              {images.map((image, index) => (
+                <li key={image.id} className="sf-thumbnail-item">
+                  <button
+                    type="button"
+                    className={`sf-thumbnail ${index === activeImageIndex ? "is-active" : ""}`}
+                    aria-label={getThumbnailLabel(index, image)}
+                    aria-current={index === activeImageIndex ? "true" : "false"}
+                    onClick={() => setActiveImageIndex(index)}
+                  >
+                    <Image
+                      src={image.url}
+                      alt=""
+                      width={120}
+                      height={90}
+                      className="sf-thumbnail-image"
+                    />
+                  </button>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
@@ -139,7 +144,7 @@ export function ProductDetailInteractive({
         <div className="sf-product-price-block">
           <div className="sf-price-display" aria-live="polite">
             <strong dir="auto">{displayPrice}</strong>
-            {effectivePrice !== null && <span>{copy.demoPrice}</span>}
+            {priceResult.effectivePrice !== null && <span>{copy.demoPrice}</span>}
           </div>
           {displaySku && (
             <p className="sf-product-sku" dir="ltr">
@@ -163,7 +168,8 @@ export function ProductDetailInteractive({
               aria-label={copy.variants}
             >
               {variants.map((variant) => {
-                const isSelected = activeVariant?.id === variant.id;
+                const isSelected = selectedVariantId === variant.id;
+                const variantPrice = variant.price !== null ? formatPrice(variant.price, locale, copy.priceUnpublished) : null;
                 return (
                   <label key={variant.id} className="sf-variant-chip-label">
                     <input
@@ -187,9 +193,9 @@ export function ProductDetailInteractive({
                         {locale === "he" ? variant.colorHe : variant.colorEn}
                       </span>
                       {variant.price !== null &&
-                        variant.price !== effectivePrice && (
+                        variant.price !== priceResult.effectivePrice && (
                           <span className="sf-variant-price-diff">
-                            {formatPrice(variant.price, locale, copy)}
+                            {variantPrice}
                           </span>
                         )}
                     </span>
@@ -207,7 +213,7 @@ export function ProductDetailInteractive({
           productSlug={productSlug}
           productName={productName}
           locale={locale}
-          variantId={activeVariant?.id ?? null}
+          variantId={priceResult.pricingVariant?.id ?? defaultVariant?.id ?? null}
           contact={contact}
         />
 

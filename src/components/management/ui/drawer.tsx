@@ -2,7 +2,8 @@
 
 import { useId, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
-import { useOverlayA11y } from "./use-overlay-a11y";
+import { useOverlayA11y } from "./overlay-stack";
+import { createPortal } from "react-dom";
 
 export type DrawerProps = {
   open: boolean;
@@ -24,6 +25,7 @@ export type DrawerProps = {
  * RTL-aware side drawer. Focus moves inside on open and returns to the
  * trigger on close; Escape closes; background scroll is locked while open.
  * Mounting is deferred on first-open to avoid SSR/CSR markup drift.
+ * Renders via portal to body-level host.
  */
 export function Drawer({
   open,
@@ -41,11 +43,11 @@ export function Drawer({
     setHasOpened(true);
   }
 
-  useOverlayA11y({ open, onClose, panelRef });
+  useOverlayA11y({ open, onClose, panelRef, type: "drawer" });
 
   if (!hasOpened) return null;
 
-  return (
+  const drawerContent = (
     <div
       className={["mgmt-drawer-root", open ? "mgmt-drawer-root--open" : null]
         .filter(Boolean)
@@ -84,4 +86,7 @@ export function Drawer({
       </div>
     </div>
   );
+
+  const portalHost = document.getElementById("mgmt-overlay-portal-host");
+  return portalHost ? createPortal(drawerContent, portalHost) : drawerContent;
 }

@@ -30,7 +30,8 @@ export function ProductDetailActions({
   contact = null,
 }: ProductDetailActionsProps) {
   const copy = storeCopy[locale];
-  const Arrow = locale === "he" ? ArrowRight : ArrowLeft;
+  // Match other forward CTAs: ArrowRight for LTR (forward), ArrowLeft for RTL (forward)
+  const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
   const quoteParams = new URLSearchParams({
     product: productId,
     item: productSlug,

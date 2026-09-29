@@ -7,8 +7,11 @@ These rules supersede earlier sizing and placeholder notes below.
 - Active shared styles load in order: `src/app/globals.css`, `src/styles/premium.css`, `src/styles/experience.css`, `src/styles/storefront.css`. The last three separate shared brand/navigation, public editorial pages and catalog-specific presentation. Unrelated canvas styles remain unchanged.
 - Shared outer frame: 112rem maximum, 2rem desktop / 1rem phone gutters. Store and marketing pages use this full frame; reading panels stay around 58rem, and paragraph measures remain narrow inside wider sections.
 - Preserve Hebrew RTL and English LTR. Prefer logical spacing/positioning, mirrored directional arrows and localized accessible control names. All content stays available at 320px and in short landscape viewports.
-- Dark uses neutral charcoal (#090b0d background), light uses clean cool white (#f7f8fa), medium uses a distinct soft gray (#e4e7ea). Primary yellow is #ffca28 with dark text; gold text uses its own contrast-aware token.
-- Shared header uses a geometric MIRO brand, five main destinations, a button-operated category disclosure and direct dark/medium/light controls. The mobile menu and category disclosure support Escape/focus return. Search submits to localized Store and preserves its query.
+- **Theme mapping (2026-09-29)**: Three modes — `light`, `medium`, `dark`.
+  - **Light** (`light`): Clean cool white (#f7f8fa background). Preserved from previous Light.
+  - **Mid** (`medium`): Former Dark appearance — neutral charcoal (#090b0d background, #121518 surface). Primary yellow #ffca28 with dark text.
+  - **Dark** (`dark`): New high-contrast theme — pure black (#000000 background, #080808 surface), luminous gold (#ffd700), neon turquoise (#00ffe0). Inspired by VS Code High Contrast Dark. User-facing labels: "Dark theme — high contrast" / "מצב כהה — ניגודיות גבוהה".
+- Shared header uses a geometric MIRO brand, five main destinations, a button-operated category disclosure and direct dark/mid/light controls. The mobile menu and category disclosure support Escape/focus return. Search submits to localized Store and preserves its query.
 - Keep public content server-rendered; client islands are for navigation, theme, search/filter/sort and forms. Avoid extra runtime libraries, perpetual animation and hover-only features. Respect reduced-motion preference.
 - Use the existing local security studio image for premium photographic heroes; original SVG hardware illustrations are category concepts, not exact manufacturer product photography. Keep illustration/sample content disclosed. Do not add fabricated reviews, partner endorsements, customer counts, guaranteed support hours or delivery times.
 - Shared public sections live in `src/components/public/experience-sections.tsx`. Edit bilingual content at its source arrays; this structure is ready for later approved content integration, not an implemented CMS.
@@ -17,7 +20,60 @@ These rules supersede earlier sizing and placeholder notes below.
 
 ## Tokens
 
-Runtime source of truth: `src/app/globals.css`. Legacy files in `src/styles` are not the active palette.
+Runtime source of truth: `src/app/globals.css`. Files under `src/styles/` **are** the active palette for their respective layers (premium.css for header/footer, experience.css for editorial, storefront.css for catalog, workspace.css for management).
+
+## CSS Ownership & Spacing Contracts — 2026-09-29
+
+### Stylesheet responsibilities
+
+- **globals.css**: Foundational semantic tokens (colors, radii, shadows, spacing), base controls, `.miro-container`, `.miro-auth-panel`, `.miro-page-shell`, `.miro-page-panel`, `.miro-split-panel`, `.miro-contact-layout`, `.miro-visual-grid`, `.miro-visual-tile`, `.miro-rich-panel`, `.miro-stat-grid`, `.miro-feature-grid`, `.miro-steps-grid`, `.miro-card`, `.miro-button`, `.miro-input`, `.miro-site-header`, `.miro-brand-mark`, `.miro-nav-link`, `.miro-product-menu-link`, `.miro-icon-action`, `.miro-product-subnav-link`, `.miro-search-input`, `.miro-product-grid`, `.miro-desktop-action`, `.miro-hero`, `.miro-eyebrow`, `.miro-store-highlight-row`, `.miro-store-hero-section`, `.miro-store-package-band`, `.miro-store-trust-section`, `.miro-store-brand-row`, `.miro-store-category-hero`, `.miro-service-card`, `.miro-mini-grid`, `.miro-service-grid`, `.miro-heading`, `.miro-section-heading`, `.miro-business-inner`, `.miro-details-grid`, `.miro-contact-band`, `.miro-step-number`, `.glass-panel`, `.canvas-container`, `.canvas-scrollbar`, `.selection-highlight`, `.snap-line-active`, `.minimap-viewfinder`, `.active-tool-pill`, theme switch primitives, focus-visible base, reduced-motion/prefers-contrast media queries.
+- **premium.css**: Public header/footer chrome (`.premium-topbar`, `.premium-header`, `.premium-footer`, `.premium-brand`, `.premium-desktop-nav`, `.premium-nav-link`, `.premium-nav-disclosure`, `.premium-disclosure-button`, `.premium-dropdown`, `.premium-header-actions`, `.premium-icon-button`, `.premium-language`, `.premium-quote-action`, `.premium-theme-selector`, `.premium-header-search`, `.premium-mobile-search`, `.premium-mobile-toggle`, `.premium-mobile-navigation`, `.premium-mobile-shortcuts`, `.premium-footer-main`, `.premium-footer-brand`, `.premium-footer-column`, `.premium-footer-consult`, `.premium-footer-bottom`, `.premium-footer-legal`, `.premium-preview-label`, `.premium-account-menu`, `.premium-account-trigger`, `.premium-account-dropdown`, `.premium-account-header`, `.premium-account-avatar`, `.premium-account-info`, `.premium-account-primary-action`, `.premium-account-secondary-action`, `.premium-account-logout`). Theme tokens for three modes (dark/medium/light) including `--header-sticky-offset` for sticky coordination.
+- **experience.css**: Marketing/services/about/contact/legal editorial layouts.
+- **storefront.css**: Catalog and product-detail presentation (`.sf-storefront`, `.sf-hero`, `.sf-departments`, `.sf-collection-section`, `.sf-catalog-toolbar`, `.sf-search`, `.sf-sort`, `.sf-category-filters`, `.sf-catalog-summary`, **`.sf-catalog-grid`**, `.sf-product-card`, `.sf-product-media`, `.sf-product-body`, `.sf-product-actions`, `.sf-empty`, `.sf-load-more`, `.sf-preview-note`, `.sf-product-dialog`, `.sf-bundle-section`, `.sf-assurance-grid`, `.sf-guide-section`, `.sf-faq-section`, `.sf-category-hero`, `.sf-category-help`, **`.sf-product-detail-layout`**, `.sf-product-breadcrumb`, `.sf-breadcrumb`, `.sf-product-main`, `.sf-product-gallery`, `.sf-main-image`, `.sf-thumbnail-strip`, `.sf-thumbnail-list`, `.sf-thumbnail-item`, `.sf-thumbnail`, `.sf-product-info`, `.sf-product-price-block`, `.sf-price-display`, `.sf-variant-fieldset`, `.sf-variant-chips`, `.sf-variant-chip-label`, `.sf-variant-radio`, `.sf-variant-chip`, `.sf-variant-swatch`, `.sf-variant-sku`, `.sf-product-short-description`, `.sf-product-actions-detail`, `.sf-action-contact`, `.sf-action-secondary`, `.sf-action-link`, `.sf-product-disclaimer`, `.sf-product-specs`, `.sf-product-warranty`, `.sf-product-description-section`, `.sf-description-content`).
+- **management.css**: Management shell and shared management primitives (`.mgmt-shell`, `.mgmt-sidebar`, `.mgmt-topbar`, `.mgmt-nav`, `.mgmt-drawer`, `.mgmt-dialog`, `.mgmt-button`, `.mgmt-metric-card`, `.mgmt-table`, `.mgmt-status-badge`, `.mgmt-page-header`, `.mgmt-toolbar`, `.mgmt-empty-state`, `.mgmt-error-state`, `.mgmt-notice`, `.mgmt-skeleton`, `.mgmt-detail-panel`, `.mgmt-date-range`, `.mgmt-form-section`, responsive breakpoints at 1023px/767px/639px).
+- **workspace.css**: Legacy feature styling until deliberately migrated (overview-panel, inventory-manager, suppliers-manager, settings-panel, sales-panel, sales-history, customers-manager, finance-dashboard, analytics-dashboard, users-management tables/cards, admin-console-header).
+- **Feature CSS Modules** (e.g., `product-editor.module.css`): Feature-specific layouts only.
+
+### Spacing & sizing contract
+
+- Public wide frame: max-width 112rem (`--container-max` in globals.css).
+- Desktop page gutters: 2rem (via `.miro-container` padding-inline).
+- Phone gutters: 1rem (via `@media (max-width: 639px)` on `.miro-container`).
+- Reading content: ~58rem maximum (`.miro-page-panel-narrow`).
+- Paragraph measure: ~60–70ch (via `max-width: 58ch` on `.miro-split-copy p`, `.miro-contact-copy p`).
+- Auth form panel: 28rem maximum (`.miro-auth-panel`).
+- Card padding: 1rem phone, 1.5rem desktop (via `.miro-card` and responsive overrides).
+- Component gaps: 0.5rem, 0.75rem, 1rem, 1.5rem, 2rem (standardized across components).
+- Public section spacing: ~2.5rem phone, 4rem desktop (`--space-section`).
+- Management section spacing: ~1.5–2rem (via `.mgmt-shell__main` padding).
+- Primary controls: min-height 44px (`.miro-button`, `.mgmt-button`, `.premium-nav-link`, `.premium-disclosure-button`).
+- Avoid tiny functional text to force content into narrow cards; use `minmax(0, 1fr)` and `min-inline-size: 0` on flex/grid children that must shrink.
+
+### Sticky coordination contract
+
+- **Public header**: Measures own height via `ResizeObserver` (border-box) → sets `--header-sticky-offset` on `:root`.
+- **Product detail gallery**: `position: sticky; top: var(--header-sticky-offset, 120px)` with `@media (max-width: 68.75rem)` disabling stickiness.
+- **Management topbar**: `position: sticky; top: 0; z-index: 40`; measures height via `ResizeObserver` (border-box) → sets `--mgmt-topbar-height`.
+- **Product editor sticky bar**: `position: sticky; inset-block-start: var(--mgmt-topbar-height)`; measures height → sets `--mgmt-stickybar-height`.
+- **Editor section nav**: `inset-block-start: calc(var(--mgmt-topbar-height) + var(--mgmt-stickybar-height) + 0.5rem)`.
+- **Scroll margin**: `[data-scroll-target]` in management scope uses `--mgmt-sticky-stack-height` (topbar + stickybar + 1rem) for anchor clearance.
+- For short screens, reduce or disable secondary stickiness rather than letting stacked bars consume usable viewport.
+
+### Overlay contract
+
+- **Portal mounting**: Management dialogs/drawers render into body-level portal (via `OverlayStackProvider`) to escape ancestor stacking contexts.
+- **Topmost ownership**: Only topmost overlay handles Escape/Tab trapping; coordinated via `OverlayStack` context.
+- **Scroll locking**: Reference-counted; original `body.style.overflow` restored only when final overlay closes.
+- **Focus management**: Restores to connected opener element; sensible fallback (panel) if opener removed.
+- **Nested dialogs**: Parent remains active and scroll-locked when child closes.
+- **Native `<dialog>` coexistence**: Product card dialogs use native `<dialog>` with `close` event listener for lifecycle sync; management custom overlays use `useOverlayStack`.
+
+### Theme system
+
+- Three modes: `dark`, `medium`, `light` (defined in `premium.css` and `globals.css`).
+- Default bootstrap prefers `dark` or `medium` from system preference; honors stored `localStorage.miro-theme`.
+- Segmented switch control (D / M / L) in header.
+- `--header-sticky-offset` token added per theme for sticky coordination.
 
 ## Premium Refinement (2026-09-20)
 
@@ -67,3 +123,11 @@ The user supplied two MIRO reference images on 2026-09-20: a dark black/charcoal
 - Bright yellow actions and restrained teal secondary accents
 - Clear service/product cards
 - Practical conversion actions
+
+## CEO reporting and shared panels — 2026-09-29
+
+- Metric cards use named grid areas: content and trailing icon, followed by a full-width footer. Never allow supporting text to auto-place in the icon column. Use moderate label/numeric weights and contrast-aware accent text.
+- Use `mgmt-card` / `mgmt-card--padded` for bordered management panels and shared toolbar search classes for icon-safe RTL/LTR input padding.
+- Reporting charts use the shared `ActivityChart`: labeled axes and legends, scrollable dates, accessible exact-value tables, and honest aggregate granularity. Do not fabricate hourly detail from daily totals or represent zero as a positive bar.
+- Next Image `fill` requires a positioned media parent. Product popup images must remain contained in `.sf-dialog-visual`, without overlapping the copy column.
+- Missing optional settings rows must resolve to editable defaults; loading UI uses a neutral status, while failures use actual error feedback.

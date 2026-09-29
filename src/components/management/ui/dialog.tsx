@@ -2,7 +2,8 @@
 
 import { useId, useRef, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
-import { useOverlayA11y } from "./use-overlay-a11y";
+import { useOverlayA11y } from "./overlay-stack";
+import { createPortal } from "react-dom";
 
 export type DialogProps = {
   open: boolean;
@@ -22,6 +23,7 @@ export type DialogProps = {
 /**
  * Accessible modal dialog: role="dialog", aria-modal, labelledby/describedby,
  * focus trap, Escape to close and focus return on close.
+ * Renders via portal to body-level host.
  */
 export function Dialog({
   open,
@@ -42,11 +44,11 @@ export function Dialog({
     setHasOpened(true);
   }
 
-  useOverlayA11y({ open, onClose, panelRef });
+  useOverlayA11y({ open, onClose, panelRef, type: "dialog" });
 
   if (!hasOpened) return null;
 
-  return (
+  const dialogContent = (
     <div
       className={["mgmt-dialog-root", open ? "mgmt-dialog-root--open" : null]
         .filter(Boolean)
@@ -92,6 +94,9 @@ export function Dialog({
       </div>
     </div>
   );
+
+  const portalHost = document.getElementById("mgmt-overlay-portal-host");
+  return portalHost ? createPortal(dialogContent, portalHost) : dialogContent;
 }
 
 export type ConfirmationDialogProps = {

@@ -31,8 +31,8 @@ export default async function SignupPage({
 
   return (
     <section className="miro-section">
-      <div className="miro-container max-w-md">
-        <div className="miro-card p-6">
+      <div className="miro-container">
+        <div className="miro-auth-panel miro-card p-6">
           <p className="mb-3 text-sm font-black uppercase tracking-[0.24em] text-accent-text">
             {t("noticeTitle")}
           </p>

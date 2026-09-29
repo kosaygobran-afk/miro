@@ -232,7 +232,7 @@ export default async function ProductDetailPage({
         </section>
 
         <section className="sf-product-main" aria-labelledby="product-title">
-          <div className="miro-container sf-product-grid">
+          <div className="miro-container sf-product-detail-layout">
             <ProductDetailInteractive
               productId={product.id}
               productSlug={product.slug}
