@@ -11,6 +11,14 @@ Last updated: 2026-09-30 (Customer Cart, Checkout Request & Gallery Repair)
 - Publication plan: commit and push `0.0.5`, verify the remote branch SHA, merge it into current `origin/main` without rewriting history, push `main`, and verify remote ancestry/tree state. Final remote evidence will be recorded after publication.
 - Launch blockers remain owner-assigned: legal/privacy approval for checkout contact/address/cart retention; business approval for pricing, promotions, catalog media and delivery operations; database migration rollout for managed merchandising; and manual bilingual accessibility/device review.
 
+## Version 0.0.5 remote publication verified — 2026-09-30
+
+- Committed the complete 63-file release as `161dd35` (`release: ship 0.0.5 storefront commerce and merchandising`) and pushed it to the new remote branch `origin/0.0.5`. Direct `git ls-remote` verification matched the local and remote SHA exactly.
+- Fast-forwarded local `main` to current `origin/main`, then merged `0.0.5` with explicit merge commit `f61ce40`. The only merge conflict was overlapping handoff history in this file; resolution retained all unique records from both sides. The resulting application/release tree was byte-identical to `0.0.5` before this verification entry.
+- Pushed the merge without force and verified with a fresh fetch plus `git ls-remote`: remote `main` matched `f61ce40`, remote `0.0.5` matched `161dd35`, `origin/0.0.5` was an ancestor of `origin/main`, and the package version read directly from remote `main` was `0.0.5`.
+- Validation for the release tree passed: `npm run lint`, `npm run typecheck`, `git diff --check`, staged credential-value/file checks, and `npm run build`. Formatting removed trailing spaces from the new comprehensive Playwright test before commit.
+- This publication commits the migration source but does not apply it to a Supabase environment or deploy the application. Database rollout, legal/privacy/business approvals, catalog ownership review, and manual bilingual accessibility/device testing remain launch blockers with their previously assigned owners.
+
 ## Customer Cart, Checkout Request & Gallery Repair — 2026-09-30
 
 Scope: Let storefront customers collect products, review quantities, enter delivery details and send a checkout request, while repairing the product-detail main image/gallery behavior.
