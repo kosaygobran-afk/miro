@@ -2,6 +2,7 @@ import {
   BarChart3,
   Boxes,
   FolderTree,
+  GripHorizontal,
   Inbox,
   Landmark,
   LayoutDashboard,
@@ -34,7 +35,8 @@ export type MgmtNavItemKey =
   | "finance"
   | "users"
   | "audit"
-  | "settings";
+  | "settings"
+  | "storefrontMerchandising";
 
 export type MgmtNavItem = {
   key: MgmtNavItemKey;
@@ -122,6 +124,13 @@ export const mgmtNavSections: MgmtNavSection[] = [
         href: "/admin/customers",
         section: "commerce",
         icon: Users,
+        ceoOnly: false,
+      },
+      {
+        key: "storefrontMerchandising",
+        href: "/admin/storefront-merchandising",
+        section: "commerce",
+        icon: GripHorizontal,
         ceoOnly: false,
       },
     ],
@@ -214,6 +223,7 @@ const itemLabels: Record<MgmtNavItemKey, LocalizedText> = {
   users: { he: "משתמשים", en: "Users" },
   audit: { he: "יומן פעולות", en: "Audit" },
   settings: { he: "הגדרות", en: "Settings" },
+  storefrontMerchandising: { he: "מוצרים בבר הזז", en: "Moving product rail" },
 };
 
 const itemSubtitles: Record<MgmtNavItemKey, LocalizedText> = {
@@ -272,6 +282,10 @@ const itemSubtitles: Record<MgmtNavItemKey, LocalizedText> = {
   settings: {
     he: "הגדרות סביבת העבודה והעסק.",
     en: "Workspace and business settings.",
+  },
+  storefrontMerchandising: {
+    he: "בחירת המוצרים שיופיעו בפס המוצרים הזז בחנות, סדר ההצגה, מבצעים ומדבקות.",
+    en: "Choose products for the moving Store rail, their order, promotions and stickers.",
   },
 };
 

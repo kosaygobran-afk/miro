@@ -3,22 +3,62 @@ import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { hasSameOrigin } from "@/lib/request-origin";
 
-const SOURCE_VALUES = ["contact_page", "product_page", "store_page"] as const;
+const SOURCE_VALUES = [
+  "contact_page",
+  "product_page",
+  "store_page",
+  "checkout_page",
+] as const;
 
-const enquirySchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  email: z.string().trim().toLowerCase().email().max(254),
-  phone: z.string().trim().max(40).optional().or(z.literal("")),
-  message: z.string().trim().min(1).max(2000),
-  locale: z.enum(["he", "en"]),
-  source: z.enum(SOURCE_VALUES),
-  productId: z.string().uuid().optional(),
-  variantId: z.string().uuid().optional(),
-  // Honeypot: legitimate users never fill this hidden field.
-  company: z.string().max(200).optional(),
-  // Time-trap: ms epoch set when the form was rendered.
-  startedAt: z.number().int().positive().optional(),
+const checkoutCartItemSchema = z.object({
+  productId: z.string().min(1).max(100),
+  variantId: z.string().min(1).max(100).nullable(),
+  slug: z.string().min(1).max(200),
+  name: z.string().min(1).max(300),
+  unitPrice: z.number().finite().nonnegative(),
+  quantity: z.number().int().min(1).max(99),
 });
+
+const shippingSchema = z.object({
+  address: z.string().trim().min(1).max(240),
+  city: z.string().trim().min(1).max(120),
+  postalCode: z.string().trim().max(20),
+});
+
+const enquirySchema = z
+  .object({
+    name: z.string().trim().min(1).max(120),
+    email: z.string().trim().toLowerCase().email().max(254),
+    phone: z.string().trim().max(40).optional().or(z.literal("")),
+    message: z.string().trim().min(1).max(2000),
+    locale: z.enum(["he", "en"]),
+    source: z.enum(SOURCE_VALUES),
+    productId: z.string().uuid().optional(),
+    variantId: z.string().uuid().optional(),
+    // Honeypot: legitimate users never fill this hidden field.
+    company: z.string().max(200).optional(),
+    // Time-trap: ms epoch set when the form was rendered.
+    startedAt: z.number().int().positive().optional(),
+    cart: z.array(checkoutCartItemSchema).min(1).max(50).optional(),
+    shipping: shippingSchema.optional(),
+  })
+  .superRefine((data, context) => {
+    if (data.source !== "checkout_page") return;
+    if (!data.cart) {
+      context.addIssue({
+        code: "custom",
+        path: ["cart"],
+        message: "Cart required",
+      });
+    }
+    if (!data.shipping) {
+      context.addIssue({
+        code: "custom",
+        path: ["shipping"],
+        message: "Shipping required",
+      });
+    }
+  });
 
 const MIN_SUBMIT_MS = 2000;
 
@@ -114,7 +154,10 @@ export async function POST(request: NextRequest) {
 
   // Rate limit check BEFORE validation (matches original behavior)
   const ip = getClientIp(request);
-  const rateLimit = await checkRateLimits(await createServerSupabaseClient(), ip);
+  const rateLimit = await checkRateLimits(
+    await createServerSupabaseClient(),
+    ip,
+  );
   if (rateLimit === "error") {
     // Never silently allow unlimited submissions when the limiter is down.
     return failureResponse("unavailable", 503, locale);
@@ -150,18 +193,34 @@ export async function POST(request: NextRequest) {
 
     // Call the RPC for service request creation (enforces validation, audit)
     // Rate limiting already checked at API level; RPC provides defense in depth.
-    const { data: requestId, error } = await supabase.rpc("create_service_request", {
-      p_name: data.name,
-      p_email: data.email,
-      p_phone: phone,
-      p_message: data.message,
-      p_locale: data.locale,
-      p_source: data.source,
-      p_product_id: data.productId ?? null,
-      p_variant_id: data.variantId ?? null,
-      p_metadata: {},
-      p_rate_limit_key: rateLimitKey,
-    });
+    const { data: requestId, error } = await supabase.rpc(
+      "create_service_request",
+      {
+        p_name: data.name,
+        p_email: data.email,
+        p_phone: phone,
+        p_message: data.message,
+        p_locale: data.locale,
+        p_source: data.source,
+        p_product_id: data.productId ?? null,
+        p_variant_id: data.variantId ?? null,
+        p_metadata:
+          data.source === "checkout_page"
+            ? {
+                checkout: {
+                  cart: data.cart,
+                  shipping: data.shipping,
+                  estimated_subtotal: data.cart?.reduce(
+                    (total, item) => total + item.unitPrice * item.quantity,
+                    0,
+                  ),
+                  payment_collected: false,
+                },
+              }
+            : {},
+        p_rate_limit_key: rateLimitKey,
+      },
+    );
 
     if (error) {
       // Map RPC errors to user-facing codes
@@ -171,7 +230,11 @@ export async function POST(request: NextRequest) {
       if (error.code === "22023") {
         return failureResponse("invalid_input", 400, locale);
       }
-      console.error("create_service_request failed:", error.code, error.message);
+      console.error(
+        "create_service_request failed:",
+        error.code,
+        error.message,
+      );
       return failureResponse("unavailable", 503, locale);
     }
 

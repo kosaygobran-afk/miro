@@ -1,7 +1,6 @@
 "use client";
 
 import { ProductCard, type Product } from "@/features/catalog/product-card";
-import type { PublicContactActions } from "@/lib/contact-config";
 
 export function ProductGrid({
   products,
@@ -9,14 +8,12 @@ export function ProductGrid({
   emptyLabel = "No store items found.",
   locale = "en",
   savedProductIds = [],
-  contact = null,
 }: {
   products: Product[];
   actionLabel?: string;
   emptyLabel?: string;
   locale?: "he" | "en";
   savedProductIds?: string[];
-  contact?: PublicContactActions | null;
 }) {
   if (!products.length) return <p className="sf-empty">{emptyLabel}</p>;
   return (
@@ -28,7 +25,6 @@ export function ProductGrid({
           actionLabel={actionLabel}
           locale={locale}
           isSaved={savedProductIds.includes(product.id)}
-          contact={contact}
         />
       ))}
     </div>

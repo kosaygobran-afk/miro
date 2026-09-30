@@ -11,7 +11,7 @@
 
 ## 2026-09-27: Production hardening decisions
 
-- Enquiry-only commerce is confirmed as the launch model: there is intentionally no public checkout/cart; every storefront CTA leads to the enquiry flow (`/api/enquiries` → `service_requests`). POS sales are staff-recorded through the management console (`record_sale`), which now separates the customer account (`orders.user_id`) from the staff recorder (`orders.recorded_by`).
+- Public commerce now includes a browser-persisted cart and a checkout-request flow (`/api/enquiries` → `service_requests`). It intentionally does not collect payment, reserve stock, or write public orders; MIRO staff must confirm availability, shipping and the final total. POS sales remain staff-recorded through the management console (`record_sale`), which separates the customer account (`orders.user_id`) from the staff recorder (`orders.recorded_by`).
 - The mock/demo catalog fallback is gated to non-production (`NODE_ENV !== 'production'`). In production an unhealthy or empty database renders honest empty states rather than sample products/prices.
 - Admin (non-CEO) read access to the audit log and finance is intentional (transparency; both are read-only for admins). CEO-only status is reserved for mutations: user management, settings, and tax rates. Nav badges were aligned to this policy.
 - Line-level sale discounts are per-unit (`discount_per_unit`, bounded by the unit price), validated identically by the API schema and the DB function, so client and server totals match.

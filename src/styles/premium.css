@@ -300,6 +300,38 @@ body {
   background: var(--surface-muted);
   color: var(--foreground);
 }
+.premium-cart-link {
+  position: relative;
+  flex: 0 0 auto;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 82%, transparent);
+  background: color-mix(in srgb, var(--surface-muted) 76%, transparent);
+}
+.premium-cart-link:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--accent-text) 55%,
+    var(--border-subtle)
+  );
+  color: var(--accent-text);
+}
+.premium-cart-count {
+  position: absolute;
+  inset-block-start: -0.42rem;
+  inset-inline-end: -0.42rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding-inline: 0.22rem;
+  border: 2px solid var(--surface);
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
 .premium-language {
   font-size: 0.75rem;
   font-weight: 750;

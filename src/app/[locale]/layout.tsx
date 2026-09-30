@@ -10,6 +10,7 @@ import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { RecoveryRedirect } from "@/components/auth/recovery-redirect";
 import { SiteChrome } from "@/components/layout/site-chrome";
+import { CartProvider } from "@/features/cart/cart-context";
 import "@/styles/workspace.css";
 import {
   getDirection,
@@ -86,20 +87,22 @@ export default async function LocaleLayout({
         />
       </head>
       <body>
-        <RecoveryRedirect locale={locale} />
-        <a className="premium-skip-link" href="#main-content">
-          {locale === "he" ? "דילוג לתוכן הראשי" : "Skip to main content"}
-        </a>
-        <SiteChrome>
-          <Header locale={locale} />
-        </SiteChrome>
-        <main id="main-content" tabIndex={-1} className="miro-main">
-          {children}
-        </main>
-        <SiteChrome>
-          <Footer locale={locale} />
-        </SiteChrome>
-        {process.env.VERCEL ? <SpeedInsights /> : null}
+        <CartProvider>
+          <RecoveryRedirect locale={locale} />
+          <a className="premium-skip-link" href="#main-content">
+            {locale === "he" ? "דילוג לתוכן הראשי" : "Skip to main content"}
+          </a>
+          <SiteChrome>
+            <Header locale={locale} />
+          </SiteChrome>
+          <main id="main-content" tabIndex={-1} className="miro-main">
+            {children}
+          </main>
+          <SiteChrome>
+            <Footer locale={locale} />
+          </SiteChrome>
+          {process.env.VERCEL ? <SpeedInsights /> : null}
+        </CartProvider>
       </body>
     </html>
   );

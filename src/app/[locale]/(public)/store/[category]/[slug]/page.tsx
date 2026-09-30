@@ -236,12 +236,17 @@ export default async function ProductDetailPage({
             <ProductDetailInteractive
               productId={product.id}
               productSlug={product.slug}
+              productCategory={product.category}
               productName={product.name}
               locale={locale}
-              basePrice={product.priceIls}
+              basePrice={product.basePriceIls ?? product.priceIls}
               images={product.images}
               variants={product.variants}
               defaultVariantId={defaultVariant?.id ?? null}
+              roleOverride={product.rolePrice ?? null}
+              publicPromotion={product.publicPromotion ?? null}
+              compareAtPrice={product.compareAtPrice ?? null}
+              canAddToCart={product.stockState !== "out"}
               visualKind={getProductVisualKind(product)}
               contact={toPublicContactActions(contactConfig)}
               header={

@@ -9,6 +9,8 @@ import {
   Plus,
   RotateCcw,
   Trash2,
+  Upload,
+  X,
 } from "lucide-react";
 import {
   ConfirmationDialog,
@@ -23,7 +25,7 @@ import {
   StatusBadge,
   Toolbar,
 } from "../ui";
-import { VisualPicker, type VisualKind } from "../visual-picker";
+import { VisualKind } from "../visual-picker";
 import { categoriesCopy as copy } from "./copy";
 import styles from "./categories-manager.module.css";
 
@@ -36,6 +38,7 @@ type CategoryRow = {
   description_en: string | null;
   parent_id: string | null;
   image_url: string | null;
+  icon_image_url: string | null;
   sort_order: number;
   is_active: boolean;
   product_count: number;
@@ -67,13 +70,6 @@ const emptyForm: CategoryForm = {
   is_active: true,
 };
 
-// Categories only store an image URL (no visual_kind column); the picker is
-// limited to the uploaded kinds so the chosen kind drives the preview.
-const CATEGORY_VISUAL_KINDS: readonly VisualKind[] = [
-  "uploaded_image",
-  "uploaded_svg",
-];
-
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
 function toForm(row: CategoryRow): CategoryForm {
@@ -84,8 +80,8 @@ function toForm(row: CategoryRow): CategoryForm {
     description_he: row.description_he ?? "",
     description_en: row.description_en ?? "",
     parent_id: row.parent_id ?? "",
-    image_url: row.image_url ?? "",
-    visual_kind: row.image_url?.endsWith(".svg")
+    image_url: row.icon_image_url ?? "",
+    visual_kind: row.icon_image_url?.endsWith(".svg")
       ? "uploaded_svg"
       : "uploaded_image",
     sort_order: String(row.sort_order ?? 0),
@@ -148,6 +144,11 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
   const [pendingDelete, setPendingDelete] = useState<CategoryRow | null>(null);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
+
+  // Icon upload state
+  const [uploadingIcon, setUploadingIcon] = useState(false);
+  const [iconUploadError, setIconUploadError] = useState("");
+  const [iconUploadProgress, setIconUploadProgress] = useState(0);
 
   const [initialForm, setInitialForm] = useState<CategoryForm>(emptyForm);
   const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
@@ -303,6 +304,141 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleIconUpload(file: File) {
+    if (!editing) return;
+
+    setUploadingIcon(true);
+    setIconUploadError("");
+    setIconUploadProgress(0);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("category_id", editing.id);
+
+      // Use XMLHttpRequest to track progress
+      const response = await new Promise<Response>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+
+        xhr.upload.addEventListener("progress", (event) => {
+          if (event.lengthComputable) {
+            const progress = Math.round((event.loaded / event.total) * 100);
+            setIconUploadProgress(progress);
+          }
+        });
+
+        xhr.addEventListener("load", () => {
+          const response = new Response(xhr.response, {
+            status: xhr.status,
+            statusText: xhr.statusText,
+            headers: {
+              "Content-Type":
+                xhr.getResponseHeader("Content-Type") || "application/json",
+            },
+          });
+          resolve(response);
+        });
+
+        xhr.addEventListener("error", () => {
+          reject(new Error("Network error"));
+        });
+
+        xhr.open("POST", "/api/management/categories/icon");
+        xhr.send(formData);
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || copy.uploadFailed[locale]);
+      }
+
+      // Update the form with the new icon URL
+      setForm((prev) => ({ ...prev, image_url: data.iconUrl }));
+      setIconUploadProgress(100);
+      showNotice("success", copy.uploadSuccess[locale]);
+
+      // Refresh categories to update the table
+      await load();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : copy.uploadFailed[locale];
+      setIconUploadError(message);
+      showNotice("danger", message);
+    } finally {
+      setUploadingIcon(false);
+      // Reset progress after a short delay
+      setTimeout(() => setIconUploadProgress(0), 1000);
+    }
+  }
+
+  async function handleIconRemove() {
+    if (!editing) return;
+
+    setUploadingIcon(true);
+    setIconUploadError("");
+
+    try {
+      const response = await fetch("/api/management/categories/icon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category_id: editing.id, image_url: null }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || copy.uploadFailed[locale]);
+      }
+
+      // Update the form to clear the icon
+      setForm((prev) => ({ ...prev, image_url: "" }));
+      showNotice("success", copy.uploadSuccess[locale]);
+
+      // Refresh categories to update the table
+      await load();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : copy.uploadFailed[locale];
+      setIconUploadError(message);
+      showNotice("danger", message);
+    } finally {
+      setUploadingIcon(false);
+    }
+  }
+
+  async function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const allowedTypes = [
+      "image/svg+xml",
+      "image/png",
+      "image/webp",
+      "image/jpeg",
+      "image/jpg",
+      "image/avif",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      setIconUploadError(copy.uploadFailed[locale]);
+      showNotice("danger", copy.uploadFailed[locale]);
+      return;
+    }
+
+    // Validate file size (1MB)
+    const maxSize = 1024 * 1024; // 1MB
+    if (file.size > maxSize) {
+      setIconUploadError(copy.uploadFailed[locale]);
+      showNotice("danger", copy.uploadFailed[locale]);
+      return;
+    }
+
+    await handleIconUpload(file);
+    // Clear the input so the same file can be selected again
+    event.target.value = "";
   }
 
   async function setActive(row: CategoryRow, active: boolean) {
@@ -498,10 +634,10 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
             <tr key={row.id}>
               <td>
                 <span className={styles.visualCell} aria-hidden="true">
-                  {row.image_url ? (
+                  {row.icon_image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={row.image_url}
+                      src={row.icon_image_url}
                       alt=""
                       className={styles.visualThumb}
                     />
@@ -765,18 +901,94 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
             </FormField>
           </div>
 
-          <VisualPicker
-            id="category-visual-kind"
-            legend={copy.fieldVisual[locale]}
-            description={copy.fieldVisualHint[locale]}
-            locale={locale}
-            value={form.visual_kind}
-            onChange={(kind) => setField("visual_kind", kind)}
-            imageUrl={form.image_url.trim() || undefined}
-            allowedKinds={CATEGORY_VISUAL_KINDS}
-            disabled={saving}
-          />
+          <FormField
+            id="category-icon"
+            label={copy.fieldIcon[locale]}
+            description={copy.fieldIconHint[locale]}
+            error={iconUploadError}
+          >
+            {(control) => (
+              <div className={styles.iconUploadActions}>
+                {/* Current icon preview */}
+                <div className={styles.iconPreviewWrapper} aria-hidden="true">
+                  {form.image_url.trim() ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={form.image_url}
+                      alt={copy.iconPreviewAlt[locale]}
+                      className={styles.iconPreview}
+                    />
+                  ) : (
+                    <span className={styles.noIcon}>{copy.noIcon[locale]}</span>
+                  )}
+                </div>
 
+                {/* Upload button */}
+                <input
+                  type="file"
+                  id="category-icon-upload"
+                  className={styles.iconUploadInput}
+                  accept="image/svg+xml,image/png,image/webp,image/jpeg,image/avif"
+                  onChange={handleFileSelect}
+                  disabled={saving || uploadingIcon}
+                  aria-describedby="category-icon-upload-hint"
+                />
+                <label
+                  htmlFor="category-icon-upload"
+                  className={styles.iconUploadLabel}
+                  aria-disabled={saving || uploadingIcon}
+                >
+                  <Upload size={14} aria-hidden="true" />
+                  {uploadingIcon
+                    ? copy.uploading[locale]
+                    : copy.uploadIcon[locale]}
+                </label>
+
+                {/* Remove icon button */}
+                {form.image_url.trim() && (
+                  <button
+                    type="button"
+                    className={styles.removeIconButton}
+                    onClick={handleIconRemove}
+                    disabled={saving || uploadingIcon}
+                  >
+                    <X size={14} aria-hidden="true" />
+                    {copy.removeIcon[locale]}
+                  </button>
+                )}
+
+                {/* Upload progress */}
+                {uploadingIcon && iconUploadProgress > 0 && (
+                  <div
+                    className={styles.uploadProgress}
+                    role="progressbar"
+                    aria-valuenow={iconUploadProgress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-label={copy.uploading[locale]}
+                  >
+                    <div className={styles.uploadProgressBar}>
+                      <div
+                        className={styles.uploadProgressFill}
+                        style={{ width: `${iconUploadProgress}%` }}
+                      />
+                    </div>
+                    <span>{iconUploadProgress}%</span>
+                  </div>
+                )}
+
+                {/* Hidden input to sync with form state */}
+                <input
+                  {...control}
+                  type="hidden"
+                  value={form.image_url}
+                  onChange={(e) => setField("image_url", e.target.value)}
+                />
+              </div>
+            )}
+          </FormField>
+
+          {/* External URL field */}
           <FormField
             id="category-image-url"
             label={copy.fieldImageUrl[locale]}

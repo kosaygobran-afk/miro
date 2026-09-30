@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
+import Image from "next/image";
 import { isLocale, type Locale } from "@/lib/i18n";
 
 const categoryIcons: Record<string, typeof Camera> = {
@@ -37,7 +38,12 @@ export function ProductSubNav({
   locale,
   ariaLabel = "Store categories",
 }: {
-  categories: Array<{ key: string; href: string; label: string }>;
+  categories: Array<{
+    key: string;
+    href: string;
+    label: string;
+    imageUrl?: string | null;
+  }>;
   locale: Locale;
   ariaLabel?: string;
 }) {
@@ -67,12 +73,23 @@ export function ProductSubNav({
               aria-current={ariaCurrent}
               className="sf-department"
             >
-              <Icon
-                className="sf-department-icon"
-                size={25}
-                strokeWidth={1.5}
-                aria-hidden="true"
-              />
+              {category.imageUrl ? (
+                <Image
+                  src={category.imageUrl}
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="sf-department-image"
+                  aria-hidden="true"
+                />
+              ) : (
+                <Icon
+                  className="sf-department-icon"
+                  size={25}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
+              )}
               <span>{category.label}</span>
               <Arrow
                 className="sf-department-arrow"

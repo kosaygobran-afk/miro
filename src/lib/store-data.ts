@@ -8,6 +8,7 @@ import type {
   Product,
   ProductVariant,
   ProductImage,
+  PromoBadge,
 } from "@/features/catalog/product-data";
 import type {
   InventoryDefaults,
@@ -15,12 +16,14 @@ import type {
   OutOfStockPolicy,
   ResolvedOutOfStockPolicy,
 } from "@/features/catalog/inventory-types";
+import { resolvePrice, type PublicPromotion } from "@/lib/catalog/pricing";
 
 export type StoreCategory = {
   id: string;
   key: string;
   label: string;
   href: string;
+  imageUrl: string | null;
 };
 
 export type StoreCatalog = {
@@ -65,9 +68,11 @@ async function getInventoryDefaults(): Promise<InventoryDefaults> {
           : 3,
       out_of_stock_policy:
         typeof value.out_of_stock_policy === "string" &&
-        ["keep_visible_contact", "keep_visible_restock", "hide_from_public"].includes(
-          value.out_of_stock_policy,
-        )
+        [
+          "keep_visible_contact",
+          "keep_visible_restock",
+          "hide_from_public",
+        ].includes(value.out_of_stock_policy)
           ? (value.out_of_stock_policy as ResolvedOutOfStockPolicy)
           : "keep_visible_contact",
     };
@@ -196,22 +201,6 @@ function normalizePrice(
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }
 
-function computeEffectivePrice(
-  productPrice: number | null,
-  variants: ProductVariant[],
-): number | null {
-  const defaultVariant =
-    variants.find((v) => v.isDefault) ?? variants.find((v) => v.price !== null);
-  if (
-    defaultVariant &&
-    defaultVariant.price !== null &&
-    defaultVariant.price !== undefined
-  ) {
-    return defaultVariant.price;
-  }
-  return productPrice;
-}
-
 export function getFallbackStoreCatalog(locale: "he" | "en"): StoreCatalog {
   if (process.env.NODE_ENV === "production") {
     return { categories: [], products: [] };
@@ -222,8 +211,10 @@ export function getFallbackStoreCatalog(locale: "he" | "en"): StoreCatalog {
       key: category.key,
       label: categoryLabels[category.key]?.[locale] ?? category.label,
       href: `/store/${category.key}`,
+      imageUrl: null,
     })),
     products: mockProducts
+      .slice(0, 10)
       .filter(
         (product) =>
           !shouldHideFromPublic(product.outOfStockPolicy, product.stockQty),
@@ -246,7 +237,11 @@ export function getFallbackStoreCatalog(locale: "he" | "en"): StoreCatalog {
             : "Collection pick"
           : undefined,
         isFeatured: Boolean(product.badge),
+        railSortOrder: product.badge ? 0 : null,
         rolePrice: undefined,
+        promoBadges: [],
+        publicPromotion: null,
+        compareAtPrice: null,
       })),
   };
 }
@@ -303,33 +298,59 @@ export async function getStoreCatalog(
     // Fetch inventory defaults first (needed for policy resolution)
     const inventoryDefaults = await getInventoryDefaults();
 
-    const [categoriesResult, productsResult, variantsResult, imagesResult] =
-      await Promise.all([
-        supabase
-          .from("categories")
-          .select("id, slug, name_he, name_en, sort_order")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
-        supabase
-          .from("products")
-          .select(
-            "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order",
-          )
-          .eq("status", "active")
-          .order("is_featured", { ascending: false })
-          .order("sort_order", { ascending: true })
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("product_variants")
-          .select(
-            "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, is_default, is_active, stock_qty, low_stock_threshold",
-          )
-          .eq("is_active", true),
-        supabase
-          .from("product_images")
-          .select("id, product_id, image_url, alt_he, alt_en, sort_order")
-          .order("sort_order", { ascending: true }),
-      ]);
+    const [
+      categoriesResult,
+      categoryIconsResult,
+      productsResult,
+      variantsResult,
+      imagesResult,
+      badgesResult,
+      promotionsResult,
+      railItemsResult,
+    ] = await Promise.all([
+      supabase
+        .from("categories")
+        .select("id, slug, name_he, name_en, sort_order")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true }),
+      // Storefront merchandising is deployed independently of the core
+      // catalog. Keep this projection optional so an older database can still
+      // serve products while the additive migration is being rolled out.
+      supabase.from("categories").select("id, icon_image_url"),
+      supabase
+        .from("products")
+        .select(
+          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order",
+        )
+        .eq("status", "active")
+        .order("is_featured", { ascending: false })
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("product_variants")
+        .select(
+          "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, is_default, is_active, stock_qty, low_stock_threshold",
+        )
+        .eq("is_active", true),
+      supabase
+        .from("product_images")
+        .select("id, product_id, image_url, alt_he, alt_en, sort_order")
+        .order("sort_order", { ascending: true }),
+      supabase
+        .from("product_promo_badges")
+        .select(
+          "id, product_id, badge_type_id, priority, scheduled_from, scheduled_until, promo_badge_types(key, label_he, label_en, shape, tone, icon_name)",
+        ),
+      supabase
+        .from("product_public_promotions")
+        .select(
+          "id, product_id, promotion_type, value, compare_at_price, is_active, scheduled_from, scheduled_until",
+        ),
+      supabase
+        .from("storefront_rail_items")
+        .select("product_id, sort_order")
+        .order("sort_order", { ascending: true }),
+    ]);
 
     if (
       categoriesResult.error ||
@@ -380,6 +401,68 @@ export async function getStoreCatalog(
       imagesByProduct.set(image.product_id, list);
     }
 
+    // Build badge map by product_id
+    const badgesByProduct = new Map<string, PromoBadge[]>();
+    const now = new Date().toISOString();
+    for (const badge of badgesResult.data ?? []) {
+      const bt = (
+        badge.promo_badge_types as Array<{
+          key: string;
+          label_he: string;
+          label_en: string;
+          shape: "tag" | "burst" | "ticket" | "ribbon" | "hex";
+          tone: "sale" | "best" | "new" | "hot" | "limited";
+          icon_name: string | null;
+          is_active: boolean;
+        }>
+      )[0];
+
+      if (
+        bt &&
+        bt.is_active &&
+        (badge.scheduled_from === null || badge.scheduled_from <= now) &&
+        (badge.scheduled_until === null || badge.scheduled_until >= now)
+      ) {
+        const list = badgesByProduct.get(badge.product_id) ?? [];
+        list.push({
+          id: badge.id,
+          key: bt.key,
+          label: locale === "he" ? bt.label_he : bt.label_en,
+          shape: bt.shape,
+          tone: bt.tone,
+          iconName: bt.icon_name,
+        });
+        badgesByProduct.set(badge.product_id, list);
+      }
+    }
+    // Sort badges by priority (highest first)
+    for (const [, badges] of badgesByProduct) {
+      badges.sort((a, b) => {
+        const aBadge = (badgesResult.data ?? []).find((bd) => bd.id === a.id);
+        const bBadge = (badgesResult.data ?? []).find((bd) => bd.id === b.id);
+        return (bBadge?.priority ?? 0) - (aBadge?.priority ?? 0);
+      });
+    }
+
+    // Build promotion map by product_id
+    const promotionsByProduct = new Map<string, PublicPromotion | null>();
+    for (const promo of promotionsResult.data ?? []) {
+      if (
+        promo.is_active &&
+        (promo.scheduled_from === null || promo.scheduled_from <= now) &&
+        (promo.scheduled_until === null || promo.scheduled_until >= now)
+      ) {
+        promotionsByProduct.set(promo.product_id, {
+          type: promo.promotion_type as "percent" | "fixed",
+          value: Number(promo.value),
+          compareAtPrice:
+            promo.compare_at_price !== null
+              ? Number(promo.compare_at_price)
+              : null,
+        });
+      }
+    }
+
     // Fetch role-based prices if role is provided
     let rolePrices: Map<string, number> = new Map();
     if (role) {
@@ -395,6 +478,11 @@ export async function getStoreCatalog(
       }
     }
 
+    const categoryIconById = new Map(
+      (categoryIconsResult.error ? [] : (categoryIconsResult.data ?? [])).map(
+        (category) => [category.id, category.icon_image_url],
+      ),
+    );
     const categories = (categoriesResult.data ?? []).map((category) => {
       const key = getCategoryKeyFromSlug(category.slug as string);
       return {
@@ -405,12 +493,20 @@ export async function getStoreCatalog(
           category as { slug: string; name_he: string; name_en: string },
         ),
         href: `/store/${key}`,
+        imageUrl: categoryIconById.get(category.id) ?? null,
       };
     });
 
     const categoryMap = new Map(
       (categoriesResult.data ?? []).map((c) => [c.id, c.slug]),
     );
+    const railOrderByProduct = new Map(
+      (railItemsResult.data ?? []).map((item) => [
+        item.product_id,
+        item.sort_order ?? 0,
+      ]),
+    );
+    const managedRailAvailable = !railItemsResult.error;
 
     const products = (productsResult.data ?? [])
       .filter((product) => {
@@ -419,20 +515,36 @@ export async function getStoreCatalog(
           (sum, v) => sum + v.stockQty,
           0,
         );
-        const rawPolicy = (product.out_of_stock_policy ?? "inherit") as OutOfStockPolicy;
-        const resolvedPolicy = resolveOutOfStockPolicy(rawPolicy, inventoryDefaults);
+        const rawPolicy = (product.out_of_stock_policy ??
+          "inherit") as OutOfStockPolicy;
+        const resolvedPolicy = resolveOutOfStockPolicy(
+          rawPolicy,
+          inventoryDefaults,
+        );
         return !shouldHideFromPublic(resolvedPolicy, stockQty);
       })
       .map((product) => {
         const productVariants = variantsByProduct.get(product.id) ?? [];
         const productImages = imagesByProduct.get(product.id) ?? [];
+        const legacyImageUrl = product.image_url?.trim() || null;
+        const resolvedImages = [...productImages];
+        if (
+          legacyImageUrl &&
+          !resolvedImages.some((image) => image.url === legacyImageUrl)
+        ) {
+          resolvedImages.push({
+            id: `${product.id}-legacy-main`,
+            url: legacyImageUrl,
+            altHe: undefined,
+            altEn: undefined,
+            sortOrder:
+              resolvedImages.length > 0
+                ? Math.max(...resolvedImages.map((image) => image.sortOrder)) +
+                  1
+                : 0,
+          });
+        }
         const productPrice = normalizePrice(product.price);
-        const effectivePrice = computeEffectivePrice(
-          productPrice,
-          productVariants,
-        );
-        const rolePrice = rolePrices.get(product.id);
-        const finalPrice = rolePrice !== undefined ? rolePrice : effectivePrice;
         const stockQty = productVariants.reduce(
           (sum, v) => sum + v.stockQty,
           0,
@@ -446,9 +558,39 @@ export async function getStoreCatalog(
         const categoryKey = getCategoryKeyFromSlug(categorySlug);
 
         // Resolve inventory settings server-side
-        const rawPolicy = (product.out_of_stock_policy ?? "inherit") as OutOfStockPolicy;
+        const rawPolicy = (product.out_of_stock_policy ??
+          "inherit") as OutOfStockPolicy;
         const trackingMode = (product.tracking_mode ?? "none") as TrackingMode;
-        const resolvedPolicy = resolveOutOfStockPolicy(rawPolicy, inventoryDefaults);
+        const resolvedPolicy = resolveOutOfStockPolicy(
+          rawPolicy,
+          inventoryDefaults,
+        );
+
+        // Get role price if available
+        const rolePrice = rolePrices.get(product.id);
+
+        // Resolve pricing with public promotion
+        const publicPromotion = promotionsByProduct.get(product.id) ?? null;
+        const defaultVariant =
+          productVariants.find((v) => v.isDefault) ?? productVariants[0];
+        const defaultVariantId = defaultVariant?.id ?? null;
+
+        const pricingResult = resolvePrice({
+          basePrice: productPrice,
+          variants: productVariants,
+          selectedVariantId: null,
+          defaultVariantId,
+          roleOverride: rolePrice ?? null,
+          variantOverride: null,
+          publicPromotion,
+        });
+
+        const finalPrice = pricingResult.effectivePrice;
+        const compareAtPrice = pricingResult.compareAtPrice;
+        const hasPublicPromotion = pricingResult.publicPromotion !== null;
+
+        // Get promo badges for this product
+        const promoBadges = badgesByProduct.get(product.id) ?? [];
 
         return {
           id: product.id as string,
@@ -477,6 +619,7 @@ export async function getStoreCatalog(
                 product.short_description_he ??
                 undefined),
           priceIls: finalPrice,
+          basePriceIls: productPrice,
           category: categoryKey,
           categorySlug: categoryKey,
           categoryLabel: categories.find((c) => c.key === categoryKey)?.label,
@@ -487,6 +630,11 @@ export async function getStoreCatalog(
             : undefined,
           icon: getProductIcon(categoryKey),
           isFeatured: Boolean(product.is_featured),
+          railSortOrder:
+            railOrderByProduct.get(product.id) ??
+            (!managedRailAvailable && product.is_featured
+              ? (product.sort_order ?? 0)
+              : null),
           rolePrice: rolePrice,
           variants: productVariants,
           stockQty,
@@ -503,20 +651,7 @@ export async function getStoreCatalog(
             locale === "he"
               ? (product.warranty_he ?? product.warranty_en ?? undefined)
               : (product.warranty_en ?? product.warranty_he ?? undefined),
-          images:
-            productImages.length > 0
-              ? productImages
-              : product.image_url
-                ? [
-                    {
-                      id: `${product.id}-main`,
-                      url: product.image_url,
-                      altHe: undefined,
-                      altEn: undefined,
-                      sortOrder: 0,
-                    },
-                  ]
-                : [],
+          images: resolvedImages,
           seoTitle:
             locale === "he"
               ? (product.seo_title_he ?? product.seo_title_en ?? undefined)
@@ -529,6 +664,9 @@ export async function getStoreCatalog(
               : (product.seo_description_en ??
                 product.seo_description_he ??
                 undefined),
+          promoBadges,
+          publicPromotion: hasPublicPromotion ? publicPromotion : null,
+          compareAtPrice,
         };
       });
 

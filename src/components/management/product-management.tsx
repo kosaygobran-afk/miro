@@ -16,7 +16,7 @@ import {
   ImageIcon,
   CalendarDays,
 } from "lucide-react";
-import { PageHeader } from "./ui";
+import { ConfirmationDialog, PageHeader } from "./ui";
 
 type ProductVariant = {
   id: string;
@@ -145,12 +145,17 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const pendingDeleteProduct = products.find(
+    (product) => product.id === pendingDeleteId,
+  );
 
   const loadData = useCallback(async () => {
     setError("");
     try {
       const [productsRes, categoriesRes] = await Promise.all([
-        fetch("/api/management/products", { cache: "no-store" }),
+        fetch("/api/management/products?limit=100&sort=sort_order&order=asc", {
+          cache: "no-store",
+        }),
         fetch("/api/management/categories", { cache: "no-store" }),
       ]);
 
@@ -174,7 +179,10 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
     async function init() {
       try {
         const [productsRes, categoriesRes] = await Promise.all([
-          fetch("/api/management/products", { cache: "no-store" }),
+          fetch(
+            "/api/management/products?limit=100&sort=sort_order&order=asc",
+            { cache: "no-store" },
+          ),
           fetch("/api/management/categories", { cache: "no-store" }),
         ]);
         if (!ignore && productsRes.ok && categoriesRes.ok) {
@@ -401,6 +409,17 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                               ".svg",
                             )}
                           />
+                          <span
+                            className="product-management__image-count"
+                            aria-label={
+                              he
+                                ? `${product.product_images.length} תמונות`
+                                : `${product.product_images.length} images`
+                            }
+                          >
+                            <ImageIcon aria-hidden="true" />
+                            {product.product_images.length}
+                          </span>
                         </div>
                       ) : (
                         <span
@@ -473,122 +492,109 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                       </span>
                     </td>
                     <td className="p-4">
-                      <div className="flex flex-wrap gap-2">
+                      <div
+                        className="product-management__actions"
+                        role="group"
+                        aria-label={he ? "פעולות מוצר" : "Product actions"}
+                      >
                         <Link
                           href={`/${locale}/admin/products/${product.id}`}
-                          className="miro-button miro-button-secondary text-xs"
+                          className="product-management__action"
+                          aria-label={he ? "עריכה" : "Edit"}
+                          data-tooltip={he ? "עריכה" : "Edit"}
                         >
-                          <Edit className="me-1 h-3 w-3" />
-                          {he ? "עריכה" : "Edit"}
+                          <Edit aria-hidden="true" />
                         </Link>
                         {product.status === "active" ? (
                           <>
                             <button
-                              className="miro-button miro-button-secondary text-xs text-amber-600 hover:bg-amber-50"
+                              type="button"
+                              className="product-management__action product-management__action--warning"
                               onClick={() =>
                                 void handleStatusChange(product.id, "hidden")
                               }
                               disabled={saving}
+                              aria-label={he ? "הסתר" : "Hide"}
+                              data-tooltip={he ? "הסתר" : "Hide"}
                             >
-                              <EyeOff className="me-1 h-3 w-3" />
-                              {he ? "הסתר" : "Hide"}
+                              <EyeOff aria-hidden="true" />
                             </button>
                             <button
-                              className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
+                              type="button"
+                              className="product-management__action product-management__action--danger"
                               onClick={() =>
                                 void handleStatusChange(product.id, "archived")
                               }
                               disabled={saving}
+                              aria-label={he ? "ארכב" : "Archive"}
+                              data-tooltip={he ? "ארכב" : "Archive"}
                             >
-                              <Archive className="me-1 h-3 w-3" />
-                              {he ? "ארכב" : "Archive"}
+                              <Archive aria-hidden="true" />
                             </button>
                           </>
                         ) : product.status === "hidden" ? (
                           <>
                             <button
-                              className="miro-button miro-button-secondary text-xs"
+                              type="button"
+                              className="product-management__action"
                               onClick={() =>
                                 void handleStatusChange(product.id, "active")
                               }
                               disabled={saving}
+                              aria-label={he ? "פרסם" : "Publish"}
+                              data-tooltip={he ? "פרסם" : "Publish"}
                             >
-                              <Eye className="me-1 h-3 w-3" />
-                              {he ? "פרסם" : "Publish"}
+                              <Eye aria-hidden="true" />
                             </button>
                             <button
-                              className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
+                              type="button"
+                              className="product-management__action product-management__action--danger"
                               onClick={() =>
                                 void handleStatusChange(product.id, "archived")
                               }
                               disabled={saving}
+                              aria-label={he ? "ארכב" : "Archive"}
+                              data-tooltip={he ? "ארכב" : "Archive"}
                             >
-                              <Archive className="me-1 h-3 w-3" />
-                              {he ? "ארכב" : "Archive"}
+                              <Archive aria-hidden="true" />
                             </button>
                           </>
                         ) : product.status === "draft" ? (
                           <button
-                            className="miro-button miro-button-primary text-xs"
+                            type="button"
+                            className="product-management__action product-management__action--primary"
                             onClick={() =>
                               void handleStatusChange(product.id, "active")
                             }
                             disabled={saving}
+                            aria-label={he ? "פרסם" : "Publish"}
+                            data-tooltip={he ? "פרסם" : "Publish"}
                           >
-                            <Eye className="me-1 h-3 w-3" />
-                            {he ? "פרסם" : "Publish"}
+                            <Eye aria-hidden="true" />
                           </button>
                         ) : (
                           <button
-                            className="miro-button miro-button-secondary text-xs"
+                            type="button"
+                            className="product-management__action"
                             onClick={() =>
                               void handleStatusChange(product.id, "draft")
                             }
                             disabled={saving}
+                            aria-label={he ? "שחזר לטיוטה" : "Restore to draft"}
+                            data-tooltip={he ? "שחזר לטיוטה" : "Restore"}
                           >
-                            <RotateCcw className="me-1 h-3 w-3" />
-                            {he ? "שחזר לטיוטה" : "Restore to Draft"}
+                            <RotateCcw aria-hidden="true" />
                           </button>
                         )}
-                        {pendingDeleteId === product.id ? (
-                          <span
-                            className="inline-flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1"
-                            role="group"
-                            aria-label={
-                              he
-                                ? "אישור מחיקת מוצר"
-                                : "Confirm product deletion"
-                            }
-                            onKeyDown={(e) => {
-                              if (e.key === "Escape") setPendingDeleteId(null);
-                            }}
-                          >
-                            <span className="text-xs font-medium text-destructive">
-                              {he ? "למחוק את המוצר?" : "Delete this product?"}
-                            </span>
-                            <button
-                              className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
-                              ref={(el) => el?.focus()}
-                              onClick={() => deleteProduct(product.id)}
-                            >
-                              {he ? "אישור מחיקה" : "Confirm delete"}
-                            </button>
-                            <button
-                              className="miro-button miro-button-secondary text-xs"
-                              onClick={() => setPendingDeleteId(null)}
-                            >
-                              {he ? "ביטול" : "Cancel"}
-                            </button>
-                          </span>
-                        ) : (
-                          <button
-                            className="miro-button miro-button-secondary text-xs text-destructive hover:bg-destructive/10"
-                            onClick={() => setPendingDeleteId(product.id)}
-                          >
-                            <Trash2 className="me-1 h-3 w-3" />
-                            {he ? "מחיקה" : "Delete"}
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="product-management__action product-management__action--danger"
+                          onClick={() => setPendingDeleteId(product.id)}
+                          aria-label={he ? "מחיקה" : "Delete"}
+                          data-tooltip={he ? "מחיקה" : "Delete"}
+                        >
+                          <Trash2 aria-hidden="true" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -605,6 +611,27 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
           </div>
         )}
       </div>
+
+      <ConfirmationDialog
+        open={pendingDeleteId !== null}
+        onCancel={() => setPendingDeleteId(null)}
+        onConfirm={() => {
+          if (pendingDeleteId) void deleteProduct(pendingDeleteId);
+        }}
+        title={he ? "למחוק את המוצר?" : "Delete product?"}
+        description={
+          pendingDeleteProduct
+            ? he
+              ? `הפעולה תמחק את ${pendingDeleteProduct.name_he} ואת הקשרים שלו. לא ניתן לבטל אותה.`
+              : `This will delete ${pendingDeleteProduct.name_en} and its relationships. This cannot be undone.`
+            : he
+              ? "לא ניתן לבטל פעולה זו."
+              : "This action cannot be undone."
+        }
+        confirmLabel={he ? "אישור מחיקה" : "Delete product"}
+        cancelLabel={he ? "ביטול" : "Cancel"}
+        tone="danger"
+      />
     </div>
   );
 }

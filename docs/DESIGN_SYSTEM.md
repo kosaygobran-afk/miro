@@ -15,7 +15,7 @@ These rules supersede earlier sizing and placeholder notes below.
 - Keep public content server-rendered; client islands are for navigation, theme, search/filter/sort and forms. Avoid extra runtime libraries, perpetual animation and hover-only features. Respect reduced-motion preference.
 - Use the existing local security studio image for premium photographic heroes; original SVG hardware illustrations are category concepts, not exact manufacturer product photography. Keep illustration/sample content disclosed. Do not add fabricated reviews, partner endorsements, customer counts, guaranteed support hours or delivery times.
 - Shared public sections live in `src/components/public/experience-sections.tsx`. Edit bilingual content at its source arrays; this structure is ready for later approved content integration, not an implemented CMS.
-- Catalog actions are product inquiries, not a working checkout. Keep the contact preview honest about submission availability. Real commerce and lead delivery remain separate engineering work.
+- Catalog cards and product details expose consistent cart actions. The header cart leads to a review page and a checkout-request form; keep the UI explicit that payment, stock reservation and final delivery pricing are not yet online. Real payment commerce remains separate engineering work.
 - Run production smoke tests and `DESIGN_BASE_URL=http://127.0.0.1:<port> node scripts/verify-design.mjs`. The browser script exercises both locales, all three themes, five viewport widths, keyboard/menu/theme behavior, reduced motion and representative axe checks.
 
 ## Tokens

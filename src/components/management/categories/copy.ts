@@ -136,4 +136,22 @@ export const categoriesCopy = {
   },
   dirtyConfirmLeave: { he: "סגירה בלי שמירה", en: "Close without saving" },
   dirtyConfirmStay: { he: "המשך עריכה", en: "Keep editing" },
+
+  // Category icon upload
+  fieldIcon: { he: "אייקון הקטגוריה", en: "Category icon" },
+  fieldIconHint: {
+    he: "אייקון שקוף לקטגוריה. עדיף SVG, PNG או WebP. עבור PNG/WebP מומלץ 512×512 פיקסלים ביחס 1:1. גודל קובץ מרבי 1MB. השאר שוליים פנימיים כדי שהאייקון לא ייגע במסגרת.",
+    en: "Transparent category icon. SVG, PNG or WebP preferred. For PNG/WebP, 512×512 px at 1:1 is recommended. Maximum file size 1 MB. Keep internal padding so the icon does not touch the frame.",
+  },
+  uploadIcon: { he: "העלאת אייקון", en: "Upload icon" },
+  removeIcon: { he: "הסרת אייקון", en: "Remove icon" },
+  uploading: { he: "מעלה…", en: "Uploading…" },
+  uploadSuccess: {
+    he: "האייקון הועלה בהצלחה",
+    en: "Icon uploaded successfully",
+  },
+  uploadFailed: { he: "העלאת האייקון נכשלה", en: "Icon upload failed" },
+  noIcon: { he: "אין אייקון", en: "No icon" },
+  currentIcon: { he: "אייקון נוכחי", en: "Current icon" },
+  iconPreviewAlt: { he: "תצוגה מקדימה של האייקון", en: "Icon preview" },
 } satisfies Record<string, Record<LocaleCode, string>>;

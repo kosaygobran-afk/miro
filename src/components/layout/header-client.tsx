@@ -19,6 +19,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
 import { Brand } from "@/components/layout/brand";
 import { AccountMenu } from "@/components/layout/account-menu";
+import { HeaderCartLink } from "@/features/cart/header-cart-link";
 
 export type HeaderLabels = {
   logo: string;
@@ -336,6 +337,7 @@ export function HeaderClient({
           </nav>
           {searchForm("premium-header-search")}
           <div className="premium-header-actions">
+            <HeaderCartLink locale={locale} />
             <Link
               href={withLocale(locale, "contact")}
               className="miro-button miro-button-primary premium-quote-action"
