@@ -9,6 +9,10 @@ export const PRODUCT_MEDIA_BUCKET = "product-media";
 // Must match storage.buckets.file_size_limit for product-media (5 MB).
 export const PRODUCT_MEDIA_MAX_BYTES = 5 * 1024 * 1024;
 
+// Category icon upload: separate bucket/path, 1 MB max, owned path categories/<uuid>/<uuid>.<ext>
+export const CATEGORY_ICON_BUCKET = "product-media"; // Same bucket, different prefix
+export const CATEGORY_ICON_MAX_BYTES = 1 * 1024 * 1024;
+
 export type SniffedImageType = "jpeg" | "png" | "webp" | "avif" | "svg";
 
 export const IMAGE_MIME_BY_TYPE: Record<SniffedImageType, string> = {
@@ -168,11 +172,22 @@ export function sanitizeSvg(source: string): string {
 const SAFE_OBJECT_NAME =
   /^products\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z0-9][a-z0-9.-]*\.(?:jpe?g|png|webp|avif|svg)$/i;
 
+// Category icon objects live under categories/<uuid>/<uuid>.<ext>
+const CATEGORY_ICON_SAFE_OBJECT_NAME =
+  /^categories\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/[a-z0-9][a-z0-9.-]*\.(?:jpe?g|png|webp|avif|svg)$/i;
+
 export function buildStorageObjectName(
   productId: string,
   extension: string,
 ): string {
   return `products/${productId}/${crypto.randomUUID()}.${extension}`;
+}
+
+export function buildCategoryIconObjectName(
+  categoryId: string,
+  extension: string,
+): string {
+  return `categories/${categoryId}/${crypto.randomUUID()}.${extension}`;
 }
 
 export function parseOwnedStorageObjectName(
@@ -200,8 +215,34 @@ export function parseOwnedStorageObjectName(
   return null;
 }
 
+export function parseOwnedCategoryIconObjectName(
+  imageUrl: string,
+  supabaseUrl: string | undefined,
+): string | null {
+  if (CATEGORY_ICON_SAFE_OBJECT_NAME.test(imageUrl)) {
+    return imageUrl;
+  }
+  if (supabaseUrl) {
+    const prefix = `${supabaseUrl.replace(/\/+$/, "")}/storage/v1/object/public/${CATEGORY_ICON_BUCKET}/`;
+    if (imageUrl.startsWith(prefix)) {
+      const rawName = imageUrl.slice(prefix.length).split(/[?#]/)[0];
+      let name = rawName;
+      try {
+        name = decodeURIComponent(rawName);
+      } catch {
+        return null;
+      }
+      if (CATEGORY_ICON_SAFE_OBJECT_NAME.test(name)) {
+        return name;
+      }
+    }
+  }
+  return null;
+}
+
 export function isAcceptedImageReference(value: string): boolean {
   if (SAFE_OBJECT_NAME.test(value)) return true;
+  if (CATEGORY_ICON_SAFE_OBJECT_NAME.test(value)) return true;
   try {
     const url = new URL(value);
     return url.protocol === "https:" || url.protocol === "http:";

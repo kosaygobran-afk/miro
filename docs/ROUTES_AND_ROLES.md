@@ -7,6 +7,8 @@ Route groups in parentheses are organization only. They do not appear in URLs.
 - `/he` and `/en` - homepage
 - `/he/store` and `/en/store` - public store preview
 - `/he/store/[category]` and `/en/store/[category]` - store category preview
+- `/he/cart` and `/en/cart` - browser-persisted customer cart
+- `/he/checkout` and `/en/checkout` - delivery details and checkout request (no online payment or stock reservation)
 - `/he/services` and `/en/services` - services index
 - `/he/services/home` and `/en/services/home` - home services
 - `/he/services/business` and `/en/services/business` - business services
@@ -49,7 +51,7 @@ These routes require a verified server session and an active profile. Worker and
 
 | Audience | Entry                                        | Permissions                                                                       |
 | -------- | -------------------------------------------- | --------------------------------------------------------------------------------- |
-| Visitor  | No account needed                            | Browse public pages and submit enquiry only after real enquiry backend exists     |
+| Visitor  | No account needed                            | Browse, keep a local cart, and submit enquiries or checkout requests               |
 | Customer | Public signup and shared login               | Own profile and own service requests                                              |
 | Worker   | Shared login; CEO assigns role               | Assigned jobs and minimum required customer information                           |
 | Admin    | Shared login; CEO assigns role               | Catalog, inventory, sales recording, analytics, finance and user-list **viewing** |

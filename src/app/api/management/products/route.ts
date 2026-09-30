@@ -235,9 +235,25 @@ export async function GET(request: Request) {
   if (q) {
     const term = sanitizeSearchTerm(q.trim());
     if (term) {
-      query = query.or(
-        `name_he.ilike.%${term}%,name_en.ilike.%${term}%,slug.ilike.%${term}%,sku.ilike.%${term}%`,
+      const { data: matchingVariants, error: variantSearchError } = await admin
+        .from("product_variants")
+        .select("product_id")
+        .ilike("sku", `%${term}%`)
+        .limit(100);
+      if (variantSearchError) return mapPostgresError(variantSearchError);
+
+      const matchingProductIds = Array.from(
+        new Set((matchingVariants ?? []).map((variant) => variant.product_id)),
       );
+      const filters = [
+        `name_he.ilike.%${term}%`,
+        `name_en.ilike.%${term}%`,
+        `slug.ilike.%${term}%`,
+      ];
+      if (matchingProductIds.length > 0) {
+        filters.push(`id.in.(${matchingProductIds.join(",")})`);
+      }
+      query = query.or(filters.join(","));
     }
   }
 

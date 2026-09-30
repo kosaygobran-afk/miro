@@ -1,6 +1,51 @@
 # Project Status
 
-Last updated: 2026-09-29 (CEO/Admin Interface Remediation & Overlay Repair)
+Last updated: 2026-09-30 (Customer Cart, Checkout Request & Gallery Repair)
+
+## Version 0.0.5 release preparation — 2026-09-30
+
+- Created release branch `0.0.5` from the accumulated storefront work based on the published `0.0.4` release, after fetching `origin` and confirming `origin/main` already contains `origin/0.0.4`.
+- Included all current workspace changes: persistent cart and checkout-request flow, repaired product galleries, storefront merchandising management and migration, product hover/rail/promotion interactions, catalog compatibility hardening, management refinements, focused Playwright coverage, project-local storefront agent definitions, and related architecture/design/status documentation.
+- Bumped `package.json` and `package-lock.json` from `0.0.4` to `0.0.5` without creating a Git tag.
+- Release validation: `npm run lint`, `npm run typecheck`, `git diff --check`, and `npm run build` passed. The production build completed all 113 static pages and included both localized cart/checkout routes plus the protected storefront-merchandising route.
+- Publication plan: commit and push `0.0.5`, verify the remote branch SHA, merge it into current `origin/main` without rewriting history, push `main`, and verify remote ancestry/tree state. Final remote evidence will be recorded after publication.
+- Launch blockers remain owner-assigned: legal/privacy approval for checkout contact/address/cart retention; business approval for pricing, promotions, catalog media and delivery operations; database migration rollout for managed merchandising; and manual bilingual accessibility/device review.
+
+## Customer Cart, Checkout Request & Gallery Repair — 2026-09-30
+
+Scope: Let storefront customers collect products, review quantities, enter delivery details and send a checkout request, while repairing the product-detail main image/gallery behavior.
+
+### What changed
+
+- Added a versioned, browser-persisted cart shared by product cards, product details, the header, cart page and checkout page.
+- Added compact cart-plus controls to purchasable product cards and a full add-to-cart action that follows the selected product variant and price.
+- Added a correctly sized header cart icon with a live quantity badge in both locales and all three themes.
+- Added localized `/[locale]/cart` and `/[locale]/checkout` pages with quantity controls, removal, estimated totals, delivery/contact fields, empty and success states, and responsive layouts down to 320px.
+- Routed checkout requests through the existing same-origin, rate-limited enquiry RPC. The request stores a bounded cart and shipping snapshot in service-request metadata; it does not trust the client estimate as a sale, reserve stock, create an order, or collect payment.
+- Repaired the product gallery main canvas with stable fill sizing, image-key replacement when a thumbnail changes, safe SVG handling, index clamping and a product-visual fallback when an image cannot load.
+- Updated storefront FAQ and architecture/route decisions so the public copy no longer claims that a cart does not exist.
+- Added `tests/store-cart.spec.ts` for card-to-cart persistence, checkout navigation, mocked submission/clearing, live catalog gallery rendering and 320px overflow protection.
+
+### Why it changed
+
+- Customers could browse products but had no shopping/cart path or persistent selection.
+- The main product image could remain empty and thumbnail selection did not reliably replace the visible image.
+- The customer header needed a clear, accessible cart entry point with current quantity.
+
+### Commands run
+
+- `npm run typecheck` — passed.
+- `npm run lint` — passed.
+- `npm run build` — passed; cart and checkout routes generated for Hebrew and English.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3001 PLAYWRIGHT_REUSE=1 npx playwright test tests/store-cart.spec.ts --project=chromium` — passed, 7/7, including WCAG A/AA automation and direct 5xx response monitoring across store, product, cart and checkout navigation.
+
+### Legal, privacy and launch blockers
+
+- **Business owner/legal:** approve collection and retention of shipping address, contact details and cart contents; update the privacy notice before public launch.
+- **Business owner/operations:** define who receives checkout requests, response times, delivery zones/costs and how staff converts an approved request into a recorded sale.
+- **Engineering/business owner:** choose and implement a payment provider, server-priced atomic order creation, stock reservation and confirmation messaging before describing this as paid online checkout.
+- **Accessibility owner:** complete manual keyboard, screen-reader, zoom and device review; automated coverage does not replace manual validation.
+- **Catalog owner:** replace preview pricing/imagery and confirm inventory accuracy before accepting real customer requests.
 
 ## CEO/Admin Interface Remediation — 2026-09-29
 
@@ -1243,3 +1288,140 @@ Phase 2 should implement real authentication and permissions:
 - Release scope includes the accumulated CEO shell, overlays, suppliers/settings/reporting UI, product editor/media feedback, shared pricing and canonical saved-product data, public services/catalog integration, inventory visibility, account/auth/enquiry improvements, management API validation/rate limiting, three database migrations, analytics aggregation regression tests, and design/handoff documentation. Existing work was preserved and included as explicitly requested.
 - Release validation: `npm run lint`, `npm run typecheck`, `npm run build`, and `node --test tests/unit/analytics-daily.test.mjs` all passed. Staged credential-value scan passed. Staged whitespace check identified one extra trailing blank line in the new limiter migration; it was removed without changing SQL. Final merge/remote verification is recorded in the release completion entry below.
 - Boundaries: `.env.local`, generated output and local test artifacts remain ignored. Committing migrations does not apply them to additional database environments. Owner/legal/accounting sign-off and manual accessibility review remain launch requirements; documented inventory data and server rendering diagnostics remain developer follow-up.
+
+## Version 0.0.4 local merge verified; remote publication blocked — 2026-09-29
+
+- Committed all 92 release files as `368598e` on branch `0.0.4`; merged into local `main` with merge commit `b31ba1d`. Verified release ancestry with `git merge-base --is-ancestor 0.0.4 main` and identical release/merge trees with `git diff --exit-code main 0.0.4`. Re-ran `npm run build` on main: PASS including TypeScript/static generation. Pre-merge lint, typecheck, regression tests and staged whitespace checks also passed.
+- `git push -u origin 0.0.4` failed: GitHub rejected terminal username/token authentication. The connected GitHub app can read this repository, but its tree-write endpoint returned HTTP 403 `Resource not accessible by integration`; no remote content was uploaded. A read-only `git ls-remote` confirmed remote main remains `fd61309ef9c75a8a85b332f09d8fb13eaef3b3ad`, and remote branch `0.0.4` is absent.
+- Owner action: configure working GitHub write credentials locally (do not paste tokens into chat), then resume publication. Agent action after authentication: fetch/reconcile any new upstream work without force pushing; push `0.0.4` and main; verify remote branch SHAs, release ancestry and version 0.0.4 on remote main. The local merge/build is verified, but remote publication/merge must not be described as completed yet.
+- Legal/privacy/accessibility launch actions remain unchanged from the release preparation entry. This Git operation did not apply database migrations or certify a deployment.
+
+## Version 0.0.4 remote publication verified — 2026-09-29
+
+- Authenticated GitHub CLI through browser device flow as repository owner; no token was added to repository files. Pushed local branch `0.0.4` and local merged `main` to `origin` without a force push.
+- Verified directly with `git ls-remote origin`: `refs/heads/0.0.4` = `368598ece69fc489ab4d928a04261d8a5d020a21` and `refs/heads/main` = `dcc83d82ceb369e99c6b445fb8bc8f25a16f8ae7` before this final handoff-log commit. `git merge-base --is-ancestor origin/0.0.4 origin/main` passed and the remote main package version is `0.0.4`. Main was built successfully after the merge; prior lint, typecheck and regression tests passed.
+- This entry supersedes the temporary remote-authentication blocker above. Owner/legal/accounting and manual accessibility approvals remain launch actions; committing these migrations did not deploy them to a new database.
+## GitHub sync retry — 2026-09-29
+
+- Fast-forwarded `hardening/ceo-production-2026-09-26` from `fd61309` to `1071dea` (`origin/main`), bringing in four additional upstream commits.
+- Preserved and reapplied the existing local script edit. The prior sync note was reconciled with the newer upstream project-status history; no application-code conflicts occurred.
+- Commands: `git fetch origin`, `git merge --ff-only origin/main`, `git stash pop` — passed after resolving the documentation-only conflict.
+- Validation: repository status confirms `HEAD` matches `origin/main`; full lint/typecheck/build were not rerun for this sync. Owner/developer action: run the project verification gates before release.
+# Storefront merchandising implementation milestone — 2026-09-30
+
+What changed:
+
+- Added the missing `/[locale]/admin/storefront-merchandising` page, protected on the server for Admin and CEO users, and added the missing CSS module required by the merchandising screen.
+- Reworked the product hover preview lifecycle so the 430 ms fine-pointer intent delay is real, open/close/rotation timers are cleaned up, Escape dismisses it, and explicit opening returns focus to its trigger.
+- Added a separate coarse-pointer quick-preview control without changing the primary product-media link behavior; normal product taps still navigate to the canonical product page.
+- Hardened category icon URLs: external icons must use HTTPS, credential-bearing URLs are rejected, and external SVGs must go through the sanitized upload flow. Storage cleanup now deletes only validated MIRO-owned category objects.
+- Wired product detail pricing to raw catalog price, role override, public promotion, and compare-at price inputs. This prevents discounting the already-discounted server display price a second time and lets variant selection recalculate consistently.
+- Extracted shared discount-percentage calculation to `src/lib/catalog/pricing.ts`.
+
+Why it changed:
+
+- Review found that the hover preview rendered immediately despite the stated intent delay, the merchandising navigation pointed to a route that did not exist, and the component imported a missing stylesheet that only became visible once the route was restored.
+- Product detail had promotion-capable props but the server page did not pass the promotion inputs, while external SVG URLs bypassed the sanitizer used for uploaded SVG files.
+
+Commands run and status:
+
+- `npm run lint` — passed with zero warnings.
+- `npm run typecheck` — passed.
+- `git diff --check` — passed.
+- `npm run build` — initially failed because `storefront-merchandising.module.css` was missing; passed after the module was added. The build now includes both localized merchandising routes.
+
+Pricing decision recorded:
+
+- Current behavior intentionally applies an active public promotion after the resolved role/default/selected-variant price. This preserves the pre-existing resolver policy. The business owner must approve whether role-specific prices may stack with public promotions before launch.
+
+Remaining blockers / owner actions:
+
+- **Engineering:** the merchandising table renders, but its add/edit/delete confirmation dialogs are not yet mounted in `storefront-merchandising.tsx`; several dialog-related state values and handlers remain unused. Complete and validate those workflows before calling management CRUD production-ready.
+- **Engineering/QA:** perform browser testing for the hover-preview pointer bridge, touch quick-preview, keyboard focus return, RTL placement, reduced motion, and 320 px layouts. Static checks pass, but this interaction needs device and assistive-technology verification.
+- **Privacy owner:** externally hosted category icons can disclose visitor IP/user-agent data to third-party hosts. Prefer uploading icons into MIRO-owned storage and document any approved external processors.
+- **Accessibility owner:** the preview is a non-modal supplemental dialog and does not trap focus. Confirm the interaction with VoiceOver/NVDA and ensure the touch control's accessible name is clear in both locales.
+- **Legal/business owner:** promotional claims, badge labels, discount stacking, dates, base prices, and inventory statements require owner approval; do not publish preview catalog data as final offers.
+
+## Storefront merchandising interaction and admin completion — 2026-09-30
+
+What changed:
+
+- Rebuilt the product preview lifecycle around a 360 ms hover-intent delay, 220 ms pointer-bridge grace period and 140 ms exit animation. The preview now collision-checks against the viewport, repositions after its entrance animation, rotates media only when motion is allowed, closes with Escape and restores focus after an explicit keyboard/touch opening.
+- Rebuilt the featured-product rail around measured card geometry instead of an estimated percentage transform. It now loops without a visible jump, preserves animation position while paused, exposes a labelled pause/play control, stops on hover/focus, becomes a snap-scrolling static row for reduced motion or small data sets, and removes its visual duplicate from the accessibility tree and tab order.
+- Refined product-card composition, responsive media ratios, pricing hierarchy, promotion stickers, focus states, shadows and small-screen quick preview. Preview intent is scoped to product media so unrelated card actions do not unexpectedly open it.
+- Connected the public rail to explicitly managed `storefront_rail_items` ordering and schedules instead of treating every generic featured product as rail content. Badge rendering now consumes the stored shape, tone and icon configuration shared by the public storefront and management preview.
+- Completed the previously missing Admin/CEO merchandising dialogs: product search/add, rail activation and date windows, badge creation/editing/assignment/priority/removal, promotion creation/editing/deletion, and confirmation states. Refreshes retain the current screen, and reorder failure rolls back the first write when the second swap cannot be saved.
+- Aligned API and migration validation: promotion percentages are capped at 95%, badge enums match the five rendered designs, date-window ordering is checked server-side, and the rail API no longer queries the nonexistent `products.sku` column.
+- Added focused Playwright coverage for hover timing/dismissal, viewport containment, stable rail cloning and pause state, touch quick preview, reduced motion, horizontal overflow and automated WCAG A/AA checks.
+
+Commands and evidence:
+
+- `npm run lint` — passed with zero warnings.
+- `npm run typecheck` — passed.
+- `git diff --check` — passed.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 PLAYWRIGHT_REUSE=1 npx playwright test tests/store-merchandising.spec.ts --reporter=line` — 5/5 passed against the development fallback catalog.
+- The production-mode browser run correctly exposed the first deployment boundary: the connected database does not yet contain `categories.icon_image_url`, so production deliberately returns an empty catalog rather than mixing database and fixture content. The interaction tests cannot exercise cards or the rail there until the pending catalog/storefront migrations are applied.
+
+Remaining blockers and owners:
+
+- **Database owner:** link the intended Supabase environment, review and apply the pending catalog/category and `20260929130000_storefront_merchandising.sql` migrations, then rerun the production-mode storefront and authenticated management CRUD flow. Do not advertise the rail or promotion controls as live before this is complete.
+- **Business/legal owner:** approve all prices, compare-at claims, percentage/fixed promotion rules, stacking with role pricing, badge wording, campaign schedules and inventory statements before publication.
+- **Privacy owner:** replace externally hosted category/product media with MIRO-controlled storage where possible; third-party media hosts receive visitor network metadata.
+- **Accessibility owner:** automated WCAG A/AA checks pass and reduced-motion/keyboard mechanics are implemented, but manual VoiceOver/NVDA, zoom, RTL and real touch-device review remains required before launch.
+
+## Connected product gallery and compact management tables — 2026-09-30
+
+What changed:
+
+- Moved the product quick preview from a left/right side placement to a centered overlay above and over its source card. The entrance now uses a bottom-origin perspective/rotate/translate animation so the panel visually lifts from the card; reduced-motion users still receive an immediate transition.
+- Added an ordered image gallery to the quick preview: square main image, vertical thumbnail choices, physical left/back and right/forward controls, image position announcement and stable pointer bridging between the source card and overlay.
+- Added the same quick-preview interaction to canonical cards in the moving product rail. The accessibility-hidden loop clone remains out of the tab order and does not create a second dialog; the measured two-segment animation continues seamlessly so cards leaving on the left re-enter from the right.
+- Reworked the product detail gallery into a square primary image with side thumbnails on larger screens, horizontal thumbnails on small screens, previous/next controls and a live image count. All surfaces use the same ordered `product_images` records, where the lowest `sort_order` is the main image.
+- Kept product media management connected to the existing canonical Admin/CEO workflow: multi-file upload, URL addition, main-image selection, ordering, bilingual alt text and deletion all write `product_images` through the protected management APIs.
+- Improved the Admin/CEO product table so it requests up to 100 real catalog rows in catalog order, displays canonical primary media plus gallery count, derives stock from active variants, and uses compact icon actions with accessible hover/focus labels and a shared confirmation dialog.
+- Fixed management SKU search so it queries `product_variants.sku` and combines matching product IDs with name/slug search instead of querying the nonexistent `products.sku` column.
+- Limited development-only catalog fixtures to 10 products, made their inventory deterministic, and attached three existing local media assets so gallery behavior can be verified without inventing management records. Production and authenticated management screens continue to fail closed to real database data only.
+
+Verification:
+
+- `npm run lint` — passed with zero warnings.
+- `npm run typecheck` — passed.
+- `git diff --check` — passed.
+- Focused storefront Playwright suite — 6/6 passed, covering above-card positioning, image selection/arrows, rail preview and looping structure, touch layout, reduced motion and WCAG A/AA automation.
+- Desktop visual QA completed for the above-card preview and full product gallery in Chromium; no side-positioned preview or gallery overflow observed.
+
+Remaining blockers and owners:
+
+- **Database owner:** this checkout is not linked to a Supabase project, so no live records were invented or mutated. Link the intended environment, review/apply pending migrations, and validate the existing real products, variants, stock and image galleries through authenticated Admin/CEO workflows.
+- **Catalog owner:** upload approved product-specific images and bilingual alt text; the ten local development fixtures and their generic media are demonstration data only and never render in production fallback mode.
+- **Legal/privacy owner:** approve product photography rights, prices, availability and promotional claims; externally hosted image URLs disclose visitor network metadata, so MIRO-owned storage is preferred.
+- **Accessibility owner:** automated checks pass, but manually verify gallery announcements, touch targets, zoom and screen-reader reading order in Hebrew and English before launch.
+
+## In-place pressed-card expansion refinement — 2026-09-30
+
+- Replaced the directional above-card preview motion with a true source-card expansion. Hover immediately compresses the product card with an inset pressed shadow, holds that feedback for exactly one second, then expands the richer card view from the source card's measured center and width/height ratios in a fast 190 ms perspective animation.
+- The expanded surface is opaque and retains the source card's product identity, gallery, price, stock and primary action; it no longer reads as a separate side panel. Viewport clamping only adjusts the final position when the source card is close to a screen edge.
+- Applied the identical press/hold/expand sequence to canonical moving-rail cards. The accessibility-hidden rail clone remains noninteractive, while the real rail pauses during interaction and continues its seamless loop afterwards.
+- Reduced-motion behavior still removes the 3D transform. Explicit touch/keyboard quick-preview controls continue to open immediately rather than imposing a hover delay.
+- Verification: lint, TypeScript and whitespace checks passed; the focused Playwright storefront suite passed 6/6, including pressed-state timing, in-place overlap, rail behavior, touch layout, reduced motion and automated WCAG A/AA checks. Desktop Chromium visual QA confirmed the expanded surface grows over the originating card.
+- Launch actions remain unchanged: catalog owner supplies approved media/content; accessibility owner performs manual screen-reader, zoom and device testing; database owner applies the pending migrations and validates authenticated live data.
+
+## Storefront schema-drift compatibility fix — 2026-09-30
+
+- Fixed the public catalog read so the core `categories` query no longer requires the pending `icon_image_url` column. Category icons are now fetched as optional merchandising data; a missing column produces `null` icons without discarding the real catalog.
+- Made the new promo-badge, public-promotion and moving-rail reads optional at the catalog boundary. Missing additive merchandising tables now yield empty enhancement data while errors from core categories, products, variants or images still fail closed and remain visible.
+- This removes the `column categories.icon_image_url does not exist` console error from product-page metadata generation during a staggered application/database rollout. The database migration remains required to activate the merchandising features.
+- Verification: `npm run typecheck` passed; `npm run lint` passed with zero warnings; `npx prettier --check src/lib/store-data.ts` passed; `npm run build` passed. A local production server returned HTTP 200 for `/en/store` and `/en/store/cameras/miro-4k-pro`, emitted the expected product title, and logged no catalog error.
+- Database owner action: this checkout is not linked (`npx supabase migration list` returned `ProjectRefNotLinkedError`). Link and verify the intended environment, review/apply `20260929130000_storefront_merchandising.sql`, then test category icon and authenticated merchandising CRUD behavior against real data.
+- Legal/privacy/accessibility: no data collection, permissions, claims or interaction semantics changed. Existing owners must still approve promotion/pricing claims and external media privacy, and complete manual bilingual assistive-technology testing before launch.
+
+## Storefront rail and gallery regression recovery — 2026-09-30
+
+- Diagnosed why the recent storefront work appeared to disappear after the schema-drift fix: the connected database has no `storefront_rail_items` table, only four `product_images` rows across six active products, and the catalog mapper discarded a distinct legacy `products.image_url` whenever one canonical gallery row existed.
+- Restored a rollout-safe moving rail. When the managed rail table is unavailable, real products already marked `is_featured` populate the rail in catalog order; once the table exists, its explicit assignments remain authoritative, including an intentionally empty rail.
+- Restored all available real product media by merging distinct canonical `product_images` with the legacy product image instead of choosing one source. Canonical images retain priority and duplicate URLs are not repeated. This gives `miro-4k-pro` two selectable images again and preserves the image placeholder for products that genuinely have no media.
+- Verification: both live image sources returned HTTP 200 JPEG responses; `npx prettier --check src/lib/store-data.ts`, `npm run typecheck`, `npm run lint`, `npm run build` and `git diff --check` passed. Local production requests returned HTTP 200 for `/en/store` and `/en/store/cameras/miro-4k-pro`; rendered HTML contained the animated three-product rail, pause control, two gallery thumbnails, previous/next controls and two distinct optimized image sources. The focused Playwright moving-rail/hover-preview test passed against the production server.
+- Catalog owner action: four live products still have only one available image and two have none. Upload approved multi-angle product media and bilingual alt text through the canonical Admin/CEO product gallery; the application must not invent product photography.
+- Database owner action: apply `20260929130000_storefront_merchandising.sql` to enable explicit rail ordering, category icons, badges and promotions. Until then, the featured-product fallback keeps the public rail functional.
+- Security owner action: a local environment parsing diagnostic accidentally printed the Supabase service-role credential into the agent execution log. Rotate that service-role secret immediately and update deployment/local secrets; the credential is not copied into source or this document.
+- Legal/privacy/accessibility: confirm rights for the external CCTV/Unsplash product images and prefer MIRO-owned storage because external hosts receive visitor network metadata. Manual bilingual keyboard, screen-reader, zoom and real-device gallery review remains a launch blocker.

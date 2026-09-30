@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductVisual } from "@/components/products/ProductVisual";
 import { ProductDetailActions } from "@/components/analytics/ProductDetailActions";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
@@ -11,16 +12,20 @@ import type {
 } from "@/features/catalog/product-data";
 import type { ProductVisualKind } from "@/features/catalog/product-visual-kind";
 import type { PublicContactActions } from "@/lib/contact-config";
+import type { PublicPromotion } from "@/lib/catalog/pricing";
 import {
   formatPrice,
+  getDiscountPercent,
   getDefaultVariant,
   resolvePrice,
   type PricingInputs,
 } from "@/lib/catalog/pricing";
+import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 
 interface ProductDetailInteractiveProps {
   productId: string;
   productSlug: string;
+  productCategory: string;
   productName: string;
   locale: "he" | "en";
   basePrice: number | null;
@@ -33,11 +38,16 @@ interface ProductDetailInteractiveProps {
   stockBadge: React.ReactNode;
   description: React.ReactNode;
   footer: React.ReactNode;
+  publicPromotion?: PublicPromotion | null;
+  compareAtPrice?: number | null;
+  roleOverride?: number | null;
+  canAddToCart?: boolean;
 }
 
 export function ProductDetailInteractive({
   productId,
   productSlug,
+  productCategory,
   productName,
   locale,
   basePrice,
@@ -50,9 +60,16 @@ export function ProductDetailInteractive({
   stockBadge,
   description,
   footer,
+  publicPromotion = null,
+  compareAtPrice = null,
+  roleOverride = null,
+  canAddToCart = true,
 }: ProductDetailInteractiveProps) {
   const copy = storeCopy[locale] as StoreCopy;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [failedImageIds, setFailedImageIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     null,
   );
@@ -60,19 +77,49 @@ export function ProductDetailInteractive({
   // Centralized default variant resolution
   const defaultVariant = getDefaultVariant(variants, defaultVariantId);
 
-  // Centralized price resolution
+  // Centralized price resolution with public promotion
   const pricingInputs: PricingInputs = {
     basePrice,
     variants,
     selectedVariantId,
     defaultVariantId: defaultVariant?.id ?? null,
-    roleOverride: null, // Role override handled at catalog fetch level
+    roleOverride,
     variantOverride: null,
+    publicPromotion,
   };
   const priceResult = resolvePrice(pricingInputs);
-  const displayPrice = formatPrice(priceResult.effectivePrice, locale, copy.priceUnpublished);
+  const effectivePrice = priceResult.effectivePrice;
+  const promoCompareAtPrice = priceResult.compareAtPrice ?? compareAtPrice;
+  const discountPercent = getDiscountPercent(
+    promoCompareAtPrice,
+    effectivePrice,
+  );
+  const displayPrice = formatPrice(
+    effectivePrice,
+    locale,
+    copy.priceUnpublished,
+  );
   const displaySku = priceResult.pricingVariant?.sku ?? defaultVariant?.sku;
-  const activeImage = images[activeImageIndex];
+  const resolvedActiveImageIndex = Math.min(
+    activeImageIndex,
+    Math.max(images.length - 1, 0),
+  );
+  const activeImage = images[resolvedActiveImageIndex];
+  const activeImageFailed = activeImage
+    ? failedImageIds.has(activeImage.id)
+    : false;
+
+  const showPreviousImage = () => {
+    setActiveImageIndex((current) =>
+      current <= 0 || current >= images.length
+        ? images.length - 1
+        : current - 1,
+    );
+  };
+
+  const showNextImage = () => {
+    setActiveImageIndex((current) => (current + 1) % images.length);
+  };
 
   // Generate distinct thumbnail names
   const getThumbnailLabel = (index: number, image: ProductImage) => {
@@ -82,32 +129,13 @@ export function ProductDetailInteractive({
     return `${copy.thumbnailLabel} ${position}: ${description}`;
   };
 
+  const formattedCompareAtPrice = promoCompareAtPrice
+    ? formatPrice(promoCompareAtPrice, locale, copy.priceUnpublished)
+    : null;
+
   return (
     <>
       <div className="sf-product-gallery">
-        <div className="sf-main-image">
-          {activeImage ? (
-            <Image
-              src={activeImage.url}
-              alt={
-                locale === "he"
-                  ? (activeImage.altHe ?? productName)
-                  : (activeImage.altEn ?? productName)
-              }
-              width={800}
-              height={600}
-              sizes="(max-width: 1200px) 100vw, 800px"
-              priority
-              className="sf-product-main-image"
-              style={{ objectFit: "contain" }}
-            />
-          ) : (
-            <div className="sf-product-visual-placeholder" aria-hidden="true">
-              <ProductVisual kind={visualKind} />
-              <p className="sf-illustration-note">{copy.illustration}</p>
-            </div>
-          )}
-        </div>
         {images.length > 1 && (
           <div
             className="sf-thumbnail-strip"
@@ -118,16 +146,18 @@ export function ProductDetailInteractive({
                 <li key={image.id} className="sf-thumbnail-item">
                   <button
                     type="button"
-                    className={`sf-thumbnail ${index === activeImageIndex ? "is-active" : ""}`}
+                    className={`sf-thumbnail ${index === resolvedActiveImageIndex ? "is-active" : ""}`}
                     aria-label={getThumbnailLabel(index, image)}
-                    aria-current={index === activeImageIndex ? "true" : "false"}
+                    aria-current={
+                      index === resolvedActiveImageIndex ? "true" : undefined
+                    }
                     onClick={() => setActiveImageIndex(index)}
                   >
                     <Image
                       src={image.url}
                       alt=""
-                      width={120}
-                      height={90}
+                      fill
+                      sizes="80px"
                       className="sf-thumbnail-image"
                     />
                   </button>
@@ -136,6 +166,61 @@ export function ProductDetailInteractive({
             </ul>
           </div>
         )}
+        <div className="sf-main-image">
+          {activeImage && !activeImageFailed ? (
+            <Image
+              key={activeImage.id}
+              src={activeImage.url}
+              alt={
+                locale === "he"
+                  ? (activeImage.altHe ?? productName)
+                  : (activeImage.altEn ?? productName)
+              }
+              fill
+              sizes="(max-width: 1200px) 100vw, 800px"
+              priority
+              className="sf-product-main-image"
+              unoptimized={activeImage.url.toLowerCase().includes(".svg")}
+              onError={() =>
+                setFailedImageIds((current) => {
+                  const next = new Set(current);
+                  next.add(activeImage.id);
+                  return next;
+                })
+              }
+            />
+          ) : (
+            <div className="sf-product-visual-placeholder" aria-hidden="true">
+              <ProductVisual kind={visualKind} />
+              <p className="sf-illustration-note">{copy.illustration}</p>
+            </div>
+          )}
+          {images.length > 1 ? (
+            <>
+              <button
+                type="button"
+                className="sf-gallery-arrow sf-gallery-arrow-previous"
+                onClick={showPreviousImage}
+                aria-label={
+                  locale === "he" ? "התמונה הקודמת" : "Previous image"
+                }
+              >
+                <ChevronLeft size={24} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="sf-gallery-arrow sf-gallery-arrow-next"
+                onClick={showNextImage}
+                aria-label={locale === "he" ? "התמונה הבאה" : "Next image"}
+              >
+                <ChevronRight size={24} aria-hidden="true" />
+              </button>
+              <span className="sf-gallery-position" aria-live="polite">
+                {resolvedActiveImageIndex + 1}/{images.length}
+              </span>
+            </>
+          ) : null}
+        </div>
       </div>
 
       <div className="sf-product-info">
@@ -144,7 +229,20 @@ export function ProductDetailInteractive({
         <div className="sf-product-price-block">
           <div className="sf-price-display" aria-live="polite">
             <strong dir="auto">{displayPrice}</strong>
-            {priceResult.effectivePrice !== null && <span>{copy.demoPrice}</span>}
+            {discountPercent !== null && formattedCompareAtPrice && (
+              <>
+                <span className="sf-price-compare-at" dir="auto">
+                  {formattedCompareAtPrice}
+                </span>
+                <span
+                  className="sf-price-discount"
+                  aria-label={`${discountPercent}% off`}
+                >
+                  -{discountPercent}%
+                </span>
+              </>
+            )}
+            {effectivePrice !== null && <span>{copy.demoPrice}</span>}
           </div>
           {displaySku && (
             <p className="sf-product-sku" dir="ltr">
@@ -169,7 +267,10 @@ export function ProductDetailInteractive({
             >
               {variants.map((variant) => {
                 const isSelected = selectedVariantId === variant.id;
-                const variantPrice = variant.price !== null ? formatPrice(variant.price, locale, copy.priceUnpublished) : null;
+                const variantPrice =
+                  variant.price !== null
+                    ? formatPrice(variant.price, locale, copy.priceUnpublished)
+                    : null;
                 return (
                   <label key={variant.id} className="sf-variant-chip-label">
                     <input
@@ -208,12 +309,35 @@ export function ProductDetailInteractive({
 
         {description}
 
+        {effectivePrice !== null && (
+          <AddToCartButton
+            locale={locale}
+            disabled={
+              !canAddToCart ||
+              (variants.length > 0 &&
+                (priceResult.pricingVariant?.stockQty ?? 0) <= 0)
+            }
+            item={{
+              productId,
+              variantId:
+                priceResult.pricingVariant?.id ?? defaultVariant?.id ?? null,
+              slug: productSlug,
+              category: productCategory,
+              name: productName,
+              imageUrl: activeImage?.url ?? images[0]?.url ?? null,
+              unitPrice: effectivePrice,
+            }}
+          />
+        )}
+
         <ProductDetailActions
           productId={productId}
           productSlug={productSlug}
           productName={productName}
           locale={locale}
-          variantId={priceResult.pricingVariant?.id ?? defaultVariant?.id ?? null}
+          variantId={
+            priceResult.pricingVariant?.id ?? defaultVariant?.id ?? null
+          }
           contact={contact}
         />
 

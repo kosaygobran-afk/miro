@@ -82,7 +82,7 @@ export const storeCopy = {
       {
         question: "Can I order directly from the website?",
         answer:
-          "The collection is currently a design and catalog preview. There is no online checkout. Product inquiries open the contact preview with the selected product, so a request can be prepared for the future sales workflow.",
+          "You can add available products to your cart and send a checkout request with delivery details. MIRO confirms availability, shipping and the final price before payment; online payment is not collected yet.",
       },
       {
         question: "How do I choose the right camera?",
@@ -117,6 +117,7 @@ export const storeCopy = {
     whatsappForProduct: "WhatsApp about this product",
     thumbnailLabel: "Image",
     productImagesLabel: "Product images",
+    promoBadgesLabel: "Promotions",
   },
   he: {
     eyebrow: "הקולקציה של MIRO",
@@ -189,7 +190,7 @@ export const storeCopy = {
       {
         question: "אפשר להזמין ישירות דרך האתר?",
         answer:
-          "הקולקציה נמצאת כרגע בשלב תצוגת עיצוב וקטלוג, ללא רכישה מקוונת. פנייה על מוצר פותחת את תצוגת טופס יצירת הקשר עם המוצר שנבחר, כהכנה לתהליך המכירה העתידי.",
+          "אפשר להוסיף מוצרים זמינים לסל ולשלוח בקשת הזמנה עם פרטי משלוח. MIRO תאשר זמינות, משלוח ומחיר סופי לפני תשלום; עדיין לא נגבה תשלום מקוון באתר.",
       },
       {
         question: "איך בוחרים מצלמה מתאימה?",
@@ -222,6 +223,7 @@ export const storeCopy = {
     whatsappForProduct: "לוואטסאפ על מוצר זה",
     thumbnailLabel: "תמונה",
     productImagesLabel: "תמונות המוצר",
+    promoBadgesLabel: "מבצעים",
   },
 } as const;
 

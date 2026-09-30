@@ -15,10 +15,6 @@ import {
   getStoreViewer,
 } from "@/lib/store-data";
 import { CategoryViewTracker } from "@/components/analytics/CategoryViewTracker";
-import {
-  getPublicContactConfig,
-  toPublicContactActions,
-} from "@/lib/contact-config";
 
 interface CategoryPageProps {
   params: Promise<{ locale: string; category: string }>;
@@ -70,7 +66,6 @@ export default async function CategoryPage({
   const copy = storeCopy[locale];
   const Arrow = locale === "he" ? ArrowRight : ArrowLeft;
   const initialQuery = typeof query.q === "string" ? query.q.slice(0, 200) : "";
-  const [contactConfig] = await Promise.all([getPublicContactConfig()]);
 
   return (
     <div className="sf-storefront">
@@ -110,7 +105,6 @@ export default async function CategoryPage({
             locale={locale}
             initialQuery={initialQuery}
             savedProductIds={viewer.savedProductIds}
-            contact={toPublicContactActions(contactConfig)}
           />
           <p className="sf-preview-note">
             <span aria-hidden="true" />

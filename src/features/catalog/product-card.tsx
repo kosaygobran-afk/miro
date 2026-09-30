@@ -1,45 +1,38 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
   ArrowLeft,
   ArrowRight,
-  Plus,
-  X,
+  ArrowUpRight,
   Heart,
   HeartOff,
   Circle,
   Truck,
-  Phone,
-  MessageSquare,
   Loader2,
+  Eye,
 } from "lucide-react";
 import { ProductVisual } from "@/components/products/ProductVisual";
 import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
-import type { Product, ProductVariant } from "@/features/catalog/product-data";
-import type { PublicContactActions } from "@/lib/contact-config";
-import {
-  trackProductImpression,
-  trackProductContactClick,
-  trackProductPhoneClick,
-  trackProductWhatsAppClick,
-} from "@/components/analytics/track";
+import type { Product } from "@/features/catalog/product-data";
+import { trackProductImpression } from "@/components/analytics/track";
 import {
   formatPrice,
-  getDefaultVariant,
-  resolvePrice,
+  getDiscountPercent,
   getStockBadgeConfig,
   shouldHideFromPublic,
   type StockBadgeConfig,
 } from "@/lib/catalog/pricing";
+import { ProductHoverPreview } from "@/features/catalog/product-hover-preview";
+import { StickerCluster } from "@/features/catalog/product-promo-badge";
+import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 
 export type { Product } from "@/features/catalog/product-data";
 
 function getPrimaryImage(product: Product) {
-  // Use the first image (sort_order 0) as primary, or first in array
   if (product.images.length > 0) {
     return product.images[0];
   }
@@ -89,46 +82,39 @@ export function ProductCard({
   locale = "en",
   actionLabel,
   isSaved = false,
-  contact = null,
 }: {
   product: Product;
   index?: number;
   actionLabel?: string;
   locale?: "he" | "en";
   isSaved?: boolean;
-  /** Config-driven contact channels; null/absent hides the actions. */
-  contact?: PublicContactActions | null;
 }) {
   const copy = storeCopy[locale] as StoreCopy;
-  const dialog = useRef<HTMLDialogElement>(null);
   const [saved, setSaved] = useState(isSaved);
-  const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(
-    null,
-  );
   const [impressionFired, setImpressionFired] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [showHoverPreview, setShowHoverPreview] = useState(false);
+  const [previewOpenedExplicitly, setPreviewOpenedExplicitly] = useState(false);
   const cardRef = useRef<HTMLElement | null>(null);
-  const titleId = useId();
+  const previewButtonRef = useRef<HTMLButtonElement | null>(null);
   const kind = getProductVisualKind(product);
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
   const primaryImage = getPrimaryImage(product);
-  const defaultVariant = getDefaultVariant(product.variants, null);
 
-  // Centralized price resolution for card display (uses base price as fallback)
-  const cardPriceResult = resolvePrice({
-    basePrice: product.priceIls,
-    variants: product.variants,
-    selectedVariantId: null,
-    defaultVariantId: defaultVariant?.id ?? null,
-    roleOverride: product.rolePrice ?? null,
-    variantOverride: null,
-  });
-  const price = formatPrice(
-    cardPriceResult.effectivePrice,
+  // Use pre-computed prices from server (already includes role prices and promotions)
+  // Do NOT call resolvePrice() again - server already computed final display price
+  const effectivePrice = product.priceIls;
+  const compareAtPrice = product.compareAtPrice ?? null;
+  const discountPercent = getDiscountPercent(compareAtPrice, effectivePrice);
+  const formattedPrice = formatPrice(
+    effectivePrice,
     locale,
     copy.priceUnpublished,
   );
+  const formattedCompareAtPrice = compareAtPrice
+    ? formatPrice(compareAtPrice, locale, copy.priceUnpublished)
+    : null;
 
   useEffect(() => {
     const element = cardRef.current;
@@ -151,59 +137,6 @@ export function ProductCard({
     observer.observe(element);
     return () => observer.disconnect();
   }, [product.id, locale, impressionFired]);
-
-  const openDialog = useCallback(() => {
-    dialog.current?.showModal();
-    if (!impressionFired) {
-      setImpressionFired(true);
-      trackProductImpression(product.id, locale);
-    }
-  }, [product.id, locale, impressionFired]);
-
-  const closeDialog = useCallback(() => {
-    dialog.current?.close();
-    setSelectedVariant(null);
-    setSaveError(null);
-  }, []);
-
-  // Handle native dialog close events (Escape, backdrop click)
-  useEffect(() => {
-    const dialogEl = dialog.current;
-    if (!dialogEl) return;
-
-    const handleClose = () => {
-      closeDialog();
-    };
-
-    dialogEl.addEventListener("close", handleClose);
-    return () => dialogEl.removeEventListener("close", handleClose);
-  }, [closeDialog]);
-
-  // Dialog variant price resolution
-  const dialogPriceResult = resolvePrice({
-    basePrice: product.priceIls,
-    variants: product.variants,
-    selectedVariantId: selectedVariant?.id ?? null,
-    defaultVariantId: defaultVariant?.id ?? null,
-    roleOverride: product.rolePrice ?? null,
-    variantOverride: null,
-  });
-  const displayPrice = formatPrice(
-    dialogPriceResult.effectivePrice,
-    locale,
-    copy.priceUnpublished,
-  );
-  const displaySku =
-    dialogPriceResult.pricingVariant?.sku ?? defaultVariant?.sku;
-
-  const quoteParams = new URLSearchParams({
-    product: product.id,
-    item: product.slug,
-  });
-  const quoteVariantId =
-    dialogPriceResult.pricingVariant?.id ?? defaultVariant?.id;
-  if (quoteVariantId) quoteParams.set("variant", quoteVariantId);
-  const quoteHref = `/${locale}/contact?${quoteParams.toString()}`;
 
   // Don't render card if product should be hidden from public
   if (shouldHideFromPublic(product.outOfStockPolicy, product.stockQty)) {
@@ -269,6 +202,8 @@ export function ProductCard({
       ? (primaryImage?.altHe ?? product.name)
       : (primaryImage?.altEn ?? product.name);
 
+  const productUrl = `/${locale}/store/${product.category}/${product.slug}`;
+
   return (
     <article
       ref={cardRef}
@@ -276,32 +211,71 @@ export function ProductCard({
       data-product-name={product.name}
       data-product-price={product.priceIls ?? 0}
       data-product-stock-state={product.stockState}
+      data-preview-intent={showHoverPreview || undefined}
     >
-      <button
-        type="button"
-        className="sf-product-media"
-        onClick={openDialog}
-        aria-label={`${copy.details}: ${product.name}`}
+      {/* Hover Preview - portaled to body */}
+      <ProductHoverPreview
+        product={product}
+        locale={locale}
+        isOpen={showHoverPreview}
+        onClose={() => setShowHoverPreview(false)}
+        onKeepOpen={() => setShowHoverPreview(true)}
+        triggerRef={cardRef}
+        focusOnOpen={previewOpenedExplicitly}
+        returnFocusRef={previewButtonRef}
+      />
+
+      <div
+        className="sf-product-media-shell"
+        onMouseEnter={() => setShowHoverPreview(true)}
+        onMouseLeave={() => setShowHoverPreview(false)}
+        onFocusCapture={() => {
+          setPreviewOpenedExplicitly(false);
+          setShowHoverPreview(true);
+        }}
+        onBlurCapture={(event) => {
+          const nextTarget = event.relatedTarget;
+          const movedIntoPreview =
+            nextTarget instanceof Element &&
+            nextTarget.closest(".sf-hover-preview") !== null;
+          if (!event.currentTarget.contains(nextTarget) && !movedIntoPreview) {
+            setShowHoverPreview(false);
+          }
+        }}
       >
-        {product.badge && (
-          <span className="sf-product-badge">{product.badge}</span>
-        )}
-        {renderStockBadge(
-          getStockBadgeConfig(
-            product.stockState,
-            product.outOfStockPolicy,
-            product.expectedRestockDate,
-            locale,
-            {
-              lowStock: copy.lowStock,
-              outOfStockContact: copy.outOfStockContact,
-              outOfStockRestock: copy.outOfStockRestock,
-              expectedRestock: copy.expectedRestock,
-            },
-          ),
-        )}
-        {primaryImage ? (
-          <>
+        <Link
+          href={productUrl}
+          className="sf-product-media"
+          aria-label={`${copy.details}: ${product.name}`}
+        >
+          {product.promoBadges && product.promoBadges.length > 0 && (
+            <StickerCluster
+              badges={product.promoBadges}
+              locale={locale}
+              maxVisible={2}
+            />
+          )}
+
+          {product.badge && (
+            <span className="sf-product-badge">{product.badge}</span>
+          )}
+
+          {renderStockBadge(
+            getStockBadgeConfig(
+              product.stockState,
+              product.outOfStockPolicy,
+              product.expectedRestockDate,
+              locale,
+              {
+                lowStock: copy.lowStock,
+                outOfStockContact: copy.outOfStockContact,
+                outOfStockRestock: copy.outOfStockRestock,
+                expectedRestock: copy.expectedRestock,
+              },
+            ),
+          )}
+
+          {primaryImage ? (
             <Image
               src={primaryImage.url}
               alt={altText}
@@ -310,30 +284,49 @@ export function ProductCard({
               className="sf-product-visual"
               style={{ objectFit: "contain" }}
               onError={(e) => {
-                // Fallback to placeholder on image error
                 e.currentTarget.style.display = "none";
               }}
             />
-          </>
-        ) : (
-          <ProductVisual kind={kind} />
-        )}
-        {!primaryImage && (
-          <span className="sf-product-illustration-caption">
-            {copy.illustration}
+          ) : (
+            <ProductVisual kind={kind} />
+          )}
+
+          {!primaryImage && (
+            <span className="sf-product-illustration-caption">
+              {copy.illustration}
+            </span>
+          )}
+
+          <span className="sf-product-expand">
+            <ArrowUpRight size={17} aria-hidden="true" />
           </span>
-        )}
-        <span className="sf-product-expand">
-          <Plus size={17} aria-hidden="true" />
-        </span>
-      </button>
+        </Link>
+
+        <button
+          ref={previewButtonRef}
+          type="button"
+          className="sf-product-quick-preview"
+          aria-label={`${locale === "he" ? "תצוגה מקדימה" : "Quick preview"}: ${product.name}`}
+          aria-haspopup="dialog"
+          aria-expanded={showHoverPreview}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setPreviewOpenedExplicitly(true);
+            setShowHoverPreview(true);
+          }}
+        >
+          <Eye size={16} aria-hidden="true" />
+        </button>
+      </div>
+
       <div className="sf-product-body">
         <p className="sf-product-category">
           {product.categoryLabel ?? product.category}
         </p>
         <h3 dir="auto">
           <Link
-            href={`/${locale}/store/${product.category}/${product.slug}`}
+            href={productUrl}
             className="sf-product-title-link"
             aria-label={`${copy.details}: ${product.name}`}
           >
@@ -343,22 +336,57 @@ export function ProductCard({
         <p className="sf-product-description" dir="auto">
           {product.description}
         </p>
+
+        {/* Price with promotional display */}
         <div className="sf-product-price">
-          <strong dir="auto">{price}</strong>
-          {cardPriceResult.effectivePrice === null ? null : (
-            <span>{copy.demoPrice}</span>
+          <strong dir="auto">{formattedPrice}</strong>
+          {discountPercent !== null && formattedCompareAtPrice && (
+            <>
+              <span className="sf-product-compare-at" dir="auto">
+                {formattedCompareAtPrice}
+              </span>
+              <span
+                className="sf-product-discount"
+                aria-label={`${discountPercent}% off`}
+              >
+                -{discountPercent}%
+              </span>
+            </>
           )}
+          {effectivePrice === null && <span>{copy.demoPrice}</span>}
         </div>
+
         <div className="sf-product-actions">
-          <button
-            type="button"
+          {/* Details button - now a semantic Link */}
+          <Link
+            href={productUrl}
             className="sf-product-action"
-            onClick={openDialog}
             aria-label={`${copy.details}: ${product.name}`}
           >
             {actionLabel ?? copy.details}
             <Arrow size={16} aria-hidden="true" />
-          </button>
+          </Link>
+
+          {effectivePrice !== null && product.stockState !== "out" ? (
+            <AddToCartButton
+              compact
+              locale={locale}
+              item={{
+                productId: product.id,
+                variantId:
+                  product.variants.find((variant) => variant.isDefault)?.id ??
+                  product.variants[0]?.id ??
+                  null,
+                slug: product.slug,
+                category: product.category,
+                name: product.name,
+                imageUrl: primaryImage?.url ?? null,
+                unitPrice: effectivePrice,
+              }}
+            />
+          ) : null}
+
+          {/* Save/Favorite - independently interactive */}
           <button
             type="button"
             className="miro-button miro-button-secondary sf-save-button"
@@ -375,6 +403,7 @@ export function ProductCard({
               <HeartOff size={18} />
             )}
           </button>
+
           {saveError && (
             <span className="sf-save-error" role="alert" aria-live="polite">
               {saveError}
@@ -382,173 +411,6 @@ export function ProductCard({
           )}
         </div>
       </div>
-      <dialog
-        ref={dialog}
-        className="sf-product-dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        dir={locale === "he" ? "rtl" : "ltr"}
-      >
-        <form method="dialog">
-          <div className="sf-product-dialog-inner">
-            <button
-              type="button"
-              className="sf-dialog-close"
-              aria-label={copy.close}
-              onClick={closeDialog}
-              autoFocus
-            >
-              <X size={21} aria-hidden="true" />
-            </button>
-            <div className="sf-dialog-visual">
-              {primaryImage ? (
-                <>
-                  <Image
-                    src={primaryImage.url}
-                    alt={altText}
-                    fill
-                    sizes="(max-width: 600px) 100vw, 40vw"
-                    className="sf-product-visual"
-                    style={{ objectFit: "contain" }}
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                </>
-              ) : (
-                <ProductVisual kind={kind} />
-              )}
-              {!primaryImage && <p>{copy.illustration}</p>}
-            </div>
-            <div className="sf-dialog-copy">
-              <p className="sf-eyebrow">
-                {product.categoryLabel ?? product.category}
-              </p>
-              <h2 id={titleId} dir="auto">
-                {product.name}
-              </h2>
-              <p dir="auto">{product.description}</p>
-
-              {/* Variant selector - using native radio inputs for accessibility */}
-              {product.variants.length > 0 && (
-                <fieldset className="sf-variant-selector">
-                  <legend className="sf-variant-label">
-                    {copy.variants} {copy.color}
-                  </legend>
-                  <div
-                    className="sf-variant-chips"
-                    role="radiogroup"
-                    aria-label={copy.variants}
-                  >
-                    {product.variants.map((variant) => {
-                      const isSelected =
-                        selectedVariant?.id === variant.id ||
-                        (!selectedVariant && variant.id === defaultVariant?.id);
-                      const variantPrice =
-                        variant.price !== null
-                          ? formatPrice(
-                              variant.price,
-                              locale,
-                              copy.priceUnpublished,
-                            )
-                          : null;
-                      return (
-                        <label
-                          key={variant.id}
-                          className="sf-variant-chip-label"
-                        >
-                          <input
-                            type="radio"
-                            name={`variant-${product.id}`}
-                            value={variant.id}
-                            checked={isSelected}
-                            onChange={() => setSelectedVariant(variant)}
-                            className="sf-variant-radio"
-                            aria-label={`${locale === "he" ? variant.colorHe : variant.colorEn} (${variant.sku})${variantPrice ? ` - ${variantPrice}` : ""}`}
-                          />
-                          <span
-                            className={`sf-variant-chip ${isSelected ? "is-selected" : ""}`}
-                            style={
-                              {
-                                "--variant-color": variant.colorHex,
-                              } as React.CSSProperties
-                            }
-                          >
-                            <span
-                              className="sf-variant-swatch"
-                              aria-hidden="true"
-                            />
-                            <span className="sf-variant-name">
-                              {locale === "he"
-                                ? variant.colorHe
-                                : variant.colorEn}
-                            </span>
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </div>
-                  {displaySku && (
-                    <p className="sf-variant-sku" dir="ltr">
-                      <span>{locale === "he" ? "מק״ט" : "SKU"}</span>:{" "}
-                      {displaySku}
-                    </p>
-                  )}
-                </fieldset>
-              )}
-
-              <div className="sf-product-price">
-                <strong dir="auto">{displayPrice}</strong>
-                {dialogPriceResult.effectivePrice === null ? null : (
-                  <span>{copy.demoPrice}</span>
-                )}
-              </div>
-              <Link
-                href={quoteHref}
-                className="miro-button miro-button-primary"
-                onClick={() => {
-                  trackProductContactClick(product.id, locale);
-                  closeDialog();
-                }}
-              >
-                {copy.quote}
-                <Arrow size={17} aria-hidden="true" />
-              </Link>
-              {contact?.phoneHref || contact?.whatsapp ? (
-                <div className="sf-dialog-secondary-actions">
-                  {contact.phoneHref ? (
-                    <a
-                      href={`tel:${contact.phoneHref}`}
-                      className="sf-dialog-action-link"
-                      onClick={() => trackProductPhoneClick(product.id, locale)}
-                      aria-label={copy.callForProduct}
-                    >
-                      <Phone size={16} aria-hidden="true" />
-                      <span>{copy.callForProduct}</span>
-                    </a>
-                  ) : null}
-                  {contact.whatsapp ? (
-                    <a
-                      href={`https://wa.me/${contact.whatsapp}?text=${encodeURIComponent(`${copy.whatsappForProduct}: ${product.name}`)}`}
-                      className="sf-dialog-action-link"
-                      onClick={() =>
-                        trackProductWhatsAppClick(product.id, locale)
-                      }
-                      aria-label={copy.whatsappForProduct}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MessageSquare size={16} aria-hidden="true" />
-                      <span>{copy.whatsappForProduct}</span>
-                    </a>
-                  ) : null}
-                </div>
-              ) : null}
-              <p className="sf-dialog-note">{copy.demo}</p>
-            </div>
-          </div>
-        </form>
-      </dialog>
     </article>
   );
 }
