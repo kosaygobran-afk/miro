@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { hasSameOrigin } from "@/lib/request-origin";
+import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import { resolvePrice } from "@/lib/catalog/pricing";
 
 const SOURCE_VALUES = [
   "contact_page",
@@ -11,8 +13,8 @@ const SOURCE_VALUES = [
 ] as const;
 
 const checkoutCartItemSchema = z.object({
-  productId: z.string().min(1).max(100),
-  variantId: z.string().min(1).max(100).nullable(),
+  productId: z.string().uuid(),
+  variantId: z.string().uuid(),
   slug: z.string().min(1).max(200),
   name: z.string().min(1).max(300),
   unitPrice: z.number().finite().nonnegative(),
@@ -67,11 +69,14 @@ const failureCopy = {
     invalid_input: "חלק מהפרטים חסרים או שגויים. נסו שוב.",
     rate_limited: "נשלחו יותר מדי פניות. נסו שוב בעוד דקה.",
     unavailable: "השליחה אינה זמינה כרגע. נסו שוב מאוחר יותר.",
+    cart_changed: "המלאי או פרטי המוצר השתנו. עדכנו את הסל ונסו שוב.",
   },
   en: {
     invalid_input: "Some details are missing or invalid. Please try again.",
     rate_limited: "Too many enquiries were sent. Please try again in a minute.",
     unavailable: "Submission is unavailable right now. Please try again later.",
+    cart_changed:
+      "A product or its stock changed. Refresh your cart and try again.",
   },
 } as const;
 
@@ -190,6 +195,51 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerSupabaseClient();
     const rateLimitKey = buildRateLimitKey(ip);
     const phone = data.phone?.trim() || null;
+    let verifiedCart: typeof data.cart;
+    if (data.source === "checkout_page" && data.cart) {
+      const viewer = await getStoreViewer();
+      const catalog = await getStoreCatalog(data.locale, viewer.role);
+      const requestedByVariant = new Map<string, number>();
+      verifiedCart = [];
+      for (const item of data.cart) {
+        const product = catalog.products.find(
+          (entry) => entry.id === item.productId,
+        );
+        const variant = product?.variants.find(
+          (entry) => entry.id === item.variantId,
+        );
+        const requested =
+          (requestedByVariant.get(item.variantId) ?? 0) + item.quantity;
+        if (
+          !product ||
+          !variant ||
+          requested > variant.stockQty ||
+          product.slug !== item.slug
+        ) {
+          return failureResponse("cart_changed", 409, locale);
+        }
+        requestedByVariant.set(item.variantId, requested);
+        const price = resolvePrice({
+          basePrice: product.basePriceIls ?? product.priceIls,
+          variants: product.variants,
+          selectedVariantId: variant.id,
+          defaultVariantId:
+            product.variants.find((entry) => entry.isDefault)?.id ?? null,
+          roleOverride: product.rolePrice ?? null,
+          variantOverride: null,
+          publicPromotion: product.publicPromotion ?? null,
+        }).effectivePrice;
+        if (price === null) return failureResponse("cart_changed", 409, locale);
+        verifiedCart.push({
+          productId: product.id,
+          variantId: variant.id,
+          slug: product.slug,
+          name: product.name,
+          unitPrice: price,
+          quantity: item.quantity,
+        });
+      }
+    }
 
     // Call the RPC for service request creation (enforces validation, audit)
     // Rate limiting already checked at API level; RPC provides defense in depth.
@@ -208,9 +258,9 @@ export async function POST(request: NextRequest) {
           data.source === "checkout_page"
             ? {
                 checkout: {
-                  cart: data.cart,
+                  cart: verifiedCart,
                   shipping: data.shipping,
-                  estimated_subtotal: data.cart?.reduce(
+                  estimated_subtotal: verifiedCart?.reduce(
                     (total, item) => total + item.unitPrice * item.quantity,
                     0,
                   ),

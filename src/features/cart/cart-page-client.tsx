@@ -52,7 +52,11 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                 );
                 return (
                   <article className="sf-cart-item" key={key}>
-                    <Link href={productHref} className="sf-cart-item-media">
+                    <Link
+                      href={productHref}
+                      className="sf-cart-item-media"
+                      aria-label={`${locale === "he" ? "פרטי מוצר" : "Product details"}: ${item.name}`}
+                    >
                       {item.imageUrl ? (
                         <Image
                           src={item.imageUrl}

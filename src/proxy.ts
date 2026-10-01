@@ -9,7 +9,7 @@ const intlMiddleware = createMiddleware(routing);
 export default async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/design-system" || pathname === "/catalog-preview") {
+  if (pathname === "/design-system") {
     return NextResponse.next();
   }
 

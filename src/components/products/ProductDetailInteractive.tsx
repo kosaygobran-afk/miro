@@ -71,11 +71,24 @@ export function ProductDetailInteractive({
     () => new Set(),
   );
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
-    null,
+    () => {
+      const preferred = getDefaultVariant(variants, defaultVariantId);
+      return (
+        (preferred?.stockQty
+          ? preferred
+          : variants.find((variant) => variant.stockQty > 0)
+        )?.id ??
+        preferred?.id ??
+        null
+      );
+    },
   );
 
   // Centralized default variant resolution
   const defaultVariant = getDefaultVariant(variants, defaultVariantId);
+  const selectedVariant =
+    variants.find((variant) => variant.id === selectedVariantId) ??
+    defaultVariant;
 
   // Centralized price resolution with public promotion
   const pricingInputs: PricingInputs = {
@@ -99,7 +112,7 @@ export function ProductDetailInteractive({
     locale,
     copy.priceUnpublished,
   );
-  const displaySku = priceResult.pricingVariant?.sku ?? defaultVariant?.sku;
+  const displaySku = selectedVariant?.sku;
   const resolvedActiveImageIndex = Math.min(
     activeImageIndex,
     Math.max(images.length - 1, 0),
@@ -293,6 +306,10 @@ export function ProductDetailInteractive({
                       <span className="sf-variant-name">
                         {locale === "he" ? variant.colorHe : variant.colorEn}
                       </span>
+                      <span className="sf-variant-stock">
+                        {variant.stockQty}{" "}
+                        {locale === "he" ? "במלאי" : "in stock"}
+                      </span>
                       {variant.price !== null &&
                         variant.price !== priceResult.effectivePrice && (
                           <span className="sf-variant-price-diff">
@@ -314,13 +331,11 @@ export function ProductDetailInteractive({
             locale={locale}
             disabled={
               !canAddToCart ||
-              (variants.length > 0 &&
-                (priceResult.pricingVariant?.stockQty ?? 0) <= 0)
+              (variants.length > 0 && (selectedVariant?.stockQty ?? 0) <= 0)
             }
             item={{
               productId,
-              variantId:
-                priceResult.pricingVariant?.id ?? defaultVariant?.id ?? null,
+              variantId: selectedVariant?.id ?? null,
               slug: productSlug,
               category: productCategory,
               name: productName,
@@ -335,9 +350,7 @@ export function ProductDetailInteractive({
           productSlug={productSlug}
           productName={productName}
           locale={locale}
-          variantId={
-            priceResult.pricingVariant?.id ?? defaultVariant?.id ?? null
-          }
+          variantId={selectedVariant?.id ?? null}
           contact={contact}
         />
 

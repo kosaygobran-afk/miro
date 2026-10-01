@@ -11,7 +11,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publishableKey =
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceKey = process.env.SUPABASE_SECRET_KEY;
 const baseUrl = process.env.ADMIN_BASE_URL || "http://127.0.0.1:3105";
 
 if (!supabaseUrl || !publishableKey || !serviceKey) {
@@ -25,7 +25,7 @@ if (!supabaseUrl || !publishableKey || !serviceKey) {
     "FAIL: verify-admin-console cannot run (missing Supabase credentials in .env.local)",
   );
   console.error(
-    "  Need NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or ANON_KEY), and SUPABASE_SERVICE_ROLE_KEY.",
+    "  Need NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (or ANON_KEY), and SUPABASE_SECRET_KEY.",
   );
   console.error(
     "  This check must exit non-zero when it cannot verify the console. To keep the old skip behavior explicitly, run:",

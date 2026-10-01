@@ -12,11 +12,7 @@ import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
-import {
-  getStoreCatalog,
-  getFallbackStoreCatalog,
-  getStoreViewer,
-} from "@/lib/store-data";
+import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
 import { withLocale, isLocale } from "@/lib/i18n";
 import { ProductViewTracker } from "@/components/analytics/ProductViewTracker";
 import { ProductDetailInteractive } from "@/components/products/ProductDetailInteractive";
@@ -40,9 +36,7 @@ export async function generateMetadata({
   const locale = isLocale(rawLocale) ? rawLocale : "he";
   const t = await getTranslations({ locale, namespace: "metadata.products" });
   const catalog = await getStoreCatalog(locale);
-  const fallbackCatalog = getFallbackStoreCatalog(locale);
-  const allProducts = [...catalog.products, ...fallbackCatalog.products];
-  const product = allProducts.find(
+  const product = catalog.products.find(
     (p) => p.slug === slug && p.category === normalizeCategory(category),
   );
 
@@ -69,6 +63,7 @@ export async function generateMetadata({
 
 function getStockBadge(
   stockState: "in_stock" | "low" | "out",
+  stockQty: number,
   policy:
     | "inherit"
     | "keep_visible_contact"
@@ -83,7 +78,7 @@ function getStockBadge(
       return (
         <span className="sf-stock-badge sf-stock-restock" aria-live="polite">
           <Truck size={14} aria-hidden="true" />
-          {copy.outOfStockRestock}
+          {copy.outOfStockRestock} · 0 {locale === "he" ? "במלאי" : "in stock"}
           <time dateTime={expectedRestockDate}>
             {new Date(expectedRestockDate).toLocaleDateString(
               locale === "he" ? "he-IL" : "en-IL",
@@ -101,14 +96,14 @@ function getStockBadge(
       return (
         <span className="sf-stock-badge sf-stock-contact" aria-live="polite">
           <Circle size={14} aria-hidden="true" />
-          {copy.outOfStockContact}
+          {copy.outOfStockContact} · 0 {locale === "he" ? "במלאי" : "in stock"}
         </span>
       );
     }
     return (
       <span className="sf-stock-badge sf-stock-out" aria-live="polite">
         <Circle size={14} aria-hidden="true" />
-        {locale === "he" ? "אזל מהמלאי" : "Out of stock"}
+        {locale === "he" ? "אזל מהמלאי · 0 במלאי" : "Out of stock · 0 in stock"}
       </span>
     );
   }
@@ -116,14 +111,14 @@ function getStockBadge(
     return (
       <span className="sf-stock-badge sf-stock-low" aria-live="polite">
         <Truck size={14} aria-hidden="true" />
-        {copy.lowStock}
+        {copy.lowStock} · {stockQty} {locale === "he" ? "נותרו" : "left"}
       </span>
     );
   }
   return (
     <span className="sf-stock-badge sf-stock-in" aria-live="polite">
       <Circle size={14} aria-hidden="true" />
-      {locale === "he" ? "במלאי" : "In stock"}
+      {stockQty} {locale === "he" ? "במלאי" : "in stock"}
     </span>
   );
 }
@@ -141,10 +136,7 @@ export default async function ProductDetailPage({
     getStoreCatalog(locale, viewer.role),
     getPublicContactConfig(),
   ]);
-  const fallbackCatalog = getFallbackStoreCatalog(locale);
-  const allProducts = [...catalog.products, ...fallbackCatalog.products];
-
-  const product = allProducts.find(
+  const product = catalog.products.find(
     (p) => p.slug === slug && p.category === category,
   );
 
@@ -159,6 +151,8 @@ export default async function ProductDetailPage({
   }
 
   const defaultVariant =
+    product.variants.find((v) => v.isDefault && v.stockQty > 0) ??
+    product.variants.find((v) => v.stockQty > 0) ??
     product.variants.find((v) => v.isDefault) ??
     product.variants.find((v) => v.price !== null) ??
     product.variants[0];
@@ -267,6 +261,7 @@ export default async function ProductDetailPage({
               }
               stockBadge={getStockBadge(
                 product.stockState,
+                product.stockQty,
                 product.outOfStockPolicy,
                 product.expectedRestockDate,
                 copy,

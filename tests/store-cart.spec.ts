@@ -34,7 +34,9 @@ test.describe("customer cart and checkout", () => {
   test("continues from cart to the checkout request page", async ({ page }) => {
     await page.locator(".sf-product-card .sf-add-cart-button").first().click();
     await page.locator(".premium-cart-link").click();
+    await expect(page).toHaveTitle(/Cart.*MIRO/);
     await page.getByRole("link", { name: "Continue to checkout" }).click();
+    await expect(page).toHaveTitle(/Checkout.*MIRO/);
 
     await expect(page).toHaveURL(/\/en\/checkout$/);
     await expect(
@@ -42,7 +44,9 @@ test.describe("customer cart and checkout", () => {
     ).toBeVisible();
     await expect(page.locator(".sf-checkout-summary li")).toHaveCount(1);
     await expect(
-      page.getByText("No online payment is collected on this page."),
+      page.getByText(
+        "No online payment is collected and no stock is reserved on this page.",
+      ),
     ).toBeVisible();
   });
 

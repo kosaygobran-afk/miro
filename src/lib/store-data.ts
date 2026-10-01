@@ -1,8 +1,3 @@
-import {
-  mockProducts,
-  productCategories,
-} from "@/features/catalog/product-data";
-import { categoryLabels } from "@/features/catalog/store-copy";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   Product,
@@ -38,14 +33,7 @@ export type StoreViewer = {
   savedProductIds: string[];
 };
 
-/**
- * Global inventory defaults fetched from business_settings.
- * Cached for the request lifetime.
- */
-let inventoryDefaultsCache: InventoryDefaults | null = null;
-
 async function getInventoryDefaults(): Promise<InventoryDefaults> {
-  if (inventoryDefaultsCache) return inventoryDefaultsCache;
   try {
     const supabase = await createServerSupabaseClient();
     const { data, error } = await supabase
@@ -54,14 +42,13 @@ async function getInventoryDefaults(): Promise<InventoryDefaults> {
       .eq("key", "inventory_defaults")
       .maybeSingle();
     if (error || !data) {
-      inventoryDefaultsCache = {
+      return {
         low_stock_threshold: 3,
         out_of_stock_policy: "keep_visible_contact",
       };
-      return inventoryDefaultsCache;
     }
     const value = data.value as Record<string, unknown>;
-    inventoryDefaultsCache = {
+    return {
       low_stock_threshold:
         typeof value.low_stock_threshold === "number"
           ? Math.max(0, Math.floor(value.low_stock_threshold))
@@ -76,13 +63,11 @@ async function getInventoryDefaults(): Promise<InventoryDefaults> {
           ? (value.out_of_stock_policy as ResolvedOutOfStockPolicy)
           : "keep_visible_contact",
     };
-    return inventoryDefaultsCache;
   } catch {
-    inventoryDefaultsCache = {
+    return {
       low_stock_threshold: 3,
       out_of_stock_policy: "keep_visible_contact",
     };
-    return inventoryDefaultsCache;
   }
 }
 
@@ -145,105 +130,12 @@ export async function getStoreViewer(): Promise<StoreViewer> {
   }
 }
 
-const hebrewProductNames: Record<string, string> = {
-  "camera-dome-pro": "מצלמת כיפה Pro 4K",
-  "camera-bullet-ai": "מצלמת צינור AI 5MP",
-  "camera-ptz-outdoor": "מצלמה ממונעת 4K 25x",
-  "camera-turret": "מצלמת צריח ColorNight 2K",
-  "camera-fisheye": "מצלמה פנורמית 360° 12MP",
-  "camera-doorbell": "פעמון וידאו חכם Pro",
-  "nvr-8ch": "מקליט NVR עם 8 ערוצים",
-  "nvr-16ch": "מקליט NVR AI עם 16 ערוצים",
-  "nvr-32ch": "מקליט NVR עם 32 ערוצים",
-  "server-storage": "שרת אחסון NAS עם 8 מפרצים",
-  "nvr-poe-switch": "מתג PoE+ עם 16 חיבורים",
-  "backup-appliance": "מערכת גיבוי 24TB",
-  "router-wifi6-pro": "נתב Wi-Fi 6 Pro AX6000",
-  "router-wifi7": "נתב Wi-Fi 7 BE11000",
-  "router-edge": "נתב קצה 10G SFP+",
-  "router-mesh": "מערכת Mesh Wi-Fi 6",
-  "gateway-5g": "נתב חוץ 5G CPE",
-  "router-vpn": "מערכת VPN לעסקים",
-  "cable-cat6a": "כבל Cat6a מסוכך, 305 מטר",
-  "cable-cat6": "כבל רשת Cat6, 305 מטר",
-  "cable-fiber": "כבל סיב אופטי OM4, 10 מטר",
-  "cable-fiber-os2": "כבל סיב אופטי OS2, 20 מטר",
-  "connector-rj45": "מחברי Cat6a RJ45, מארז 50",
-  "cable-hdmi": "כבל HDMI 2.1 8K, 3 מטר",
-  "mount-wall": "זרוע קיר מתכווננת למצלמה",
-  "mount-pole": "ערכת התקנה למצלמה על עמוד",
-  "poe-injector": "מזריק מתח PoE++ 90W",
-  "poe-splitter": "מפצל PoE למתח 12V / 24V",
-  "ups-mini": "אל־פסק קומפקטי 650VA",
-  "surge-protector": "מגן נחשולי מתח לרשת",
-  "switch-24port": "מתג חכם עם 24 חיבורים",
-  "switch-48port": "מתג PoE+ עם 48 חיבורים",
-  "switch-8port": "מתג PoE+ עם 8 חיבורים",
-  "ap-wifi6": "נקודת גישה לתקרה Wi-Fi 6",
-  "ap-outdoor": "נקודת גישה לחוץ Wi-Fi 6",
-  "media-converter": "זוג ממירי סיב אופטי לרשת",
-};
-
-const hebrewDescriptions: Record<string, string> = {
-  cameras: "פתרון צילום לניטור המרחב, כחלק ממערכת מיגון המותאמת לבית או לעסק.",
-  servers: "הקלטה ואחסון למערכות צילום, עם מקום לתכנון נפח ודרישות הרחבה.",
-  routers: "תקשורת רציפה וחיבור בין המערכות, בתכנון המותאם למבנה ולמשתמשים.",
-  cables: "תשתית חיבור לציוד מיגון ותקשורת, להתקנה מסודרת בהתאם למפרט הפרויקט.",
-  accessories: "השלמה למערכת המיגון והתקשורת, עם התאמה לציוד ולתנאי ההתקנה.",
-  networkGear: "תשתית רשת למצלמות, נקודות גישה ומכשירים מחוברים בבית ובעסק.",
-};
-
 function normalizePrice(
   value: number | string | null | undefined,
 ): number | null {
   if (value === null || value === undefined) return null;
   const numeric = Number(value);
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
-}
-
-export function getFallbackStoreCatalog(locale: "he" | "en"): StoreCatalog {
-  if (process.env.NODE_ENV === "production") {
-    return { categories: [], products: [] };
-  }
-  return {
-    categories: productCategories.map((category) => ({
-      id: category.key,
-      key: category.key,
-      label: categoryLabels[category.key]?.[locale] ?? category.label,
-      href: `/store/${category.key}`,
-      imageUrl: null,
-    })),
-    products: mockProducts
-      .slice(0, 10)
-      .filter(
-        (product) =>
-          !shouldHideFromPublic(product.outOfStockPolicy, product.stockQty),
-      )
-      .map((product) => ({
-        ...product,
-        name:
-          locale === "he"
-            ? (hebrewProductNames[product.id] ?? product.name)
-            : product.name,
-        description:
-          locale === "he"
-            ? (hebrewDescriptions[product.category] ?? product.description)
-            : product.description.replace(", lifetime warranty", ""),
-        categoryLabel:
-          categoryLabels[product.category]?.[locale] ?? product.category,
-        badge: product.badge
-          ? locale === "he"
-            ? "מהקולקציה"
-            : "Collection pick"
-          : undefined,
-        isFeatured: Boolean(product.badge),
-        railSortOrder: product.badge ? 0 : null,
-        rolePrice: undefined,
-        promoBadges: [],
-        publicPromotion: null,
-        compareAtPrice: null,
-      })),
-  };
 }
 
 function mapCategoryLabel(
@@ -329,7 +221,7 @@ export async function getStoreCatalog(
       supabase
         .from("product_variants")
         .select(
-          "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, is_default, is_active, stock_qty, low_stock_threshold",
+          "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, is_default, is_active, stock_qty, low_stock_threshold",
         )
         .eq("is_active", true),
       supabase
@@ -572,7 +464,10 @@ export async function getStoreCatalog(
         // Resolve pricing with public promotion
         const publicPromotion = promotionsByProduct.get(product.id) ?? null;
         const defaultVariant =
-          productVariants.find((v) => v.isDefault) ?? productVariants[0];
+          productVariants.find((v) => v.isDefault && v.stockQty > 0) ??
+          productVariants.find((v) => v.stockQty > 0) ??
+          productVariants.find((v) => v.isDefault) ??
+          productVariants[0];
         const defaultVariantId = defaultVariant?.id ?? null;
 
         const pricingResult = resolvePrice({
@@ -670,14 +565,10 @@ export async function getStoreCatalog(
         };
       });
 
-    // Keep categories and products from the same source; mixed fallback data can
-    // otherwise produce empty category pages when the live catalog is unseeded.
-    if (!categories.length || !products.length)
-      return getFallbackStoreCatalog(locale);
     return { categories, products };
   } catch (error) {
     console.error("Supabase catalog read failed.", error);
-    return getFallbackStoreCatalog(locale);
+    return { categories: [], products: [] };
   }
 }
 
@@ -729,7 +620,7 @@ export async function getSavedProductsWithCanonicalData(
       supabase
         .from("product_variants")
         .select(
-          "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, is_default, is_active, stock_qty, low_stock_threshold",
+          "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, is_default, is_active, stock_qty, low_stock_threshold",
         )
         .in("product_id", productIds)
         .eq("is_active", true),

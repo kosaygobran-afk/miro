@@ -1,6 +1,86 @@
 # Project Status
 
-Last updated: 2026-09-30 (Customer Cart, Checkout Request & Gallery Repair)
+Last updated: 2026-10-01 (Production rollout and launch verification)
+
+## Production rollout and launch verification — 2026-10-01
+
+What changed and why:
+
+- Released the database-backed catalog, inventory counts, atomic actor audit, and server-validated enquiry checkout to Vercel Production. The live alias is `https://miro-one-omega.vercel.app`; the final mock-free deployment is `dpl_CpyuKTAqkRXtvZgCeMkkdtjms7jA` (Ready).
+- Upgraded Next.js and `eslint-config-next` from 16.3.5 to 16.3.8 after `npm audit` reported a critical Next.js advisory. `npm audit` and Vercel's production install now report zero vulnerabilities.
+- Removed the legacy `SUPABASE_SERVICE_ROLE_KEY` from Vercel Production and ignored local configuration. The server now requires the new `SUPABASE_SECRET_KEY`; authenticated Admin browser checks passed after a fresh production deployment with only that private app key configured.
+- Added an opt-in live customer/worker role smoke script. Removed the unused invented product array and the development-only `/catalog-preview` route, so the remaining storefront product source is the database.
+- Updated the comprehensive and merchandising browser checks to use live catalog records and support an unconfigured optional rail or single-image products. They no longer silently pass a detail page that returned 404.
+
+Commands and evidence:
+
+- Local `npm run lint`, `npm run typecheck`, changed-file Prettier checks and `git diff --check` passed. Deleting the preview route required `npx next typegen` to clear its stale generated validator entry before typecheck passed. The full Chromium suite passed 56/56 before the patch-only Next.js upgrade; 23 production Chromium auth, smoke, cart and checkout tests passed after the upgrade. The final remote production build passed with Next.js 16.3.8, generated 112 static pages and excluded `/catalog-preview`.
+- Live HTTP returned 200 for both store locales, the `miro-4k-pro` detail page, cart and checkout; unauthenticated Admin/worker routes redirected to login. A stale/nonexistent cart submitted to `/api/enquiries` returned 409 `cart_changed` and created no enquiry. Product and remaining-stock content rendered on the live store. The production error-log query returned no errors for the period checked.
+- The 14-page Admin console smoke passed twice, including after removing the legacy Vercel key; disposable Admin accounts were deleted. The customer and worker production smoke passed allowed-page and Admin/inventory-API isolation checks; both disposable accounts were deleted.
+- `npm run format:check` still reports 24 older untouched files; all files changed for this release pass Prettier. The legacy Supabase project key itself remains active at the provider pending deactivation after checking for any integrations outside this repository.
+
+Remaining owners and launch constraints:
+
+- **Security/operations owner:** deactivate the legacy anon/service-role key pair in Supabase Settings > API Keys after confirming external integrations, webhooks and other deployed clients use publishable/secret keys. The application and Vercel Production no longer depend on the old service-role key. Supabase's own migration guide says deactivation is reversible. Recheck production Auth/Admin and public browsing immediately afterward.
+- **Business/inventory owner:** confirm the seven existing sample database products, pricing, media rights and six imported opening stock balances against actual inventory. The owner authorized these rows as editable products for now, but no physical counts or commercial-claim approvals were supplied.
+- **Privacy/legal owner:** approve enquiry contact/address retention and final privacy/terms and storefront claims. **Accessibility owner:** complete manual bilingual screen-reader, keyboard, zoom and device checks; automated axe checks passed but cannot establish sign-off.
+
+## Launch workflow follow-up — 2026-10-01
+
+What changed and why:
+
+- Added `20261001000000_catalog_atomic_writes.sql`: Admin/CEO product and variant creation now use actor-authorized database functions that insert the catalog row and its audit event in one transaction. Default-variant changes during creation are audited in the same transaction. Variant removal now archives through the existing transactional update RPC, preserving stock/order references and actor history.
+- The migration records a separate, explicitly unattributed opening snapshot for legacy variant quantities that have no movement rows. It does not fabricate stock movements or claim a staff member performed the initial import.
+- Inventory movement history now shows that opening snapshot separately with its capture time and a clear statement that it is not an employee movement. History cache is cleared after a stock write so the next open fetches the new ledger entry.
+- Checkout remains an enquiry at the owner's direction. The server now checks each product, variant, slug, combined requested quantity and price against the current database-backed catalog before storing the enquiry. It replaces client-submitted names and prices with canonical values in request metadata; if stock or identity changed, it asks the customer to refresh the cart. Checkout copy explicitly says no payment is collected and stock is not reserved.
+- Visible store pages refresh every five seconds and on focus to pick up writes from another session. Public database change streams were deliberately avoided because full product rows contain private cost fields. This is near-live refresh, not a guarantee of instantaneous delivery.
+- Closed a catalog data exposure in the migration: anon/authenticated SQL grants now cover only public product and variant columns. `purchase_cost`, `cost_override`, supplier terms and internal metadata are excluded, and storefront queries no longer request variant cost. Existing row-level policies alone did not restrict these columns.
+- Server-side admin clients and privileged verification scripts now prefer `SUPABASE_SECRET_KEY`, with the legacy service-role key as a temporary fallback. The new key is documented in `.env.example` and `docs/OPERATIONS.md`. A valid `sb_secret_` project key was tested with a privileged product read, then installed in ignored `.env.local` and the Vercel Production environment. The production variable is sensitive and its value cannot be read back through `vercel env pull`; `vercel env ls production` confirms its presence. The legacy credential remains active until the updated application is deployed and verified.
+
+Verification and rollout state:
+
+- `npm run lint`, `npm run typecheck`, `npm run build`, `git diff --check` and Prettier checks passed after the route and migration work. Focused Chromium cart/checkout suite passed 7/7 after its copy assertion was updated.
+- The owner completed the Supabase CLI browser login. The checkout was linked to the project ref matching `.env.local`; `supabase db push --dry-run` listed exactly the earlier storefront-merchandising migration and the new catalog atomic-write migration. Both applied successfully through `supabase db push --yes`; `supabase migration list` showed local/remote versions aligned.
+- Anonymous live PostgREST checks returned `42501` for `products.purchase_cost` and `product_variants.cost_override`, while public `products.id` and `product_variants.stock_qty` remained readable. Six opening-balance rows captured 60 earlier seeded units; seven active catalog products remained. A live rollback transaction exercised product creation, default-variant creation, and their three CEO-attributed audit rows without leaving a QA record. A checkout request with nonexistent product/variant IDs returned HTTP 409 `cart_changed` and did not create an enquiry.
+- Authenticated CEO browser QA against a clean local production server created draft `atomic-catalog-qa-20261001` and its default variant, then archived both at zero stock. Live readback found `product_created`, `variant_created`, `variant_set_default`, `variant_updated` and `product_updated` with the same CEO actor; the variant is inactive and product archived, so neither is public. Product creation and default-variant creation each recorded their audit entries at the same transaction timestamp. Corrected the variant editor's misleading Delete wording to Archive and removed Archive from already inactive variant rows.
+- After the server-key compatibility change, `npm run lint`, `npm run typecheck`, `git diff --check` and Prettier checks passed. Direct privileged Supabase table and Auth Admin API reads with the new secret key passed. An attempted readback from Vercel's sensitive-variable pull returned no value, so deployment smoke verification is still required before legacy-key retirement. The earlier full production build and focused cart suite passed before this narrow key selection change; the dev server is currently using `.next`, so no concurrent build was started for this change.
+
+Remaining launch owners:
+
+- **Database/QA owner:** confirm the six legacy opening balances with a physical count where possible; complete browser checks of Admin and worker roles and a second open storefront session. CEO product/variant create and archive checks passed after restarting the local production server from a clean build.
+- **Security/operations owner:** deploy and smoke-check this release using the new `SUPABASE_SECRET_KEY`, then disable the previously exposed legacy service-role credential in Supabase. Confirm every remaining integration has moved first; disabling it prematurely would interrupt the current deployment. The new key has been installed locally and in Vercel Production, but this code is not yet deployed.
+- **Business/legal/privacy owner:** approve sample product claims, prices, stock counts, media rights, enquiry contact/address retention and the final privacy/terms copy. Do not describe enquiry submission as a reserved or paid order.
+- **Accessibility owner:** complete manual Hebrew/English screen-reader, keyboard, zoom and device review. **QA owner:** verify authenticated customer and worker journeys with test accounts and a second storefront session after the migration is live.
+
+## Catalog and inventory connection audit — 2026-10-01
+
+What changed and why:
+
+- Removed public category/product fallback to local mock records. The storefront now shows only active database products and fails closed to an empty catalog if its core read fails. The connected database already contains seven active products (six earlier sample MIRO records plus one additional product) and seven variants, so no duplicate products were inserted. These records are editable through the existing Admin/CEO catalog routes.
+- Displayed the sum of active variant stock on product cards, quick previews and detail pages, plus each variant's own count. Cart actions now use the selected or available variant's ID and stock rather than inferring stock from the variant that supplied the price. Inventory changes revalidate both localized store, category and detail routes. Removed the process-global inventory-default cache so settings reads cannot stay stale across requests, and removed `inventory_count` from product-creation input because it is a legacy counter rather than the stock ledger.
+- Product removal now archives through the actor-authorized transactional `update_product` RPC, which records `product_updated` with the previous/target status; hard deletion is disabled to preserve stock and order history. Added missing audit-history labels/filters for earlier product archive and variant create/update/delete events. Fixed the cart media link's accessible name; the cart accessibility test now waits for route metadata before auditing after client navigation.
+- Corrected the product table's misleading permanent-delete wording: active/hidden products have an Archive action, drafts have a confirmed Archive draft action, and archived products can be restored to a draft. The archive confirmation now explains that the product leaves the store and is recoverable.
+- Reviewed the role workflow: Admin/CEO can edit catalog and stock; workers handle assigned requests; customers browse and submit checkout enquiries. Checkout enquiries do not reserve or decrement inventory, while the management sale RPC does. Product creation and variant create/delete audit inserts are still separate from their data writes, so audit completeness is not yet guaranteed if an audit insert fails.
+
+Verification:
+
+- `npm run typecheck`, `npm run lint`, `npm run build`, and `git diff --check` passed.
+- Production-mode HTTP checks returned 200 for `/en/store` and `/en/store/cameras/miro-4k-pro`, with the live product's 18-unit variant count rendered; anonymous inventory and audit API requests returned 403.
+- Anonymous `/en/account`, `/en/worker`, and `/en/admin` requests returned 307 redirects to the shared login. The final production store response contains the live MIRO 4K product and no old development fixture product.
+- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:3100 PLAYWRIGHT_REUSE=1 npx playwright test tests/store-cart.spec.ts --project=chromium --reporter=line` passed 7/7 after the accessible-link fix.
+- Before authenticated QA, a read-only live database check found seven active product/variant records and zero historical `stock_movements`; only one `product_created` and one `variant_created` event appeared in the queried audit actions. The original seeded stock balances therefore have no trustworthy per-action actor history. Do not backfill a fictional actor.
+- Authenticated CEO browser QA on `/he/admin/inventory` loaded all seven variant quantities. A temporary stocktake correction on SKU `111111` changed 0→1, then 1→0; the UI returned to zero. Database readback confirmed two `stock_movements` and two matching `stock_movement` audit rows, each with the CEO actor and UTC timestamp.
+- Authenticated CEO browser QA created draft `temporary-catalog-qa-20261001`, edited its brand, then archived it. Database readback confirmed the saved field and three actor-attributed audit rows (`product_created`, `product_updated`, `product_updated` with target `archived`). The later publication check below temporarily made it public before the final archive.
+- The CEO `/he/admin/audit` screen visibly listed all five new QA events with the CEO name and local timestamps, including both stock corrections and product create/edit/archive.
+- Continued the authenticated end-to-end workflow with the same QA draft: restored it, assigned the Security Cameras category, saved a ₪100 base price, created default variant `QA-20261001` with barcode, and set its stock from 0→1 through the inventory ledger. Publishing succeeded; an anonymous HTTP request to `/en/store/cameras/temporary-catalog-qa-20261001` returned 200 and rendered the product name, SKU and one unit in stock. The CEO then archived the product and adjusted its variant back to zero; the public URL returned 404. Database readback confirmed archived status, zero stock, actor-attributed product/variant audit rows and paired stock movements. This QA record remains archived with no stock and is not public inventory.
+- After refreshing the CEO products screen, the actions displayed Archive for active products and Restore to draft for the QA archived product. Final `npm run build` passed after that UI change; `npm run lint`, `npm run typecheck` and `git diff --check` also passed.
+
+Remaining blockers and owner actions:
+
+- **Engineering/database owner:** link the intended Supabase project, apply pending migrations, replace separate product and variant create/delete plus audit calls with atomic actor-authorized database operations, and record a clearly marked opening balance for legacy seeded stock. Verify cross-session storefront refresh. A service-role credential exposure is recorded in the earlier status entry; rotate that credential.
+- **Business owner:** approve or replace sample product identities, claims, prices, photography rights, availability and stock counts. The user authorized retaining the current sample rows as editable database products for now; they are not verified business inventory.
+- **Engineering/operations owner:** define and implement stock reservation and server-priced order/payment flow if online checkout is required. The current cart sends an enquiry and does not change inventory.
+- **Privacy/legal owner:** approve checkout address/contact retention, storefront claims and externally hosted media. **Accessibility owner:** complete manual Hebrew/English screen-reader, zoom and device review.
 
 ## Version 0.0.5 release preparation — 2026-09-30
 
@@ -62,6 +142,7 @@ Scope: Substantially improve the existing CEO/admin interface, repair functional
 ### Completed Fixes
 
 **1. Overlay System (dialog, drawer, use-overlay-a11y)**
+
 - Fixed stable ID ownership in overlay-stack.tsx — replaced callback identity comparison with `isTopmost(id)` pattern
 - Dialogs and drawers now render via `createPortal` into body-level host (`#mgmt-overlay-portal-host`)
 - Portal host preserves theme tokens (`data-theme`, `dir`) from documentElement via MutationObserver
@@ -71,15 +152,18 @@ Scope: Substantially improve the existing CEO/admin interface, repair functional
 - Keyboard: Escape closes only topmost; Tab/Shift+Tab trapped in topmost; handles overlays with no focusable elements
 
 **2. ResizeObserver Measurements (header-client.tsx, management-topbar.tsx, product-editor.tsx)**
+
 - Fixed `borderBoxSize[0]?.blockSize` usage (replaced invented `borderBoxHeight`)
 - Product editor: uses callback ref (`setStickyBarRef`) to measure when element actually mounts; re-measures on resize, locale changes, content changes
 
 **3. Mobile Drawer Collapsed Sidebar (management.css, admin-nav.tsx)**
+
 - Scoped collapsed selectors to `.mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar` (not the drawer)
 - Added `aria-label` to collapsed icon links for accessibility
 - Tested: desktop collapse → resize to 375px → open mobile navigation → all drawer labels visible
 
 **4. Theme Contrast (experience.css, management.css)**
+
 - Light mode hero emphasis: `--primary` → `--accent-text` (contrast ~1.43:1 → ≥4.5:1)
 - Management active nav: `--mgmt-active-fg` changed from `--primary-foreground` (near-black) to `--accent-text` (gold) in dark/medium themes
 - Defined `--mgmt-sticky-stack-height` for scroll-margin coordination
@@ -87,23 +171,27 @@ Scope: Substantially improve the existing CEO/admin interface, repair functional
 - Disabled secondary stickiness on short landscape screens
 
 **5. Form Lifecycle Bugs**
+
 - Product creation: `finally` block resets `saving` state; duplicate slug gets specific field error
 - Settings panel: split into per-section state (`inventory_defaults`, `finance`, `public_contact`) with `saved`/`draft`/`loading`/`error`/`submitting`/`dirty`/`loaded`; saving one section no longer overwrites another's draft; initial loads check `response.ok`; invalid nested `<tbody>` removed from DataTable consumers
 - CEO notices: per-action persistent messages; removed 5-second auto-dismiss
 
 **6. Product API Contracts**
+
 - GET `/api/management/products` now supports `q`, `status`, `category`, `supplier`, `sort`, `order`, `page`, `limit` with validated response including `totalCount`, `totalPages`
 - GET `/api/management/products/[id]` for single product detail (editor loads one product, not full catalog)
 - POST `/api/management/product-lookup` for bounded picker DTO (variants + products)
 - Role prices: state lifted to editor (`rolePrices`, `rolePriceInputs`); survives section switches; saves independently via `/api/management/product-prices`
 
 **7. Settings Panel Rewrite**
+
 - Three independent sections: Inventory Defaults, Finance, Public Contact
 - Each has `saved`/`draft`/`loading`/`error`/`submitting`/`dirty`/`loaded` state
 - Failed load disables saving; retry clears only that section's error
 - Per-section success/error notices with dismiss
 
 **8. Verification Results**
+
 - `npm run lint` — passed (max-warnings=0)
 - `npm run typecheck` — passed
 - `npm run build` — passed (production, 109 routes)
@@ -131,6 +219,7 @@ Scope: Substantially improve the existing CEO/admin interface, repair functional
 ### Verification Results (2026-09-29)
 
 All verification gates passed:
+
 - `npm run lint` — passed (0 errors, 0 warnings)
 - `npm run typecheck` — passed
 - `npm run build` — passed (production, 102 routes)
@@ -150,24 +239,25 @@ All verification gates passed:
 
 All 14 major work items completed:
 
-| # | Area | Key Changes |
-|---|------|-------------|
-| 1 | Overlay System | Stable ID ownership, portal rendering, focus management, inert background, nested coordination |
-| 2 | ResizeObserver | Fixed `borderBoxSize[0]?.blockSize` in header, topbar, product editor; callback ref measurement |
-| 3 | Mobile Drawer | Scoped collapsed selectors to sidebar only; aria-label on collapsed links |
-| 4 | Theme Contrast | Light mode hero ≥4.5:1; management active nav uses `--accent-text`; `--mgmt-sticky-stack-height` |
-| 5 | Form Lifecycle | `finally` blocks, per-section settings state, `response.ok` checks, removed invalid `<tbody>` |
-| 6 | Product API | List/detail contracts, `/products/[id]` endpoint, `/product-lookup` picker, lifted role prices |
-| 7 | Settings Panel | Per-section `saved`/`draft`/`loading`/`error`/`submitting`/`dirty`/`loaded`; no cross-overwrite |
-| 8 | Dashboard Filters | URL-backed filters for requests, products, inventory, sales, customers |
-| 9 | Public Services | `getPublishedServices`, `getPublishedServiceBySlug`; dynamic service pages |
-| 10 | Pricing Resolver | Centralized `resolvePrice` in `src/lib/catalog/pricing.ts`; all consumers updated |
-| 11 | Inventory Settings | Four separate concepts (visibility, tracking, sale, traceability); server-side resolution |
-| 12 | Reporting Logic | SQL/RPC aggregates (finance overview), idempotency key on sales, stock lock ordering |
-| 13 | Customer/Intake | Authorized paginated read model, closed direct-write paths, atomic rate limiting |
-| 14 | Page Quality | CEO/admin compositions preserved; public/account routes functional |
+| #   | Area               | Key Changes                                                                                      |
+| --- | ------------------ | ------------------------------------------------------------------------------------------------ |
+| 1   | Overlay System     | Stable ID ownership, portal rendering, focus management, inert background, nested coordination   |
+| 2   | ResizeObserver     | Fixed `borderBoxSize[0]?.blockSize` in header, topbar, product editor; callback ref measurement  |
+| 3   | Mobile Drawer      | Scoped collapsed selectors to sidebar only; aria-label on collapsed links                        |
+| 4   | Theme Contrast     | Light mode hero ≥4.5:1; management active nav uses `--accent-text`; `--mgmt-sticky-stack-height` |
+| 5   | Form Lifecycle     | `finally` blocks, per-section settings state, `response.ok` checks, removed invalid `<tbody>`    |
+| 6   | Product API        | List/detail contracts, `/products/[id]` endpoint, `/product-lookup` picker, lifted role prices   |
+| 7   | Settings Panel     | Per-section `saved`/`draft`/`loading`/`error`/`submitting`/`dirty`/`loaded`; no cross-overwrite  |
+| 8   | Dashboard Filters  | URL-backed filters for requests, products, inventory, sales, customers                           |
+| 9   | Public Services    | `getPublishedServices`, `getPublishedServiceBySlug`; dynamic service pages                       |
+| 10  | Pricing Resolver   | Centralized `resolvePrice` in `src/lib/catalog/pricing.ts`; all consumers updated                |
+| 11  | Inventory Settings | Four separate concepts (visibility, tracking, sale, traceability); server-side resolution        |
+| 12  | Reporting Logic    | SQL/RPC aggregates (finance overview), idempotency key on sales, stock lock ordering             |
+| 13  | Customer/Intake    | Authorized paginated read model, closed direct-write paths, atomic rate limiting                 |
+| 14  | Page Quality       | CEO/admin compositions preserved; public/account routes functional                               |
 
 ### New Files Created
+
 - `src/lib/public-services.ts` — server-only public services read model
 - `src/lib/catalog/pricing.ts` — centralized pricing/availability resolver
 - `src/features/catalog/inventory-types.ts` — unified inventory type system
@@ -177,6 +267,7 @@ All 14 major work items completed:
 - `supabase/migrations/20260929000000_close_service_requests_direct_write.sql` — intake hardening
 
 ### Key Documentation Updated
+
 - `docs/PROJECT_STATUS.md` — this entry
 
 ---
@@ -1309,12 +1400,14 @@ Phase 2 should implement real authentication and permissions:
 - Authenticated GitHub CLI through browser device flow as repository owner; no token was added to repository files. Pushed local branch `0.0.4` and local merged `main` to `origin` without a force push.
 - Verified directly with `git ls-remote origin`: `refs/heads/0.0.4` = `368598ece69fc489ab4d928a04261d8a5d020a21` and `refs/heads/main` = `dcc83d82ceb369e99c6b445fb8bc8f25a16f8ae7` before this final handoff-log commit. `git merge-base --is-ancestor origin/0.0.4 origin/main` passed and the remote main package version is `0.0.4`. Main was built successfully after the merge; prior lint, typecheck and regression tests passed.
 - This entry supersedes the temporary remote-authentication blocker above. Owner/legal/accounting and manual accessibility approvals remain launch actions; committing these migrations did not deploy them to a new database.
+
 ## GitHub sync retry — 2026-09-29
 
 - Fast-forwarded `hardening/ceo-production-2026-09-26` from `fd61309` to `1071dea` (`origin/main`), bringing in four additional upstream commits.
 - Preserved and reapplied the existing local script edit. The prior sync note was reconciled with the newer upstream project-status history; no application-code conflicts occurred.
 - Commands: `git fetch origin`, `git merge --ff-only origin/main`, `git stash pop` — passed after resolving the documentation-only conflict.
 - Validation: repository status confirms `HEAD` matches `origin/main`; full lint/typecheck/build were not rerun for this sync. Owner/developer action: run the project verification gates before release.
+
 # Storefront merchandising implementation milestone — 2026-09-30
 
 What changed:
@@ -1433,3 +1526,35 @@ Remaining blockers and owners:
 - Database owner action: apply `20260929130000_storefront_merchandising.sql` to enable explicit rail ordering, category icons, badges and promotions. Until then, the featured-product fallback keeps the public rail functional.
 - Security owner action: a local environment parsing diagnostic accidentally printed the Supabase service-role credential into the agent execution log. Rotate that service-role secret immediately and update deployment/local secrets; the credential is not copied into source or this document.
 - Legal/privacy/accessibility: confirm rights for the external CCTV/Unsplash product images and prefer MIRO-owned storage because external hosts receive visitor network metadata. Manual bilingual keyboard, screen-reader, zoom and real-device gallery review remains a launch blocker.
+
+## Theme reload and inventory quantity recovery — 2026-09-30
+
+What changed:
+
+- Moved the theme bootstrap into a small `useServerInsertedHTML` component and kept an explicit dark server fallback. The bootstrap is emitted in the document head for pre-paint theme selection, while the component itself returns `null` on the client so React never reconciles an executable script element.
+- Aligned the inventory manager with the current management API contract: it now reads `items`, respects the 100-row API limit, follows `offset` pagination until all matching variants are loaded, and uses the same paginated data for replenishment calculations. The previous client requested invalid 200/500 limits and only read the retired `variants` property, so valid quantities could never render.
+- Added a cookie-free anonymous Supabase server client for published-service reads. Public service prefetches no longer inherit request-time cookies, removing the production `DYNAMIC_SERVER_USAGE` 500 responses that appeared in the console during navigation/reload while retaining anonymous RLS enforcement.
+
+Why it changed:
+
+- React 19.2/Next 16.3.5 reported that the executable script in `LocaleLayout` would not run when rendered on the client. A `next/script` `beforeInteractive` intermediate fix still materialized a script element during client/HMR rendering, so the server-insertion boundary was required to remove the warning reliably.
+- The inventory API and UI had drifted to different response and pagination contracts.
+- Production browser verification exposed service-detail RSC prefetch failures on reload even after the reported script warning was removed.
+
+Commands and evidence:
+
+- `npx prettier --check ...` — passed for the changed application files.
+- `npm run typecheck` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run build` — passed; all 113 static pages generated.
+- `git diff --check` — passed.
+- Development Chromium initial load and forced HMR refresh — saved `medium` theme restored correctly; selecting `light` persisted through a hard reload and client navigation to `/en/services`. The run had zero console warnings, console errors, page errors or failed requests, and visual review confirmed the selected light theme. The rendered bootstrap appears in the document head rather than in the client component tree.
+- Production Chromium navigation `/en` → `/en/services` plus hard reload — passed with the theme bootstrap present, the saved/system theme applied, zero console/page errors and zero HTTP failures.
+- Production Chromium request and reload of the protected inventory URL — correctly redirected an anonymous visitor to `/en/login` with zero console/page errors and zero HTTP failures.
+- Read-only connected-database check — six active variants, six numeric stock quantities and total stock 60. The unauthenticated inventory API correctly returned 403; no account, role or stock data was created or changed.
+
+Remaining blockers / owner actions:
+
+- **QA/Admin owner:** perform one authenticated Admin/CEO browser pass on `/[locale]/admin/inventory` to visually confirm the six live quantities, filters, refresh and movement history. Automated UI access had no authenticated browser surface, so no live stock mutation was attempted.
+- **Security owner:** the previously recorded service-role credential rotation remains outstanding; this change did not print, replace or rotate any secret.
+- **Business/legal owner:** approve real inventory and availability claims before publication. **Accessibility owner:** complete the existing bilingual keyboard, screen-reader and zoom review. This fix adds no tracking, new personal-data processing or permission changes.

@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   Plus,
   Edit,
-  Trash2,
   Loader2,
   AlertCircle,
   Eye,
@@ -248,22 +247,22 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
     }
   }
 
-  async function deleteProduct(id: string) {
+  async function archiveProduct(id: string) {
     setPendingDeleteId(null);
     setError("");
     try {
       const response = await fetch(`/api/management/products?id=${id}`, {
         method: "DELETE",
       });
-      if (!response.ok) throw new Error("Failed to delete");
+      if (!response.ok) throw new Error("Failed to archive");
       await loadData();
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
           : he
-            ? "שגיאה במחיקה"
-            : "Delete failed",
+            ? "שגיאה בהעברה לארכיון"
+            : "Archive failed",
       );
     }
   }
@@ -335,8 +334,8 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
         title={he ? "ניהול מוצרים" : "Product Management"}
         subtitle={
           he
-            ? "הוסף, ערוך ומחק מוצרים, נהל סטטוסים ופרסום"
-            : "Add, edit, delete products and manage statuses and publishing"
+            ? "הוסף וערוך מוצרים, נהל פרסום וארכוב"
+            : "Add and edit products, manage publishing and archiving"
         }
         actions={
           <Link
@@ -586,15 +585,17 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                             <RotateCcw aria-hidden="true" />
                           </button>
                         )}
-                        <button
-                          type="button"
-                          className="product-management__action product-management__action--danger"
-                          onClick={() => setPendingDeleteId(product.id)}
-                          aria-label={he ? "מחיקה" : "Delete"}
-                          data-tooltip={he ? "מחיקה" : "Delete"}
-                        >
-                          <Trash2 aria-hidden="true" />
-                        </button>
+                        {product.status === "draft" && (
+                          <button
+                            type="button"
+                            className="product-management__action product-management__action--danger"
+                            onClick={() => setPendingDeleteId(product.id)}
+                            aria-label={he ? "ארכב טיוטה" : "Archive draft"}
+                            data-tooltip={he ? "ארכב טיוטה" : "Archive draft"}
+                          >
+                            <Archive aria-hidden="true" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -616,19 +617,19 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
         open={pendingDeleteId !== null}
         onCancel={() => setPendingDeleteId(null)}
         onConfirm={() => {
-          if (pendingDeleteId) void deleteProduct(pendingDeleteId);
+          if (pendingDeleteId) void archiveProduct(pendingDeleteId);
         }}
-        title={he ? "למחוק את המוצר?" : "Delete product?"}
+        title={he ? "להעביר את המוצר לארכיון?" : "Archive product?"}
         description={
           pendingDeleteProduct
             ? he
-              ? `הפעולה תמחק את ${pendingDeleteProduct.name_he} ואת הקשרים שלו. לא ניתן לבטל אותה.`
-              : `This will delete ${pendingDeleteProduct.name_en} and its relationships. This cannot be undone.`
+              ? `${pendingDeleteProduct.name_he} יוסר מהחנות, וניתן יהיה לשחזר אותו לטיוטה.`
+              : `${pendingDeleteProduct.name_en} will be removed from the store and can be restored to a draft.`
             : he
-              ? "לא ניתן לבטל פעולה זו."
-              : "This action cannot be undone."
+              ? "ניתן לשחזר את המוצר לטיוטה בהמשך."
+              : "You can restore the product to a draft later."
         }
-        confirmLabel={he ? "אישור מחיקה" : "Delete product"}
+        confirmLabel={he ? "העבר לארכיון" : "Archive product"}
         cancelLabel={he ? "ביטול" : "Cancel"}
         tone="danger"
       />

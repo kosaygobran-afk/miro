@@ -218,13 +218,6 @@ export function VariantsManager({
       );
       if (!response.ok) {
         const err = await response.json();
-        if (err.code === "has_stock_movements") {
-          throw new Error(
-            he
-              ? "לא ניתן למחוק - יש תנועות מלאי. הוריאנט יאורכב."
-              : "Cannot delete - has stock movements. Variant will be archived.",
-          );
-        }
         throw new Error(err.error || (he ? "שגיאה בארכוב" : "Archive failed"));
       }
       await loadVariants();

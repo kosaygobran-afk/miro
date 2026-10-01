@@ -26,7 +26,6 @@ Route groups in parentheses are organization only. They do not appear in URLs.
 ## Development-Only Routes
 
 - `/design-system` - noindex and blocked in production
-- `/catalog-preview` - noindex and blocked in production
 
 ## Protected Routes
 
@@ -51,7 +50,7 @@ These routes require a verified server session and an active profile. Worker and
 
 | Audience | Entry                                        | Permissions                                                                       |
 | -------- | -------------------------------------------- | --------------------------------------------------------------------------------- |
-| Visitor  | No account needed                            | Browse, keep a local cart, and submit enquiries or checkout requests               |
+| Visitor  | No account needed                            | Browse, keep a local cart, and submit enquiries or checkout requests              |
 | Customer | Public signup and shared login               | Own profile and own service requests                                              |
 | Worker   | Shared login; CEO assigns role               | Assigned jobs and minimum required customer information                           |
 | Admin    | Shared login; CEO assigns role               | Catalog, inventory, sales recording, analytics, finance and user-list **viewing** |

@@ -20,7 +20,7 @@ export default defineConfig({
       env: {
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54331",
         NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "test-public-key",
-        SUPABASE_SERVICE_ROLE_KEY: "test-service-key",
+        SUPABASE_SECRET_KEY: "test-private-key",
       },
     },
   ],

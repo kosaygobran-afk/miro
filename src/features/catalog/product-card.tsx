@@ -39,14 +39,25 @@ function getPrimaryImage(product: Product) {
   return null;
 }
 
-function renderStockBadge(config: StockBadgeConfig | null) {
-  if (!config) return null;
+function renderStockBadge(
+  config: StockBadgeConfig | null,
+  stockQty: number,
+  locale: "he" | "en",
+) {
+  if (!config) {
+    return (
+      <span className="sf-stock-badge sf-stock-in" aria-live="polite">
+        <Circle size={12} aria-hidden="true" />
+        {stockQty} {locale === "he" ? "במלאי" : "in stock"}
+      </span>
+    );
+  }
 
   if (config.type === "restock") {
     return (
       <span className="sf-stock-badge sf-stock-restock" aria-live="polite">
         <Truck size={12} aria-hidden="true" />
-        {config.label}
+        {config.label} · 0 {locale === "he" ? "במלאי" : "in stock"}
       </span>
     );
   }
@@ -54,7 +65,7 @@ function renderStockBadge(config: StockBadgeConfig | null) {
     return (
       <span className="sf-stock-badge sf-stock-contact" aria-live="polite">
         <Circle size={12} aria-hidden="true" />
-        {config.label}
+        {config.label} · 0 {locale === "he" ? "במלאי" : "in stock"}
       </span>
     );
   }
@@ -62,7 +73,7 @@ function renderStockBadge(config: StockBadgeConfig | null) {
     return (
       <span className="sf-stock-badge sf-stock-out" aria-live="polite">
         <Circle size={12} aria-hidden="true" />
-        {config.label}
+        {config.label} · 0 {locale === "he" ? "במלאי" : "in stock"}
       </span>
     );
   }
@@ -70,7 +81,7 @@ function renderStockBadge(config: StockBadgeConfig | null) {
     return (
       <span className="sf-stock-badge sf-stock-low" aria-live="polite">
         <Truck size={12} aria-hidden="true" />
-        {config.label}
+        {config.label} · {stockQty} {locale === "he" ? "נותרו" : "left"}
       </span>
     );
   }
@@ -273,6 +284,8 @@ export function ProductCard({
                 expectedRestock: copy.expectedRestock,
               },
             ),
+            product.stockQty,
+            locale,
           )}
 
           {primaryImage ? (
@@ -374,9 +387,12 @@ export function ProductCard({
               item={{
                 productId: product.id,
                 variantId:
-                  product.variants.find((variant) => variant.isDefault)?.id ??
-                  product.variants[0]?.id ??
-                  null,
+                  (
+                    product.variants.find(
+                      (variant) => variant.isDefault && variant.stockQty > 0,
+                    ) ??
+                    product.variants.find((variant) => variant.stockQty > 0)
+                  )?.id ?? null,
                 slug: product.slug,
                 category: product.category,
                 name: product.name,

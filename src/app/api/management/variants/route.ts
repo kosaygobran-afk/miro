@@ -89,6 +89,8 @@ async function revalidateCatalog() {
   revalidatePath("/en/store");
   revalidatePath("/he/store/[category]", "page");
   revalidatePath("/en/store/[category]", "page");
+  revalidatePath("/he/store/[category]/[slug]", "page");
+  revalidatePath("/en/store/[category]/[slug]", "page");
 }
 
 export async function GET(request: Request) {
@@ -135,44 +137,15 @@ export async function POST(request: Request) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { admin, actor } = auth;
-  const { ...insertData } = parsed.data;
-
-  // Default-flag flips go through the atomic RPC (advisory-locked).
-  const wantsDefault = insertData.is_default;
-  insertData.is_default = false;
-
-  const { data: variant, error: variantError } = await admin
-    .from("product_variants")
-    .insert(insertData)
-    .select()
-    .single();
+  const client = await createServerSupabaseClient();
+  const { data: variant, error: variantError } = await client.rpc(
+    "create_catalog_variant",
+    { p_data: parsed.data },
+  );
 
   if (variantError) {
     return mapPostgresError(variantError);
   }
-
-  if (wantsDefault) {
-    const client = await createServerSupabaseClient();
-    const { error: defaultError } = await client.rpc("set_default_variant", {
-      p_variant: variant.id,
-    });
-    if (defaultError) return mapPostgresError(defaultError);
-    variant.is_default = true;
-  }
-
-  await admin.from("audit_events").insert({
-    action: "variant_created",
-    user_id: actor.user.id,
-    details: {
-      variant_id: variant.id,
-      product_id: variant.product_id,
-      sku: variant.sku,
-      is_default: variant.is_default,
-    },
-    entity_type: "product_variant",
-    entity_id: variant.id,
-  });
 
   await revalidateCatalog();
 
@@ -224,71 +197,20 @@ export async function DELETE(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
-  if (!id) {
-    return errorResponse("Variant ID required", 400);
+  if (!id || !z.string().uuid().safeParse(id).success) {
+    return errorResponse("Valid variant ID required", 400);
   }
 
-  const { admin, actor } = auth;
-
-  // Check if stock_movements exist for this variant
-  const { count: movementsCount, error: countError } = await admin
-    .from("stock_movements")
-    .select("id", { count: "exact", head: true })
-    .eq("variant_id", id);
-
-  if (countError) {
-    return mapPostgresError(countError);
-  }
-
-  const hasMovements = (movementsCount ?? 0) > 0;
-
-  if (hasMovements) {
-    // Soft delete via the transactional RPC (archives + audits + fires the
-    // last-sellable-variant unpublish trigger in one transaction).
-    const client = await createServerSupabaseClient();
-    const { error: updateError } = await client.rpc("update_variant", {
-      p_id: id,
-      p_patch: { is_active: false },
-    });
-
-    if (updateError) {
-      return mapVariantRpcError(updateError);
-    }
-
-    await revalidateCatalog();
-
-    return NextResponse.json({ ok: true, archived: true });
-  }
-
-  // Hard delete: no movements
-  const { error: deleteError } = await admin
-    .from("product_variants")
-    .delete()
-    .eq("id", id);
-
-  if (deleteError) {
-    // Check for FK constraint violation (23503) from stock_movements
-    if (deleteError.code === "23503") {
-      return NextResponse.json(
-        {
-          error: "Cannot delete variant with stock movements",
-          code: "has_stock_movements",
-        },
-        { status: 409 },
-      );
-    }
-    return mapPostgresError(deleteError);
-  }
-
-  await admin.from("audit_events").insert({
-    action: "variant_deleted",
-    user_id: actor.user.id,
-    details: { variant_id: id },
-    entity_type: "product_variant",
-    entity_id: id,
+  // Keep the row and its stock/order references. update_variant writes the
+  // metadata change and actor audit event in the same transaction.
+  const client = await createServerSupabaseClient();
+  const { error: updateError } = await client.rpc("update_variant", {
+    p_id: id,
+    p_patch: { is_active: false },
   });
+  if (updateError) return mapVariantRpcError(updateError);
 
   await revalidateCatalog();
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, archived: true });
 }

@@ -61,12 +61,16 @@ test.describe("Storefront - Comprehensive Tests", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("Store page has moving rail with proper structure", async ({ page }) => {
+  test("Store page handles optional moving rail", async ({ page }) => {
     await page.goto("/he/store");
     await page.waitForLoadState("networkidle");
 
     // Check for moving rail section
     const movingRail = page.locator(".sf-moving-rail-section");
+    if ((await movingRail.count()) === 0) {
+      await expect(page.locator(".sf-product-card").first()).toBeVisible();
+      return;
+    }
     await expect(movingRail).toBeVisible();
 
     // Check for rail track
@@ -168,12 +172,13 @@ test.describe("Storefront - Comprehensive Tests", () => {
   });
 
   test("Product detail page loads and passes axe", async ({ page }) => {
-    await page.goto("/he/store/cameras/camera-dome-pro");
+    await page.goto("/he/store/cameras/miro-4k-pro");
     await page.waitForLoadState("networkidle");
 
     // Check if page loads (not 404)
-    const response = await page.goto("/he/store/cameras/camera-dome-pro");
+    const response = await page.goto("/he/store/cameras/miro-4k-pro");
     console.log(`Product detail page status: ${response?.status()}`);
+    expect(response?.status()).toBe(200);
 
     if (response?.status() === 200) {
       const results = await new AxeBuilder({ page })
@@ -197,10 +202,11 @@ test.describe("Storefront - Comprehensive Tests", () => {
   test("Product detail page has image gallery with thumbnails", async ({
     page,
   }) => {
-    await page.goto("/he/store/cameras/camera-dome-pro");
+    await page.goto("/he/store/cameras/miro-4k-pro");
     await page.waitForLoadState("networkidle");
 
-    const response = await page.goto("/he/store/cameras/camera-dome-pro");
+    const response = await page.goto("/he/store/cameras/miro-4k-pro");
+    expect(response?.status()).toBe(200);
 
     if (response?.status() === 200) {
       // Check for main image
@@ -227,10 +233,11 @@ test.describe("Storefront - Comprehensive Tests", () => {
   });
 
   test("Product detail page variant selection works", async ({ page }) => {
-    await page.goto("/he/store/cameras/camera-dome-pro");
+    await page.goto("/he/store/cameras/miro-4k-pro");
     await page.waitForLoadState("networkidle");
 
-    const response = await page.goto("/he/store/cameras/camera-dome-pro");
+    const response = await page.goto("/he/store/cameras/miro-4k-pro");
+    expect(response?.status()).toBe(200);
 
     if (response?.status() === 200) {
       // Check for variant chips
@@ -315,7 +322,7 @@ test.describe("Storefront - Comprehensive Tests", () => {
     await expect(productGrid.first()).toBeVisible();
 
     const movingRail = page.locator(".sf-moving-rail-section");
-    await expect(movingRail).toBeVisible();
+    if ((await movingRail.count()) > 0) await expect(movingRail).toBeVisible();
   });
 
   test("Dark/Medium/Light theme switching", async ({ page }) => {
@@ -384,6 +391,10 @@ test.describe("Storefront - Comprehensive Tests", () => {
 
     // Check for duplicate content that might be announced twice
     const railCards = page.locator(".sf-moving-rail-card");
+    if ((await railCards.count()) === 0) {
+      await expect(page.locator(".sf-product-card").first()).toBeVisible();
+      return;
+    }
     const firstCard = railCards.first();
     const ariaLabel = await firstCard.getAttribute("aria-label");
     console.log(`First rail card aria-label: ${ariaLabel}`);

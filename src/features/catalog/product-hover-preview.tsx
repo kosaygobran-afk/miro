@@ -85,7 +85,11 @@ export function ProductHoverPreview({
     sourceScaleX: 0.72,
     sourceScaleY: 0.72,
   });
-  const isClient = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const isClient = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
   const hasFinePointer = useMediaQuery("(hover: hover) and (pointer: fine)");
   const prefersReducedMotion = useMediaQuery(
     "(prefers-reduced-motion: reduce)",
@@ -452,12 +456,12 @@ export function ProductHoverPreview({
             >
               <Circle size={8} fill="currentColor" aria-hidden="true" />
               {product.stockState === "low"
-                ? copy.lowStock
+                ? `${copy.lowStock} · ${product.stockQty} ${locale === "he" ? "נותרו" : "left"}`
                 : product.stockState === "out"
                   ? copy.outOfStockContact
                   : locale === "he"
-                    ? "במלאי"
-                    : "In stock"}
+                    ? `${product.stockQty} במלאי`
+                    : `${product.stockQty} in stock`}
             </span>
             <Link
               href={`/${locale}/store/${product.category}/${product.slug}`}

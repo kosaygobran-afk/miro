@@ -6,6 +6,15 @@ import {
   mapPostgresError,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
+
+function revalidateCatalog() {
+  for (const locale of ["he", "en"]) {
+    revalidatePath(`/${locale}/store`);
+    revalidatePath(`/${locale}/store/[category]`, "page");
+    revalidatePath(`/${locale}/store/[category]/[slug]`, "page");
+  }
+}
 
 const movementSchema = z.object({
   variantId: z.string().uuid(),
@@ -87,6 +96,9 @@ export async function GET(request: Request) {
   const { admin } = auth;
 
   if (variantId) {
+    if (!z.string().uuid().safeParse(variantId).success) {
+      return errorResponse("Valid variant ID required", 400);
+    }
     const { data: movements, error } = await admin
       .from("stock_movements")
       .select(
@@ -96,7 +108,18 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) return mapPostgresError(error);
-    return NextResponse.json({ movements: movements ?? [] });
+    const { data: openingBalance, error: openingError } = await admin
+      .from("stock_opening_balances")
+      .select("quantity, captured_at, source")
+      .eq("variant_id", variantId)
+      .maybeSingle();
+    if (openingError && !["42P01", "PGRST205"].includes(openingError.code)) {
+      return mapPostgresError(openingError);
+    }
+    return NextResponse.json({
+      movements: movements ?? [],
+      openingBalance: openingBalance ?? null,
+    });
   }
 
   const parsed = inventoryListQuerySchema.safeParse({
@@ -214,6 +237,7 @@ export async function POST(request: Request) {
     );
   }
 
+  revalidateCatalog();
   return NextResponse.json({ movementId });
 }
 
@@ -264,5 +288,6 @@ export async function PATCH(request: Request) {
     );
   }
 
+  revalidateCatalog();
   return NextResponse.json({ movementId });
 }

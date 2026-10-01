@@ -10,7 +10,7 @@ nextEnv.loadEnvConfig(process.cwd());
 const options = { auth: { persistSession: false, autoRefreshToken: false } };
 const service = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
+  process.env.SUPABASE_SECRET_KEY,
   options,
 );
 const client = createClient(

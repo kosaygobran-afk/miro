@@ -9,11 +9,7 @@ import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
-import {
-  getStoreCatalog,
-  getFallbackStoreCatalog,
-  getStoreViewer,
-} from "@/lib/store-data";
+import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
 import { CategoryViewTracker } from "@/components/analytics/CategoryViewTracker";
 
 interface CategoryPageProps {
@@ -31,9 +27,8 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "metadata.products" });
   const catalog = await getStoreCatalog(locale);
   const label =
-    [...catalog.categories, ...getFallbackStoreCatalog(locale).categories].find(
-      (item) => item.key === normalizeCategory(category),
-    )?.label ?? category;
+    catalog.categories.find((item) => item.key === normalizeCategory(category))
+      ?.label ?? category;
   return pageMetadata({
     locale,
     path: `store/${category}`,
@@ -54,10 +49,7 @@ export default async function CategoryPage({
   const locale = rawLocale === "en" ? "en" : "he";
   const category = normalizeCategory(rawCategory);
   const viewer = await getStoreViewer();
-  const liveCatalog = await getStoreCatalog(locale, viewer.role);
-  const catalog = liveCatalog.categories.some((item) => item.key === category)
-    ? liveCatalog
-    : getFallbackStoreCatalog(locale);
+  const catalog = await getStoreCatalog(locale, viewer.role);
   const selected = catalog.categories.find((item) => item.key === category);
   if (!selected) notFound();
   const products = catalog.products.filter(

@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createPublicServerClient } from "@/lib/supabase/public-server";
 
 /**
  * Public-facing DTO for a published service.
@@ -66,10 +66,10 @@ export type RelatedProductItem = {
 
 /**
  * Fetches all published (active) services ordered by sort_order.
- * Server-only function - uses service role client for public reads.
+ * Server-only function - uses the anonymous public client and database RLS.
  */
 export async function getPublishedServices(): Promise<PublishedService[]> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createPublicServerClient();
 
   const { data, error } = await supabase
     .from("services")
@@ -91,12 +91,12 @@ export async function getPublishedServices(): Promise<PublishedService[]> {
 /**
  * Fetches a single published service by slug.
  * Returns null if not found or not active.
- * Server-only function - uses service role client for public reads.
+ * Server-only function - uses the anonymous public client and database RLS.
  */
 export async function getPublishedServiceBySlug(
   slug: string,
 ): Promise<PublishedService | null> {
-  const supabase = await createServerSupabaseClient();
+  const supabase = createPublicServerClient();
 
   const { data, error } = await supabase
     .from("services")
@@ -211,9 +211,11 @@ function mapContent(content: unknown): ServiceContent {
           typeof item === "object" && item !== null,
       )
       .map((item) => ({
-        question_he: typeof item.question_he === "string" ? item.question_he : "",
+        question_he:
+          typeof item.question_he === "string" ? item.question_he : "",
         answer_he: typeof item.answer_he === "string" ? item.answer_he : "",
-        question_en: typeof item.question_en === "string" ? item.question_en : "",
+        question_en:
+          typeof item.question_en === "string" ? item.question_en : "",
         answer_en: typeof item.answer_en === "string" ? item.answer_en : "",
       }))
       .filter(
@@ -249,12 +251,9 @@ function mapContent(content: unknown): ServiceContent {
           typeof item === "object" && item !== null,
       )
       .map((item) => ({
-        product_id:
-          typeof item.product_id === "string" ? item.product_id : "",
-        label_he:
-          typeof item.label_he === "string" ? item.label_he : "",
-        label_en:
-          typeof item.label_en === "string" ? item.label_en : "",
+        product_id: typeof item.product_id === "string" ? item.product_id : "",
+        label_he: typeof item.label_he === "string" ? item.label_he : "",
+        label_en: typeof item.label_en === "string" ? item.label_en : "",
       }))
       .filter((item) => item.product_id.trim());
   }

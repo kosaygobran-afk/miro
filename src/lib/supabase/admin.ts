@@ -7,23 +7,24 @@ let adminClient: SupabaseClient | null = null;
 export function createAdminClient(): SupabaseClient {
   if (adminClient) return adminClient;
 
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured.");
+  const privateKey = process.env.SUPABASE_SECRET_KEY;
+  if (!privateKey) {
+    throw new Error("A Supabase private server key is not configured.");
   }
 
   if (
-    serviceRoleKey.startsWith("sb_publishable_") ||
-    serviceRoleKey === process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    privateKey.startsWith("sb_publishable_") ||
+    privateKey === process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    privateKey === process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   ) {
     throw new Error(
-      "SUPABASE_SERVICE_ROLE_KEY must be a private service-role key, not the public publishable key.",
+      "The Supabase server key must be private, not a public API key.",
     );
   }
 
   adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
+    privateKey,
     {
       auth: {
         autoRefreshToken: false,

@@ -77,6 +77,14 @@ type ReplenishmentItem = {
   supplier_name: string | null;
 };
 
+type InventoryResponse = {
+  items?: Variant[];
+  totalCount?: number;
+  error?: string;
+};
+
+const inventoryPageSize = 100;
+
 const movementTypes = [
   {
     value: "purchase_receipt",
@@ -118,6 +126,71 @@ function getMovementLabel(type: string, locale: "he" | "en"): string {
   return type.replace(/_/g, " ");
 }
 
+async function fetchInventoryPages({
+  search = "",
+  lowStock = false,
+  signal,
+}: {
+  search?: string;
+  lowStock?: boolean;
+  signal?: AbortSignal;
+}): Promise<Variant[]> {
+  const variants: Variant[] = [];
+  let offset = 0;
+
+  while (true) {
+    const params = new URLSearchParams({
+      limit: String(inventoryPageSize),
+      offset: String(offset),
+    });
+    if (search) params.set("search", search);
+    if (lowStock) params.set("lowStock", "true");
+
+    const response = await fetch(
+      `/api/management/inventory?${params.toString()}`,
+      { cache: "no-store", signal },
+    );
+    const data = (await response.json()) as InventoryResponse;
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to load inventory");
+    }
+
+    const pageItems = Array.isArray(data.items) ? data.items : [];
+    variants.push(...pageItems);
+
+    const totalCount = Number(data.totalCount ?? variants.length);
+    if (pageItems.length < inventoryPageSize || variants.length >= totalCount) {
+      return variants;
+    }
+    offset += inventoryPageSize;
+  }
+}
+
+function toReplenishmentItems(variants: Variant[]): ReplenishmentItem[] {
+  return variants
+    .filter((variant) => {
+      const threshold =
+        variant.reorder_point ?? variant.low_stock_threshold ?? 0;
+      return variant.stock_qty <= threshold;
+    })
+    .map((variant) => {
+      const threshold =
+        variant.reorder_point ?? variant.low_stock_threshold ?? 0;
+      return {
+        id: variant.id,
+        sku: variant.sku,
+        product_name_he: variant.products?.name_he || "",
+        product_name_en: variant.products?.name_en || "",
+        stock_qty: variant.stock_qty,
+        low_stock_threshold: variant.low_stock_threshold,
+        reorder_point: variant.reorder_point,
+        reorder_qty: variant.reorder_qty,
+        recommended_order: variant.reorder_qty ?? threshold * 2,
+        supplier_name: variant.suppliers?.company_name || null,
+      };
+    });
+}
+
 interface InventoryManagerProps {
   locale: "he" | "en";
 }
@@ -138,6 +211,9 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
   const [historyOpen, setHistoryOpen] = useState<string | null>(null);
   const [historyData, setHistoryData] = useState<
     Record<string, StockMovement[]>
+  >({});
+  const [historyOpening, setHistoryOpening] = useState<
+    Record<string, { quantity: number; captured_at: string } | null>
   >({});
   const [historyLoading, setHistoryLoading] = useState<string | null>(null);
 
@@ -176,67 +252,40 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
     note: "",
   });
 
-  const fetchVariants = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const params = new URLSearchParams();
-      if (search) params.append("search", search);
-      if (lowStockFilter) params.append("lowStock", "true");
-      params.append("limit", "200");
-
-      const response = await fetch(
-        `/api/management/inventory?${params.toString()}`,
-        {
-          cache: "no-store",
-        },
-      );
-      const data = await response.json();
-      if (response.ok) {
-        setVariants(data.variants ?? []);
-      } else {
-        setError(
-          data.error ||
-            (he ? "לא ניתן לטעון מלאי" : "Failed to load inventory"),
-        );
+  const fetchVariants = useCallback(
+    async (signal?: AbortSignal) => {
+      if (signal?.aborted) return;
+      setLoading(true);
+      setError("");
+      try {
+        const items = await fetchInventoryPages({
+          search,
+          lowStock: lowStockFilter,
+          signal,
+        });
+        if (!signal?.aborted) setVariants(items);
+      } catch (cause) {
+        if (!signal?.aborted) {
+          setError(
+            cause instanceof Error && cause.message
+              ? cause.message
+              : he
+                ? "שגיאת חיבור"
+                : "Connection error",
+          );
+        }
+      } finally {
+        if (!signal?.aborted) setLoading(false);
       }
-    } catch {
-      setError(he ? "שגיאת חיבור" : "Connection error");
-    } finally {
-      setLoading(false);
-    }
-  }, [search, lowStockFilter, he]);
+    },
+    [search, lowStockFilter, he],
+  );
 
-  const fetchReplenishment = useCallback(async () => {
+  const fetchReplenishment = useCallback(async (signal?: AbortSignal) => {
     try {
-      const response = await fetch(
-        "/api/management/inventory?lowStock=false&limit=500",
-        { cache: "no-store" },
-      );
-      const data = await response.json();
-      if (response.ok && data.variants) {
-        const items: ReplenishmentItem[] = data.variants
-          .filter((v: Variant) => {
-            const threshold = v.reorder_point ?? v.low_stock_threshold;
-            return v.stock_qty <= threshold;
-          })
-          .map((v: Variant) => {
-            const threshold = v.reorder_point ?? v.low_stock_threshold;
-            const recommended = v.reorder_qty ?? threshold * 2;
-            return {
-              id: v.id,
-              sku: v.sku,
-              product_name_he: v.products?.name_he || "",
-              product_name_en: v.products?.name_en || "",
-              stock_qty: v.stock_qty,
-              low_stock_threshold: v.low_stock_threshold,
-              reorder_point: v.reorder_point,
-              reorder_qty: v.reorder_qty,
-              recommended_order: recommended,
-              supplier_name: v.suppliers?.company_name || null,
-            };
-          });
-        setReplenishment(items);
+      const items = await fetchInventoryPages({ signal });
+      if (!signal?.aborted) {
+        setReplenishment(toReplenishmentItems(items));
       }
     } catch {
       // Silently fail for replenishment
@@ -244,76 +293,26 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
   }, []);
 
   useEffect(() => {
-    // Initial load - use AbortController to avoid setState-in-effect lint issue
     const controller = new AbortController();
-    const params = new URLSearchParams();
-    if (search) params.append("search", search);
-    if (lowStockFilter) params.append("lowStock", "true");
-    params.append("limit", "200");
-
-    fetch(`/api/management/inventory?${params.toString()}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (!controller.signal.aborted) {
-          if (data.variants) {
-            setVariants(data.variants);
-          }
-          setLoading(false);
-        }
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) {
-          setError(he ? "שגיאת חיבור" : "Connection error");
-          setLoading(false);
-        }
-      });
-
-    // Fetch replenishment separately
-    fetch("/api/management/inventory?lowStock=false&limit=500", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((response) => response.json())
-      .then((data) => {
-        if (!controller.signal.aborted && data.variants) {
-          const items: ReplenishmentItem[] = data.variants
-            .filter((v: Variant) => {
-              const threshold = v.reorder_point ?? v.low_stock_threshold;
-              return v.stock_qty <= threshold;
-            })
-            .map((v: Variant) => {
-              const threshold = v.reorder_point ?? v.low_stock_threshold;
-              const recommended = v.reorder_qty ?? threshold * 2;
-              return {
-                id: v.id,
-                sku: v.sku,
-                product_name_he: v.products?.name_he || "",
-                product_name_en: v.products?.name_en || "",
-                stock_qty: v.stock_qty,
-                low_stock_threshold: v.low_stock_threshold,
-                reorder_point: v.reorder_point,
-                reorder_qty: v.reorder_qty,
-                recommended_order: recommended,
-                supplier_name: v.suppliers?.company_name || null,
-              };
-            });
-          setReplenishment(items);
-        }
-      })
-      .catch(() => {
-        // Silently fail for replenishment
-      });
+    void Promise.resolve().then(() => fetchVariants(controller.signal));
+    void Promise.resolve().then(() => fetchReplenishment(controller.signal));
 
     return () => controller.abort();
-  }, [search, lowStockFilter, he]);
+  }, [fetchVariants, fetchReplenishment]);
 
   const showToast = (text: string, type: "success" | "error" = "success") => {
     setMessage(text);
     setMessageType(type);
     setTimeout(() => setMessage(""), 5000);
+  };
+
+  const invalidateHistory = (variantId: string) => {
+    setHistoryData((current) => {
+      const next = { ...current };
+      delete next[variantId];
+      return next;
+    });
+    setHistoryOpen(null);
   };
 
   const fetchHistory = async (variantId: string) => {
@@ -332,6 +331,10 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
         setHistoryData((prev) => ({
           ...prev,
           [variantId]: data.movements ?? [],
+        }));
+        setHistoryOpening((prev) => ({
+          ...prev,
+          [variantId]: data.openingBalance ?? null,
         }));
         setHistoryOpen(variantId);
       }
@@ -388,6 +391,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
       const data = await response.json();
       if (response.ok) {
         showToast(he ? "קבלת מלאי נרשמה" : "Stock receipt recorded");
+        invalidateHistory(receiveModal.variant.id);
         setReceiveModal({
           variant: null,
           quantity: "",
@@ -427,6 +431,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
       const data = await response.json();
       if (response.ok) {
         showToast(he ? "ההתאמה נרשמה" : "Adjustment recorded");
+        invalidateHistory(adjustModal.variant.id);
         setAdjustModal({ variant: null, counted: "", reason: "" });
         fetchVariants();
         fetchReplenishment();
@@ -465,6 +470,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
       const data = await response.json();
       if (response.ok) {
         showToast(he ? "ההוצאה נרשמה" : "Out movement recorded");
+        invalidateHistory(outModal.variant.id);
         setOutModal({
           variant: null,
           type: "damage",
@@ -622,7 +628,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
             <span>{error}</span>
             <button
               className="miro-button miro-button-secondary text-sm"
-              onClick={fetchVariants}
+              onClick={() => void fetchVariants()}
             >
               {he ? "נסה שוב" : "Retry"}
             </button>
@@ -946,6 +952,22 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                           {he ? "סגור" : "Close"}
                         </button>
                       </div>
+                      {historyOpening[variant.id] ? (
+                        <p className="inventory-manager__history-empty">
+                          {he
+                            ? "יתרת פתיחה מיובאת"
+                            : "Imported opening balance"}
+                          : {historyOpening[variant.id]?.quantity} ·{" "}
+                          {formatDate(
+                            historyOpening[variant.id]!.captured_at,
+                            locale,
+                          )}
+                          .{" "}
+                          {he
+                            ? "זהו צילום מצב ללא רישום של עובד שביצע תנועה."
+                            : "This is a snapshot, not an employee stock movement."}
+                        </p>
+                      ) : null}
                       {historyLoading === variant.id ? (
                         <div className="inventory-manager__history-loading">
                           <Loader2

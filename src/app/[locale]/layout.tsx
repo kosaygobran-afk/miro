@@ -10,6 +10,7 @@ import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { RecoveryRedirect } from "@/components/auth/recovery-redirect";
 import { SiteChrome } from "@/components/layout/site-chrome";
+import { ThemeBootstrap } from "@/components/theme-bootstrap";
 import { CartProvider } from "@/features/cart/cart-context";
 import "@/styles/workspace.css";
 import {
@@ -75,18 +76,11 @@ export default async function LocaleLayout({
       lang={locale}
       dir={getDirection(locale)}
       className={heebo.variable}
+      data-theme="dark"
       suppressHydrationWarning
     >
-      <head>
-        <script
-          suppressHydrationWarning
-          dangerouslySetInnerHTML={{
-            __html:
-              "(()=>{try{const k='miro-theme';const themes=['dark','medium','light'];const saved=localStorage.getItem(k);const prefersDark=matchMedia('(prefers-color-scheme: dark)').matches;const prefersLight=matchMedia('(prefers-color-scheme: light)').matches;let preferred=saved&&themes.includes(saved)?saved:(prefersDark?'dark':(prefersLight?'light':'medium'));document.documentElement.dataset.theme=preferred;}catch{document.documentElement.dataset.theme='dark';}})();",
-          }}
-        />
-      </head>
       <body>
+        <ThemeBootstrap />
         <CartProvider>
           <RecoveryRedirect locale={locale} />
           <a className="premium-skip-link" href="#main-content">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Package, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, Package, Pencil, Plus } from "lucide-react";
 import {
   ConfirmationDialog,
   DataTable,
@@ -424,14 +424,16 @@ export function VariantsSection({
                   >
                     <Pencil className="h-4 w-4" aria-hidden="true" />
                   </button>
-                  <button
-                    type="button"
-                    className={`${styles.iconButton} ${styles.iconButtonDanger}`}
-                    onClick={() => setPendingDelete(variant)}
-                    aria-label={variantCopy.deleteVariant[locale]}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </button>
+                  {variant.is_active ? (
+                    <button
+                      type="button"
+                      className={`${styles.iconButton} ${styles.iconButtonDanger}`}
+                      onClick={() => setPendingDelete(variant)}
+                      aria-label={variantCopy.deleteVariant[locale]}
+                    >
+                      <Archive className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  ) : null}
                 </span>
               </td>
             </tr>

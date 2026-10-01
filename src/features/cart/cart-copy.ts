@@ -13,7 +13,7 @@ export const cartCopy = {
     checkout: "Continue to checkout",
     checkoutTitle: "Checkout request",
     checkoutIntro:
-      "Send your delivery details and MIRO will confirm availability, shipping and the final total.",
+      "Send an enquiry. Stock is checked when you submit, but is not reserved; MIRO will confirm availability, shipping and the final total.",
     contact: "Contact details",
     shipping: "Shipping details",
     summary: "Order summary",
@@ -33,7 +33,8 @@ export const cartCopy = {
     requiredError: "Please complete all required fields.",
     emailError: "Enter a valid email address.",
     unavailable: "Checkout is unavailable right now. Please try again later.",
-    noPayment: "No online payment is collected on this page.",
+    noPayment:
+      "No online payment is collected and no stock is reserved on this page.",
   },
   he: {
     cartTitle: "סל הקניות שלכם",
@@ -47,7 +48,8 @@ export const cartCopy = {
     estimateNote: "זמינות, עלות משלוח ומחיר סופי יאושרו לפני תשלום.",
     checkout: "המשך לפרטי המשלוח",
     checkoutTitle: "בקשת הזמנה ומשלוח",
-    checkoutIntro: "שלחו את פרטי המשלוח ו-MIRO תאשר זמינות, משלוח וסכום סופי.",
+    checkoutIntro:
+      "שלחו בקשה. המלאי נבדק בשליחה אך אינו נשמר; MIRO תאשר זמינות, משלוח וסכום סופי.",
     contact: "פרטי קשר",
     shipping: "פרטי משלוח",
     summary: "סיכום ההזמנה",
@@ -67,6 +69,6 @@ export const cartCopy = {
     requiredError: "יש למלא את כל שדות החובה.",
     emailError: "יש להזין כתובת דוא״ל תקינה.",
     unavailable: "לא ניתן להשלים את הבקשה כרגע. נסו שוב מאוחר יותר.",
-    noPayment: "לא נגבה תשלום מקוון בעמוד זה.",
+    noPayment: "לא נגבה תשלום מקוון והמלאי אינו נשמר בעמוד זה.",
   },
 } as const;
