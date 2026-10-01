@@ -1912,3 +1912,13 @@ details[open] > p {
 .active-tool-pill {
   animation: pill-slide 0.3s ease-out;
 }
+
+/* Low-specificity foundation for controls outside the named design systems. */
+:where(button, [role="button"], [role="switch"]) {
+  border-radius: var(--radius-lg);
+  touch-action: manipulation;
+}
+:where(button, [role="button"], [role="switch"]):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}

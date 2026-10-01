@@ -131,3 +131,10 @@ The user supplied two MIRO reference images on 2026-09-20: a dark black/charcoal
 - Reporting charts use the shared `ActivityChart`: labeled axes and legends, scrollable dates, accessible exact-value tables, and honest aggregate granularity. Do not fabricate hourly detail from daily totals or represent zero as a positive bar.
 - Next Image `fill` requires a positioned media parent. Product popup images must remain contained in `.sf-dialog-visual`, without overlapping the copy column.
 - Missing optional settings rows must resolve to editable defaults; loading UI uses a neutral status, while failures use actual error feedback.
+
+## Catalog controls and price hierarchy — 2026-10-01
+
+- Keep action buttons at least 44px tall, with rounded corners, visible focus rings, and a clear gap from adjacent controls. On small phones, show a single product card per row so its price, stock and actions have room.
+- Public product prices show the VAT-inclusive amount first and a smaller VAT-exclusive amount below. Keep stock quantity beside the price, using the shared `StockIndicator` so cards, previews and details share accessible status wording.
+- Stock colors are quantity based: 15+ bright green, 6–14 green, 4–5 orange, and 0–3 red. Color is supplemental; show the numeric quantity and a short status on hover or keyboard focus.
+- The current storefront calculation uses the seeded 18% VAT rate. If the CEO changes the scheduled tax rate, update the public rate source and verify the displayed net amounts before publishing.

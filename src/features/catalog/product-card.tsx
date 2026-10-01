@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -9,11 +9,10 @@ import {
   ArrowUpRight,
   Heart,
   HeartOff,
-  Circle,
-  Truck,
   Loader2,
   Eye,
 } from "lucide-react";
+import { StockIndicator } from "@/features/catalog/stock-indicator";
 import { ProductVisual } from "@/components/products/ProductVisual";
 import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
@@ -22,9 +21,8 @@ import { trackProductImpression } from "@/components/analytics/track";
 import {
   formatPrice,
   getDiscountPercent,
-  getStockBadgeConfig,
+  priceBeforeVat,
   shouldHideFromPublic,
-  type StockBadgeConfig,
 } from "@/lib/catalog/pricing";
 import { ProductHoverPreview } from "@/features/catalog/product-hover-preview";
 import { StickerCluster } from "@/features/catalog/product-promo-badge";
@@ -35,55 +33,6 @@ export type { Product } from "@/features/catalog/product-data";
 function getPrimaryImage(product: Product) {
   if (product.images.length > 0) {
     return product.images[0];
-  }
-  return null;
-}
-
-function renderStockBadge(
-  config: StockBadgeConfig | null,
-  stockQty: number,
-  locale: "he" | "en",
-) {
-  if (!config) {
-    return (
-      <span className="sf-stock-badge sf-stock-in" aria-live="polite">
-        <Circle size={12} aria-hidden="true" />
-        {stockQty} {locale === "he" ? "במלאי" : "in stock"}
-      </span>
-    );
-  }
-
-  if (config.type === "restock") {
-    return (
-      <span className="sf-stock-badge sf-stock-restock" aria-live="polite">
-        <Truck size={12} aria-hidden="true" />
-        {config.label} · 0 {locale === "he" ? "במלאי" : "in stock"}
-      </span>
-    );
-  }
-  if (config.type === "contact") {
-    return (
-      <span className="sf-stock-badge sf-stock-contact" aria-live="polite">
-        <Circle size={12} aria-hidden="true" />
-        {config.label} · 0 {locale === "he" ? "במלאי" : "in stock"}
-      </span>
-    );
-  }
-  if (config.type === "out") {
-    return (
-      <span className="sf-stock-badge sf-stock-out" aria-live="polite">
-        <Circle size={12} aria-hidden="true" />
-        {config.label} · 0 {locale === "he" ? "במלאי" : "in stock"}
-      </span>
-    );
-  }
-  if (config.type === "low") {
-    return (
-      <span className="sf-stock-badge sf-stock-low" aria-live="polite">
-        <Truck size={12} aria-hidden="true" />
-        {config.label} · {stockQty} {locale === "he" ? "נותרו" : "left"}
-      </span>
-    );
   }
   return null;
 }
@@ -107,6 +56,8 @@ export function ProductCard({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showHoverPreview, setShowHoverPreview] = useState(false);
   const [previewOpenedExplicitly, setPreviewOpenedExplicitly] = useState(false);
+  const closePreview = useCallback(() => setShowHoverPreview(false), []);
+  const keepPreviewOpen = useCallback(() => setShowHoverPreview(true), []);
   const cardRef = useRef<HTMLElement | null>(null);
   const previewButtonRef = useRef<HTMLButtonElement | null>(null);
   const kind = getProductVisualKind(product);
@@ -229,8 +180,8 @@ export function ProductCard({
         product={product}
         locale={locale}
         isOpen={showHoverPreview}
-        onClose={() => setShowHoverPreview(false)}
-        onKeepOpen={() => setShowHoverPreview(true)}
+        onClose={closePreview}
+        onKeepOpen={keepPreviewOpen}
         triggerRef={cardRef}
         focusOnOpen={previewOpenedExplicitly}
         returnFocusRef={previewButtonRef}
@@ -269,23 +220,6 @@ export function ProductCard({
 
           {product.badge && (
             <span className="sf-product-badge">{product.badge}</span>
-          )}
-
-          {renderStockBadge(
-            getStockBadgeConfig(
-              product.stockState,
-              product.outOfStockPolicy,
-              product.expectedRestockDate,
-              locale,
-              {
-                lowStock: copy.lowStock,
-                outOfStockContact: copy.outOfStockContact,
-                outOfStockRestock: copy.outOfStockRestock,
-                expectedRestock: copy.expectedRestock,
-              },
-            ),
-            product.stockQty,
-            locale,
           )}
 
           {primaryImage ? (
@@ -352,21 +286,41 @@ export function ProductCard({
 
         {/* Price with promotional display */}
         <div className="sf-product-price">
-          <strong dir="auto">{formattedPrice}</strong>
-          {discountPercent !== null && formattedCompareAtPrice && (
-            <>
-              <span className="sf-product-compare-at" dir="auto">
-                {formattedCompareAtPrice}
-              </span>
-              <span
-                className="sf-product-discount"
-                aria-label={`${discountPercent}% off`}
-              >
-                -{discountPercent}%
-              </span>
-            </>
-          )}
-          {effectivePrice === null && <span>{copy.demoPrice}</span>}
+          <div className="sf-product-price__amount">
+            <strong dir="auto">{formattedPrice}</strong>
+            {effectivePrice !== null && (
+              <small dir="auto">
+                {locale === "he" ? "כולל מע״מ" : "incl. VAT"}
+              </small>
+            )}
+            {effectivePrice !== null && (
+              <small dir="auto">
+                {formatPrice(
+                  priceBeforeVat(effectivePrice),
+                  locale,
+                  copy.priceUnpublished,
+                )}{" "}
+                {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
+              </small>
+            )}
+          </div>
+          <StockIndicator quantity={product.stockQty} locale={locale} />
+          <div className="sf-product-price__promotion">
+            {discountPercent !== null && formattedCompareAtPrice && (
+              <>
+                <span className="sf-product-compare-at" dir="auto">
+                  {formattedCompareAtPrice}
+                </span>
+                <span
+                  className="sf-product-discount"
+                  aria-label={`${discountPercent}% off`}
+                >
+                  -{discountPercent}%
+                </span>
+              </>
+            )}
+            {effectivePrice === null && <span>{copy.demoPrice}</span>}
+          </div>
         </div>
 
         <div className="sf-product-actions">

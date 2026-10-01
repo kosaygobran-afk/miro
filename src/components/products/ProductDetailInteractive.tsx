@@ -17,10 +17,12 @@ import {
   formatPrice,
   getDiscountPercent,
   getDefaultVariant,
+  priceBeforeVat,
   resolvePrice,
   type PricingInputs,
 } from "@/lib/catalog/pricing";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
+import { StockIndicator } from "@/features/catalog/stock-indicator";
 
 interface ProductDetailInteractiveProps {
   productId: string;
@@ -36,6 +38,7 @@ interface ProductDetailInteractiveProps {
   contact: PublicContactActions | null;
   header: React.ReactNode;
   stockBadge: React.ReactNode;
+  stockQty: number;
   description: React.ReactNode;
   footer: React.ReactNode;
   publicPromotion?: PublicPromotion | null;
@@ -58,6 +61,7 @@ export function ProductDetailInteractive({
   contact,
   header,
   stockBadge,
+  stockQty,
   description,
   footer,
   publicPromotion = null,
@@ -113,6 +117,7 @@ export function ProductDetailInteractive({
     copy.priceUnpublished,
   );
   const displaySku = selectedVariant?.sku;
+  const displayedStock = selectedVariant?.stockQty ?? stockQty;
   const resolvedActiveImageIndex = Math.min(
     activeImageIndex,
     Math.max(images.length - 1, 0),
@@ -241,7 +246,22 @@ export function ProductDetailInteractive({
 
         <div className="sf-product-price-block">
           <div className="sf-price-display" aria-live="polite">
-            <strong dir="auto">{displayPrice}</strong>
+            <div className="sf-price-display__amount">
+              <strong dir="auto">{displayPrice}</strong>
+              {effectivePrice !== null && (
+                <small>{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
+              )}
+              {effectivePrice !== null && (
+                <small dir="auto">
+                  {formatPrice(
+                    priceBeforeVat(effectivePrice),
+                    locale,
+                    copy.priceUnpublished,
+                  )}{" "}
+                  {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
+                </small>
+              )}
+            </div>
             {discountPercent !== null && formattedCompareAtPrice && (
               <>
                 <span className="sf-price-compare-at" dir="auto">
@@ -257,6 +277,7 @@ export function ProductDetailInteractive({
             )}
             {effectivePrice !== null && <span>{copy.demoPrice}</span>}
           </div>
+          <StockIndicator quantity={displayedStock} locale={locale} />
           {displaySku && (
             <p className="sf-product-sku" dir="ltr">
               <span>{locale === "he" ? "מק״ט" : "SKU"}</span>: {displaySku}
@@ -264,9 +285,11 @@ export function ProductDetailInteractive({
           )}
         </div>
 
-        <div className="sf-product-stock" aria-live="polite">
-          {stockBadge}
-        </div>
+        {displayedStock <= 0 && (
+          <div className="sf-product-stock" aria-live="polite">
+            {stockBadge}
+          </div>
+        )}
 
         {variants.length > 0 && (
           <fieldset className="sf-variant-fieldset">

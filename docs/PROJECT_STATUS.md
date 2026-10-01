@@ -1589,3 +1589,24 @@ Remaining blockers / owner actions:
 - **QA/Admin owner:** perform one authenticated Admin/CEO browser pass on `/[locale]/admin/inventory` to visually confirm the six live quantities, filters, refresh and movement history. Automated UI access had no authenticated browser surface, so no live stock mutation was attempted.
 - **Security owner:** the previously recorded service-role credential rotation remains outstanding; this change did not print, replace or rotate any secret.
 - **Business/legal owner:** approve real inventory and availability claims before publication. **Accessibility owner:** complete the existing bilingual keyboard, screen-reader and zoom review. This fix adds no tracking, new personal-data processing or permission changes.
+
+## Premium controls and catalog price/stock hierarchy — 2026-10-01
+
+What changed and why:
+
+- Rounded and spaced the shared public and management buttons, theme control, search/filter controls, gallery actions and supplier switch, with a low-specificity foundation for remaining buttons/switches. Visible keyboard focus and reduced-motion behavior remain supported.
+- Moved numeric stock availability beside the product price on cards, quick previews and detail pages. The shared pill shows 15+ bright green, 6–14 green, 4–5 orange and 0–3 red, with short bilingual hover/focus wording and a full accessible label.
+- Displayed VAT-inclusive prices prominently with the smaller VAT-exclusive amount below on cards, the moving rail, quick previews and detail pages. The calculation uses the seeded 18% VAT rate and rounds to currency precision before display.
+- Switched the narrow-phone product grid to one column so prices, quantities and actions have adequate room. Stabilized hover-preview callbacks to avoid restarting the existing one-second intent timer during an impression rerender.
+- Kept the three card actions aligned in one row at 390px after the visual pass; their measured positions shared the same vertical coordinate and retained 44px icon targets.
+
+Verification:
+
+- `npm run lint`, `npm run typecheck`, `npm run build` and `git diff --check` passed.
+- Production-mode Playwright storefront and deployment smoke suites passed 15/15, including the new price/stock assertion, mobile overflow, hover preview, both home locales, reduced motion and WCAG A/AA automation. Desktop and 390px visual screenshots were reviewed; the latter prompted the single-column adjustment.
+
+Remaining blockers and owners:
+
+- **Business/legal owner:** confirm VAT-inclusive catalog pricing, the active 18% VAT assumption and live inventory claims before publication. The CEO can schedule another tax rate; the public net-price calculation must then be connected to the active rate rather than this seeded constant.
+- **Accessibility owner:** complete manual Hebrew/English screen-reader, keyboard, zoom and touch-device review of the new stock tooltip and responsive card controls.
+- **Security owner:** rotate the previously exposed service-role credential noted above. No personal-data collection or new external media access was added here.

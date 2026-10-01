@@ -265,6 +265,7 @@ export default async function ProductDetailPage({
                 copy,
                 locale,
               )}
+              stockQty={product.stockQty}
               description={
                 product.shortDescription ? (
                   <p className="sf-product-short-description" dir="auto">

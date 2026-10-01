@@ -11,17 +11,16 @@ import {
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
-import {
-  ArrowUpRight,
-  ChevronLeft,
-  ChevronRight,
-  Circle,
-  X,
-} from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Product, ProductImage } from "@/features/catalog/product-data";
 import { PromoBadge } from "@/features/catalog/product-promo-badge";
-import { formatPrice, getDiscountPercent } from "@/lib/catalog/pricing";
+import { StockIndicator } from "@/features/catalog/stock-indicator";
+import {
+  formatPrice,
+  getDiscountPercent,
+  priceBeforeVat,
+} from "@/lib/catalog/pricing";
 
 interface ProductHoverPreviewProps {
   product: Product;
@@ -415,7 +414,23 @@ export function ProductHoverPreview({
             {product.name}
           </h3>
           <div className="sf-hover-preview-price">
-            <strong dir="auto">{formattedPrice}</strong>
+            <div className="sf-price-display__amount">
+              <strong dir="auto">{formattedPrice}</strong>
+              {effectivePrice !== null && (
+                <small>{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
+              )}
+              {effectivePrice !== null && (
+                <small dir="auto">
+                  {formatPrice(
+                    priceBeforeVat(effectivePrice),
+                    locale,
+                    copy.priceUnpublished,
+                  )}{" "}
+                  {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
+                </small>
+              )}
+            </div>
+            <StockIndicator quantity={product.stockQty} locale={locale} />
             {discountPercent !== null && formattedCompareAtPrice ? (
               <>
                 <span className="sf-hover-preview-compare-at" dir="auto">
@@ -451,18 +466,6 @@ export function ProductHoverPreview({
           ) : null}
 
           <div className="sf-hover-preview-footer">
-            <span
-              className={`sf-hover-preview-stock sf-hover-preview-stock-${product.stockState}`}
-            >
-              <Circle size={8} fill="currentColor" aria-hidden="true" />
-              {product.stockState === "low"
-                ? `${copy.lowStock} · ${product.stockQty} ${locale === "he" ? "נותרו" : "left"}`
-                : product.stockState === "out"
-                  ? copy.outOfStockContact
-                  : locale === "he"
-                    ? `${product.stockQty} במלאי`
-                    : `${product.stockQty} in stock`}
-            </span>
             <Link
               href={`/${locale}/store/${product.category}/${product.slug}`}
               className="sf-hover-preview-link"

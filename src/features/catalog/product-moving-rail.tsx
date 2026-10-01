@@ -12,7 +12,11 @@ import Link from "next/link";
 import { ArrowUpRight, Eye, Pause, Play } from "lucide-react";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
-import { formatPrice, getDiscountPercent } from "@/lib/catalog/pricing";
+import {
+  formatPrice,
+  getDiscountPercent,
+  priceBeforeVat,
+} from "@/lib/catalog/pricing";
 import { StickerCluster } from "@/features/catalog/product-promo-badge";
 import { ProductHoverPreview } from "@/features/catalog/product-hover-preview";
 
@@ -155,7 +159,22 @@ function RailProduct({
             {product.name}
           </h3>
           <div className="sf-moving-rail-price">
-            <strong dir="auto">{formattedPrice}</strong>
+            <div className="sf-price-display__amount">
+              <strong dir="auto">{formattedPrice}</strong>
+              {effectivePrice !== null && (
+                <small>{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
+              )}
+              {effectivePrice !== null && (
+                <small dir="auto">
+                  {formatPrice(
+                    priceBeforeVat(effectivePrice),
+                    locale,
+                    copy.priceUnpublished,
+                  )}{" "}
+                  {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
+                </small>
+              )}
+            </div>
             {discountPercent !== null && compareAtPrice ? (
               <>
                 <span className="sf-moving-rail-compare-at" dir="auto">

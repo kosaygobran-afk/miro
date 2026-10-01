@@ -2,6 +2,40 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 test.describe("Storefront merchandising interactions", () => {
+  test("cards place VAT pricing beside an accessible stock tier", async ({
+    page,
+  }) => {
+    await page.goto("/en/store");
+    const card = page.locator(".sf-product-card").first();
+    await expect(card).toBeVisible();
+    await expect(card.locator(".sf-product-price__amount small")).toHaveCount(
+      2,
+    );
+    await expect(
+      card.locator(".sf-product-price__amount small").last(),
+    ).toContainText("excl. VAT");
+    const indicator = card.locator(".sf-stock-indicator");
+    const count = Number(
+      await indicator.locator(".sf-stock-indicator__number").textContent(),
+    );
+    const expectedTier =
+      count >= 15
+        ? "abundant"
+        : count >= 6
+          ? "available"
+          : count >= 4
+            ? "limited"
+            : "critical";
+    await expect(indicator).toHaveClass(
+      new RegExp(`sf-stock-indicator--${expectedTier}`),
+    );
+    await expect(indicator).toHaveAttribute(
+      "aria-label",
+      new RegExp(`${count} units in stock`),
+    );
+    await indicator.focus();
+    await expect(indicator).toBeFocused();
+  });
   test("card presses before its in-place 3D expansion, stays in the viewport, and closes", async ({
     page,
   }) => {

@@ -1,5 +1,13 @@
 import type { ProductVariant } from "@/features/catalog/product-data";
 
+// Public catalog prices are VAT inclusive. Confirm this rate with the business
+// owner when the scheduled management tax rate changes.
+export const STOREFRONT_VAT_RATE = 18;
+
+export function priceBeforeVat(gross: number): number {
+  return Math.round((gross / (1 + STOREFRONT_VAT_RATE / 100)) * 100) / 100;
+}
+
 export type PricingInputs = {
   /** Base product price (from product.price) */
   basePrice: number | null;
