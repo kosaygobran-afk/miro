@@ -77,6 +77,15 @@ test.describe("deployment smoke", () => {
     }
   });
 
+  test("service detail route does not switch from static to dynamic at runtime", async ({
+    page,
+  }) => {
+    const response = await page.goto("/he/services/security-cameras");
+    // An unseeded environment may have no published service; it must still
+    // render a normal not-found response rather than a server error.
+    expect([200, 404]).toContain(response?.status());
+  });
+
   test("home pages pass automated accessibility smoke checks", async ({
     page,
   }) => {

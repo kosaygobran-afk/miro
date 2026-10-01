@@ -1610,3 +1610,9 @@ Remaining blockers and owners:
 - **Business/legal owner:** confirm VAT-inclusive catalog pricing, the active 18% VAT assumption and live inventory claims before publication. The CEO can schedule another tax rate; the public net-price calculation must then be connected to the active rate rather than this seeded constant.
 - **Accessibility owner:** complete manual Hebrew/English screen-reader, keyboard, zoom and touch-device review of the new stock tooltip and responsive card controls.
 - **Security owner:** rotate the previously exposed service-role credential noted above. No personal-data collection or new external media access was added here.
+
+## Service detail production rendering recovery — 2026-10-01
+
+- The final production-server audit found HTTP 500 on `/he/services/security-cameras`: the detail route returned an empty `generateStaticParams` list, which Next.js 16 treats as runtime static generation, while the shared layout reads request-time cookies. Removed that static-path declaration and marked the detail page dynamic, allowing new published services to render on request as the existing comment intended.
+- Verification: production build, lint, typecheck and whitespace checks passed; the direct service-detail HTTP check changed from 500 to 200; storefront and smoke suites passed 16/16. No service copy, personal-data handling or access permissions changed.
+- **Content/accessibility owner:** continue the existing approval of published service copy and manual bilingual screen-reader/zoom review. **Security owner:** the previously exposed service-role credential rotation remains outstanding.

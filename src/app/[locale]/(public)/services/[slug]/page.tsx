@@ -13,11 +13,9 @@ import {
 
 type Params = Promise<{ locale: string; slug: string }>;
 
-export async function generateStaticParams() {
-  // Static params are not generated dynamically - we'll use dynamic rendering
-  // This allows new services to appear without rebuilds
-  return [];
-}
+// This page reads request-time locale/session context through the shared layout.
+// New published services must render immediately without a static path list.
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { locale, slug } = await params;
