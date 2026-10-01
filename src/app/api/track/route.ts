@@ -50,7 +50,10 @@ async function checkTrackingRateLimit(
   return "ok";
 }
 
-function getTrackingKey(request: NextRequest, sessionId: string | null): string {
+function getTrackingKey(
+  request: NextRequest,
+  sessionId: string | null,
+): string {
   // Prefer session ID for tracking rate limits; fall back to IP
   if (sessionId) return `sid:${sessionId}`;
   const forwarded = request.headers.get("x-forwarded-for");

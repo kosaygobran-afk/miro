@@ -99,7 +99,7 @@ export function DirectionArrow({
   return <Icon className={className} aria-hidden="true" />;
 }
 
-type ServiceItem = PublishedService | (typeof experienceCategories.he[number]);
+type ServiceItem = PublishedService | (typeof experienceCategories.he)[number];
 
 function getServiceName(service: ServiceItem, locale: Locale): string {
   if ("name_he" in service) {
@@ -117,12 +117,12 @@ function getServiceDescription(
     const s = service as PublishedService;
     if (compact) {
       return locale === "he"
-        ? s.short_description_he ?? s.description_he ?? ""
-        : s.short_description_en ?? s.description_en ?? "";
+        ? (s.short_description_he ?? s.description_he ?? "")
+        : (s.short_description_en ?? s.description_en ?? "");
     }
     return locale === "he"
-      ? s.description_he ?? s.short_description_he ?? ""
-      : s.description_en ?? s.short_description_en ?? "";
+      ? (s.description_he ?? s.short_description_he ?? "")
+      : (s.description_en ?? s.short_description_en ?? "");
   }
   return compact ? service.description : service.detail;
 }
@@ -134,7 +134,10 @@ function getServiceSlug(service: ServiceItem): string {
   return service.id;
 }
 
-function getServiceCtaText(service: ServiceItem, locale: Locale): string | null {
+function getServiceCtaText(
+  service: ServiceItem,
+  locale: Locale,
+): string | null {
   if ("content" in service) {
     const s = service as PublishedService;
     return s.content?.cta

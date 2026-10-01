@@ -62,7 +62,11 @@ const inventoryDefaultsSchema = z
   .object({
     low_stock_threshold: z.number().int().min(0).max(10000).default(3),
     out_of_stock_policy: z
-      .enum(["keep_visible_contact", "keep_visible_restock", "hide_from_public"])
+      .enum([
+        "keep_visible_contact",
+        "keep_visible_restock",
+        "hide_from_public",
+      ])
       .default("keep_visible_contact"),
   })
   .strict();
@@ -182,9 +186,15 @@ export async function POST(request: Request) {
   }
 
   if (parsed.data.key === "inventory_defaults") {
-    const inventoryParsed = inventoryDefaultsSchema.safeParse(parsed.data.value);
+    const inventoryParsed = inventoryDefaultsSchema.safeParse(
+      parsed.data.value,
+    );
     if (!inventoryParsed.success) {
-      return errorResponse("Invalid input", 400, inventoryParsed.error.flatten());
+      return errorResponse(
+        "Invalid input",
+        400,
+        inventoryParsed.error.flatten(),
+      );
     }
     // Merge with existing values for any omitted fields
     const { data: existingRows, error: readError } = await auth.admin
@@ -198,9 +208,13 @@ export async function POST(request: Request) {
       );
       return errorResponse("Failed to save setting", 500);
     }
-    const existingRow = existingRows?.find((r) => r.key === "inventory_defaults");
+    const existingRow = existingRows?.find(
+      (r) => r.key === "inventory_defaults",
+    );
     const existingValue =
-      existingRow && typeof existingRow.value === "object" && existingRow.value !== null
+      existingRow &&
+      typeof existingRow.value === "object" &&
+      existingRow.value !== null
         ? (existingRow.value as Record<string, unknown>)
         : {};
     valueToSave = { ...existingValue, ...inventoryParsed.data };

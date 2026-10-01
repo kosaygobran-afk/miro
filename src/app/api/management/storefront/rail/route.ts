@@ -7,20 +7,22 @@ import {
 } from "@/app/api/management/_shared";
 import { revalidatePath } from "next/cache";
 
-const railItemSchema = z.object({
-  id: z.string().uuid().optional(),
-  product_id: z.string().uuid(),
-  sort_order: z.number().int().default(0),
-  is_active: z.boolean().default(true),
-  scheduled_from: z.string().datetime().nullable().optional(),
-  scheduled_until: z.string().datetime().nullable().optional(),
-}).refine(
-  (data) =>
-    !data.scheduled_from ||
-    !data.scheduled_until ||
-    new Date(data.scheduled_from) < new Date(data.scheduled_until),
-  { message: "Scheduled end must be later than scheduled start" },
-);
+const railItemSchema = z
+  .object({
+    id: z.string().uuid().optional(),
+    product_id: z.string().uuid(),
+    sort_order: z.number().int().default(0),
+    is_active: z.boolean().default(true),
+    scheduled_from: z.string().datetime().nullable().optional(),
+    scheduled_until: z.string().datetime().nullable().optional(),
+  })
+  .refine(
+    (data) =>
+      !data.scheduled_from ||
+      !data.scheduled_until ||
+      new Date(data.scheduled_from) < new Date(data.scheduled_until),
+    { message: "Scheduled end must be later than scheduled start" },
+  );
 
 async function revalidateStorefront() {
   revalidatePath("/he/store");

@@ -211,7 +211,9 @@
   pointer-events: none;
   opacity: 0;
   transform: translate(-50%, 0.2rem);
-  transition: opacity 120ms ease, transform 120ms ease;
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
 }
 
 [dir="rtl"] .product-management__action::after {

@@ -423,8 +423,10 @@
   border: 1px solid var(--border-subtle);
   border-radius: 0.85rem;
   background:
-    linear-gradient(45deg, var(--surface-muted) 25%, transparent 25%) 0 0 / 1rem 1rem,
-    linear-gradient(-45deg, var(--surface-muted) 25%, transparent 25%) 0 0 / 1rem 1rem,
+    linear-gradient(45deg, var(--surface-muted) 25%, transparent 25%) 0 0 / 1rem
+      1rem,
+    linear-gradient(-45deg, var(--surface-muted) 25%, transparent 25%) 0 0 /
+      1rem 1rem,
     var(--surface);
 }
 

@@ -1142,7 +1142,11 @@ export type Database = {
       };
       publish_product: { Args: { p_product: string }; Returns: undefined };
       record_sale: {
-        Args: { p_customer: Json; p_items: Json; p_idempotency_key?: string | null };
+        Args: {
+          p_customer: Json;
+          p_items: Json;
+          p_idempotency_key?: string | null;
+        };
         Returns: string;
       };
       record_stock_movement: {

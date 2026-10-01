@@ -3,16 +3,14 @@
 import { Loader2, Trash2 } from "lucide-react";
 import { FormField } from "../ui";
 import { editorCopy, priceCopy, roleLabels } from "./copy";
-import {
-  PRICE_ROLES,
-  type Locale,
-  type PriceRole,
-} from "./types";
+import { PRICE_ROLES, type Locale, type PriceRole } from "./types";
 import styles from "./product-editor.module.css";
 
 export type RolePricesState = Partial<Record<PriceRole, number>>;
 export type RolePricesInputs = Record<PriceRole, string>;
-export type RolePricesInputsUpdater = (prev: RolePricesInputs) => RolePricesInputs;
+export type RolePricesInputsUpdater = (
+  prev: RolePricesInputs,
+) => RolePricesInputs;
 
 export function RolePricesSection({
   locale,
@@ -30,12 +28,20 @@ export function RolePricesSection({
   productId: string;
   prices: RolePricesState;
   inputs: RolePricesInputs;
-  onPricesChange: (prices: RolePricesState | ((prev: RolePricesState) => RolePricesState)) => void;
+  onPricesChange: (
+    prices: RolePricesState | ((prev: RolePricesState) => RolePricesState),
+  ) => void;
   onInputsChange: (inputs: RolePricesInputs | RolePricesInputsUpdater) => void;
   savingRole: PriceRole | null;
   setSavingRole: (role: PriceRole | null) => void;
   errors: Partial<Record<PriceRole, string>>;
-  setErrors: (errors: Partial<Record<PriceRole, string>> | ((prev: Partial<Record<PriceRole, string>>) => Partial<Record<PriceRole, string>>)) => void;
+  setErrors: (
+    errors:
+      | Partial<Record<PriceRole, string>>
+      | ((
+          prev: Partial<Record<PriceRole, string>>,
+        ) => Partial<Record<PriceRole, string>>),
+  ) => void;
 }) {
   async function saveRolePrice(role: PriceRole) {
     if (savingRole) return;
@@ -65,10 +71,19 @@ export function RolePricesSection({
         }));
         return;
       }
-      onPricesChange((prev: Partial<Record<PriceRole, number>>) => ({ ...prev, [role]: parsed }));
-      setErrors((prev: Partial<Record<PriceRole, string>>) => ({ ...prev, [role]: undefined }));
+      onPricesChange((prev: Partial<Record<PriceRole, number>>) => ({
+        ...prev,
+        [role]: parsed,
+      }));
+      setErrors((prev: Partial<Record<PriceRole, string>>) => ({
+        ...prev,
+        [role]: undefined,
+      }));
     } catch {
-      setErrors((prev: Partial<Record<PriceRole, string>>) => ({ ...prev, [role]: priceCopy.saveFailed[locale] }));
+      setErrors((prev: Partial<Record<PriceRole, string>>) => ({
+        ...prev,
+        [role]: priceCopy.saveFailed[locale],
+      }));
     } finally {
       setSavingRole(null);
     }
@@ -92,8 +107,14 @@ export function RolePricesSection({
       const nextPrices = { ...prices };
       delete nextPrices[role];
       onPricesChange(nextPrices);
-      onInputsChange((prev: Record<PriceRole, string>) => ({ ...prev, [role]: "" }));
-      setErrors((prev: Partial<Record<PriceRole, string>>) => ({ ...prev, [role]: undefined }));
+      onInputsChange((prev: Record<PriceRole, string>) => ({
+        ...prev,
+        [role]: "",
+      }));
+      setErrors((prev: Partial<Record<PriceRole, string>>) => ({
+        ...prev,
+        [role]: undefined,
+      }));
     } catch {
       setErrors((prev: Partial<Record<PriceRole, string>>) => ({
         ...prev,
@@ -117,14 +138,11 @@ export function RolePricesSection({
               label={roleLabels[role][locale]}
               description={
                 prices[role] !== undefined
-                  ? new Intl.NumberFormat(
-                      locale === "he" ? "he-IL" : "en-IL",
-                      {
-                        style: "currency",
-                        currency: "ILS",
-                        maximumFractionDigits: 2,
-                      },
-                    ).format(prices[role] as number)
+                  ? new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
+                      style: "currency",
+                      currency: "ILS",
+                      maximumFractionDigits: 2,
+                    }).format(prices[role] as number)
                   : priceCopy.noPriceSet[locale]
               }
               error={errors[role]}
@@ -139,7 +157,10 @@ export function RolePricesSection({
                   step="0.01"
                   value={inputs[role]}
                   onChange={(e) =>
-                    onInputsChange((prev) => ({ ...prev, [role]: e.target.value }))
+                    onInputsChange((prev) => ({
+                      ...prev,
+                      [role]: e.target.value,
+                    }))
                   }
                   disabled={savingRole !== null}
                 />

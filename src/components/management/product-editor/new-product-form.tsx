@@ -113,7 +113,9 @@ export function NewProductForm({ locale }: { locale: Locale }) {
         if (body.error === "duplicate_slug" || body.code === "duplicate_slug") {
           setErrors((prev) => ({
             ...prev,
-            slug: validationCopy.slugDuplicate?.[locale] ?? validationCopy.slugInvalid[locale],
+            slug:
+              validationCopy.slugDuplicate?.[locale] ??
+              validationCopy.slugInvalid[locale],
           }));
         }
         setSubmitError(

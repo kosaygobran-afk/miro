@@ -35,8 +35,20 @@ export async function generateMetadata({ params }: { params: Params }) {
   return pageMetadata({
     locale,
     path: `services/${slug}`,
-    title: locale === "he" ? service.seo_title_he ?? service.name_he : service.seo_title_en ?? service.name_en,
-    description: locale === "he" ? service.seo_description_he ?? service.short_description_he ?? service.description_he ?? "" : service.seo_description_en ?? service.short_description_en ?? service.description_en ?? "",
+    title:
+      locale === "he"
+        ? (service.seo_title_he ?? service.name_he)
+        : (service.seo_title_en ?? service.name_en),
+    description:
+      locale === "he"
+        ? (service.seo_description_he ??
+          service.short_description_he ??
+          service.description_he ??
+          "")
+        : (service.seo_description_en ??
+          service.short_description_en ??
+          service.description_en ??
+          ""),
   });
 }
 
@@ -90,8 +102,10 @@ export default async function ServiceDetailPage({
             <h1>{locale === "he" ? service.name_he : service.name_en}</h1>
             <p className="experience-description">
               {locale === "he"
-                ? service.short_description_he ?? service.description_he ?? ""
-                : service.short_description_en ?? service.description_en ?? ""}
+                ? (service.short_description_he ?? service.description_he ?? "")
+                : (service.short_description_en ??
+                  service.description_en ??
+                  "")}
             </p>
             <div className="experience-contact-prep">
               <h2>{he ? "מה מביאים בחשבון?" : "What goes into the plan?"}</h2>

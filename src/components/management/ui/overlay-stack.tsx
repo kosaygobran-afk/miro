@@ -211,7 +211,13 @@ export function OverlayStackProvider({ children }: { children: ReactNode }) {
 
   return (
     <OverlayStackContext.Provider
-      value={{ register, getTopmostClose, isTopmost, getPortalHost: () => document.getElementById("mgmt-overlay-portal-host") }}
+      value={{
+        register,
+        getTopmostClose,
+        isTopmost,
+        getPortalHost: () =>
+          document.getElementById("mgmt-overlay-portal-host"),
+      }}
     >
       <OverlayPortalHost />
       {children}

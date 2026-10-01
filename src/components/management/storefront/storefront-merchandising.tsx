@@ -464,9 +464,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
       void _ignoredErrors;
       const url = "/api/management/storefront/badges";
       const method = editingBadge ? "PATCH" : "POST";
-      const body = editingBadge
-        ? { id: editingBadge.id, ...payload }
-        : payload;
+      const body = editingBadge ? { id: editingBadge.id, ...payload } : payload;
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -694,10 +692,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
       const data = await response.json();
       if (!response.ok) throw new Error(data.error);
       setEditRailItemDialogOpen(false);
-      showNotice(
-        "success",
-        he ? "הגדרות הפס נשמרו." : "Rail settings saved.",
-      );
+      showNotice("success", he ? "הגדרות הפס נשמרו." : "Rail settings saved.");
       await load();
     } catch {
       showNotice("danger", copy[locale].saveFailed);
@@ -746,9 +741,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         tone: badgeType.tone,
         iconName: badgeType.icon_name,
       };
-      return (
-        <PromoBadge badge={badge} locale={locale} size="sm" />
-      );
+      return <PromoBadge badge={badge} locale={locale} size="sm" />;
     },
     [he, locale],
   );
@@ -819,7 +812,8 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         searchHint: "Enter at least two characters to find an active product.",
         noResults: "No available products found.",
         editRail: "Edit rail product",
-        railDescription: "Activation and scheduling control when this product appears publicly.",
+        railDescription:
+          "Activation and scheduling control when this product appears publicly.",
         start: "Start date",
         end: "End date",
         active: "Active in store",
@@ -837,7 +831,8 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         tone: "Color",
         icon: "Icon name",
         sortOrder: "Order",
-        promoDescription: "The promotion is calculated from the resolved customer and product price.",
+        promoDescription:
+          "The promotion is calculated from the resolved customer and product price.",
         promoType: "Promotion type",
         percent: "Percentage off",
         fixed: "Fixed amount",
@@ -845,9 +840,11 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         compareAt: "Compare-at price (optional)",
         removePromotion: "Delete promotion",
         deleteProductTitle: "Remove product from rail?",
-        deleteProductDescription: "This removes it from the rail only, not from the catalog.",
+        deleteProductDescription:
+          "This removes it from the rail only, not from the catalog.",
         deleteBadgeTitle: "Delete badge type?",
-        deleteBadgeDescription: "The badge type cannot be restored after deletion.",
+        deleteBadgeDescription:
+          "The badge type cannot be restored after deletion.",
         confirmDelete: "Delete",
       };
 
@@ -1299,13 +1296,13 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
                         ? "active"
                         : badge.tone === "best"
                           ? "pending"
-                        : badge.tone === "hot"
-                          ? "danger"
-                          : badge.tone === "new"
-                            ? "info"
-                            : badge.tone === "limited"
-                              ? "pending"
-                              : "neutral"
+                          : badge.tone === "hot"
+                            ? "danger"
+                            : badge.tone === "new"
+                              ? "info"
+                              : badge.tone === "limited"
+                                ? "pending"
+                                : "neutral"
                     }
                     size="sm"
                   >
@@ -1426,7 +1423,9 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
                     </strong>
                     <small dir="ltr">{product.slug}</small>
                   </span>
-                  <span>{formatPrice(product.sale_price ?? product.price)}</span>
+                  <span>
+                    {formatPrice(product.sale_price ?? product.price)}
+                  </span>
                   <Plus size={16} aria-hidden="true" />
                 </button>
               ))}
@@ -1680,11 +1679,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
             })}
           </div>
           <div className={styles.formGrid}>
-            <FormField
-              label={ui.key}
-              required
-              error={badgeForm._errors?.key}
-            >
+            <FormField label={ui.key} required error={badgeForm._errors?.key}>
               {(control) => (
                 <input
                   {...control}

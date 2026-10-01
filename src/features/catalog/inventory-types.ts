@@ -119,12 +119,7 @@ export function canSell(permission: SalePermission): boolean {
  * Used when tracking_mode is "serial" or "lot".
  */
 export type SerialUnitState =
-  | "in_stock"
-  | "sold"
-  | "returned"
-  | "damaged"
-  | "rma"
-  | "reserved";
+  "in_stock" | "sold" | "returned" | "damaged" | "rma" | "reserved";
 
 /**
  * Serial/lot unit record (mirrors product_serial_units table).
@@ -281,13 +276,18 @@ export function validateInventoryDefaults(value: unknown): InventoryDefaults {
 
   const outOfStockPolicy =
     typeof obj.out_of_stock_policy === "string" &&
-    ["keep_visible_contact", "keep_visible_restock", "hide_from_public"].includes(
-      obj.out_of_stock_policy,
-    )
+    [
+      "keep_visible_contact",
+      "keep_visible_restock",
+      "hide_from_public",
+    ].includes(obj.out_of_stock_policy)
       ? (obj.out_of_stock_policy as ResolvedOutOfStockPolicy)
       : "keep_visible_contact";
 
-  return { low_stock_threshold: lowStockThreshold, out_of_stock_policy: outOfStockPolicy };
+  return {
+    low_stock_threshold: lowStockThreshold,
+    out_of_stock_policy: outOfStockPolicy,
+  };
 }
 
 /**
@@ -342,9 +342,14 @@ export function buildResolvedVariantInventory(
     product.out_of_stock_policy,
     globalDefaults,
   );
-  const stockState = computeStockState(variant.stock_qty, variant.low_stock_threshold);
+  const stockState = computeStockState(
+    variant.stock_qty,
+    variant.low_stock_threshold,
+  );
   const isTracked = trackingModeEnforcesStock(product.tracking_mode);
-  const requiresTraceability = trackingModeRequiresTraceability(product.tracking_mode);
+  const requiresTraceability = trackingModeRequiresTraceability(
+    product.tracking_mode,
+  );
   const canSell = productStatusAllowsSale(product.status) && variant.is_active;
 
   return {

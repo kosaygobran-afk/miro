@@ -72,7 +72,10 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
 
   // Rate limit management read endpoints per IP
-  const rateLimit = await checkManagementReadRateLimit(auth.admin, getClientIp(request));
+  const rateLimit = await checkManagementReadRateLimit(
+    auth.admin,
+    getClientIp(request),
+  );
   if (rateLimit === "error") {
     return errorResponse("Unable to process request", 503);
   }
