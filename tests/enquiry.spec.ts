@@ -12,8 +12,8 @@ function enquiryPayload(overrides: Record<string, unknown> = {}) {
   };
 }
 
-// The API rate limit is an in-memory per-IP bucket and the suite runs
-// fullyParallel, so each test claims its own client IP to stay isolated.
+// Loopback tests can isolate rate-limit buckets with a unique forwarded IP.
+// Hosted proxies replace that header with the actual client IP.
 function uniqueIp() {
   const part = () => Math.floor(Math.random() * 256);
   return `198.${part()}.${part()}.${part()}`;
@@ -118,6 +118,11 @@ test.describe("enquiry flow", () => {
     request,
     baseURL,
   }) => {
+    const hostname = new URL(baseURL!).hostname;
+    test.skip(
+      hostname !== "localhost" && hostname !== "127.0.0.1",
+      "Hosted proxies control client IP; run this stress check on loopback",
+    );
     const ip = uniqueIp();
     // Invalid bodies fail validation after the rate check, so the first five
     // requests exercise the bucket without writing service_requests rows.

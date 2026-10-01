@@ -1,6 +1,20 @@
 # Project Status
 
-Last updated: 2026-10-01 (Production rollout and launch verification)
+Last updated: 2026-10-01 (Immediate storefront change signal)
+
+## Immediate storefront change signal — 2026-10-01
+
+What changed and why:
+
+- Added `20261001010000_store_catalog_change_signal.sql` and applied it to the linked Supabase project. Triggers on public catalog, variant stock, media, category and merchandising tables update one public version row after a committed write. The Supabase Realtime publication contains only that version table, so subscribers never receive private product/cost/audit rows.
+- Open store pages subscribe to version updates and call `router.refresh()` when an event arrives. A 15-second poll and focus refresh remain as a fallback for disconnected clients. This closes the earlier five-second polling gap while avoiding an unsupported guarantee of fixed delivery latency.
+
+Verification and next steps:
+
+- Migration dry run listed only this file; live push passed. Lint, typecheck and changed-file Prettier checks passed. Anonymous read of the version row worked, a publishable-key Realtime subscriber connected, a privileged version increment produced an `UPDATE` event containing exactly `id`, `version` and `updated_at`, and eight catalog triggers were found. The first subscription attempt did not receive an event immediately after publication setup; a repeated subscription and write did.
+- The 0.0.7 client was deployed to Vercel Production as `dpl_9NypKdBV9mMoY4rSzQw1oKoBvLWy` (Ready). A production browser on `/en/store` made five server-render requests within seven seconds after a test version increment, before the 15-second fallback timer. This confirms the Realtime refresh path in a browser, though no fixed delivery latency is promised.
+- A full production Chromium run passed 55/56; the sole failure was the rate-limit stress check because Vercel replaces the forged `x-forwarded-for` header with the actual client IP shared by earlier tests. The stress check is now loopback-only, and all six enquiry tests passed on loopback afterward. This test change does not alter application rate limiting.
+- **Business/inventory owner:** physical counts and product/price/media approvals remain outstanding. **Privacy/legal owner:** approve enquiry retention and legal copy. **Accessibility owner:** complete bilingual manual review.
 
 ## Production rollout and launch verification — 2026-10-01
 
