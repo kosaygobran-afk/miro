@@ -12,7 +12,8 @@ What changed and why:
 
 Verification:
 
-- `npx next typegen`, `npm run lint`, `npm run typecheck`, `git diff --check`, and local Chromium `tests/smoke.spec.ts tests/store-cart.spec.ts` passed (15/15). Local `/sitemap.xml` returned 200 and listed 44 localized URLs, including current categories and products. Final production deployment and live canonical/redirect checks follow.
+- `npx next typegen`, `npm run lint`, `npm run typecheck`, `npm run format:check`, `git diff --check`, and local Chromium `tests/smoke.spec.ts tests/store-cart.spec.ts` passed (15/15). Local `/sitemap.xml` returned 200 and listed 44 localized URLs, including current categories and products.
+- Commit `64ab0c8` deployed as `dpl_7LoJhHwLVsFkikeQbRpBR64mP3NH` (Ready) on `https://miro-one-omega.vercel.app`. Live `/he`, `/en`, `/he/home` and a product detail returned 200. Both old locale `/store` listing URLs returned 308 to their locale roots. Live canonical links point to the new root or secondary Home path as appropriate; the live sitemap lists 44 localized URLs and excludes the old listing URL. Production Chromium `tests/smoke.spec.ts` passed 8/8, including automated accessibility smoke checks.
 
 Owner actions and launch blockers:
 
