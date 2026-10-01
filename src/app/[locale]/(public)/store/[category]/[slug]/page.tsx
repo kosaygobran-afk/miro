@@ -211,9 +211,7 @@ export default async function ProductDetailPage({
                 {locale === "he" ? "בית" : "Home"}
               </Link>
               <Arrow size={14} aria-hidden="true" />
-              <Link href={withLocale(locale, "store")}>
-                {copy.catalogLabel}
-              </Link>
+              <Link href={withLocale(locale)}>{copy.catalogLabel}</Link>
               <Arrow size={14} aria-hidden="true" />
               <Link href={withLocale(locale, `store/${category}`)}>
                 {catalog.categories.find((c) => c.key === category)?.label ??

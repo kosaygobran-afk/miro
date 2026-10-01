@@ -185,7 +185,7 @@ export async function AccountDashboard({
               </h2>
               <Link
                 className="miro-button miro-button-secondary text-sm"
-                href={withLocale(locale, "store")}
+                href={withLocale(locale)}
               >
                 {locale === "he" ? "המשך קנייה" : "Continue shopping"}
               </Link>
@@ -274,7 +274,7 @@ export async function AccountDashboard({
           </div>
           <Link
             className="miro-button miro-button-primary"
-            href={withLocale(locale, "store")}
+            href={withLocale(locale)}
           >
             {locale === "he" ? "לחנות" : "Browse store"}
           </Link>

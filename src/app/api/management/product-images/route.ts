@@ -40,8 +40,8 @@ const imagePatchSchema = z
   .strict();
 
 async function revalidateCatalog() {
-  revalidatePath("/he/store");
-  revalidatePath("/en/store");
+  revalidatePath("/he");
+  revalidatePath("/en");
   revalidatePath("/he/store/[category]", "page");
   revalidatePath("/en/store/[category]", "page");
 }

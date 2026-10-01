@@ -21,6 +21,27 @@ export type StoreCategory = {
   imageUrl: string | null;
 };
 
+/** Small public projection for the global Store menu. */
+export async function getStoreNavigationCategories(
+  locale: "he" | "en",
+): Promise<Array<Pick<StoreCategory, "key" | "label">>> {
+  try {
+    const supabase = await createServerSupabaseClient();
+    const { data, error } = await supabase
+      .from("categories")
+      .select("slug, name_he, name_en")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true });
+    if (error) return [];
+    return (data ?? []).map((category) => ({
+      key: getCategoryKeyFromSlug(category.slug),
+      label: mapCategoryLabel(locale, category),
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export type StoreCatalog = {
   categories: StoreCategory[];
   products: Product[];

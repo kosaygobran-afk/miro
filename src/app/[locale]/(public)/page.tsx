@@ -1,242 +1,259 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowDown, ShieldCheck } from "lucide-react";
-import { getTranslations } from "next-intl/server";
-import { pageMetadata } from "@/lib/seo";
-import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import {
-  CapabilityStrip,
-  ConnectedSystem,
-  ConsultationBand,
-  DirectionArrow,
-  FaqSection,
-  FeatureCheck,
-  ProcessSteps,
-  ServiceCategoryGrid,
-  SolutionCards,
-} from "@/components/public/experience-sections";
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  ChevronDown,
+  CircuitBoard,
+  ClipboardCheck,
+  ScanLine,
+} from "lucide-react";
+import { getTranslations } from "next-intl/server";
+import { ProductsClient } from "@/components/products/ProductsClient";
+import { ProductSubNav } from "@/components/products/ProductSubNav";
+import { ProductMovingRail } from "@/features/catalog/product-moving-rail";
+import { SecurityComposition } from "@/components/products/ProductVisual";
+import { isLocale, withLocale } from "@/lib/i18n";
+import { storeCopy } from "@/features/catalog/store-copy";
+import type { Metadata } from "next";
+import { getSiteUrl, pageMetadata } from "@/lib/seo";
+import type { Locale } from "@/lib/i18n";
+import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import { StoreLiveRefresh } from "@/features/catalog/store-live-refresh";
+
+interface ProductsPageProps {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<{ q?: string | string[] }>;
+}
 
 export async function generateMetadata({
   params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+}: ProductsPageProps): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "metadata.home" });
+  const t = await getTranslations({ locale, namespace: "metadata.products" });
   return pageMetadata({
-    locale,
+    locale: locale as Locale,
     title: t("title"),
     description: t("description"),
   });
 }
 
-export default async function HomePage({
+export default async function ProductsPage({
   params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
-  const { locale: rawLocale } = await params;
+  searchParams,
+}: ProductsPageProps) {
+  const [{ locale: rawLocale }, query] = await Promise.all([
+    params,
+    searchParams,
+  ]);
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
-  const he = locale === "he";
+  const copy = storeCopy[locale];
+  const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
+
+  const viewer = await getStoreViewer();
+  const catalog = await getStoreCatalog(locale, viewer.role);
+  const savedProductIds = new Set(viewer.savedProductIds);
+
+  const categories = catalog.categories.map((category) => ({
+    ...category,
+    href: `/${locale}${category.href}`,
+  }));
+  const assuranceIcons = [ScanLine, CircuitBoard, ClipboardCheck, Building2];
+  const initialQuery = typeof query.q === "string" ? query.q.slice(0, 200) : "";
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${getSiteUrl()}/#website`,
+    url: getSiteUrl(),
+    name: "MIRO",
+    alternateName: ["MIRO Group", "מירו"],
+  };
 
   return (
-    <>
-      <section className="experience-hero">
-        <div className="experience-hero-media" aria-hidden="true">
+    <div className="sf-storefront">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(websiteJsonLd).replace(/</g, "\\u003c"),
+        }}
+      />
+      <StoreLiveRefresh />
+      <section className="sf-hero" aria-labelledby="store-title">
+        <div className="sf-hero-image">
           <Image
             src="/images/security-studio.png"
             alt=""
             fill
-            sizes="100vw"
+            sizes="(max-width: 700px) 100vw, 75vw"
             preload
-            className="experience-hero-image"
           />
         </div>
-        <div className="miro-container experience-hero-inner">
-          <div className="experience-hero-copy">
-            <p className="experience-overline">
-              <span className="experience-live-dot" />
-              {he
-                ? "מיגון. תקשורת. שקט בראש."
-                : "SECURITY. CONNECTION. PEACE OF MIND."}
+        <div className="sf-hero-grid" aria-hidden="true" />
+        <div className="miro-container sf-hero-inner">
+          <div className="sf-hero-copy">
+            <p className="sf-eyebrow">
+              <span />
+              {copy.eyebrow}
             </p>
-            <h1>
-              {he ? (
-                <>
-                  העולם שלכם.
-                  <br />
-                  <em>בטוח יותר.</em>
-                  <br />
-                  מחובר יותר.
-                </>
-              ) : (
-                <>
-                  Your world.
-                  <br />
-                  <em>More secure.</em>
-                  <br />
-                  More connected.
-                </>
-              )}
+            <h1 id="store-title">
+              {copy.title}
+              <span>{copy.titleAccent}</span>
             </h1>
-            <p className="experience-hero-description">
-              {he
-                ? "מצלמות, אזעקות, בקרת כניסה ורשתות. פתרונות חכמים שמתחברים לבית שלכם, לעסק שלכם ולדרך שבה אתם חיים."
-                : "Cameras, alarms, smart access and networks. Thoughtful solutions for your home, your business and the way you live."}
-            </p>
-            <div className="experience-actions">
-              <Link
-                href={withLocale(locale, "store")}
+            <p className="sf-hero-intro">{copy.intro}</p>
+            <div className="sf-hero-actions">
+              <a
+                href="#store-items"
                 className="miro-button miro-button-primary"
               >
-                {he ? "לגלות את המוצרים" : "Explore the collection"}
-                <DirectionArrow locale={locale} />
-              </Link>
+                {copy.browse}
+                <Arrow size={18} aria-hidden="true" />
+              </a>
               <Link
                 href={withLocale(locale, "contact")}
-                className="miro-button miro-button-secondary"
+                className="sf-hero-secondary"
               >
-                {he ? "נתכנן את הפרויקט שלכם" : "Plan your project"}
+                {copy.consult}
+                <Arrow size={17} aria-hidden="true" />
               </Link>
             </div>
-            <div className="experience-hero-meta">
-              <ShieldCheck aria-hidden="true" />
-              <span>
-                {he
-                  ? "מיגון חכם מתחיל בתכנון נכון"
-                  : "Smarter security starts with a considered plan"}
-              </span>
+            <div className="sf-hero-signature" aria-hidden="true">
+              <span>SECURE.</span>
+              <span>SMART.</span>
+              <span>CONNECTED.</span>
             </div>
           </div>
-          <span className="experience-hero-side" lang="en" dir="ltr">
-            SECURE / SMART / CONNECTED
-          </span>
-          <div className="experience-hero-bottom">
-            <a href="#solutions">
-              {he ? "כל החיבורים מתחילים כאן" : "Discover what connects us"}
-              <ArrowDown aria-hidden="true" />
-            </a>
-            <small>
-              {he ? "הציוד להמחשה בלבד" : "Equipment shown for illustration"}
-            </small>
-          </div>
+          <span className="sf-hero-caption">MIRO SYSTEMS / COLLECTION 01</span>
         </div>
       </section>
+
+      <ProductSubNav
+        categories={categories}
+        locale={locale}
+        ariaLabel={copy.category}
+      />
+
+      <ProductMovingRail products={catalog.products} locale={locale} />
+
       <section
-        className="experience-category-strip"
-        aria-label={he ? "תחומי המומחיות" : "Explore our expertise"}
+        className="sf-collection-section"
+        id="store-items"
+        aria-labelledby="collection-title"
       >
         <div className="miro-container">
-          <ServiceCategoryGrid locale={locale} compact />
+          <div className="sf-section-heading">
+            <div>
+              <p className="sf-eyebrow">{copy.catalogLabel}</p>
+              <h2 id="collection-title">{copy.collection}</h2>
+            </div>
+            <p>{copy.collectionText}</p>
+          </div>
+          <ProductsClient
+            key={initialQuery}
+            products={catalog.products}
+            categories={catalog.categories}
+            locale={locale}
+            initialQuery={initialQuery}
+            savedProductIds={Array.from(savedProductIds)}
+          />
+          <p className="sf-preview-note">
+            <span aria-hidden="true" />
+            {copy.demo}
+          </p>
         </div>
       </section>
-      <section className="experience-section" id="solutions">
+
+      <section className="sf-bundle-section">
         <div className="miro-container">
-          <div className="experience-section-heading">
-            <div>
-              <p className="experience-overline">
-                {he ? "המרחב שלכם. הפתרון שלכם." : "YOUR SPACE. YOUR SOLUTION."}
-              </p>
-              <h2 className="experience-heading">
-                {he
-                  ? "לכל מרחב יש את החיבור הנכון."
-                  : "The right connection for every space."}
-              </h2>
+          <div className="sf-bundle">
+            <div className="sf-bundle-copy">
+              <p className="sf-eyebrow">{copy.bundleEyebrow}</p>
+              <h2>{copy.bundleTitle}</h2>
+              <p>{copy.bundleText}</p>
+              <div className="sf-bundle-tags">
+                {copy.bundleTags.map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+              </div>
+              <Link
+                href={withLocale(locale, "services/business")}
+                className="miro-button miro-button-primary"
+              >
+                {copy.bundleAction}
+                <Arrow size={17} aria-hidden="true" />
+              </Link>
             </div>
-            <Link
-              className="experience-text-link"
-              href={withLocale(locale, "services")}
-            >
-              {he ? "לכל הפתרונות" : "All solutions"}
-              <DirectionArrow locale={locale} />
+            <SecurityComposition />
+            <span className="sf-bundle-watermark" aria-hidden="true">
+              MIRO.
+            </span>
+          </div>
+          <div className="sf-assurance-grid">
+            {copy.assurance.map((item, index) => {
+              const Icon = assuranceIcons[index];
+              return (
+                <div className="sf-assurance" key={item.title}>
+                  <Icon size={25} strokeWidth={1.5} aria-hidden="true" />
+                  <div>
+                    <h3>{item.title}</h3>
+                    <p>{item.text}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="sf-guide-section">
+        <div className="miro-container">
+          <div className="sf-section-heading">
+            <div>
+              <p className="sf-eyebrow">
+                {locale === "he"
+                  ? "מחשבה לפני הטכנולוגיה"
+                  : "PURPOSE BEFORE TECHNOLOGY"}
+              </p>
+              <h2>{copy.quickTitle}</h2>
+            </div>
+            <p>{copy.quickText}</p>
+          </div>
+          <div className="sf-guide-grid">
+            {copy.buying.map((item) => (
+              <article className="sf-guide-card" key={item.number}>
+                <span>{item.number}</span>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+                <div className="sf-guide-rule" aria-hidden="true" />
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="sf-faq-section">
+        <div className="miro-container sf-faq-layout">
+          <div>
+            <p className="sf-eyebrow">{copy.faqEyebrow}</p>
+            <h2>{copy.faqTitle}</h2>
+            <Link href={withLocale(locale, "contact")} className="sf-text-link">
+              {copy.consult}
+              <Arrow size={17} aria-hidden="true" />
             </Link>
           </div>
-          <SolutionCards locale={locale} />
-        </div>
-      </section>
-      <section className="experience-system-section">
-        <div className="miro-container experience-system-layout">
-          <div className="experience-system-copy">
-            <p className="experience-overline">
-              {he ? "רואים את התמונה הגדולה" : "THE BIGGER PICTURE"}
-            </p>
-            <h2 className="experience-heading">
-              {he ? (
-                <>
-                  טכנולוגיה חכמה.
-                  <br />
-                  <span>חיבורים פשוטים.</span>
-                </>
-              ) : (
-                <>
-                  Smart technology.
-                  <br />
-                  <span>Simple connections.</span>
-                </>
-              )}
-            </h2>
-            <p className="experience-description">
-              {he
-                ? "מערכת טובה מתחילה בחיבור בין כל הפרטים. בוחנים יחד את המצלמות, הכניסות והתשתיות, כדי לבנות תכנית שמתאימה למרחב שלכם גם בהמשך."
-                : "A good system connects the details. Consider cameras, entrances and infrastructure together, with a plan built around your space and what comes next."}
-            </p>
-            <ul className="experience-checks">
-              <FeatureCheck>
-                {he
-                  ? "תכנון שמתחשב בתשתית הקיימת"
-                  : "Planning that considers your existing infrastructure"}
-              </FeatureCheck>
-              <FeatureCheck>
-                {he
-                  ? "מפרט שמתאים לשימוש ולתקציב"
-                  : "A specification shaped around use and budget"}
-              </FeatureCheck>
-              <FeatureCheck>
-                {he
-                  ? "חשיבה על הרחבה ותחזוקה בהמשך"
-                  : "Room for future expansion and maintenance"}
-              </FeatureCheck>
-            </ul>
-            <Link
-              href={withLocale(locale, "services/business")}
-              className="experience-text-link"
-            >
-              {he ? "לפתרונות לעסק" : "Explore business solutions"}
-              <DirectionArrow locale={locale} />
-            </Link>
+          <div className="sf-faq-list">
+            {copy.faqs.map((item) => (
+              <details key={item.question}>
+                <summary>
+                  {item.question}
+                  <ChevronDown size={19} aria-hidden="true" />
+                </summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
           </div>
-          <ConnectedSystem locale={locale} />
         </div>
       </section>
-      <section className="experience-section">
-        <div className="miro-container">
-          <div className="experience-section-heading">
-            <div>
-              <p className="experience-overline">
-                {he ? "מהרעיון למערכת" : "FROM IDEA TO INSTALLATION"}
-              </p>
-              <h2 className="experience-heading">
-                {he
-                  ? "תהליך מסודר. מהחיבור הראשון."
-                  : "A clear process. From the first connection."}
-              </h2>
-            </div>
-            <p className="experience-description">
-              {he
-                ? "ארבעה שלבים שהופכים שאלות לתכנית ברורה."
-                : "Four considered steps from your first questions to a clear plan."}
-            </p>
-          </div>
-          <ProcessSteps locale={locale} />
-        </div>
-      </section>
-      <div className="experience-capability-band">
-        <div className="miro-container">
-          <CapabilityStrip locale={locale} />
-        </div>
-      </div>
-      <FaqSection locale={locale} />
-      <ConsultationBand locale={locale} />
-    </>
+    </div>
   );
 }

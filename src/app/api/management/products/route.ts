@@ -107,8 +107,8 @@ const PUBLISH_INCOMPLETE_REASONS = [
 ];
 
 async function revalidateCatalog() {
-  revalidatePath("/he/store");
-  revalidatePath("/en/store");
+  revalidatePath("/he");
+  revalidatePath("/en");
   revalidatePath("/he/store/[category]", "page");
   revalidatePath("/en/store/[category]", "page");
   revalidatePath("/he/store/[category]/[slug]", "page");

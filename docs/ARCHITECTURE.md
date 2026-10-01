@@ -16,7 +16,8 @@
 
 ## Catalog and inventory workflow (2026-10-01)
 
-- The public store, category, and product pages render active Supabase products only. Local mock products are for the isolated catalog preview; they must not be mixed into live routes when a database read fails or the catalog is empty.
+- `/he` and `/en` are the canonical storefront entry pages. The previous editorial Home page lives at `/he/home` and `/en/home`; `/[locale]/store` permanently redirects to the corresponding locale root. Product and category detail paths remain under `/[locale]/store/...`. Keep store links, cache invalidations, metadata, and sitemap entries aligned with this route structure.
+- The public store, category, and product pages render active Supabase products only. Do not mix local mock products into live routes when a database read fails or the catalog is empty.
 - A product starts as a draft. Admin/CEO add a sellable variant, set its stock through the inventory ledger, and publish the product. `product_variants.stock_qty` is the canonical quantity; the legacy `products.inventory_count` must not be edited or displayed as current stock.
 - Admin/CEO stock receipt, adjustment, and outgoing actions call the authenticated stock RPCs. Those RPCs write stock movements and audit events together. Public pages sum active variant quantities and show the remaining count on the store and product page.
 - The customer cart and checkout request do not reserve stock or create an order. The enquiry route checks current canonical product/variant identity, available quantity and price before submission and stores a server-derived estimate. Staff must confirm current stock before recording a sale through the authenticated sale RPC.

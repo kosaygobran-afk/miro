@@ -134,7 +134,7 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
           <h1>{copy.successTitle}</h1>
           <p>{copy.successText}</p>
           <Link
-            href={withLocale(locale, "store")}
+            href={withLocale(locale)}
             className="miro-button miro-button-primary"
           >
             {copy.backToStore}
@@ -152,7 +152,7 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
           <h1>{copy.emptyTitle}</h1>
           <p>{copy.emptyText}</p>
           <Link
-            href={withLocale(locale, "store")}
+            href={withLocale(locale)}
             className="miro-button miro-button-primary"
           >
             {copy.browse}

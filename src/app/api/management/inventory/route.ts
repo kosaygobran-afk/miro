@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 
 function revalidateCatalog() {
   for (const locale of ["he", "en"]) {
-    revalidatePath(`/${locale}/store`);
+    revalidatePath(`/${locale}`);
     revalidatePath(`/${locale}/store/[category]`, "page");
     revalidatePath(`/${locale}/store/[category]/[slug]`, "page");
   }

@@ -51,14 +51,6 @@ export type HeaderLabels = {
     userMenu: string;
     roleBadge: string;
   };
-  products: {
-    cameras: string;
-    servers: string;
-    routers: string;
-    cables: string;
-    accessories: string;
-    networkGear: string;
-  };
 };
 
 type ThemeMode = "dark" | "medium" | "light";
@@ -82,9 +74,11 @@ const serverTheme = (): ThemeMode => "dark";
 export function HeaderClient({
   locale,
   labels,
+  categories,
 }: {
   locale: Locale;
   labels: HeaderLabels;
+  categories: Array<{ key: string; label: string }>;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -101,21 +95,13 @@ export function HeaderClient({
   );
   const he = locale === "he";
   const Arrow = he ? ArrowLeft : ArrowRight;
-  const productsHref = withLocale(locale, "store");
+  const productsHref = withLocale(locale);
   const navLinks = [
-    { href: withLocale(locale), label: labels.nav.home },
     { href: productsHref, label: labels.nav.products },
     { href: withLocale(locale, "services"), label: labels.nav.services },
+    { href: withLocale(locale, "home"), label: labels.nav.home },
     { href: withLocale(locale, "about"), label: labels.nav.about },
     { href: withLocale(locale, "contact"), label: labels.nav.contact },
-  ];
-  const categories = [
-    ["cameras", labels.products.cameras],
-    ["servers", labels.products.servers],
-    ["routers", labels.products.routers],
-    ["cables", labels.products.cables],
-    ["accessories", labels.products.accessories],
-    ["network-gear", labels.products.networkGear],
   ];
   const modes = [
     {
@@ -235,8 +221,9 @@ export function HeaderClient({
       const exact = pathname === link.href;
       const active =
         exact ||
-        (link.href !== withLocale(locale) &&
-          pathname.startsWith(`${link.href}/`));
+        (link.href === productsHref
+          ? pathname.startsWith(`${productsHref}/store/`)
+          : pathname.startsWith(`${link.href}/`));
       const linkElement = (
         <Link
           href={link.href}
@@ -274,7 +261,7 @@ export function HeaderClient({
           {productsOpen && (
             <div id="store-navigation" className="premium-dropdown">
               <p>{he ? "לכל צורך, הפתרון שלו" : "Find the right fit"}</p>
-              {categories.map(([key, label]) => (
+              {categories.map(({ key, label }) => (
                 <Link
                   key={key}
                   href={withLocale(locale, `store/${key}`)}

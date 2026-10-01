@@ -28,8 +28,8 @@ const badgeTypeSchema = z.object({
 });
 
 async function revalidateStorefront() {
-  revalidatePath("/he/store");
-  revalidatePath("/en/store");
+  revalidatePath("/he");
+  revalidatePath("/en");
   revalidatePath("/he/store/[category]", "page");
   revalidatePath("/en/store/[category]", "page");
   revalidatePath("/he/store/[category]/[slug]", "page");

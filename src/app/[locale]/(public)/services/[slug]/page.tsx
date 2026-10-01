@@ -131,7 +131,7 @@ export default async function ServiceDetailPage({
             )}
             {!service.content?.cta && (
               <Link
-                href={withLocale(locale, "store")}
+                href={withLocale(locale)}
                 className="experience-text-link mt-6"
               >
                 {he

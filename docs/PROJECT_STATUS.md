@@ -1,6 +1,22 @@
 # Project Status
 
-Last updated: 2026-10-01 (Immediate storefront change signal)
+Last updated: 2026-10-01 (Storefront as primary entry page)
+
+## Storefront as primary entry page — 2026-10-01
+
+What changed and why:
+
+- Moved the live Supabase storefront to `/he` and `/en`, and moved the previous editorial Home content to `/he/home` and `/en/home`. The desktop/mobile navigation and footer now lead with Store, then Services, then Home. Store search and browsing links use the new root path; category and product detail URLs remain stable.
+- Added a permanent redirect from the old locale `/store` listing URL to the locale root. Store metadata, canonical and alternate links, and the public sitemap now point at the new root. The sitemap derives category and product URLs from the currently public catalog rather than listing placeholder categories. The header Store menu likewise reads active categories from Supabase. Added homepage `WebSite` structured data with MIRO and MIRO Group names.
+- Updated root-page revalidation in management writes. The storefront Realtime refresh now mounts on the new root pages; category and detail pages retain their existing store layout subscription.
+
+Verification:
+
+- `npx next typegen`, `npm run lint`, `npm run typecheck`, `git diff --check`, and local Chromium `tests/smoke.spec.ts tests/store-cart.spec.ts` passed (15/15). Local `/sitemap.xml` returned 200 and listed 44 localized URLs, including current categories and products. Final production deployment and live canonical/redirect checks follow.
+
+Owner actions and launch blockers:
+
+- **Business/inventory owner:** confirm the product identities, descriptions, prices, imagery rights and physical stock counts before marketing the new storefront. **Privacy/legal owner:** approve enquiry retention, terms and privacy copy. **Accessibility owner:** complete manual bilingual keyboard, screen-reader, zoom and device review. **Site owner:** attach and verify the intended branded domain, then submit the sitemap and inspect the new canonical pages in Google Search Console. Redirects and metadata guide indexing but cannot guarantee a first search-result position.
 
 ## Immediate storefront change signal — 2026-10-01
 

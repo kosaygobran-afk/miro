@@ -1,18 +1,14 @@
 import type { MetadataRoute } from "next";
 import { locales } from "@/lib/i18n";
 import { localizedUrl } from "@/lib/seo";
+import { getStoreCatalog } from "@/lib/store-data";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const catalog = await getStoreCatalog("he");
   const publicPaths = [
     "",
-    "store",
-    "store/cameras",
-    "store/servers",
-    "store/routers",
-    "store/cables",
-    "store/accessories",
-    "store/network-gear",
     "services",
+    "home",
     "services/home",
     "services/business",
     "services/security-cameras",
@@ -21,14 +17,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "services/network-wifi",
     "about",
     "contact",
+    ...catalog.categories.map((category) => `store/${category.key}`),
+    ...catalog.products.map(
+      (product) => `store/${product.category}/${product.slug}`,
+    ),
   ];
 
   return locales.flatMap((locale) =>
     publicPaths.map((path) => ({
       url: localizedUrl(locale, path),
-      lastModified: new Date("2026-09-20"),
-      changeFrequency: path === "" ? ("weekly" as const) : ("monthly" as const),
-      priority: path === "" ? 1 : 0.8,
+      changeFrequency: path === "" ? ("daily" as const) : ("monthly" as const),
+      priority: path === "" ? 1 : path === "home" ? 0.6 : 0.8,
     })),
   );
 }

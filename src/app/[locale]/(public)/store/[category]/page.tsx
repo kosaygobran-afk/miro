@@ -65,7 +65,7 @@ export default async function CategoryPage({
       <section className="sf-category-hero">
         <div className="miro-container sf-category-hero-inner">
           <div>
-            <Link className="sf-text-link" href={`/${locale}/store`}>
+            <Link className="sf-text-link" href={`/${locale}`}>
               <Arrow size={16} aria-hidden="true" />
               {copy.back}
             </Link>

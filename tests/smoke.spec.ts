@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
 const pages = [
   { path: "/he", locale: "he", dir: "rtl", title: /מירו/ },
   { path: "/en", locale: "en", dir: "ltr", title: /MIRO/ },
-  { path: "/he/store", locale: "he", dir: "rtl", title: /חנות/ },
+  { path: "/he/home", locale: "he", dir: "rtl", title: /מירו/ },
   { path: "/en/contact", locale: "en", dir: "ltr", title: /Contact/ },
 ] as const;
 
@@ -41,6 +41,27 @@ test.describe("deployment smoke", () => {
     expect(response?.status()).toBe(200);
     await expect(page).toHaveURL(/\/he$/);
     await expect(page.locator("html")).toHaveAttribute("lang", "he");
+    await expect(page.locator("#store-title")).toBeVisible();
+  });
+
+  test("store is canonical and appears before Services and Home", async ({
+    page,
+  }) => {
+    for (const locale of ["he", "en"] as const) {
+      await page.goto(`/${locale}`);
+      await expect(page.locator("#store-title")).toBeVisible();
+      await expect(page.locator('link[rel="canonical"]')).toHaveAttribute(
+        "href",
+        new RegExp(`/${locale}$`),
+      );
+      const links = page.locator(".premium-desktop-nav .premium-nav-link");
+      await expect(links.nth(0)).toHaveAttribute("href", `/${locale}`);
+      await expect(links.nth(1)).toHaveAttribute("href", `/${locale}/services`);
+      await expect(links.nth(2)).toHaveAttribute("href", `/${locale}/home`);
+
+      await page.goto(`/${locale}/store`);
+      await expect(page).toHaveURL(new RegExp(`/${locale}$`));
+    }
   });
 
   test("old product URLs redirect to the Store section", async ({ page }) => {

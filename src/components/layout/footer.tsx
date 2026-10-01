@@ -7,9 +7,9 @@ export function Footer({ locale }: { locale: Locale }) {
   const he = locale === "he";
   const Arrow = he ? ArrowLeft : ArrowRight;
   const links = [
-    ["", he ? "בית" : "Home"],
-    ["store", he ? "חנות המוצרים" : "Explore the store"],
+    ["", he ? "חנות המוצרים" : "Explore the store"],
     ["services", he ? "הפתרונות שלנו" : "Our solutions"],
+    ["home", he ? "בית" : "Home"],
     ["about", he ? "אודות מירו" : "About MIRO"],
     ["contact", he ? "יצירת קשר" : "Get in touch"],
   ];

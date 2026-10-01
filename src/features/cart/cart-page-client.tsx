@@ -35,7 +35,7 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
             <h2 id="empty-cart-title">{copy.emptyTitle}</h2>
             <p>{copy.emptyText}</p>
             <Link
-              href={withLocale(locale, "store")}
+              href={withLocale(locale)}
               className="miro-button miro-button-primary"
             >
               {copy.browse}

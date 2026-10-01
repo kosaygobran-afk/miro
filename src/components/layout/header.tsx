@@ -4,10 +4,13 @@ import {
   type HeaderLabels,
 } from "@/components/layout/header-client";
 import type { Locale } from "@/lib/i18n";
+import { getStoreNavigationCategories } from "@/lib/store-data";
 
 export async function Header({ locale }: { locale: Locale }) {
-  const t = await getTranslations({ locale, namespace: "layout.header" });
-  const pt = await getTranslations({ locale, namespace: "pages.products" });
+  const [t, categories] = await Promise.all([
+    getTranslations({ locale, namespace: "layout.header" }),
+    getStoreNavigationCategories(locale),
+  ]);
   const labels: HeaderLabels = {
     logo: t("logo"),
     tagline: t("tagline"),
@@ -38,15 +41,9 @@ export async function Header({ locale }: { locale: Locale }) {
       userMenu: t("actions.userMenu"),
       roleBadge: t.raw("actions.roleBadge") as string,
     },
-    products: {
-      cameras: pt("categories.cameras"),
-      servers: pt("categories.servers"),
-      routers: pt("categories.routers"),
-      cables: pt("categories.cables"),
-      accessories: pt("categories.accessories"),
-      networkGear: pt("categories.networkGear"),
-    },
   };
 
-  return <HeaderClient locale={locale} labels={labels} />;
+  return (
+    <HeaderClient locale={locale} labels={labels} categories={categories} />
+  );
 }
