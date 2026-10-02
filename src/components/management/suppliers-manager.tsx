@@ -18,6 +18,7 @@ import {
   IconAction,
   ActivationSwitch,
   DataTable,
+  TableSkeleton,
   EmptyState,
   ErrorState,
   FormField,
@@ -27,6 +28,8 @@ import {
   PageHeader,
 } from "@/components/management/ui";
 import type { Locale } from "@/lib/i18n";
+import { Pager } from "./pager";
+import { useCollectionPage } from "./use-collection-page";
 
 type Supplier = {
   id: string;
@@ -69,7 +72,10 @@ const getCurrencyLabel = (code: string, locale: Locale) => {
 export function SuppliersManager({ locale }: { locale: Locale }) {
   const he = locale === "he";
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const { visibleItems: visibleSuppliers, pager } =
+    useCollectionPage(suppliers);
   const [loadError, setLoadError] = useState("");
   const [formError, setFormError] = useState("");
   const [message, setMessage] = useState("");
@@ -96,7 +102,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
   // Load suppliers with proper error handling
   const loadSuppliers = useCallback(
     async (showLoading = false) => {
-      if (showLoading) setLoadError("");
+      if (showLoading) setLoading(true);
       setLoadError("");
       try {
         const response = await fetch("/api/management/suppliers", {
@@ -115,7 +121,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
       } catch {
         setLoadError(he ? "שגיאת חיבור" : "Connection error");
       } finally {
-        if (showLoading) setBusy(false);
+        if (showLoading) setLoading(false);
       }
     },
     [he],
@@ -141,7 +147,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
       } catch {
         if (!ignore) setLoadError(he ? "שגיאת חיבור" : "Connection error");
       } finally {
-        if (!ignore) setBusy(false);
+        if (!ignore) setLoading(false);
       }
     }
     void init();
@@ -366,7 +372,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
           <button
             className="miro-button miro-button-primary"
             onClick={openCreateForm}
-            disabled={busy}
+            disabled={busy || loading}
           >
             <Plus className="me-2 h-4 w-4" />
             {he ? "הוסף ספק" : "Add Supplier"}
@@ -378,7 +384,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
         items={[
           {
             label: he ? "ספקים שנטענו" : "Loaded suppliers",
-            value: suppliers.length,
+            value: loading ? "—" : suppliers.length,
           },
           {
             label: he ? "פעילים" : "Active",
@@ -403,7 +409,45 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
       />
 
       <section className="miro-card">
-        {suppliers.length === 0 ? (
+        {loading ? (
+          <TableSkeleton
+            mobileCards
+            columnWidths={[
+              "16%",
+              "12%",
+              "12%",
+              "18%",
+              "9%",
+              "13%",
+              "8%",
+              "12%",
+            ]}
+            columns={
+              he
+                ? [
+                    "שם חברה",
+                    "איש קשר",
+                    "טלפון",
+                    "אימייל",
+                    "זמן אספקה",
+                    "מטבע",
+                    "סטטוס",
+                    "פעולות",
+                  ]
+                : [
+                    "Company name",
+                    "Contact person",
+                    "Phone",
+                    "Email",
+                    "Lead time",
+                    "Currency",
+                    "Status",
+                    "Actions",
+                  ]
+            }
+            minWidth="80rem"
+          />
+        ) : suppliers.length === 0 ? (
           <EmptyState
             icon={<Building2 size={24} />}
             title={he ? "אין ספקים במערכת" : "No suppliers in the system"}
@@ -464,7 +508,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                   </tr>
                 }
               >
-                {suppliers.map((supplier) => (
+                {visibleSuppliers.map((supplier) => (
                   <tr key={supplier.id}>
                     <td className="p-4">
                       <div className="mgmt-supplier-company">
@@ -537,7 +581,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                     <td className="p-4">
                       <ActivationSwitch
                         active={supplier.is_active}
-                        disabled={busy}
+                        disabled={busy || loading}
                         label={
                           supplier.is_active
                             ? he
@@ -557,7 +601,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                         <IconAction
                           label={he ? "ערוך ספק" : "Edit supplier"}
                           onClick={() => openEditForm(supplier)}
-                          disabled={busy}
+                          disabled={busy || loading}
                         >
                           <Edit size={17} aria-hidden="true" />
                         </IconAction>
@@ -565,7 +609,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                           label={he ? "מחיקת ספק" : "Delete supplier"}
                           tone="danger"
                           onClick={() => startDeleteConfirm(supplier.id)}
-                          disabled={busy}
+                          disabled={busy || loading}
                         >
                           <Trash2 size={17} aria-hidden="true" />
                         </IconAction>
@@ -579,7 +623,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
             {/* Mobile Card View (<768px) */}
             <div className="md:hidden">
               <div className="space-y-4" role="list">
-                {suppliers.map((supplier) => (
+                {visibleSuppliers.map((supplier) => (
                   <div
                     key={supplier.id}
                     className="miro-card p-4"
@@ -595,7 +639,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                       </div>
                       <ActivationSwitch
                         active={supplier.is_active}
-                        disabled={busy}
+                        disabled={busy || loading}
                         label={
                           supplier.is_active
                             ? he
@@ -690,7 +734,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                       <button
                         className="miro-button miro-button-secondary text-sm flex-1 min-w-0"
                         onClick={() => openEditForm(supplier)}
-                        disabled={busy}
+                        disabled={busy || loading}
                       >
                         <Edit className="h-4 w-4" aria-hidden="true" />
                         {he ? "עריכה" : "Edit"}
@@ -698,7 +742,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                       <button
                         className="miro-button miro-button-secondary text-sm text-destructive hover:bg-destructive/10 flex-1 min-w-0"
                         onClick={() => startDeleteConfirm(supplier.id)}
-                        disabled={busy}
+                        disabled={busy || loading}
                       >
                         <Trash2 className="h-4 w-4" aria-hidden="true" />
                         {he ? "מחיקה" : "Delete"}
@@ -709,13 +753,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
               </div>
             </div>
 
-            <div className="p-4 border-t border-border-subtle">
-              <p className="text-sm text-muted-foreground">
-                {he
-                  ? `מוצגים ${suppliers.length} ספקים`
-                  : `Showing ${suppliers.length} suppliers`}
-              </p>
-            </div>
+            <Pager {...pager} locale={locale} busy={loading || busy} />
           </>
         )}
 
@@ -745,7 +783,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                   setShowForm(false);
                   resetForm();
                 }}
-                disabled={busy}
+                disabled={busy || loading}
               >
                 {he ? "ביטול" : "Cancel"}
               </button>
@@ -753,7 +791,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                 type="button"
                 className="mgmt-button mgmt-button--primary"
                 onClick={() => void submitForm()}
-                disabled={busy}
+                disabled={busy || loading}
                 aria-busy={busy || undefined}
               >
                 {busy ? (

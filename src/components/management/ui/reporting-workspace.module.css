@@ -264,3 +264,27 @@
 .workspace :global(.mgmt-metric-card__icon):empty {
   display: none;
 }
+
+/* Center the inner grouping while leaving actions and responsive controls free to wrap. */
+:global(html[data-appearance-version="2"]) .connections {
+  justify-content: center;
+  gap: 0.65rem;
+}
+:global(html[data-appearance-version="2"]) .connection {
+  border-radius: 0.9rem;
+  padding-inline: 1rem;
+}
+:global(html[data-appearance-version="2"]) .panel {
+  gap: 1.4rem;
+  border-radius: 1.35rem;
+}
+:global(html[data-appearance-version="2"]) .toolbar {
+  gap: 1rem;
+  padding: 1.1rem;
+}
+:global(html[data-appearance-version="2"]) .choices {
+  border-radius: 1rem;
+}
+:global(html[data-appearance-version="2"]) .choices button {
+  border-radius: 0.75rem;
+}

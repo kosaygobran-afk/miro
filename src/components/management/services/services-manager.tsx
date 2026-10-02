@@ -13,7 +13,7 @@ import {
   ErrorState,
   FormField,
   FormSection,
-  ListSkeleton,
+  TableSkeleton,
   Notice,
   PageHeader,
   StatusBadge,
@@ -592,7 +592,21 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
           title={copy.pageTitle[locale]}
           subtitle={copy.pageSubtitle[locale]}
         />
-        <ListSkeleton rows={6} />
+        <TableSkeleton
+          columnWidths={["7%", "17%", "17%", "20%", "17%", "10%", "12%"]}
+          columns={[
+            copy.colVisual[locale],
+            copy.colNameHe[locale],
+            copy.colNameEn[locale],
+            copy.colSlug[locale],
+            copy.colSort[locale],
+            copy.colStatus[locale],
+            copy.colActions[locale],
+          ]}
+          rows={6}
+          leadingImage
+          minWidth="70rem"
+        />
       </div>
     );
   }

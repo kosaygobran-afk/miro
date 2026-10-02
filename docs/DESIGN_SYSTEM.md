@@ -1,5 +1,16 @@
 # Design System
 
+## Motion and Version 2 appearance — 2026-10-02
+
+This entry supersedes older palette and metric-card geometry descriptions for active Version 2. Version 1 remains restorable from CEO Settings; retain all original layers and the immutable token snapshot.
+
+- The central motion contract and operating guide are in `docs/ANIMATION_SYSTEM.md`. All 13 presentation effects start enabled, alongside the master switch and enhanced-appearance switch. Every effect has a bilingual explanatory note. Reuse duration/easing tokens, region skeletons, decode-aware images and accepted-navigation feedback; honor reduced motion.
+- Public layers finish with `appearance-v1.css`, `customer-evolution.css` and `motion.css`. Version 2 public Light uses warm `#f1f2ed` background, `#fafbf7` surfaces, `#202821` text, `#515d53` muted text, `#765512` gold text/focus and `#e8bd42` primary controls. Dark uses calm charcoal/gold; Mid is a distinct softer blue-gray. Public colors exclude management surfaces.
+- Protected Admin adds `console-evolution.css` and `insights-refinement.css` after its existing layers. Keep its Dark palette unchanged. Shape/spacing/icon refinements center components within a 104rem management frame. Only Light/Medium receive calmer reading surfaces.
+- Version 2 report metrics use icon, content and supporting footer rows. Use `InsightCard` for interpretation, localized definitions and links. Activity charts retain exact-value accessibility and honest aggregation.
+- All new visual overrides must be gated by `data-appearance-version="2"`. Restoring Version 1 applies original public tokens before hydration and leaves catalog, stock, orders and owner content intact. Do not alter the immutable backup through a generic settings save.
+- Layout checks cover Hebrew/English and 320/390px phones, tablets and desktops. Table width remains based on real controls; scrolling and bounded pagination preserve readable identifiers. Never hide functional content to fit a viewport.
+
 ## Premium storefront system — 2026-09-21
 
 These rules supersede earlier sizing and placeholder notes below.

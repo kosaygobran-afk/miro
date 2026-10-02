@@ -1,6 +1,23 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+async function waitForSettledContent(page: import("@playwright/test").Page) {
+  await expect(page.locator('[data-route-loading="true"]')).toHaveCount(0);
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter(
+          (animation) =>
+            animation.playState !== "paused" &&
+            Number.isFinite(animation.effect?.getComputedTiming().endTime),
+        )
+        .map((animation) => animation.finished.catch(() => undefined)),
+    );
+  });
+}
+
 test.describe("customer cart and checkout", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/en/store");
@@ -166,6 +183,7 @@ test.describe("customer cart and checkout", () => {
     await page.locator(".sf-product-card .sf-add-cart-button").first().click();
     await page.locator(".premium-cart-link").click();
     await expect(page).toHaveTitle(/Cart/);
+    await waitForSettledContent(page);
     let results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -173,6 +191,7 @@ test.describe("customer cart and checkout", () => {
 
     await page.getByRole("link", { name: "Continue to checkout" }).click();
     await expect(page).toHaveTitle(/Checkout/);
+    await waitForSettledContent(page);
     results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();

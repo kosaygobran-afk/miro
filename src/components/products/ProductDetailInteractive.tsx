@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { RevealImage as Image } from "@/components/ui/reveal-image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductVisual } from "@/components/products/ProductVisual";
 import { ProductDetailActions } from "@/components/analytics/ProductDetailActions";

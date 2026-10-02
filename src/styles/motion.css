@@ -1,0 +1,431 @@
+/* CEO-controlled motion tokens. Server attributes prevent a first-paint preference flash. */
+:root {
+  --motion-theme-duration: 420ms;
+  --motion-icon-duration: 180ms;
+  --motion-navigation-duration: 180ms;
+  --motion-page-duration: 220ms;
+  --motion-content-duration: 160ms;
+  --motion-skeleton-duration: 1400ms;
+  --motion-image-duration: 160ms;
+  --motion-dialog-duration: 200ms;
+  --motion-menu-duration: 150ms;
+  --motion-button-duration: 160ms;
+  --motion-micro-duration: 150ms;
+  --motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-beam-height: 2px;
+}
+
+/* Both snapshots are opaque: only the NEW theme is clipped, in either direction. */
+:root[data-motion-theme-transition="true"]::view-transition-old(root),
+:root[data-motion-theme-transition="true"]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+:root[data-motion-theme-transition="true"]::view-transition-old(root) {
+  z-index: 1;
+}
+:root[data-motion-theme-transition="true"]::view-transition-new(root) {
+  z-index: 2;
+}
+::view-transition {
+  pointer-events: none;
+}
+:root[data-motion-theme-transition="true"] *,
+:root[data-motion-theme-transition="true"] *::before,
+:root[data-motion-theme-transition="true"] *::after {
+  transition-duration: 0s !important;
+}
+
+:root[data-motion-theme-fallback="true"]
+  :is(
+    body,
+    header,
+    main,
+    footer,
+    section,
+    article,
+    aside,
+    button,
+    input,
+    select,
+    textarea,
+    nav,
+    a,
+    div
+  ) {
+  transition:
+    color 160ms var(--motion-easing),
+    background-color 160ms var(--motion-easing),
+    border-color 160ms var(--motion-easing) !important;
+}
+
+.motion-navigation-progress {
+  position: fixed;
+  inset-inline: 0;
+  top: var(--header-sticky-offset, 0px);
+  height: var(--motion-beam-height);
+  z-index: 1500;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--motion-navigation-duration) linear;
+}
+html:has(.mgmt-shell) .motion-navigation-progress {
+  top: var(--mgmt-topbar-height, 64px);
+}
+.motion-navigation-progress[data-state="loading"],
+.motion-navigation-progress[data-state="complete"] {
+  opacity: 1;
+}
+.motion-navigation-progress span {
+  display: block;
+  height: 100%;
+  transform: scaleX(var(--motion-progress, 0));
+  transform-origin: left;
+  background: linear-gradient(
+    90deg,
+    var(--accent-text),
+    var(--primary),
+    var(--foreground)
+  );
+  box-shadow: 0 0 5px color-mix(in srgb, var(--primary) 45%, transparent);
+  transition: transform var(--motion-navigation-duration) var(--motion-easing);
+}
+[dir="rtl"] .motion-navigation-progress span {
+  transform-origin: right;
+}
+:root[data-motion-navigation-progress="false"] .motion-navigation-progress {
+  display: none;
+}
+
+@keyframes motion-content-in {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.sf-company-viewport:focus-within .sf-company-track {
+  animation-play-state: paused;
+}
+:root .motion-content-reveal {
+  animation: motion-content-in var(--motion-content-duration)
+    var(--motion-easing);
+}
+:root[data-motion-content-reveal="false"] .motion-content-reveal {
+  animation: none;
+}
+@keyframes motion-skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+:root :is(.mgmt-skeleton, .motion-skeleton) {
+  background: var(--surface-muted);
+  animation: motion-skeleton-pulse var(--motion-skeleton-duration) ease-in-out
+    infinite;
+}
+:root[data-motion-skeleton-shimmer="false"]
+  :is(.mgmt-skeleton, .motion-skeleton),
+:root[data-motion-skeleton-shimmer="false"] .animate-pulse {
+  animation: none !important;
+}
+:root .motion-image {
+  transition: opacity var(--motion-image-duration) var(--motion-easing);
+}
+:root .motion-image[data-image-ready="false"] {
+  opacity: 0;
+}
+:root .motion-image[data-image-ready="true"] {
+  opacity: 1;
+}
+:root .motion-image[data-image-cached="true"] {
+  transition: none;
+}
+:root
+  :is(.sf-product-media, .sf-main-image):has(
+    .motion-image[data-image-ready="false"]
+  ) {
+  background-color: var(--surface-muted);
+}
+:root[data-motion-image-reveal="false"] .motion-image {
+  transition: none;
+}
+
+/* Extend the existing components instead of adding an animation framework. */
+:root .mgmt-shell {
+  --mgmt-transition-fast: var(--motion-micro-duration) var(--motion-easing);
+  --mgmt-transition-normal: var(--motion-button-duration) var(--motion-easing);
+}
+:root
+  :is(
+    .miro-button,
+    .mgmt-button,
+    .mgmt-icon-action,
+    .premium-icon-button,
+    .mgmt-topbar__theme-option,
+    .sf-add-to-cart,
+    .sf-product-action
+  ) {
+  transition-duration: var(--motion-button-duration);
+  transition-timing-function: var(--motion-easing);
+}
+:root
+  :is(
+    .sf-product-card,
+    .sf-department,
+    .miro-service-card,
+    .premium-theme-selector button,
+    .mgmt-sidebar__collapse,
+    .sf-gallery-arrow
+  ) {
+  transition-duration: var(--motion-micro-duration);
+  transition-timing-function: var(--motion-easing);
+}
+:root
+  :is(
+    .mgmt-dialog-overlay,
+    .mgmt-drawer-overlay,
+    .mgmt-modal-overlay,
+    .requests-manager__detail-overlay,
+    .customers-manager__drawer-overlay
+  ) {
+  animation: motion-backdrop-in var(--motion-dialog-duration)
+    var(--motion-easing);
+}
+@keyframes motion-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+:root :is(.mgmt-dialog, .mgmt-modal) {
+  animation: motion-dialog-in var(--motion-dialog-duration) var(--motion-easing);
+}
+@keyframes motion-dialog-in {
+  from {
+    opacity: 0.5;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+:root
+  :is(
+    .mgmt-drawer,
+    .requests-manager__detail-panel,
+    .customers-manager__drawer,
+    .sf-hover-preview
+  ) {
+  animation-duration: var(--motion-dialog-duration);
+  animation-timing-function: var(--motion-easing);
+}
+:root .sf-hover-preview[data-state="closing"] {
+  animation-duration: var(--motion-content-duration);
+}
+:root
+  :is(
+    .premium-account-dropdown,
+    .premium-products-menu,
+    .mgmt-account-menu__dropdown,
+    .mgmt-account__popover,
+    .premium-dropdown,
+    .miro-product-menu,
+    .mgmt-dropdown-menu,
+    .mgmt-workspace-finder__panel
+  ),
+:root #mobile-navigation {
+  /* Preserve opaque glass text and the existing transform-only portal entrance. */
+  animation: motion-menu-in var(--motion-menu-duration) var(--motion-easing)
+    both;
+}
+@keyframes motion-menu-in {
+  from {
+    opacity: 1;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+:root[data-motion-dialogs="false"]
+  :is(
+    .mgmt-dialog,
+    .mgmt-dialog-overlay,
+    .mgmt-drawer,
+    .mgmt-drawer-overlay,
+    .mgmt-modal,
+    .mgmt-modal-overlay,
+    .requests-manager__detail-panel,
+    .customers-manager__drawer,
+    .requests-manager__detail-overlay,
+    .customers-manager__drawer-overlay,
+    .sf-hover-preview
+  ),
+:root[data-motion-menus="false"]
+  :is(
+    .premium-account-dropdown,
+    .premium-products-menu,
+    .mgmt-account-menu__dropdown,
+    .mgmt-account__popover,
+    .premium-dropdown,
+    .miro-product-menu,
+    .mgmt-dropdown-menu,
+    .mgmt-workspace-finder__panel
+  ),
+:root[data-motion-menus="false"] #mobile-navigation {
+  animation: none !important;
+  transition: none !important;
+}
+:root[data-motion-button-feedback="false"]
+  :is(button, .miro-button, .mgmt-button),
+:root[data-motion-button-feedback="false"] button .animate-spin {
+  transition: none !important;
+  animation: none !important;
+}
+:root[data-motion-micro-interactions="false"]
+  :is(
+    a,
+    .sf-product-card,
+    .sf-department,
+    .miro-service-card,
+    .sf-gallery-arrow
+  ) {
+  transition: none !important;
+}
+
+/* Existing first-page entrances now share a short reveal and one switch. */
+:root
+  :is(
+    .miro-hero-copy,
+    .experience-page,
+    .experience-hero-copy,
+    .miro-page-enter,
+    .miro-section-enter
+  ) {
+  animation-duration: var(--motion-page-duration);
+  animation-timing-function: var(--motion-easing);
+}
+:root[data-motion-page-reveal="false"]
+  :is(
+    .miro-hero-copy,
+    .experience-page,
+    .experience-hero-copy,
+    .miro-page-enter,
+    .miro-section-enter
+  ) {
+  animation: none !important;
+}
+:root[data-motion-ambient-motion="false"]
+  :is(
+    .sf-company-track,
+    .sf-moving-rail-track,
+    .snap-pulse,
+    .snap-line-active
+  ) {
+  animation: none !important;
+}
+:root[data-motion-ambient-motion="false"] .sf-hero-slide {
+  transition: none !important;
+}
+:root[data-motion-text-rails="false"]
+  :is(.sf-label-track, .mgmt-overflow-text__content) {
+  animation: none !important;
+  transform: none;
+}
+:root[data-motion-text-rails="false"]
+  :is(.sf-overflow-label, .mgmt-overflow-text) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+:root[data-motion-text-rails="false"]
+  :is(.sf-label-track, .mgmt-overflow-text__content, .sf-label-copy > span) {
+  width: auto;
+  inline-size: auto;
+  white-space: normal;
+}
+:root[data-motion-text-rails="false"]
+  :is(.mgmt-overflow-text__copy, .sf-label-copy[aria-hidden="true"]) {
+  display: none;
+}
+
+:root[data-motion-enabled="false"] *,
+:root[data-motion-enabled="false"] *::before,
+:root[data-motion-enabled="false"] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .motion-navigation-progress span {
+    transition: none;
+  }
+  .motion-navigation-progress {
+    transition: opacity 60ms linear;
+  }
+  :root
+    :is(
+      .motion-content-reveal,
+      .motion-skeleton,
+      .mgmt-skeleton,
+      .motion-image
+    ) {
+    animation: none !important;
+    transition: none !important;
+  }
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+  }
+}
+
+:root details[open] > p {
+  animation-duration: var(--motion-menu-duration);
+  animation-timing-function: var(--motion-easing);
+}
+:root[data-motion-menus="false"] details[open] > p {
+  animation: none !important;
+}
+:root
+  :is(
+    .inventory-manager__toast,
+    .settings-panel__toast,
+    .inventory-manager__history-panel,
+    .sales-history__card-expanded
+  ) {
+  animation-duration: var(--motion-content-duration);
+  animation-timing-function: var(--motion-easing);
+}
+:root[data-motion-content-reveal="false"]
+  :is(
+    .inventory-manager__toast,
+    .settings-panel__toast,
+    .inventory-manager__history-panel,
+    .sales-history__card-expanded
+  ) {
+  animation: none !important;
+}
+:root .active-tool-pill {
+  animation-duration: var(--motion-micro-duration);
+  animation-timing-function: var(--motion-easing);
+}
+:root[data-motion-micro-interactions="false"] .active-tool-pill {
+  animation: none !important;
+}
+:root[data-motion-micro-interactions="false"]
+  :is(.sf-product-card, .sf-department, .miro-service-card):hover {
+  transform: none !important;
+}
+:root :is(.animate-spin, [class$="__spinner"]) {
+  animation-duration: calc(var(--motion-button-duration) * 6);
+}
+:root[data-motion-button-feedback="false"]
+  :is(.animate-spin, [class$="__spinner"]) {
+  animation: none !important;
+}

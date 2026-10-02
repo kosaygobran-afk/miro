@@ -1,5 +1,9 @@
 "use client";
 
+import { TableSkeleton } from "./ui/skeleton";
+import { Pager } from "./pager";
+import { useCollectionPage } from "./use-collection-page";
+
 import { useState, useCallback } from "react";
 import {
   AlertCircle,
@@ -65,10 +69,12 @@ export function UsersManagement({
   locale,
   canControlAdmins,
   initialUsers,
+  initialError = "",
 }: {
   locale: "he" | "en";
   canControlAdmins: boolean;
   initialUsers: ManagedUser[];
+  initialError?: string;
 }) {
   const he = locale === "he";
   const [busy, setBusy] = useState(false);
@@ -87,12 +93,16 @@ export function UsersManagement({
   }
   const [users, setUsers] = useState<ManagedUser[]>(initialUsers);
   const filteredUsers = usersForFilter();
+  const { visibleItems: visibleUsers, pager } = useCollectionPage(
+    filteredUsers,
+    `${query}:${roleFilter}:${statusFilter}`,
+  );
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">(
     "success",
   );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialError);
   const [actionState, setActionState] = useState<UserActionState>(null);
   const [pendingChange, setPendingChange] = useState<{
     userId: string;
@@ -289,14 +299,17 @@ export function UsersManagement({
 
   if (loading) {
     return (
-      <div
-        className="miro-card users-management__loading"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="users-management__spinner" aria-hidden="true" />
-        <p>{he ? "טוען משתמשים…" : "Loading users…"}</p>
-      </div>
+      <TableSkeleton
+        columnWidths={["18%", "23%", "10%", "12%", "37%"]}
+        minWidth="74rem"
+        columns={
+          he
+            ? ["משתמש", "פרטי קשר", "תפקיד", "סטטוס", "פעולות"]
+            : ["User", "Contact details", "Role", "Status", "Actions"]
+        }
+        leadingImage={false}
+        label={he ? "טוען נתונים…" : "Loading data…"}
+      />
     );
   }
 
@@ -489,8 +502,8 @@ export function UsersManagement({
                     </th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
+                <tbody className="motion-content-reveal">
+                  {visibleUsers.map((user) => (
                     <tr key={user.id}>
                       <td className="users-management__td">
                         <div className="users-management__user-info">
@@ -721,7 +734,7 @@ export function UsersManagement({
 
             {/* Mobile Card View */}
             <div className="users-management__card-list" role="list">
-              {filteredUsers.map((user) => (
+              {visibleUsers.map((user) => (
                 <div
                   key={user.id}
                   className="users-management__card"
@@ -962,13 +975,7 @@ export function UsersManagement({
               ))}
             </div>
 
-            <div className="p-4 border-t border-border-subtle">
-              <p className="text-sm text-muted-foreground">
-                {he
-                  ? `מוצגים ${users.length} משתמשים`
-                  : `Showing ${users.length} users`}
-              </p>
-            </div>
+            <Pager {...pager} locale={locale} busy={loading || busy} />
           </>
         )}
       </div>

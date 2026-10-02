@@ -99,20 +99,25 @@ export async function GET(request: Request) {
     if (!z.string().uuid().safeParse(variantId).success) {
       return errorResponse("Valid variant ID required", 400);
     }
-    const { data: movements, error } = await admin
-      .from("stock_movements")
-      .select(
-        "id, delta, previous_qty, resulting_qty, type, reference, unit_cost, note, actor_id, created_at",
-      )
-      .eq("variant_id", variantId)
-      .order("created_at", { ascending: false })
-      .limit(200);
+    const [
+      { data: movements, error },
+      { data: openingBalance, error: openingError },
+    ] = await Promise.all([
+      admin
+        .from("stock_movements")
+        .select(
+          "id, delta, previous_qty, resulting_qty, type, reference, unit_cost, note, actor_id, created_at",
+        )
+        .eq("variant_id", variantId)
+        .order("created_at", { ascending: false })
+        .limit(200),
+      admin
+        .from("stock_opening_balances")
+        .select("quantity, captured_at, source")
+        .eq("variant_id", variantId)
+        .maybeSingle(),
+    ]);
     if (error) return mapPostgresError(error);
-    const { data: openingBalance, error: openingError } = await admin
-      .from("stock_opening_balances")
-      .select("quantity, captured_at, source")
-      .eq("variant_id", variantId)
-      .maybeSingle();
     if (openingError && !["42P01", "PGRST205"].includes(openingError.code)) {
       return mapPostgresError(openingError);
     }

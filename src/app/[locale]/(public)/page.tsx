@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { StoreHeroBackdrop } from "@/features/store-design/store-hero-backdrop";
 import { CompanyRail } from "@/features/store-design/company-rail";
 import {

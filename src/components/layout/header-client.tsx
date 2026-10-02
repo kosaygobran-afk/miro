@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "@/components/motion/motion-link";
+import { usePathname } from "next/navigation";
+import { useRouter } from "@/components/motion/use-motion-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -60,7 +61,11 @@ export type HeaderLabels = {
   };
 };
 
-type ThemeMode = "dark" | "medium" | "light";
+import {
+  transitionTheme,
+  type ThemeMode,
+} from "@/components/motion/theme-transition";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 
 function subscribeTheme(callback: () => void) {
   if (typeof window === "undefined") return () => {};
@@ -89,6 +94,7 @@ export function HeaderClient({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const animationSettings = useAnimationSettings();
   const [open, setOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
@@ -205,21 +211,6 @@ export function HeaderClient({
     };
   }, [open, productsOpen]);
 
-  function chooseTheme(theme: ThemeMode) {
-    if (typeof document !== "undefined") {
-      document.documentElement.setAttribute("data-theme", theme);
-    }
-    try {
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem("miro-theme", theme);
-      }
-    } catch {
-      /* Works without browser storage. */
-    }
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("miro-theme-change"));
-    }
-  }
   function closeNavigation() {
     setOpen(false);
     setProductsOpen(false);
@@ -318,7 +309,12 @@ export function HeaderClient({
 
   return (
     <>
-      <div className="premium-topbar" suppressHydrationWarning>
+      <div
+        className="premium-topbar"
+        role="region"
+        aria-label={he ? "הודעות החנות" : "Store announcements"}
+        suppressHydrationWarning
+      >
         <div className="miro-container premium-topbar-inner">
           <span>
             <ShieldCheck size={13} aria-hidden="true" />
@@ -405,7 +401,13 @@ export function HeaderClient({
                   aria-label={label}
                   title={label}
                   aria-pressed={themeMode === value}
-                  onClick={() => chooseTheme(value)}
+                  onClick={(event) =>
+                    transitionTheme(
+                      value,
+                      event.currentTarget,
+                      animationSettings,
+                    )
+                  }
                 >
                   <Icon size={16} aria-hidden="true" />
                 </button>

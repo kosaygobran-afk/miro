@@ -1,0 +1,16 @@
+{
+  "checkedAt": "2026-10-02T13:46:05.175Z",
+  "checks": [
+    "real customer login and own saved product through authorized API",
+    "saved card links use the canonical storefront category route",
+    "18 account bilingual/theme/320/390/1440 layouts with no overflow or axe violations",
+    "independent forms, duplicate guard and profile failure preserve request draft",
+    "request failure preserves text; successful mocked save resets only its form",
+    "failed removal is retryable; real own-record deletion refreshes without losing drafts or document reload"
+  ],
+  "layoutCases": 18,
+  "axeViolations": 0,
+  "runtimeErrors": [],
+  "submissions": "mocked",
+  "savedRecord": "disposable customer only"
+}

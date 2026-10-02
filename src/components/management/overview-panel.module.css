@@ -218,3 +218,47 @@
 .attentionGrid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
 }
+
+/* Shape-only overview refinement; keep the established theme tokens. */
+:global(html[data-appearance-version="2"]) .root {
+  gap: 1.75rem;
+  min-inline-size: 0;
+}
+:global(html[data-appearance-version="2"]) .rowTitle {
+  text-align: center;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+:global(html[data-appearance-version="2"]) .panelTitle,
+:global(html[data-appearance-version="2"]) .panelNote {
+  text-align: center;
+  line-height: 1.7;
+}
+:global(html[data-appearance-version="2"]) .panelCard {
+  gap: 1.25rem;
+  border-radius: 1.35rem;
+}
+:global(html[data-appearance-version="2"]) .metricLink {
+  block-size: 100%;
+}
+:global(html[data-appearance-version="2"])
+  .metricLink
+  :global(.mgmt-metric-card) {
+  block-size: 100%;
+}
+:global(html[data-appearance-version="2"]) .moverItem {
+  align-items: center;
+  padding-block: 0.9rem;
+}
+:global(html[data-appearance-version="2"]) .activityItem {
+  align-items: center;
+  border-radius: 1rem;
+}
+@media (max-width: 40rem) {
+  :global(html[data-appearance-version="2"]) .panelCard {
+    padding: 1.1rem;
+  }
+  :global(html[data-appearance-version="2"]) .root {
+    gap: 1.35rem;
+  }
+}

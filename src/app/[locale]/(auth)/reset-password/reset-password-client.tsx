@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { createClient } from "@/lib/supabase/client";
 import { LiveAuthForm } from "@/components/auth/live-auth-form";
 import { type Locale } from "@/lib/i18n";

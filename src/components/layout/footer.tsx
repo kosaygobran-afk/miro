@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { ArrowLeft, ArrowRight, MessageSquareText } from "lucide-react";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { Brand } from "@/components/layout/brand";

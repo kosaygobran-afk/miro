@@ -1,12 +1,13 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { CheckCircle2, LockKeyhole, ShoppingBag } from "lucide-react";
 import { useCart } from "@/features/cart/cart-context";
 import { cartCopy } from "@/features/cart/cart-copy";
 import { formatPrice } from "@/lib/catalog/pricing";
 import { withLocale } from "@/lib/i18n";
+import { CartSkeleton } from "./cart-skeleton";
 
 type CheckoutFields = {
   name: string;
@@ -123,7 +124,7 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
   }
 
   if (!hydrated) {
-    return <div className="sf-cart-loading" aria-busy="true" />;
+    return <CartSkeleton locale={locale} checkout />;
   }
 
   if (success) {

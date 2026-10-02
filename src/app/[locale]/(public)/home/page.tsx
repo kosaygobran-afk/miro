@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import Image from "next/image";
 import { ArrowDown, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";

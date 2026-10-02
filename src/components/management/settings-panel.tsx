@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { AnimationSettings } from "./animation-settings";
 import {
   RotateCcw,
   ShieldCheck,
@@ -22,7 +23,8 @@ import {
   ErrorState,
   EmptyState,
   StatusBadge,
-  Skeleton,
+  FormSkeleton,
+  TableSkeleton,
 } from "./ui";
 
 type TaxRateStatus = "current" | "scheduled" | "historical";
@@ -77,7 +79,6 @@ export function SettingsPanel({
   const he = locale === "he";
 
   // State
-  const [loading, setLoading] = useState(true);
   const [globalNotice, setGlobalNotice] = useState<{
     text: string;
     type: "success" | "error";
@@ -356,26 +357,28 @@ export function SettingsPanel({
   }, [loadResource]);
 
   useEffect(() => {
-    // Initial load - use shared loader to ensure response.ok checks
     const controller = new AbortController();
     let mounted = true;
-
-    const loadInitial = async () => {
+    const loadTax = async () => {
       try {
-        // Fetch tax rates
-        const taxRes = await fetch("/api/management/tax", {
+        const response = await fetch("/api/management/tax", {
           cache: "no-store",
           signal: controller.signal,
         });
-        if (taxRes.ok) {
-          const taxData = await taxRes.json();
-          if (mounted && taxData.taxRates) setTaxRates(taxData.taxRates);
-        } else if (mounted) {
-          setTaxError(he ? "טעינה נכשלה" : "Failed to load");
-        }
+        if (!response.ok) throw new Error("load_failed");
+        const data = await response.json();
+        if (mounted) setTaxRates(data.taxRates ?? []);
+      } catch {
+        if (mounted)
+          setTaxError(
+            he ? "לא ניתן לטעון שיעורי מס" : "Unable to load tax rates",
+          );
+      } finally {
         if (mounted) setTaxLoading(false);
-
-        // Fetch business settings
+      }
+    };
+    const loadSettings = async () => {
+      try {
         const settingsRes = await fetch("/api/management/settings", {
           cache: "no-store",
           signal: controller.signal,
@@ -386,7 +389,8 @@ export function SettingsPanel({
             for (const s of settingsData.settings ?? []) {
               if (
                 s.key === "inventory_defaults" &&
-                typeof s.value === "object"
+                typeof s.value === "object" &&
+                s.value !== null
               ) {
                 const saved = s.value as Partial<InventoryDefaults>;
                 setInventoryState((prev) => ({
@@ -397,7 +401,11 @@ export function SettingsPanel({
                   loaded: true,
                 }));
               }
-              if (s.key === "finance" && typeof s.value === "object") {
+              if (
+                s.key === "finance" &&
+                typeof s.value === "object" &&
+                s.value !== null
+              ) {
                 const saved = s.value as Partial<FinanceSettings>;
                 setFinanceState((prev) => ({
                   ...prev,
@@ -407,7 +415,11 @@ export function SettingsPanel({
                   loaded: true,
                 }));
               }
-              if (s.key === "public_contact" && typeof s.value === "object") {
+              if (
+                s.key === "public_contact" &&
+                typeof s.value === "object" &&
+                s.value !== null
+              ) {
                 const value = s.value as Record<string, unknown>;
                 const saved: PublicContactForm = {
                   phone: (value.phone as string) ?? "",
@@ -448,27 +460,8 @@ export function SettingsPanel({
             loaded: true,
           }));
         }
-        if (mounted) {
-          setInventoryState((prev) => ({
-            ...prev,
-            loading: false,
-            loaded: true,
-          }));
-          setFinanceState((prev) => ({
-            ...prev,
-            loading: false,
-            loaded: true,
-          }));
-          setPublicContactState((prev) => ({
-            ...prev,
-            loading: false,
-            loaded: true,
-          }));
-          setLoading(false);
-        }
       } catch {
         if (mounted) {
-          setTaxError(he ? "שגיאת חיבור" : "Connection error");
           setInventoryState((prev) => ({
             ...prev,
             error: he ? "שגיאת חיבור" : "Connection error",
@@ -489,12 +482,27 @@ export function SettingsPanel({
           }));
         }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setInventoryState((prev) => ({
+            ...prev,
+            loading: false,
+            loaded: true,
+          }));
+          setFinanceState((prev) => ({
+            ...prev,
+            loading: false,
+            loaded: true,
+          }));
+          setPublicContactState((prev) => ({
+            ...prev,
+            loading: false,
+            loaded: true,
+          }));
+        }
       }
     };
-
-    void loadInitial();
-
+    // These independent regions settle separately, keeping the settings shell and CEO controls interactive.
+    void Promise.allSettled([loadTax(), loadSettings()]);
     return () => {
       mounted = false;
       controller.abort();
@@ -671,24 +679,14 @@ export function SettingsPanel({
     }
   };
 
-  if (loading) {
-    return (
-      <div className="settings-panel" role="status" aria-live="polite">
-        <Skeleton className="mgmt-skeleton--w-lg mgmt-skeleton--text" />
-        <Skeleton className="mgmt-skeleton--w-md mgmt-skeleton--text" />
-        <Skeleton className="mgmt-skeleton--w-full mgmt-skeleton--text" />
-      </div>
-    );
-  }
-
   return (
     <div className="settings-panel space-y-6">
       <PageHeader
         title={he ? "הגדרות" : "Settings"}
         subtitle={
           he
-            ? "ניהול מס, מלאי, מטבע, תצוגת מחירים ופרטי קשר"
-            : "Manage tax, inventory, currency, price display, and contact settings"
+            ? "ניהול מס, מלאי, תצוגת מחירים, פרטי קשר והנפשות"
+            : "Manage tax, inventory, price display, contact details and animations"
         }
       />
 
@@ -700,6 +698,7 @@ export function SettingsPanel({
         <a href="#settings-inventory">{he ? "מלאי" : "Inventory"}</a>
         <a href="#settings-finance">{he ? "כספים" : "Finance"}</a>
         <a href="#settings-contact">{he ? "פרטי קשר" : "Contact details"}</a>
+        <a href="#settings-animation">{he ? "הנפשות" : "Animations"}</a>
       </nav>
 
       {globalNotice && (
@@ -719,6 +718,8 @@ export function SettingsPanel({
           {globalNotice.text}
         </Notice>
       )}
+
+      <AnimationSettings locale={locale} isCeo={isCeo} />
 
       {/* Tax Section */}
       <FormSection
@@ -745,13 +746,16 @@ export function SettingsPanel({
       >
         {/* Current Active Rate - Prominent Display */}
         <div className="settings-section-content">
-          {taxLoading && (
-            <ErrorState
-              title={he ? "טוען שיעורי מס…" : "Loading tax rates…"}
-              onRetry={fetchTaxRates}
-              retryLabel={he ? "נסה שוב" : "Retry"}
+          {taxLoading ? (
+            <TableSkeleton
+              columns={
+                he
+                  ? ["שם", "שיעור", "תחילה", "תוקף עד", "סטטוס"]
+                  : ["Name", "Rate", "Effective from", "Valid until", "Status"]
+              }
+              label={he ? "טוען שיעורי מס…" : "Loading tax rates…"}
             />
-          )}
+          ) : null}
 
           {taxError && !taxLoading && (
             <ErrorState
@@ -1058,12 +1062,12 @@ export function SettingsPanel({
         }
       >
         <div className="settings-section-content">
-          {inventoryState.loading && (
-            <div className="mgmt-section-loading" role="status">
-              <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-              {he ? "טוען הגדרות…" : "Loading settings…"}
-            </div>
-          )}
+          {inventoryState.loading ? (
+            <FormSkeleton
+              fields={2}
+              label={he ? "טוען הגדרות…" : "Loading settings…"}
+            />
+          ) : null}
 
           {inventoryState.error && !inventoryState.loading && (
             <ErrorState
@@ -1179,12 +1183,12 @@ export function SettingsPanel({
         }
       >
         <div className="settings-section-content">
-          {financeState.loading && (
-            <div className="mgmt-section-loading" role="status">
-              <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-              {he ? "טוען הגדרות…" : "Loading settings…"}
-            </div>
-          )}
+          {financeState.loading ? (
+            <FormSkeleton
+              fields={2}
+              label={he ? "טוען הגדרות…" : "Loading settings…"}
+            />
+          ) : null}
 
           {financeState.error && !financeState.loading && (
             <ErrorState
@@ -1301,12 +1305,12 @@ export function SettingsPanel({
         }
       >
         <div className="settings-section-content">
-          {publicContactState.loading && (
-            <div className="mgmt-section-loading" role="status">
-              <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-              {he ? "טוען הגדרות…" : "Loading settings…"}
-            </div>
-          )}
+          {publicContactState.loading ? (
+            <FormSkeleton
+              fields={8}
+              label={he ? "טוען הגדרות…" : "Loading settings…"}
+            />
+          ) : null}
 
           {publicContactState.error && !publicContactState.loading && (
             <Notice

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";

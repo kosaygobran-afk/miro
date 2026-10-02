@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import Image from "next/image";
+import { RevealImage as Image } from "@/components/ui/reveal-image";
 import { Plus, Trash2, GripVertical, Edit2 } from "lucide-react";
 
 type ProductImage = {

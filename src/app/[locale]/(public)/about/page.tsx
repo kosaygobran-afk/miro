@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { Layers3, ScanLine, SlidersHorizontal } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import {

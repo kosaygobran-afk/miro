@@ -131,23 +131,21 @@ export async function GET(request: Request) {
     orderQuery = orderQuery.lte("created_at", to);
   }
 
-  const { data: orders, error: ordersError } = await orderQuery.range(
-    offset,
-    offset + limit - 1,
-  );
-
-  if (ordersError) {
-    return errorResponse(ordersError.message);
-  }
-
   let countQuery = admin
     .from("orders")
-    .select("id", { count: "exact" })
+    .select("id", { count: "exact", head: true })
     .eq("source", "management");
   if (from) countQuery = countQuery.gte("created_at", from);
   if (to) countQuery = countQuery.lte("created_at", to);
 
-  const { count } = await countQuery;
+  const [{ data: orders, error: ordersError }, { count }] = await Promise.all([
+    orderQuery.range(offset, offset + limit - 1),
+    countQuery,
+  ]);
+
+  if (ordersError) {
+    return errorResponse(ordersError.message);
+  }
 
   // recorded_by has no FK into public.profiles (it references auth.users), so
   // staff display names are resolved with one bounded lookup for the page,

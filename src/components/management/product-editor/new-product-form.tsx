@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useId, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/motion/use-motion-router";
 import { ArrowLeft, ArrowRight, Loader2, Save } from "lucide-react";
 import {
   ErrorState,
   FormField,
   FormSection,
-  ListSkeleton,
+  FormSkeleton,
   Notice,
   PageHeader,
 } from "../ui";
@@ -147,7 +147,12 @@ export function NewProductForm({ locale }: { locale: Locale }) {
   }
 
   if (categories === null) {
-    return <ListSkeleton rows={4} />;
+    return (
+      <FormSkeleton
+        fields={4}
+        label={he ? "טוען טופס מוצר…" : "Loading product form…"}
+      />
+    );
   }
 
   const BackArrow = he ? ArrowRight : ArrowLeft;

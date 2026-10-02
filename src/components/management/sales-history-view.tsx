@@ -9,7 +9,7 @@ import {
   EmptyState,
   ErrorState,
   FormSection,
-  ListSkeleton,
+  TableSkeleton,
   dateRangeLabels,
   resolveDateRange,
   type DateRangeValue,
@@ -164,7 +164,19 @@ export function SalesHistoryView({
           retryLabel={t(copy.retry)}
         />
       ) : showSkeleton ? (
-        <ListSkeleton rows={5} />
+        <TableSkeleton
+          columns={[
+            t(copy.colOrder),
+            t(copy.colDate),
+            t(copy.colCustomer),
+            t(copy.colRecordedBy),
+            t(copy.colItems),
+            t(copy.colVat),
+            t(copy.colTotal),
+            he ? "פעולות" : "Actions",
+          ]}
+          minWidth="56rem"
+        />
       ) : (
         <>
           <div aria-busy={loading}>

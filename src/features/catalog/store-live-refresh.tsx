@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/motion/use-motion-router";
 import { getClient } from "@/lib/supabase/client";
 
 /** Keep an open storefront in sync with catalog and stock writes elsewhere. */

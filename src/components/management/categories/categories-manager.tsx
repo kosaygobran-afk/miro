@@ -21,7 +21,7 @@ import {
   EmptyState,
   ErrorState,
   FormField,
-  ListSkeleton,
+  TableSkeleton,
   Notice,
   PageHeader,
   StatusBadge,
@@ -562,7 +562,33 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
           title={copy.pageTitle[locale]}
           subtitle={copy.pageSubtitle[locale]}
         />
-        <ListSkeleton rows={6} />
+        <TableSkeleton
+          columnWidths={[
+            "6%",
+            "12%",
+            "12%",
+            "13%",
+            "9%",
+            "6%",
+            "10%",
+            "14%",
+            "18%",
+          ]}
+          columns={[
+            copy.colVisual[locale],
+            copy.colNameHe[locale],
+            copy.colNameEn[locale],
+            copy.colSlug[locale],
+            copy.colParent[locale],
+            copy.colProducts[locale],
+            copy.colStatus[locale],
+            copy.colSort[locale],
+            copy.colActions[locale],
+          ]}
+          rows={6}
+          leadingImage
+          minWidth="80rem"
+        />
       </div>
     );
   }

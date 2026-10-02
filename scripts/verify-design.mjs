@@ -184,11 +184,8 @@ async function checkInteractions() {
     await expect(page.locator("#mobile-navigation")).toBeHidden();
     await expect(menu).toBeFocused();
     await menu.click();
-    await page
-      .locator('#mobile-navigation a[href="/en/store"]')
-      .first()
-      .click();
-    await expect(page).toHaveURL(`${baseURL}/en/store`);
+    await page.locator('#mobile-navigation a[href="/en"]').first().click();
+    await expect(page).toHaveURL(`${baseURL}/en`);
     await expect(page.locator("#mobile-navigation")).toBeHidden();
 
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -248,7 +245,7 @@ async function checkInteractions() {
     await page
       .getByRole("searchbox", { name: "Search the store", exact: true })
       .press("Enter");
-    await expect(page).toHaveURL(`${baseURL}/en/store?q=camera#store-items`);
+    await expect(page).toHaveURL(`${baseURL}/en?q=camera#store-items`);
     await expect(
       page.getByTestId("store-catalog").getByRole("searchbox"),
     ).toHaveValue("camera");
@@ -324,9 +321,20 @@ async function checkStoreInteractions() {
       const sort = catalog.getByRole("combobox", { name: labels.sort });
       for (const direction of ["low", "high"]) {
         await sort.selectOption(direction);
-        const prices = await cards.evaluateAll((elements) =>
-          elements.map((element) => Number(element.dataset.productPrice)),
+        const rows = await cards.evaluateAll((elements) =>
+          elements.map((element) =>
+            element.dataset.productPrice === undefined
+              ? null
+              : Number(element.dataset.productPrice),
+          ),
         );
+        const firstUnpriced = rows.indexOf(null);
+        assert(
+          firstUnpriced === -1 ||
+            rows.slice(firstUnpriced).every((price) => price === null),
+          `${locale}: quote-only products must follow published prices`,
+        );
+        const prices = rows.filter((price) => price !== null);
         assert(
           prices.every(
             (price, index) =>
@@ -358,9 +366,7 @@ async function checkStoreInteractions() {
       await expect(categories.first()).toHaveAttribute("aria-pressed", "true");
 
       const productName = await cards.first().getAttribute("data-product-name");
-      const details = cards
-        .first()
-        .getByRole("button", { name: labels.details, exact: true });
+      const details = cards.first().locator(".sf-product-quick-preview");
       await details.click();
       const dialog = page.getByRole("dialog", {
         name: productName,
@@ -372,13 +378,22 @@ async function checkStoreInteractions() {
       await expect(dialog).toBeHidden();
       await expect(details).toBeFocused();
       await details.click();
-      const quote = dialog.getByRole("link", {
-        name: labels.quote,
-        exact: true,
-      });
+      const detailLink = dialog.locator(".sf-hover-preview-link");
+      const detailUrl = new URL(await detailLink.getAttribute("href"), baseURL);
+      await detailLink.click();
+      await expect(page).toHaveURL(detailUrl.href);
+      await ready(page);
+      const quote = page.locator(".sf-action-contact");
       const destination = new URL(await quote.getAttribute("href"), baseURL);
       assert.equal(destination.pathname, `/${locale}/contact`);
-      assert.equal(destination.searchParams.get("product"), productName);
+      assert.match(
+        destination.searchParams.get("product") || "",
+        /^[0-9a-f-]{36}$/,
+      );
+      assert.equal(
+        destination.searchParams.get("item"),
+        detailUrl.pathname.split("/").at(-1),
+      );
       await quote.click();
       await expect(page).toHaveURL(destination.href);
       await ready(page);

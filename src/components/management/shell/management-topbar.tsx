@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useSyncExternalStore } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "@/components/motion/motion-link";
+import { usePathname } from "next/navigation";
+import { useRouter } from "@/components/motion/use-motion-router";
 import { Menu, Moon, Sun, SunMoon, Store, Pause, Play } from "lucide-react";
 import { roleLabel, type AppRole } from "@/lib/roles";
 import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
@@ -17,7 +18,11 @@ import { IconAction } from "../ui/icon-action";
 import { AccountMenu } from "./account-menu";
 import { WorkspaceTools } from "./workspace-tools";
 
-type ThemeMode = "dark" | "medium" | "light";
+import {
+  transitionTheme,
+  type ThemeMode,
+} from "@/components/motion/theme-transition";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 
 function subscribeTheme(callback: () => void) {
   if (typeof window === "undefined") return () => {};
@@ -67,6 +72,7 @@ export function ManagementTopbar({
 }: ManagementTopbarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const animationSettings = useAnimationSettings();
   const topbarRef = useRef<HTMLElement>(null);
   const { section, item } = matchMgmtNav(
     pathname ?? `/${locale}/admin`,
@@ -116,22 +122,6 @@ export function ManagementTopbar({
       document.documentElement.style.removeProperty("--mgmt-topbar-height");
     };
   }, []);
-
-  function chooseTheme(theme: ThemeMode) {
-    if (typeof document !== "undefined") {
-      document.documentElement.setAttribute("data-theme", theme);
-    }
-    try {
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem("miro-theme", theme);
-      }
-    } catch {
-      /* Works without browser storage. */
-    }
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new Event("miro-theme-change"));
-    }
-  }
 
   function handleLocaleChange() {
     const newLocale = locale === "he" ? "en" : "he";
@@ -233,7 +223,9 @@ export function ManagementTopbar({
             data-theme-option="dark"
             aria-label={themeLabels.dark}
             aria-pressed={themeMode === "dark"}
-            onClick={() => chooseTheme("dark")}
+            onClick={(event) =>
+              transitionTheme("dark", event.currentTarget, animationSettings)
+            }
           >
             <Moon size={18} aria-hidden="true" />
           </button>
@@ -243,7 +235,9 @@ export function ManagementTopbar({
             data-theme-option="medium"
             aria-label={themeLabels.medium}
             aria-pressed={themeMode === "medium"}
-            onClick={() => chooseTheme("medium")}
+            onClick={(event) =>
+              transitionTheme("medium", event.currentTarget, animationSettings)
+            }
           >
             <SunMoon size={18} aria-hidden="true" />
           </button>
@@ -253,7 +247,9 @@ export function ManagementTopbar({
             data-theme-option="light"
             aria-label={themeLabels.light}
             aria-pressed={themeMode === "light"}
-            onClick={() => chooseTheme("light")}
+            onClick={(event) =>
+              transitionTheme("light", event.currentTarget, animationSettings)
+            }
           >
             <Sun size={18} aria-hidden="true" />
           </button>

@@ -9,7 +9,7 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
 } from "react";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { createPortal } from "react-dom";
 import { OverflowText } from "./overflow-text";
 
@@ -152,6 +152,11 @@ export function IconAction({
           .filter(Boolean)
           .join(" ")}
         aria-label={props["aria-label"] ?? label}
+        aria-describedby={
+          [props["aria-describedby"], handlers["aria-describedby"]]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
       >
         {children}
       </button>
@@ -180,6 +185,11 @@ export function IconLink({
         href={href}
         className={["mgmt-icon-action", className].filter(Boolean).join(" ")}
         aria-label={label}
+        aria-describedby={
+          [props["aria-describedby"], handlers["aria-describedby"]]
+            .filter(Boolean)
+            .join(" ") || undefined
+        }
       >
         {children}
       </Link>

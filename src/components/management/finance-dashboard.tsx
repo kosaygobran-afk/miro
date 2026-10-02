@@ -10,9 +10,12 @@ import {
   SlidersHorizontal,
   ArrowUpRight,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { periodChange, reportingRangeParams } from "@/lib/management-reporting";
+import { financeRatios } from "@/lib/report-insights";
+import { InsightCard, InsightSectionHeader } from "./ui/insight-card";
 import { ActivityChart } from "./ui/activity-chart";
+import { DashboardSkeleton } from "./ui/skeleton";
 import { MetricCard } from "./ui/metric-card";
 import {
   DateRangePicker,
@@ -150,8 +153,17 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
     },
   ] as const;
   const daily = data?.dailySeries ?? [];
+  const ratios = data ? financeRatios(data.totals) : null;
+  const previousRatios = data ? financeRatios(data.previous.totals) : null;
+  const averageOrderChange =
+    ratios?.averageOrder != null && previousRatios?.averageOrder != null
+      ? periodChange(ratios.averageOrder, previousRatios.averageOrder)
+      : null;
   return (
-    <section className={s.workspace} aria-busy={loading}>
+    <section
+      className={`${s.workspace} insight-report-workspace`}
+      aria-busy={loading}
+    >
       <ReportingHeader
         locale={locale}
         section="finance"
@@ -225,288 +237,399 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
           />
         )
       ) : null}
-      <div className={s.metrics}>
-        {cards.map((card) => {
-          const change =
-            totals && data && card.key !== "inventoryValue"
-              ? periodChange(totals[card.key], data.previous.totals[card.key])
-              : null;
-          return (
-            <MetricCard
-              key={card.key}
-              label={<OverflowText text={card.label} />}
-              value={
-                totals ? (
-                  <span dir="ltr">{card.format(totals[card.key])}</span>
-                ) : (
-                  "—"
-                )
-              }
-              loading={loading && !data}
-              icon={card.icon}
-              delta={
-                compare && card.key !== "inventoryValue" && totals
-                  ? change === null
-                    ? he
-                      ? "אין בסיס להשוואה"
-                      : "No comparison baseline"
-                    : `${change > 0 ? "+" : ""}${percent(change)} ${he ? "מול התקופה הקודמת" : "vs previous period"}`
-                  : undefined
-              }
-              deltaDirection={
-                change === null || change === 0
-                  ? "flat"
-                  : change > 0
-                    ? "up"
-                    : "down"
-              }
-              deltaTone={
-                change === null || change === 0
-                  ? "neutral"
-                  : change > 0
-                    ? "success"
-                    : "danger"
-              }
-              footer={
-                card.key === "inventoryValue" ? (
-                  <button
-                    type="button"
-                    className="mgmt-button mgmt-button--ghost"
-                    onClick={() => setDrawer("inventory")}
-                  >
-                    {he ? "פרטי מלאי" : "Inventory details"}
-                    <ArrowUpRight size={15} aria-hidden="true" />
-                  </button>
-                ) : undefined
-              }
-            />
-          );
-        })}
-      </div>
-      {view === "overview" ? (
-        <>
-          <div className={s.split}>
-            <section className={s.panel} aria-labelledby="finance-trend-title">
-              <div className={s.panelHeader}>
-                <div>
-                  <h2 id="finance-trend-title">
-                    {he
-                      ? "ביצועי העסק לאורך זמן"
-                      : "Business performance over time"}
-                  </h2>
-                  <p className={s.muted}>
-                    {he
-                      ? "נתונים יומיים מהמכירות שנרשמו"
-                      : "Daily figures from recorded sales"}
-                  </p>
-                </div>
-                <ReportChoices
-                  label={he ? "מדד התרשים" : "Chart metric"}
-                  value={chartMetric}
-                  onChange={setChartMetric}
-                  options={[
-                    { value: "revenue", label: he ? "הכנסות" : "Revenue" },
-                    { value: "orders", label: he ? "הזמנות" : "Orders" },
-                  ]}
-                />
-              </div>
-              <ReportChoices
-                label={he ? "סוג התרשים" : "Chart style"}
-                value={chartType}
-                onChange={setChartType}
-                options={[
-                  { value: "line", label: he ? "קווים" : "Lines" },
-                  { value: "bar", label: he ? "עמודות" : "Bars" },
-                ]}
-              />
-              {daily.length ? (
-                <ActivityChart
-                  kind={chartType}
-                  days={daily.map((point) => point.day.split("T")[0])}
-                  series={
-                    chartMetric === "revenue"
-                      ? [
-                          {
-                            label: he ? "כולל מע״מ" : "Incl. VAT",
-                            values: daily.map((point) => point.gross),
-                            tone: "cyan",
-                          },
-                          {
-                            label: he ? "ללא מע״מ" : "Excl. VAT",
-                            values: daily.map((point) => point.net),
-                            tone: "violet",
-                          },
-                        ]
-                      : [
-                          {
-                            label: he ? "הזמנות" : "Orders",
-                            values: daily.map((point) => point.orders),
-                            tone: "cyan",
-                          },
-                        ]
+      {loading && !data ? (
+        <DashboardSkeleton
+          label={he ? "טוען נתונים פיננסיים…" : "Loading finance data…"}
+        />
+      ) : data ? (
+        <div className="motion-content-reveal">
+          <div className={s.metrics}>
+            {cards.map((card) => {
+              const change =
+                totals && data && card.key !== "inventoryValue"
+                  ? periodChange(
+                      totals[card.key],
+                      data.previous.totals[card.key],
+                    )
+                  : null;
+              return (
+                <MetricCard
+                  key={card.key}
+                  label={<OverflowText text={card.label} />}
+                  value={
+                    totals ? (
+                      <span dir="ltr">{card.format(totals[card.key])}</span>
+                    ) : (
+                      "—"
+                    )
                   }
-                  locale={locale}
-                  unit={
-                    chartMetric === "revenue"
-                      ? he
-                        ? "הכנסות · ₪"
-                        : "Revenue · ILS"
-                      : he
-                        ? "מספר הזמנות"
-                        : "Order count"
+                  loading={loading && !data}
+                  icon={card.icon}
+                  delta={
+                    compare && card.key !== "inventoryValue" && totals
+                      ? change === null
+                        ? he
+                          ? "אין בסיס להשוואה"
+                          : "No comparison baseline"
+                        : `${change > 0 ? "+" : ""}${percent(change)} ${he ? "מול התקופה הקודמת" : "vs previous period"}`
+                      : undefined
                   }
-                  note={
-                    he
-                      ? "סיכומים יומיים לפי אזור הזמן של מסד הנתונים. נתונים מדויקים זמינים מתחת לתרשים."
-                      : "Daily totals follow the database timezone. Exact figures are available below the chart."
+                  deltaDirection={
+                    change === null || change === 0
+                      ? "flat"
+                      : change > 0
+                        ? "up"
+                        : "down"
+                  }
+                  deltaTone={
+                    change === null || change === 0
+                      ? "neutral"
+                      : change > 0
+                        ? "success"
+                        : "danger"
+                  }
+                  footer={
+                    card.key === "inventoryValue" ? (
+                      <button
+                        type="button"
+                        className="mgmt-button mgmt-button--ghost"
+                        onClick={() => setDrawer("inventory")}
+                      >
+                        {he ? "פרטי מלאי" : "Inventory details"}
+                        <ArrowUpRight size={15} aria-hidden="true" />
+                      </button>
+                    ) : undefined
                   }
                 />
-              ) : (
-                <EmptyState
-                  title={he ? "אין מכירות בטווח הזה" : "No sales in this range"}
+              );
+            })}
+          </div>
+          {view === "overview" ? (
+            <>
+              <div className="insight-finance-context">
+                <InsightSectionHeader
+                  title={
+                    he ? "מבט נוסף על כל מכירה" : "A closer look at each sale"
+                  }
                   description={
                     he
-                      ? "בחר טווח רחב יותר כדי לראות פעילות."
-                      : "Choose a wider date range to see activity."
+                      ? "יחסים מחושבים מתוך ההזמנות שנרשמו. אותה תקופת דיווח, עם הסבר ברור לכל מספר."
+                      : "Ratios calculated from recorded orders. The same reporting period, with a clear explanation for every figure."
+                  }
+                  icon={<TrendingUp />}
+                />
+                <div className="insight-summary-grid">
+                  <InsightCard
+                    title={he ? "ערך הזמנה ממוצע" : "Average order value"}
+                    value={
+                      ratios?.averageOrder == null
+                        ? "—"
+                        : currency(ratios.averageOrder)
+                    }
+                    icon={<ShoppingBag />}
+                    description={
+                      he
+                        ? `${number(data.totals.orderCount)} הזמנות שנרשמו. הכנסה כולל מע״מ חלקי מספר ההזמנות.`
+                        : `${number(data.totals.orderCount)} recorded orders. Revenue including VAT divided by order count.`
+                    }
+                    detail={
+                      !compare
+                        ? he
+                          ? "השוואת התקופות כבויה באפשרויות הדוח."
+                          : "Period comparison is turned off in report options."
+                        : averageOrderChange != null
+                          ? `${averageOrderChange > 0 ? "+" : ""}${percent(averageOrderChange)} · ${he ? "מול ערך ההזמנה הממוצע בתקופה הקודמת" : "versus average order value in the previous period"}`
+                          : he
+                            ? "כשהתקופה הקודמת ריקה או ערכה אפס, אין בסיס לאחוז שינוי."
+                            : "An empty previous period or zero average does not provide a percentage-change baseline."
+                    }
+                  />
+                  <InsightCard
+                    title={he ? "יחידות להזמנה" : "Units per order"}
+                    value={
+                      ratios?.unitsPerOrder == null
+                        ? "—"
+                        : number(ratios.unitsPerOrder)
+                    }
+                    icon={<Package />}
+                    description={
+                      he
+                        ? `${number(data.totals.unitsSold)} יחידות שנמכרו חלקי ${number(data.totals.orderCount)} הזמנות. זהו ממוצע, ולא כמות בכל הזמנה.`
+                        : `${number(data.totals.unitsSold)} units sold divided by ${number(data.totals.orderCount)} orders. This is an average, rather than the quantity in every order.`
+                    }
+                    action={{
+                      href: `/${locale}/admin/sales`,
+                      label: he ? "עיון בהזמנות" : "Review orders",
+                    }}
+                  />
+                  <InsightCard
+                    title={
+                      he
+                        ? "יחס הרווח הגולמי להכנסה נטו"
+                        : "Gross profit / net revenue ratio"
+                    }
+                    value={
+                      ratios?.grossMargin == null
+                        ? "—"
+                        : percent(ratios.grossMargin)
+                    }
+                    icon={<Banknote />}
+                    description={
+                      he
+                        ? "רווח גולמי חלקי הכנסה ללא מע״מ. עלות המכר כבר נוכתה, והוצאות תפעול טרם נוכו."
+                        : "Gross profit divided by revenue excluding VAT. Cost of goods is already deducted; operating expenses are still excluded."
+                    }
+                    detail={
+                      he
+                        ? "אין כאן חישוב רווח נקי, תזרים מזומנים או אישור חשבונאי."
+                        : "This is not net profit, cash flow or an accounting approval."
+                    }
+                    action={{
+                      href: `/${locale}/admin/settings`,
+                      label: he
+                        ? "בדיקת הגדרות הכספים"
+                        : "Review finance settings",
+                    }}
+                  />
+                </div>
+              </div>
+              <div className={s.split}>
+                <section
+                  className={s.panel}
+                  aria-labelledby="finance-trend-title"
+                >
+                  <div className={s.panelHeader}>
+                    <div>
+                      <h2 id="finance-trend-title">
+                        {he
+                          ? "ביצועי העסק לאורך זמן"
+                          : "Business performance over time"}
+                      </h2>
+                      <p className={s.muted}>
+                        {he
+                          ? "נתונים יומיים מהמכירות שנרשמו"
+                          : "Daily figures from recorded sales"}
+                      </p>
+                    </div>
+                    <ReportChoices
+                      label={he ? "מדד התרשים" : "Chart metric"}
+                      value={chartMetric}
+                      onChange={setChartMetric}
+                      options={[
+                        { value: "revenue", label: he ? "הכנסות" : "Revenue" },
+                        { value: "orders", label: he ? "הזמנות" : "Orders" },
+                      ]}
+                    />
+                  </div>
+                  <ReportChoices
+                    label={he ? "סוג התרשים" : "Chart style"}
+                    value={chartType}
+                    onChange={setChartType}
+                    options={[
+                      { value: "line", label: he ? "קווים" : "Lines" },
+                      { value: "bar", label: he ? "עמודות" : "Bars" },
+                    ]}
+                  />
+                  {daily.length ? (
+                    <ActivityChart
+                      kind={chartType}
+                      days={daily.map((point) => point.day.split("T")[0])}
+                      series={
+                        chartMetric === "revenue"
+                          ? [
+                              {
+                                label: he ? "כולל מע״מ" : "Incl. VAT",
+                                values: daily.map((point) => point.gross),
+                                tone: "cyan",
+                              },
+                              {
+                                label: he ? "ללא מע״מ" : "Excl. VAT",
+                                values: daily.map((point) => point.net),
+                                tone: "violet",
+                              },
+                            ]
+                          : [
+                              {
+                                label: he ? "הזמנות" : "Orders",
+                                values: daily.map((point) => point.orders),
+                                tone: "cyan",
+                              },
+                            ]
+                      }
+                      locale={locale}
+                      unit={
+                        chartMetric === "revenue"
+                          ? he
+                            ? "הכנסות · ₪"
+                            : "Revenue · ILS"
+                          : he
+                            ? "מספר הזמנות"
+                            : "Order count"
+                      }
+                      note={
+                        he
+                          ? "סיכומים יומיים לפי אזור הזמן של מסד הנתונים. נתונים מדויקים זמינים מתחת לתרשים."
+                          : "Daily totals follow the database timezone. Exact figures are available below the chart."
+                      }
+                    />
+                  ) : (
+                    <EmptyState
+                      title={
+                        he ? "אין מכירות בטווח הזה" : "No sales in this range"
+                      }
+                      description={
+                        he
+                          ? "בחר טווח רחב יותר כדי לראות פעילות."
+                          : "Choose a wider date range to see activity."
+                      }
+                    />
+                  )}
+                </section>
+                <section
+                  className={s.panel}
+                  aria-labelledby="finance-profit-title"
+                >
+                  <h2 id="finance-profit-title">
+                    {he ? "מההכנסה לרווח" : "From revenue to profit"}
+                  </h2>
+                  <dl className={s.ledger}>
+                    {(
+                      [
+                        [
+                          he ? "הכנסות כולל מע״מ" : "Revenue incl. VAT",
+                          totals?.revenueGross,
+                        ],
+                        [he ? "מע״מ" : "VAT", totals?.vatTotal],
+                        [
+                          he ? "הכנסות ללא מע״מ" : "Revenue excl. VAT",
+                          totals?.revenueNet,
+                        ],
+                        [he ? "עלות המכר" : "Cost of goods sold", totals?.cogs],
+                        [
+                          he ? "רווח גולמי" : "Gross profit",
+                          totals?.grossProfit,
+                        ],
+                      ] as const
+                    ).map(([label, value]) => (
+                      <div key={label}>
+                        <dt>
+                          <OverflowText text={label} />
+                        </dt>
+                        <dd dir="ltr">
+                          {value === undefined ? "—" : currency(value)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className={s.muted}>
+                    {he
+                      ? "ההנחות כבר כלולות בהכנסות. רווח גולמי אינו כולל הוצאות תפעול."
+                      : "Revenue already reflects discounts. Gross profit excludes operating expenses."}
+                  </p>
+                  <button
+                    type="button"
+                    className="mgmt-button mgmt-button--secondary"
+                    onClick={() => setDrawer("comparison")}
+                  >
+                    {he ? "השוואת תקופות" : "Compare periods"}
+                    <ArrowUpRight size={16} aria-hidden="true" />
+                  </button>
+                </section>
+              </div>
+              <div className={s.metrics}>
+                {details.map((item) => (
+                  <MetricCard
+                    key={item.key}
+                    label={<OverflowText text={item.label} />}
+                    value={
+                      totals ? (
+                        <span dir="ltr">{item.format(totals[item.key])}</span>
+                      ) : (
+                        "—"
+                      )
+                    }
+                  />
+                ))}
+                <MetricCard
+                  label={
+                    he ? "הזמנה ממוצעת כולל מע״מ" : "Average order incl. VAT"
+                  }
+                  value={
+                    totals?.orderCount
+                      ? currency(totals.revenueGross / totals.orderCount)
+                      : "—"
                   }
                 />
-              )}
-            </section>
-            <section className={s.panel} aria-labelledby="finance-profit-title">
-              <h2 id="finance-profit-title">
-                {he ? "מההכנסה לרווח" : "From revenue to profit"}
-              </h2>
-              <dl className={s.ledger}>
-                {(
-                  [
-                    [
-                      he ? "הכנסות כולל מע״מ" : "Revenue incl. VAT",
-                      totals?.revenueGross,
-                    ],
-                    [he ? "מע״מ" : "VAT", totals?.vatTotal],
-                    [
-                      he ? "הכנסות ללא מע״מ" : "Revenue excl. VAT",
-                      totals?.revenueNet,
-                    ],
-                    [he ? "עלות המכר" : "Cost of goods sold", totals?.cogs],
-                    [he ? "רווח גולמי" : "Gross profit", totals?.grossProfit],
-                  ] as const
-                ).map(([label, value]) => (
-                  <div key={label}>
-                    <dt>
-                      <OverflowText text={label} />
-                    </dt>
-                    <dd dir="ltr">
-                      {value === undefined ? "—" : currency(value)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-              <p className={s.muted}>
-                {he
-                  ? "ההנחות כבר כלולות בהכנסות. רווח גולמי אינו כולל הוצאות תפעול."
-                  : "Revenue already reflects discounts. Gross profit excludes operating expenses."}
-              </p>
-              <button
-                type="button"
-                className="mgmt-button mgmt-button--secondary"
-                onClick={() => setDrawer("comparison")}
+                <MetricCard
+                  label={he ? "יחידות במלאי כעת" : "Units currently in stock"}
+                  value={totals ? number(totals.inventoryUnits) : "—"}
+                />
+              </div>
+            </>
+          ) : (
+            <section className={s.panel}>
+              <div className={s.panelHeader}>
+                <h2>{he ? "פירוט יומי" : "Daily ledger"}</h2>
+                <Link
+                  href={`/${locale}/admin/sales`}
+                  className="mgmt-button mgmt-button--secondary"
+                >
+                  {he ? "היסטוריית מכירות" : "Sales history"}
+                  <ArrowUpRight size={16} aria-hidden="true" />
+                </Link>
+              </div>
+              <DataTable
+                caption={
+                  he ? "פירוט הכנסות והזמנות" : "Revenue and orders breakdown"
+                }
+                minWidth="42rem"
+                head={
+                  <tr>
+                    {[
+                      he ? "תאריך" : "Date",
+                      he ? "כולל מע״מ" : "Incl. VAT",
+                      he ? "ללא מע״מ" : "Excl. VAT",
+                      he ? "הזמנות" : "Orders",
+                    ].map((label) => (
+                      <th key={label} scope="col">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                }
+                isEmpty={!daily.length}
+                emptyState={
+                  <EmptyState
+                    title={
+                      he ? "אין נתונים בטווח שנבחר" : "No figures in this range"
+                    }
+                  />
+                }
               >
-                {he ? "השוואת תקופות" : "Compare periods"}
-                <ArrowUpRight size={16} aria-hidden="true" />
-              </button>
+                {[...daily]
+                  .sort((a, b) => b.day.localeCompare(a.day))
+                  .map((point) => (
+                    <tr key={point.day}>
+                      <th scope="row">
+                        <time dateTime={point.day}>
+                          {date(point.day.split("T")[0])}
+                        </time>
+                      </th>
+                      <td dir="ltr">{currency(point.gross)}</td>
+                      <td dir="ltr">{currency(point.net)}</td>
+                      <td>{number(point.orders)}</td>
+                    </tr>
+                  ))}
+              </DataTable>
             </section>
-          </div>
-          <div className={s.metrics}>
-            {details.map((item) => (
-              <MetricCard
-                key={item.key}
-                label={<OverflowText text={item.label} />}
-                value={
-                  totals ? (
-                    <span dir="ltr">{item.format(totals[item.key])}</span>
-                  ) : (
-                    "—"
-                  )
-                }
-              />
-            ))}
-            <MetricCard
-              label={he ? "הזמנה ממוצעת כולל מע״מ" : "Average order incl. VAT"}
-              value={
-                totals?.orderCount
-                  ? currency(totals.revenueGross / totals.orderCount)
-                  : "—"
-              }
-            />
-            <MetricCard
-              label={he ? "יחידות במלאי כעת" : "Units currently in stock"}
-              value={totals ? number(totals.inventoryUnits) : "—"}
-            />
-          </div>
-        </>
-      ) : (
-        <section className={s.panel}>
-          <div className={s.panelHeader}>
-            <h2>{he ? "פירוט יומי" : "Daily ledger"}</h2>
-            <Link
-              href={`/${locale}/admin/sales`}
-              className="mgmt-button mgmt-button--secondary"
-            >
-              {he ? "היסטוריית מכירות" : "Sales history"}
-              <ArrowUpRight size={16} aria-hidden="true" />
-            </Link>
-          </div>
-          <DataTable
-            caption={
-              he ? "פירוט הכנסות והזמנות" : "Revenue and orders breakdown"
-            }
-            minWidth="42rem"
-            head={
-              <tr>
-                {[
-                  he ? "תאריך" : "Date",
-                  he ? "כולל מע״מ" : "Incl. VAT",
-                  he ? "ללא מע״מ" : "Excl. VAT",
-                  he ? "הזמנות" : "Orders",
-                ].map((label) => (
-                  <th key={label} scope="col">
-                    {label}
-                  </th>
-                ))}
-              </tr>
-            }
-            isEmpty={!daily.length}
-            emptyState={
-              <EmptyState
-                title={
-                  he ? "אין נתונים בטווח שנבחר" : "No figures in this range"
-                }
-              />
-            }
-          >
-            {[...daily]
-              .sort((a, b) => b.day.localeCompare(a.day))
-              .map((point) => (
-                <tr key={point.day}>
-                  <th scope="row">
-                    <time dateTime={point.day}>
-                      {date(point.day.split("T")[0])}
-                    </time>
-                  </th>
-                  <td dir="ltr">{currency(point.gross)}</td>
-                  <td dir="ltr">{currency(point.net)}</td>
-                  <td>{number(point.orders)}</td>
-                </tr>
-              ))}
-          </DataTable>
-        </section>
-      )}
-      <p className={s.muted}>
-        {he
-          ? "תצוגה ניהולית פנימית. אינה חלופה לדוחות חשבונאיים רשמיים."
-          : "Internal management figures. Not a substitute for official accounting reports."}
-      </p>
+          )}
+          <p className={s.muted}>
+            {he
+              ? "תצוגה ניהולית פנימית. אינה חלופה לדוחות חשבונאיים רשמיים."
+              : "Internal management figures. Not a substitute for official accounting reports."}
+          </p>
+        </div>
+      ) : null}
       <Drawer
         open={drawer !== null}
         onClose={() => setDrawer(null)}

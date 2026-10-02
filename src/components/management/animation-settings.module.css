@@ -1,0 +1,87 @@
+.switchRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+}
+
+.switchRow > div {
+  min-width: 0;
+}
+.switchRow > button {
+  flex-shrink: 0;
+}
+
+.backupCard {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--border-control);
+  border-radius: 1rem;
+  background: var(--surface-muted);
+}
+
+.backupCard > button {
+  justify-self: start;
+}
+
+.note {
+  margin-block-start: 0.35rem;
+  font-size: 0.85rem;
+  line-height: 1.65;
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.featureGrid,
+.durationGrid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.field {
+  display: grid;
+  align-content: start;
+  gap: 0.4rem;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+.field input,
+.field select {
+  width: 100%;
+  min-width: 0;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.actions button {
+  min-height: 2.6rem;
+}
+.actions button:first-child {
+  min-width: 13rem;
+}
+
+@media (min-width: 56rem) {
+  .featureGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .durationGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 30rem) {
+  .switchRow {
+    gap: 0.65rem;
+    padding: 0.8rem;
+  }
+  .actions button {
+    flex: 1 1 100%;
+  }
+}

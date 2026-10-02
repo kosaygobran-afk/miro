@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
-import Link from "next/link";
+import { Activity, ArrowUpRight, Banknote, Inbox } from "lucide-react";
+import Link from "@/components/motion/motion-link";
 import { PageHeader } from "./page-header";
 import { OverflowText } from "./overflow-text";
 import styles from "./reporting-workspace.module.css";
@@ -21,10 +21,18 @@ export function ReportingHeader({
   actions?: ReactNode;
 }) {
   const he = locale === "he";
+  const SectionIcon =
+    section === "analytics"
+      ? Activity
+      : section === "finance"
+        ? Banknote
+        : Inbox;
   return (
     <div className={styles.hero}>
-      <div className={styles.eyebrow}>
-        <ShieldCheck size={15} aria-hidden="true" />
+      <div className={`${styles.eyebrow} insight-workspace-emblem`}>
+        <span className="insight-icon" aria-hidden="true">
+          <SectionIcon size={20} />
+        </span>
         <span>MIRO</span>
         <span className={styles.dot} aria-hidden="true" />
         {he ? "ניהול העסק" : "BUSINESS WORKSPACE"}

@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import { Children, isValidElement, type ReactNode } from "react";
 import { ScrollRegion } from "./scroll-region";
+import { TableSkeletonRows } from "./skeleton";
 
 export type DataTableProps = {
   /** Header cells: a single <tr> containing <th> elements. */
@@ -19,6 +20,9 @@ export type DataTableProps = {
   className?: string;
   tableClassName?: string;
   columnWidths?: readonly string[];
+  loading?: boolean;
+  loadingLabel?: string;
+  skeletonRows?: number;
 };
 
 /**
@@ -37,9 +41,23 @@ export function DataTable({
   className,
   tableClassName,
   columnWidths,
+  loading = false,
+  loadingLabel = "Loading data… / טוען נתונים…",
+  skeletonRows = 5,
 }: DataTableProps) {
+  const headerColumns = isValidElement<{ children?: ReactNode }>(head)
+    ? Children.toArray(head.props.children).length
+    : 5;
   return (
-    <div className={["mgmt-table", className].filter(Boolean).join(" ")}>
+    <div
+      className={["mgmt-table", className].filter(Boolean).join(" ")}
+      aria-busy={loading || undefined}
+    >
+      {loading ? (
+        <span className="sr-only" role="status">
+          {loadingLabel}
+        </span>
+      ) : null}
       <ScrollRegion
         className="mgmt-table__scroll"
         label={typeof caption === "string" ? caption : undefined}
@@ -71,12 +89,26 @@ export function DataTable({
           >
             {head}
           </thead>
-          <tbody className="mgmt-table__body">
-            {isEmpty ? null : children}
+          <tbody
+            key={loading ? "loading" : "content"}
+            className={`mgmt-table__body${loading ? "" : " motion-content-reveal"}`}
+          >
+            {loading ? (
+              <TableSkeletonRows
+                columns={columnWidths?.length ?? headerColumns}
+                rows={skeletonRows}
+              />
+            ) : isEmpty ? null : (
+              children
+            )}
           </tbody>
         </table>
       </ScrollRegion>
-      {isEmpty ? <div className="mgmt-table__empty">{emptyState}</div> : null}
+      {!loading && isEmpty ? (
+        <div className="mgmt-table__empty motion-content-reveal">
+          {emptyState}
+        </div>
+      ) : null}
     </div>
   );
 }

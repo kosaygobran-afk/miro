@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { Lock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { withLocale, type Locale } from "@/lib/i18n";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { getTranslations } from "next-intl/server";
 import { LiveAuthForm } from "@/components/auth/live-auth-form";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";

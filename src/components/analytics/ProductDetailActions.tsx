@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { ArrowLeft, ArrowRight, Phone, MessageSquare } from "lucide-react";
 import { withLocale } from "@/lib/i18n";
 import { storeCopy } from "@/features/catalog/store-copy";

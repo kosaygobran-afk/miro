@@ -1,10 +1,18 @@
 "use client";
 
-import { SearchField, OverflowText, PageHeader, Dialog } from "./ui";
+import {
+  SearchField,
+  OverflowText,
+  PageHeader,
+  Dialog,
+  TableSkeleton,
+} from "./ui";
 
 import { ReportChoices } from "./ui/reporting-workspace";
+import { Pager } from "./pager";
+import { useDebouncedValue } from "./use-debounced-value";
 import { CollectionSummary } from "./ui/collection-summary";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 
 import { useState, useEffect, useCallback } from "react";
 import { ScrollRegion } from "@/components/management/ui/scroll-region";
@@ -211,6 +219,17 @@ export function InventoryManager({
   const [replenishment, setReplenishment] = useState<ReplenishmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search);
+  const [visibleLimit, setVisibleLimit] = useState(25);
+  const [visibleOffset, setVisibleOffset] = useState(0);
+  const pageOffset = Math.min(
+    visibleOffset,
+    Math.max(
+      0,
+      Math.floor((variants.length - 1) / visibleLimit) * visibleLimit,
+    ),
+  );
+  const visibleVariants = variants.slice(pageOffset, pageOffset + visibleLimit);
   const [stockFilter, setStockFilter] = useState<
     "all" | "low" | "out_of_stock"
   >(initialStockFilter);
@@ -272,7 +291,7 @@ export function InventoryManager({
       setError("");
       try {
         const items = await fetchInventoryPages({
-          search,
+          search: debouncedSearch,
           lowStock: lowStockFilter,
           signal,
         });
@@ -296,7 +315,7 @@ export function InventoryManager({
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [search, lowStockFilter, stockFilter, he],
+    [debouncedSearch, lowStockFilter, stockFilter, he],
   );
 
   const fetchReplenishment = useCallback(async (signal?: AbortSignal) => {
@@ -313,10 +332,16 @@ export function InventoryManager({
   useEffect(() => {
     const controller = new AbortController();
     void Promise.resolve().then(() => fetchVariants(controller.signal));
-    void Promise.resolve().then(() => fetchReplenishment(controller.signal));
 
     return () => controller.abort();
-  }, [fetchVariants, fetchReplenishment]);
+  }, [fetchVariants]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    // The all-inventory replenishment summary is independent of search and needs one initial fetch.
+    void Promise.resolve().then(() => fetchReplenishment(controller.signal));
+    return () => controller.abort();
+  }, [fetchReplenishment]);
 
   const showToast = (text: string, type: "success" | "error" = "success") => {
     setMessage(text);
@@ -568,7 +593,10 @@ export function InventoryManager({
       <ReportChoices
         label={he ? "מצב מלאי" : "Stock status"}
         value={stockFilter}
-        onChange={setStockFilter}
+        onChange={(value) => {
+          setStockFilter(value);
+          setVisibleOffset(0);
+        }}
         options={[
           { value: "all", label: he ? "כל המלאי" : "All stock" },
           { value: "low", label: he ? "מלאי נמוך" : "Low stock" },
@@ -664,7 +692,10 @@ export function InventoryManager({
             <SearchField
               className="mgmt-inventory-search"
               value={search}
-              onValueChange={setSearch}
+              onValueChange={(value) => {
+                setSearch(value);
+                setVisibleOffset(0);
+              }}
               label={he ? "חיפוש מלאי" : "Search inventory"}
               placeholder={
                 he
@@ -678,9 +709,10 @@ export function InventoryManager({
               <input
                 type="checkbox"
                 checked={lowStockFilter}
-                onChange={(e) =>
-                  setStockFilter(e.target.checked ? "low" : "all")
-                }
+                onChange={(e) => {
+                  setStockFilter(e.target.checked ? "low" : "all");
+                  setVisibleOffset(0);
+                }}
               />
               <Filter className="h-4 w-4" aria-hidden="true" />
               <span>{he ? "מלאי נמוך בלבד" : "Low stock only"}</span>
@@ -716,17 +748,50 @@ export function InventoryManager({
         )}
 
         {loading ? (
-          <div
-            className="inventory-manager__loading"
-            role="status"
-            aria-live="polite"
-          >
-            <Loader2
-              className="h-8 w-8 animate-spin text-primary"
-              aria-hidden="true"
-            />
-            <p>{he ? "טוען מלאי…" : "Loading inventory…"}</p>
-          </div>
+          <TableSkeleton
+            mobileCards
+            columnWidths={[
+              "20%",
+              "12%",
+              "13%",
+              "8%",
+              "6%",
+              "7%",
+              "7%",
+              "7%",
+              "9%",
+              "11%",
+            ]}
+            columns={
+              he
+                ? [
+                    "מוצר",
+                    "SKU",
+                    "ברקוד",
+                    "צבע",
+                    "מלאי",
+                    "סף נמוך",
+                    "נקודת הזמנה",
+                    "כמות הזמנה",
+                    "ספק",
+                    "פעולות",
+                  ]
+                : [
+                    "Product",
+                    "SKU",
+                    "Barcode",
+                    "Color",
+                    "Stock",
+                    "Low threshold",
+                    "Reorder point",
+                    "Reorder qty",
+                    "Supplier",
+                    "Actions",
+                  ]
+            }
+            minWidth="90rem"
+            label={he ? "טוען מלאי…" : "Loading inventory…"}
+          />
         ) : (
           <>
             {/* Desktop Table */}
@@ -758,7 +823,7 @@ export function InventoryManager({
                     <th scope="col">{he ? "פעולות" : "Actions"}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="motion-content-reveal">
                   {variants.length === 0 ? (
                     <tr>
                       <td
@@ -769,7 +834,7 @@ export function InventoryManager({
                       </td>
                     </tr>
                   ) : (
-                    variants.map((variant) => (
+                    visibleVariants.map((variant) => (
                       <tr key={variant.id}>
                         <td>
                           <div className="inventory-manager__product-cell">
@@ -886,7 +951,7 @@ export function InventoryManager({
 
             {/* Mobile Card View */}
             <div className="inventory-manager__card-list" role="list">
-              {variants.map((variant) => (
+              {visibleVariants.map((variant) => (
                 <div
                   key={variant.id}
                   className="inventory-manager__card"
@@ -1127,6 +1192,18 @@ export function InventoryManager({
                 </div>
               ))}
             </div>
+            <Pager
+              totalCount={variants.length}
+              limit={visibleLimit}
+              offset={pageOffset}
+              onOffsetChange={setVisibleOffset}
+              onLimitChange={(value) => {
+                setVisibleLimit(value);
+                setVisibleOffset(0);
+              }}
+              locale={locale}
+              busy={loading}
+            />
           </>
         )}
 

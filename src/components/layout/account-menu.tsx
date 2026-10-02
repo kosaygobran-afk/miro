@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import Link from "@/components/motion/motion-link";
+import { usePathname } from "next/navigation";
+import { useRouter } from "@/components/motion/use-motion-router";
 import { ChevronDown, LayoutDashboard, LogOut, UserRound } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";

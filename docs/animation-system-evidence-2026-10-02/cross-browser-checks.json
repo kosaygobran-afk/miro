@@ -1,0 +1,892 @@
+{
+  "date": "2026-10-02",
+  "runner": "PLAYWRIGHT_BASE_URL=http://127.0.0.1:3121 PLAYWRIGHT_REUSE=1 npx playwright test --config=playwright.cross-browser.config.ts",
+  "total": 80,
+  "passed": 80,
+  "failed": 0,
+  "flaky": 0,
+  "physicalDevice": false,
+  "profiles": ["chromium", "firefox", "webkit", "webkit-iphone"],
+  "cases": [
+    {
+      "name": "appearance backup restores original public tokens and console Dark stays unchanged",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 478
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/services at 1280px",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 755
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/login at 390px",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 674
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he at 320px",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 929
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he/store/cameras/miro-4k-pro at 390px",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 633
+        }
+      ]
+    },
+    {
+      "name": "appearance backup restores original public tokens and console Dark stays unchanged",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1401
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/services at 1280px",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1886
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/login at 390px",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1825
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he at 320px",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1572
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he/store/cameras/miro-4k-pro at 390px",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1108
+        }
+      ]
+    },
+    {
+      "name": "appearance backup restores original public tokens and console Dark stays unchanged",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 968
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/services at 1280px",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1195
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/login at 390px",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 877
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he at 320px",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1287
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he/store/cameras/miro-4k-pro at 390px",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 822
+        }
+      ]
+    },
+    {
+      "name": "appearance backup restores original public tokens and console Dark stays unchanged",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 518
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/services at 1280px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 923
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/login at 390px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 896
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he at 320px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1568
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he/store/cameras/miro-4k-pro at 390px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 944
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 1280px",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1519
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 768px",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 2020
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 390px",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 2017
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual he button at 390px",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1508
+        }
+      ]
+    },
+    {
+      "name": "rapid theme changes settle on the last selection and every mode persists",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 5519
+        }
+      ]
+    },
+    {
+      "name": "browsers without View Transitions still switch and persist themes",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 584
+        }
+      ]
+    },
+    {
+      "name": "reduced motion switches immediately and keeps navigation feedback functional",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1278
+        }
+      ]
+    },
+    {
+      "name": "all saved feature switches apply live and disabling motion preserves interactions",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 424
+        }
+      ]
+    },
+    {
+      "name": "navigation beam responds immediately and waits for dynamic loading to finish",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1201
+        }
+      ]
+    },
+    {
+      "name": "navigation cancellation, failure, same-route links and browser history settle",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1431
+        }
+      ]
+    },
+    {
+      "name": "stalled navigation cancels its beam and leaves the current page usable",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 285
+        }
+      ]
+    },
+    {
+      "name": "rapidly superseded navigation settles when the final destination is the current page",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 276
+        }
+      ]
+    },
+    {
+      "name": "hash-only browser history does not start a page navigation beam",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 262
+        }
+      ]
+    },
+    {
+      "name": "slow category navigation exposes a structured route skeleton and settles",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1113
+        }
+      ]
+    },
+    {
+      "name": "GET search receives immediate navigation feedback for its query",
+      "project": "chromium",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 972
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 1280px",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1538
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 768px",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1450
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 390px",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1453
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual he button at 390px",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1944
+        }
+      ]
+    },
+    {
+      "name": "rapid theme changes settle on the last selection and every mode persists",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 6996
+        }
+      ]
+    },
+    {
+      "name": "browsers without View Transitions still switch and persist themes",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1166
+        }
+      ]
+    },
+    {
+      "name": "reduced motion switches immediately and keeps navigation feedback functional",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1675
+        }
+      ]
+    },
+    {
+      "name": "all saved feature switches apply live and disabling motion preserves interactions",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 788
+        }
+      ]
+    },
+    {
+      "name": "navigation beam responds immediately and waits for dynamic loading to finish",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1125
+        }
+      ]
+    },
+    {
+      "name": "navigation cancellation, failure, same-route links and browser history settle",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 2484
+        }
+      ]
+    },
+    {
+      "name": "stalled navigation cancels its beam and leaves the current page usable",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 678
+        }
+      ]
+    },
+    {
+      "name": "rapidly superseded navigation settles when the final destination is the current page",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 529
+        }
+      ]
+    },
+    {
+      "name": "hash-only browser history does not start a page navigation beam",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 474
+        }
+      ]
+    },
+    {
+      "name": "slow category navigation exposes a structured route skeleton and settles",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1914
+        }
+      ]
+    },
+    {
+      "name": "GET search receives immediate navigation feedback for its query",
+      "project": "firefox",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1155
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 1280px",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1624
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 768px",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1631
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 390px",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1634
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual he button at 390px",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1808
+        }
+      ]
+    },
+    {
+      "name": "rapid theme changes settle on the last selection and every mode persists",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 6317
+        }
+      ]
+    },
+    {
+      "name": "browsers without View Transitions still switch and persist themes",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 625
+        }
+      ]
+    },
+    {
+      "name": "reduced motion switches immediately and keeps navigation feedback functional",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1402
+        }
+      ]
+    },
+    {
+      "name": "all saved feature switches apply live and disabling motion preserves interactions",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 601
+        }
+      ]
+    },
+    {
+      "name": "navigation beam responds immediately and waits for dynamic loading to finish",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1282
+        }
+      ]
+    },
+    {
+      "name": "navigation cancellation, failure, same-route links and browser history settle",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 2040
+        }
+      ]
+    },
+    {
+      "name": "stalled navigation cancels its beam and leaves the current page usable",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 431
+        }
+      ]
+    },
+    {
+      "name": "rapidly superseded navigation settles when the final destination is the current page",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 433
+        }
+      ]
+    },
+    {
+      "name": "hash-only browser history does not start a page navigation beam",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 416
+        }
+      ]
+    },
+    {
+      "name": "slow category navigation exposes a structured route skeleton and settles",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1476
+        }
+      ]
+    },
+    {
+      "name": "GET search receives immediate navigation feedback for its query",
+      "project": "webkit",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1154
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 1280px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1722
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 768px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1790
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 390px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1742
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual he button at 390px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1785
+        }
+      ]
+    },
+    {
+      "name": "rapid theme changes settle on the last selection and every mode persists",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 6299
+        }
+      ]
+    },
+    {
+      "name": "browsers without View Transitions still switch and persist themes",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 690
+        }
+      ]
+    },
+    {
+      "name": "reduced motion switches immediately and keeps navigation feedback functional",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1430
+        }
+      ]
+    },
+    {
+      "name": "all saved feature switches apply live and disabling motion preserves interactions",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 642
+        }
+      ]
+    },
+    {
+      "name": "navigation beam responds immediately and waits for dynamic loading to finish",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1287
+        }
+      ]
+    },
+    {
+      "name": "navigation cancellation, failure, same-route links and browser history settle",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1964
+        }
+      ]
+    },
+    {
+      "name": "stalled navigation cancels its beam and leaves the current page usable",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 473
+        }
+      ]
+    },
+    {
+      "name": "rapidly superseded navigation settles when the final destination is the current page",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 460
+        }
+      ]
+    },
+    {
+      "name": "hash-only browser history does not start a page navigation beam",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 436
+        }
+      ]
+    },
+    {
+      "name": "slow category navigation exposes a structured route skeleton and settles",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1366
+        }
+      ]
+    },
+    {
+      "name": "GET search receives immediate navigation feedback for its query",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "runs": [
+        {
+          "status": "passed",
+          "durationMs": 1083
+        }
+      ]
+    }
+  ]
+}

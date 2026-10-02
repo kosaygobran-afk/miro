@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-02",
+  "runner": "DESIGN_BASE_URL=http://127.0.0.1:3121 node scripts/verify-design.mjs",
+  "layoutCombinationsPassed": 60,
+  "axeScansPassed": 14,
+  "widths": [320, 390, 768, 1440, 1920],
+  "locales": ["he", "en"],
+  "themes": ["dark", "medium", "light"],
+  "interactions": [
+    "Theme persistence",
+    "Mobile menus, keyboard Escape and focus",
+    "Header search",
+    "Reduced motion",
+    "Landscape and 200% text reflow",
+    "Catalog search, empty/reset, quote-only-aware price sorting",
+    "Categories",
+    "Preview and detail navigation",
+    "Product contact links and shared search URLs"
+  ],
+  "screenshots": "Public screenshots retained in /tmp/miro-motion-design-complete. Private console screenshots remain outside repository."
+}

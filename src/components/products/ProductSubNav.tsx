@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
-import Image from "next/image";
+import { RevealImage as Image } from "@/components/ui/reveal-image";
 import { isLocale, type Locale } from "@/lib/i18n";
 
 const categoryIcons: Record<string, typeof Camera> = {

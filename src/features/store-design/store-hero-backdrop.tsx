@@ -1,4 +1,5 @@
 "use client";
+import { useAnimationFeature } from "@/components/motion/animation-provider";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import {
@@ -19,7 +20,8 @@ export function StoreHeroBackdrop({ locale }: { locale: "he" | "en" }) {
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [focused, setFocused] = useState(false);
-  const reduceMotion = useReducedMotion();
+  const ambientMotion = useAnimationFeature("ambientMotion");
+  const reduceMotion = useReducedMotion() || !ambientMotion;
   const visible = useSyncExternalStore(
     subscribeVisibility,
     () => document.visibilityState === "visible",

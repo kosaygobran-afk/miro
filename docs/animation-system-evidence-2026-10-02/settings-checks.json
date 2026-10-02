@@ -1,0 +1,10 @@
+{
+  "date": "2026-10-02",
+  "runner": "ANIMATION_BASE_URL=http://127.0.0.1:3121 node scripts/verify-animation-settings.mjs",
+  "groupedChecksPassed": 15,
+  "layoutCombinationsPassed": 18,
+  "axeViolations": 0,
+  "runtimeErrors": 0,
+  "scope": "Real disposable CEO/admin authentication, protected/public reads and invalid/denied writes. Valid saves, restore/conflict/retry cases use browser-only response fixtures; no live business setting changes. Actors deleted in finally.",
+  "versions": "Version1 prepare then explicit Save, original motion and personal theme persistence; Version2 re-enable keeps other flags."
+}

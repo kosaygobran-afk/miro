@@ -18,7 +18,7 @@ import {
   DateRangePicker,
   EmptyState,
   ErrorState,
-  ListSkeleton,
+  TableSkeleton,
   Notice,
   Drawer,
   MetricCard,
@@ -748,7 +748,17 @@ export function RequestsQueue({
           retryLabel={t(copy.errorRetry)}
         />
       ) : showSkeleton ? (
-        <ListSkeleton rows={6} />
+        <TableSkeleton
+          columns={[
+            t(copy.colContact),
+            t(copy.colProduct),
+            t(copy.colReceived),
+            t(copy.colStatus),
+            t(copy.colAssignee),
+            he ? "פעולות" : "Actions",
+          ]}
+          rows={6}
+        />
       ) : (
         <>
           <div aria-busy={loading}>

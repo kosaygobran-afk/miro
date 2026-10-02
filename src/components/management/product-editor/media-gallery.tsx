@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import Image from "next/image";
+import { RevealImage as Image } from "@/components/ui/reveal-image";
 import {
   ArrowDown,
   ArrowUp,
@@ -19,7 +19,7 @@ import {
   Dialog,
   EmptyState,
   FormField,
-  ListSkeleton,
+  Skeleton,
   Notice,
 } from "../ui";
 import { editorCopy, mediaCopy } from "./copy";
@@ -470,7 +470,30 @@ export function MediaGallery({
   }
 
   if (images === null && !error) {
-    return <ListSkeleton rows={3} />;
+    return (
+      <div aria-busy="true" data-route-loading="true">
+        <span className="sr-only" role="status">
+          {he ? "טוען תמונות…" : "Loading images…"}
+        </span>
+        <div className={styles.galleryGrid} aria-hidden="true">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div className={styles.imageTile} key={index}>
+              <div className={styles.imageFrame}>
+                <Skeleton
+                  width="full"
+                  height="100%"
+                  style={{ position: "absolute", inset: 0 }}
+                />
+              </div>
+              <div className={styles.tileBody}>
+                <Skeleton width="lg" />
+                <Skeleton width="full" height="2rem" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createPublicServerClient } from "@/lib/supabase/public-server";
 
 /**
@@ -68,54 +69,56 @@ export type RelatedProductItem = {
  * Fetches all published (active) services ordered by sort_order.
  * Server-only function - uses the anonymous public client and database RLS.
  */
-export async function getPublishedServices(): Promise<PublishedService[]> {
-  const supabase = createPublicServerClient();
+export const getPublishedServices = cache(
+  async (): Promise<PublishedService[]> => {
+    const supabase = createPublicServerClient();
 
-  const { data, error } = await supabase
-    .from("services")
-    .select(
-      "id, slug, name_he, name_en, short_description_he, short_description_en, description_he, description_en, visual_kind, image_url, sort_order, seo_title_he, seo_title_en, seo_description_he, seo_description_en, content, created_at, updated_at",
-    )
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("slug", { ascending: true });
+    const { data, error } = await supabase
+      .from("services")
+      .select(
+        "id, slug, name_he, name_en, short_description_he, short_description_en, description_he, description_en, visual_kind, image_url, sort_order, seo_title_he, seo_title_en, seo_description_he, seo_description_en, content, created_at, updated_at",
+      )
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("slug", { ascending: true });
 
-  if (error) {
-    console.error("Failed to fetch published services:", error);
-    return [];
-  }
+    if (error) {
+      console.error("Failed to fetch published services:", error);
+      return [];
+    }
 
-  return (data ?? []).map(mapServiceRow);
-}
+    return (data ?? []).map(mapServiceRow);
+  },
+);
 
 /**
  * Fetches a single published service by slug.
  * Returns null if not found or not active.
  * Server-only function - uses the anonymous public client and database RLS.
  */
-export async function getPublishedServiceBySlug(
-  slug: string,
-): Promise<PublishedService | null> {
-  const supabase = createPublicServerClient();
+export const getPublishedServiceBySlug = cache(
+  async (slug: string): Promise<PublishedService | null> => {
+    const supabase = createPublicServerClient();
 
-  const { data, error } = await supabase
-    .from("services")
-    .select(
-      "id, slug, name_he, name_en, short_description_he, short_description_en, description_he, description_en, visual_kind, image_url, sort_order, seo_title_he, seo_title_en, seo_description_he, seo_description_en, content, created_at, updated_at",
-    )
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .maybeSingle();
+    const { data, error } = await supabase
+      .from("services")
+      .select(
+        "id, slug, name_he, name_en, short_description_he, short_description_en, description_he, description_en, visual_kind, image_url, sort_order, seo_title_he, seo_title_en, seo_description_he, seo_description_en, content, created_at, updated_at",
+      )
+      .eq("slug", slug)
+      .eq("is_active", true)
+      .maybeSingle();
 
-  if (error) {
-    console.error(`Failed to fetch published service ${slug}:`, error);
-    return null;
-  }
+    if (error) {
+      console.error(`Failed to fetch published service ${slug}:`, error);
+      return null;
+    }
 
-  if (!data) return null;
+    if (!data) return null;
 
-  return mapServiceRow(data);
-}
+    return mapServiceRow(data);
+  },
+);
 
 function mapServiceRow(row: {
   id: string;

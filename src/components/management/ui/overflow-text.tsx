@@ -1,4 +1,5 @@
 "use client";
+import { useAnimationFeature } from "@/components/motion/animation-provider";
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
@@ -34,6 +35,8 @@ export function OverflowText({
     measure();
     return () => observer.disconnect();
   }, [text, dir]);
+  const railsEnabled = useAnimationFeature("textRails");
+  const overflowing = distance > 1 && railsEnabled;
   const style = {
     "--text-travel": `${textWidth + 32}px`,
     "--text-end": `${(rtl ? 1 : -1) * (textWidth + 32)}px`,
@@ -45,13 +48,13 @@ export function OverflowText({
       dir={dir}
       title={text}
       className={["mgmt-overflow-text", className].filter(Boolean).join(" ")}
-      data-overflow={distance > 1 || undefined}
+      data-overflow={overflowing || undefined}
       style={style}
-      tabIndex={distance > 1 && focusable ? 0 : undefined}
+      tabIndex={overflowing && focusable ? 0 : undefined}
     >
       <span className="mgmt-overflow-text__content">
         <span ref={content}>{text}</span>
-        {distance > 1 ? (
+        {overflowing ? (
           <span className="mgmt-overflow-text__copy" aria-hidden="true">
             {text}
           </span>
