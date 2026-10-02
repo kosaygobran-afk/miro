@@ -7,12 +7,14 @@ import {
   FolderTree,
   Pencil,
   Plus,
-  RotateCcw,
   Trash2,
   Upload,
   X,
 } from "lucide-react";
 import {
+  OverflowText,
+  IconAction,
+  ActivationSwitch,
   ConfirmationDialog,
   DataTable,
   Dialog,
@@ -27,6 +29,9 @@ import {
 } from "../ui";
 import { VisualKind } from "../visual-picker";
 import { categoriesCopy as copy } from "./copy";
+import { buildOrderUpdates } from "@/lib/management-ordering";
+import { CollectionSummary } from "../ui/collection-summary";
+import { ReportChoices } from "../ui/reporting-workspace";
 import styles from "./categories-manager.module.css";
 
 type CategoryRow = {
@@ -127,6 +132,12 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
   } | null>(null);
   const noticeTimer = useRef<number | null>(null);
   const [search, setSearch] = useState("");
+  const [visibility, setVisibility] = useState<"all" | "active" | "inactive">(
+    "all",
+  );
+  const [reordering, setReordering] = useState(false);
+  const reorderLock = useRef(false);
+  const [activating, setActivating] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryRow | null>(null);
@@ -187,14 +198,15 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return categories;
     return categories.filter(
       (c) =>
-        c.name_he.toLowerCase().includes(needle) ||
-        c.name_en.toLowerCase().includes(needle) ||
-        c.slug.toLowerCase().includes(needle),
+        (visibility === "all" || c.is_active === (visibility === "active")) &&
+        (!needle ||
+          [c.name_he, c.name_en, c.slug].some((value) =>
+            value.toLowerCase().includes(needle),
+          )),
     );
-  }, [categories, search]);
+  }, [categories, search, visibility]);
 
   const categoryName = useCallback(
     (id: string | null) => {
@@ -442,6 +454,8 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
   }
 
   async function setActive(row: CategoryRow, active: boolean) {
+    if (activating) return;
+    setActivating(true);
     try {
       const response = await fetch("/api/management/categories", {
         method: "PATCH",
@@ -457,6 +471,8 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
       await load();
     } catch {
       showNotice("danger", copy.saveFailed[locale]);
+    } finally {
+      setActivating(false);
     }
   }
 
@@ -503,22 +519,34 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
   }
 
   async function moveSort(row: CategoryRow, delta: number) {
-    const next = row.sort_order + delta;
+    if (reorderLock.current) return;
+    const updates = buildOrderUpdates(categories, row.id, delta);
+    if (!updates.length) return;
+    reorderLock.current = true;
+    setReordering(true);
     try {
-      const response = await fetch("/api/management/categories", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: row.id, sort_order: next }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
-      setCategories((prev) =>
-        prev
-          .map((c) => (c.id === row.id ? { ...c, sort_order: next } : c))
-          .sort((a, b) => a.sort_order - b.sort_order),
+      // Normalize duplicate/adjacent ranks so each arrow moves exactly one row.
+      // Persist through the existing authorized and audited category API.
+      for (const update of updates) {
+        const response = await fetch("/api/management/categories", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(update),
+        });
+        if (!response.ok) throw new Error("reorder_failed");
+      }
+      await load();
+      showNotice(
+        "success",
+        he ? "סדר הקטגוריות עודכן" : "Category order updated",
       );
     } catch {
       showNotice("danger", copy.saveFailed[locale]);
+      // A failed multi-row save must display the actual persisted order.
+      await load();
+    } finally {
+      reorderLock.current = false;
+      setReordering(false);
     }
   }
 
@@ -585,6 +613,42 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
         </Notice>
       ) : null}
 
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "נטענו במערכת" : "Loaded records",
+            value: categories.length,
+          },
+          {
+            label: he ? "מפורסמים" : "Active",
+            value: categories.filter((row) => row.is_active).length,
+          },
+          {
+            label: he ? "לא פעילים" : "Inactive",
+            value: categories.filter((row) => !row.is_active).length,
+          },
+          {
+            label: he ? "קטגוריות ריקות" : "Empty categories",
+            value: categories.filter((row) => row.product_count === 0).length,
+          },
+        ]}
+        scope={
+          he
+            ? "סיכום הרשומות שנטענו. החיפוש והסינון חלים על קבוצה זו."
+            : "Summary of loaded records. Search and visibility filters apply to this collection."
+        }
+      />
+      <ReportChoices
+        label={he ? "מצב תצוגה" : "Visibility filter"}
+        value={visibility}
+        onChange={setVisibility}
+        options={[
+          { value: "all", label: he ? "הכל" : "All records" },
+          { value: "active", label: he ? "פעילים" : "Active" },
+          { value: "inactive", label: he ? "לא פעילים" : "Inactive" },
+        ]}
+      />
+
       <Toolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -593,6 +657,18 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
       />
 
       <DataTable
+        columnWidths={[
+          "6%",
+          "12%",
+          "12%",
+          "13%",
+          "9%",
+          "6%",
+          "10%",
+          "14%",
+          "18%",
+        ]}
+        tableClassName="mgmt-categories-table"
         caption={copy.tableCaption[locale]}
         isEmpty={visible.length === 0}
         emptyState={
@@ -613,7 +689,7 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
             compact
           />
         }
-        minWidth="56rem"
+        minWidth="80rem"
         head={
           <tr>
             <th scope="col">{copy.colVisual[locale]}</th>
@@ -649,9 +725,11 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
               <td dir="auto">{row.name_he}</td>
               <td dir="auto">{row.name_en}</td>
               <td>
-                <span className={styles.slugValue} dir="ltr">
-                  {row.slug}
-                </span>
+                <OverflowText
+                  text={row.slug}
+                  dir="ltr"
+                  className={styles.slugValue}
+                />
               </td>
               <td dir="auto">{categoryName(row.parent_id)}</td>
               <td>{row.product_count}</td>
@@ -667,10 +745,16 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
               </td>
               <td>
                 <span className={styles.sortCell}>
-                  <span className={styles.sortValue}>{row.sort_order}</span>
+                  <span className={styles.sortValue}>
+                    {categories.findIndex(
+                      (category) => category.id === row.id,
+                    ) + 1}
+                  </span>
                   <button
                     type="button"
-                    className={styles.stepperButton}
+                    className="mgmt-icon-action"
+                    disabled={reordering || categories[0]?.id === row.id}
+                    title={copy.sortUp[locale]}
                     onClick={() => void moveSort(row, -1)}
                     aria-label={copy.sortUp[locale]}
                   >
@@ -678,7 +762,9 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
                   </button>
                   <button
                     type="button"
-                    className={styles.stepperButton}
+                    className="mgmt-icon-action"
+                    disabled={reordering || categories.at(-1)?.id === row.id}
+                    title={copy.sortDown[locale]}
                     onClick={() => void moveSort(row, 1)}
                     aria-label={copy.sortDown[locale]}
                   >
@@ -688,45 +774,40 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
               </td>
               <td>
                 <span className={styles.actionsCell}>
-                  <button
-                    type="button"
-                    className="miro-button miro-button-secondary"
+                  <IconAction
+                    label={copy.edit[locale]}
                     onClick={() => openEdit(row)}
                   >
-                    <Pencil size={14} aria-hidden="true" />
-                    {copy.edit[locale]}
-                  </button>
-                  {row.is_active ? (
-                    <button
-                      type="button"
-                      className="miro-button miro-button-secondary"
-                      onClick={() => setPendingDeactivate(row)}
-                    >
-                      {copy.deactivate[locale]}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="miro-button miro-button-secondary"
-                      onClick={() => void setActive(row, true)}
-                    >
-                      <RotateCcw size={14} aria-hidden="true" />
-                      {copy.reactivate[locale]}
-                    </button>
-                  )}
-                  {row.product_count === 0 ? (
-                    <button
-                      type="button"
-                      className="miro-button miro-button-danger"
-                      onClick={() => {
-                        setPendingDelete(row);
-                        setDeleteConfirmText("");
-                      }}
-                      aria-label={copy.delete[locale]}
-                    >
-                      <Trash2 size={14} aria-hidden="true" />
-                    </button>
-                  ) : null}
+                    <Pencil size={17} aria-hidden="true" />
+                  </IconAction>
+                  <ActivationSwitch
+                    active={row.is_active}
+                    label={`${row.is_active ? copy.statusActive[locale] : copy.statusInactive[locale]} · ${row.is_active ? copy.deactivate[locale] : copy.reactivate[locale]}`}
+                    disabled={activating || deactivating}
+                    onClick={() =>
+                      row.is_active
+                        ? setPendingDeactivate(row)
+                        : void setActive(row, true)
+                    }
+                  />
+                  <IconAction
+                    label={
+                      row.product_count === 0
+                        ? copy.delete[locale]
+                        : he
+                          ? "יש להעביר את המוצרים המקושרים לפני המחיקה"
+                          : "Reassign linked products before deleting"
+                    }
+                    tone="danger"
+                    aria-disabled={row.product_count > 0}
+                    onClick={() => {
+                      if (row.product_count > 0) return;
+                      setPendingDelete(row);
+                      setDeleteConfirmText("");
+                    }}
+                  >
+                    <Trash2 size={17} aria-hidden="true" />
+                  </IconAction>
                 </span>
               </td>
             </tr>

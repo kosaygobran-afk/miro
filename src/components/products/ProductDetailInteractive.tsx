@@ -45,6 +45,7 @@ interface ProductDetailInteractiveProps {
   compareAtPrice?: number | null;
   roleOverride?: number | null;
   canAddToCart?: boolean;
+  availabilityUnconfirmed?: boolean;
 }
 
 export function ProductDetailInteractive({
@@ -68,8 +69,11 @@ export function ProductDetailInteractive({
   compareAtPrice = null,
   roleOverride = null,
   canAddToCart = true,
+  availabilityUnconfirmed = false,
 }: ProductDetailInteractiveProps) {
   const copy = storeCopy[locale] as StoreCopy;
+  const PreviousArrow = locale === "he" ? ChevronRight : ChevronLeft;
+  const NextArrow = locale === "he" ? ChevronLeft : ChevronRight;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(
     () => new Set(),
@@ -176,6 +180,7 @@ export function ProductDetailInteractive({
                       alt=""
                       fill
                       sizes="80px"
+                      unoptimized={image.url.endsWith(".svg")}
                       className="sf-thumbnail-image"
                     />
                   </button>
@@ -213,6 +218,13 @@ export function ProductDetailInteractive({
               <p className="sf-illustration-note">{copy.illustration}</p>
             </div>
           )}
+          {activeImage?.url.match(
+            /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
+          ) ? (
+            <p className="sf-illustration-note sf-reference-image-note">
+              {copy.illustration}
+            </p>
+          ) : null}
           {images.length > 1 ? (
             <>
               <button
@@ -223,7 +235,7 @@ export function ProductDetailInteractive({
                   locale === "he" ? "התמונה הקודמת" : "Previous image"
                 }
               >
-                <ChevronLeft size={24} aria-hidden="true" />
+                <PreviousArrow size={24} aria-hidden="true" />
               </button>
               <button
                 type="button"
@@ -231,9 +243,13 @@ export function ProductDetailInteractive({
                 onClick={showNextImage}
                 aria-label={locale === "he" ? "התמונה הבאה" : "Next image"}
               >
-                <ChevronRight size={24} aria-hidden="true" />
+                <NextArrow size={24} aria-hidden="true" />
               </button>
-              <span className="sf-gallery-position" aria-live="polite">
+              <span
+                className="sf-gallery-position"
+                dir="ltr"
+                aria-live="polite"
+              >
                 {resolvedActiveImageIndex + 1}/{images.length}
               </span>
             </>
@@ -277,7 +293,11 @@ export function ProductDetailInteractive({
             )}
             {effectivePrice !== null && <span>{copy.demoPrice}</span>}
           </div>
-          <StockIndicator quantity={displayedStock} locale={locale} />
+          <StockIndicator
+            unconfirmed={availabilityUnconfirmed}
+            quantity={displayedStock}
+            locale={locale}
+          />
           {displaySku && (
             <p className="sf-product-sku" dir="ltr">
               <span>{locale === "he" ? "מק״ט" : "SKU"}</span>: {displaySku}

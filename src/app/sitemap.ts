@@ -3,8 +3,11 @@ import { locales } from "@/lib/i18n";
 import { localizedUrl } from "@/lib/seo";
 import { getStoreCatalog } from "@/lib/store-data";
 
+// Read the current public catalog after CEO edits, without request cookies.
+export const dynamic = "force-dynamic";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const catalog = await getStoreCatalog("he");
+  const catalog = await getStoreCatalog("he", null, true);
   const publicPaths = [
     "",
     "services",

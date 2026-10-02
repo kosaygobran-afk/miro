@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Search } from "lucide-react";
+import { SearchField } from "./search-field";
 
 export type ToolbarProps = {
   /** Controlled search value. Omit search props to render filters only. */
@@ -31,21 +31,18 @@ export function Toolbar({
     <div className={["mgmt-toolbar", className].filter(Boolean).join(" ")}>
       <div className="mgmt-toolbar__row">
         {hasSearch ? (
-          <div className="mgmt-toolbar__search">
-            <Search
-              size={16}
-              aria-hidden="true"
-              className="mgmt-toolbar__search-icon"
-            />
-            <input
-              type="search"
-              className="mgmt-toolbar__search-input"
-              value={searchValue ?? ""}
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder={searchPlaceholder}
-              aria-label={searchLabel}
-            />
-          </div>
+          <SearchField
+            className="mgmt-toolbar__search"
+            value={searchValue ?? ""}
+            onValueChange={onSearchChange}
+            placeholder={searchPlaceholder}
+            label={searchLabel}
+            clearLabel={
+              /[\u0590-\u05ff]/.test(searchLabel)
+                ? "ניקוי חיפוש"
+                : "Clear search"
+            }
+          />
         ) : null}
         {children ? (
           <div className="mgmt-toolbar__filters">{children}</div>

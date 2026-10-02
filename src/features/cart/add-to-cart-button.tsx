@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Plus, ShoppingCart } from "lucide-react";
+import { Check, Minus, Plus, ShoppingCart } from "lucide-react";
 import { useCart, type CartItem } from "@/features/cart/cart-context";
 
 type AddToCartButtonProps = {
@@ -17,7 +17,13 @@ export function AddToCartButton({
   compact = false,
   disabled = false,
 }: AddToCartButtonProps) {
-  const { addItem } = useCart();
+  const { addItem, items, updateQuantity } = useCart();
+  const quantity =
+    items.find(
+      (entry) =>
+        entry.productId === item.productId &&
+        entry.variantId === item.variantId,
+    )?.quantity ?? 0;
   const [added, setAdded] = useState(false);
   const label = locale === "he" ? "הוספה לסל" : "Add to cart";
   const addedLabel = locale === "he" ? "נוסף לסל" : "Added to cart";
@@ -27,6 +33,49 @@ export function AddToCartButton({
     const timeout = window.setTimeout(() => setAdded(false), 1600);
     return () => window.clearTimeout(timeout);
   }, [added]);
+
+  if (quantity > 0)
+    return (
+      <div
+        className={`sf-cart-quantity ${compact ? "is-compact" : ""}`}
+        role="group"
+        aria-label={`${locale === "he" ? "כמות בסל" : "Cart quantity"}: ${item.name}`}
+      >
+        <span className="sf-cart-quantity-icon" aria-hidden="true">
+          <ShoppingCart size={17} />
+        </span>
+        <button
+          type="button"
+          disabled={disabled}
+          aria-label={`${locale === "he" ? "הפחתת כמות" : "Decrease quantity"}: ${item.name}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            updateQuantity(item.productId, item.variantId, quantity - 1);
+          }}
+        >
+          <Minus size={15} />
+        </button>
+        <output
+          aria-live="polite"
+          aria-label={locale === "he" ? "כמות" : "Quantity"}
+        >
+          {quantity}
+        </output>
+        <button
+          type="button"
+          disabled={disabled || quantity >= 99}
+          aria-label={`${locale === "he" ? "הגדלת כמות" : "Increase quantity"}: ${item.name}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            addItem(item);
+          }}
+        >
+          <Plus size={15} />
+        </button>
+      </div>
+    );
 
   return (
     <button

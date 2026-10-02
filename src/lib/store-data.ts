@@ -1,3 +1,4 @@
+import { createPublicServerClient } from "@/lib/supabase/public-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
   Product,
@@ -56,19 +57,16 @@ export type StoreViewer = {
 
 async function getInventoryDefaults(): Promise<InventoryDefaults> {
   try {
-    const supabase = await createServerSupabaseClient();
-    const { data, error } = await supabase
-      .from("business_settings")
-      .select("value")
-      .eq("key", "inventory_defaults")
-      .maybeSingle();
+    const { data, error } = await createPublicServerClient().rpc(
+      "get_public_inventory_defaults",
+    );
     if (error || !data) {
       return {
         low_stock_threshold: 3,
         out_of_stock_policy: "keep_visible_contact",
       };
     }
-    const value = data.value as Record<string, unknown>;
+    const value = data as Record<string, unknown>;
     return {
       low_stock_threshold:
         typeof value.low_stock_threshold === "number"
@@ -176,6 +174,7 @@ function getCategoryKeyFromSlug(slug: string) {
     network: "routers",
     cables: "cables",
     accessories: "accessories",
+    tools: "accessories",
     "network-gear": "networkGear",
     networkgear: "networkGear",
     "alarm-systems": "alarms",
@@ -204,9 +203,12 @@ function getProductIcon(categoryKey: string) {
 export async function getStoreCatalog(
   locale: "he" | "en",
   role: UserRole = null,
+  anonymous = false,
 ): Promise<StoreCatalog> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = anonymous
+      ? createPublicServerClient()
+      : await createServerSupabaseClient();
 
     // Fetch inventory defaults first (needed for policy resolution)
     const inventoryDefaults = await getInventoryDefaults();
@@ -233,7 +235,7 @@ export async function getStoreCatalog(
       supabase
         .from("products")
         .select(
-          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order",
+          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order, tags",
         )
         .eq("status", "active")
         .order("is_featured", { ascending: false })
@@ -252,7 +254,7 @@ export async function getStoreCatalog(
       supabase
         .from("product_promo_badges")
         .select(
-          "id, product_id, badge_type_id, priority, scheduled_from, scheduled_until, promo_badge_types(key, label_he, label_en, shape, tone, icon_name)",
+          "id, product_id, badge_type_id, priority, scheduled_from, scheduled_until, promo_badge_types(key, label_he, label_en, shape, tone, icon_name, is_active)",
         ),
       supabase
         .from("product_public_promotions")
@@ -318,17 +320,18 @@ export async function getStoreCatalog(
     const badgesByProduct = new Map<string, PromoBadge[]>();
     const now = new Date().toISOString();
     for (const badge of badgesResult.data ?? []) {
-      const bt = (
-        badge.promo_badge_types as Array<{
-          key: string;
-          label_he: string;
-          label_en: string;
-          shape: "tag" | "burst" | "ticket" | "ribbon" | "hex";
-          tone: "sale" | "best" | "new" | "hot" | "limited";
-          icon_name: string | null;
-          is_active: boolean;
-        }>
-      )[0];
+      type BadgeType = {
+        key: string;
+        label_he: string;
+        label_en: string;
+        shape: "tag" | "burst" | "ticket" | "ribbon" | "hex";
+        tone: "sale" | "best" | "new" | "hot" | "limited";
+        icon_name: string | null;
+        is_active: boolean;
+      };
+      const embedded = badge.promo_badge_types as unknown as
+        BadgeType | BadgeType[] | null;
+      const bt = Array.isArray(embedded) ? embedded[0] : embedded;
 
       if (
         bt &&
@@ -554,6 +557,10 @@ export async function getStoreCatalog(
           rolePrice: rolePrice,
           variants: productVariants,
           stockQty,
+          availabilityUnconfirmed:
+            stockQty === 0 &&
+            finalPrice === null &&
+            (product.tags ?? []).includes("catalog-reference"),
           stockState,
           outOfStockPolicy: resolvedPolicy, // Resolved, no "inherit"
           rawOutOfStockPolicy: rawPolicy, // Original value for admin reference
@@ -629,7 +636,7 @@ export async function getSavedProductsWithCanonicalData(
       supabase
         .from("products")
         .select(
-          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order",
+          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order, tags",
         )
         .in("id", productIds)
         .eq("status", "active"),

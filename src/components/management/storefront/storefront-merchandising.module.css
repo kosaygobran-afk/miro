@@ -461,3 +461,40 @@
     grid-column: 1 / -1;
   }
 }
+
+.section {
+  border-radius: 1.15rem;
+  background: var(--surface);
+  border-color: var(--border-subtle);
+  scroll-margin-block-start: calc(var(--mgmt-topbar-height) + 1rem);
+}
+.sectionTitle,
+.previewTitle {
+  font-weight: 600;
+}
+.productCell {
+  min-inline-size: 0;
+}
+.productInfo {
+  min-inline-size: 0;
+  max-inline-size: 18rem;
+}
+.productName {
+  display: block;
+  min-inline-size: 0;
+}
+.stepperButton,
+.addBadgeButton {
+  min-inline-size: 2.75rem;
+  min-block-size: 2.75rem;
+  border-radius: 0.7rem;
+  background: var(--surface-muted);
+}
+.stepperButton:hover,
+.addBadgeButton:hover {
+  color: var(--report-cyan);
+  border-color: var(--report-cyan);
+}
+.previewContent {
+  min-inline-size: 0;
+}

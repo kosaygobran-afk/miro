@@ -1,11 +1,17 @@
 "use client";
 
+import { SearchField, OverflowText, PageHeader, Drawer } from "./ui";
+
+import { CollectionSummary } from "./ui/collection-summary";
+import { ReportChoices } from "./ui/reporting-workspace";
+
+import { ScrollRegion } from "./ui/scroll-region";
+
 import { useState, useEffect, useCallback } from "react";
 import {
   Search,
   User,
   Eye,
-  X,
   Package,
   ClipboardList,
   Activity,
@@ -69,6 +75,9 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "suspended" | "blocked"
+  >("all");
   const [selectedCustomer, setSelectedCustomer] =
     useState<CustomerDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -107,7 +116,10 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
       cache: "no-store",
       signal: controller.signal,
     })
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) throw new Error("Failed to load customers");
+        return res.json();
+      })
       .then((data) => {
         if (!controller.signal.aborted) {
           if (data.customers) {
@@ -163,6 +175,8 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
   };
 
   const filteredCustomers = customers.filter((customer) => {
+    if (statusFilter !== "all" && customer.account_status !== statusFilter)
+      return false;
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -325,14 +339,74 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
   }
 
   return (
-    <div className="customers-manager">
+    <div className="customers-manager mgmt-page-stack">
+      <PageHeader
+        title={he ? "הלקוחות שלך, בתמונה" : "Your customers, in focus"}
+        subtitle={
+          he
+            ? "חשבונות, הזמנות ופניות — הקשר המלא עם כל לקוח."
+            : "Accounts, orders and enquiries. The full relationship with every customer."
+        }
+        actions={
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--secondary"
+            onClick={() => fetchCustomers(true)}
+          >
+            <RotateCcw size={17} aria-hidden="true" />
+            {he ? "רענון" : "Refresh"}
+          </button>
+        }
+      />
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "לקוחות שנטענו" : "Loaded customers",
+            value: customers.length,
+          },
+          {
+            label: he ? "פעילים" : "Active",
+            value: customers.filter(
+              (customer) => customer.account_status === "active",
+            ).length,
+          },
+          {
+            label: he ? "מושהים" : "Suspended",
+            value: customers.filter(
+              (customer) => customer.account_status === "suspended",
+            ).length,
+          },
+          {
+            label: he ? "חסומים" : "Blocked",
+            value: customers.filter(
+              (customer) => customer.account_status === "blocked",
+            ).length,
+          },
+        ]}
+        scope={
+          he
+            ? "סיכום החשבונות שנטענו. הסינון חל על הרשומות האלה."
+            : "Summary of loaded accounts. Filters apply to these records."
+        }
+      />
+      <ReportChoices
+        label={he ? "מצב חשבון" : "Account status"}
+        value={statusFilter}
+        onChange={setStatusFilter}
+        options={[
+          { value: "all", label: he ? "כל הלקוחות" : "All customers" },
+          { value: "active", label: he ? "פעילים" : "Active" },
+          { value: "suspended", label: he ? "מושהים" : "Suspended" },
+          { value: "blocked", label: he ? "חסומים" : "Blocked" },
+        ]}
+      />
       {/* Main Customers Table */}
       <div className="miro-card">
         <div className="border-b border-border-subtle p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black">
-                {he ? "ניהול לקוחות" : "Customers Management"}
+                {he ? "ספר הלקוחות" : "Customer directory"}
               </h2>
               <p className="mt-1 text-muted-foreground">
                 {he
@@ -343,25 +417,19 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
           </div>
 
           <div className="mt-4 flex flex-wrap gap-3">
-            <div className="mgmt-toolbar__search">
-              <Search
-                className="mgmt-toolbar__search-icon"
-                size={18}
-                aria-hidden="true"
-              />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={
-                  he
-                    ? "חפש לפי שם, אימייל או טלפון…"
-                    : "Search by name, email or phone…"
-                }
-                className="mgmt-toolbar__search-input"
-                aria-label={he ? "חיפוש לקוחות" : "Search customers"}
-              />
-            </div>
+            <SearchField
+              className="mgmt-toolbar__search"
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              label={he ? "חיפוש לקוחות" : "Search customers"}
+              placeholder={
+                he
+                  ? "חיפוש לפי שם, אימייל או טלפון…"
+                  : "Search by name, email or phone…"
+              }
+              clearLabel={he ? "ניקוי חיפוש" : "Clear search"}
+            />
+
             <span className="text-sm text-muted-foreground">
               {he
                 ? `מוצגים ${filteredCustomers.length} מתוך ${customers.length} לקוחות`
@@ -389,8 +457,11 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
         ) : (
           <>
             {/* Desktop Table */}
-            <div className="customers-manager__table-wrapper">
-              <table className="customers-manager__table" role="grid">
+            <ScrollRegion
+              className="customers-manager__table-wrapper"
+              label={he ? "טבלת לקוחות" : "Customers table"}
+            >
+              <table className="customers-manager__table">
                 <caption className="sr-only">
                   {he ? "טבלת ניהול לקוחות" : "Customer management table"}
                 </caption>
@@ -444,7 +515,11 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
                           href={`mailto:${customer.email}`}
                           className="customers-manager__email"
                         >
-                          {customer.email}
+                          <OverflowText
+                            text={customer.email}
+                            dir="ltr"
+                            focusable={false}
+                          />
                         </a>
                       </td>
                       <td className="customers-manager__td">
@@ -499,7 +574,7 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
 
             {/* Mobile Card View */}
             <div className="customers-manager__card-list" role="list">
@@ -533,7 +608,11 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
                         href={`mailto:${customer.email}`}
                         className="customers-manager__card-email"
                       >
-                        {customer.email}
+                        <OverflowText
+                          text={customer.email}
+                          dir="ltr"
+                          focusable={false}
+                        />
                       </a>
                     </div>
                     <div className="customers-manager__card-field">
@@ -590,356 +669,347 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
       </div>
 
       {/* Customer Detail Drawer */}
-      {selectedCustomer && (
-        <div
-          className="customers-manager__drawer-overlay"
-          onClick={closeDetail}
-          aria-hidden="true"
-        />
-      )}
-      {selectedCustomer && (
-        <aside
-          className="customers-manager__drawer"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="drawer-title"
-        >
-          <div className="customers-manager__drawer-header">
-            <h3 id="drawer-title" className="text-xl font-black">
-              {he ? "פרטי לקוח" : "Customer Details"}
-            </h3>
-            <button
-              type="button"
-              onClick={closeDetail}
-              className="customers-manager__close-btn"
-              aria-label={he ? "סגור" : "Close"}
-            >
-              <X className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </div>
-
-          {detailLoading && (
-            <div
-              className="customers-manager__drawer-loading"
-              role="status"
-              aria-live="polite"
-            >
-              <div className="customers-manager__spinner" aria-hidden="true" />
-              <p>{he ? "טוען פרטים…" : "Loading details…"}</p>
-            </div>
-          )}
-
-          {detailError && !detailLoading && (
-            <div className="customers-manager__drawer-error p-6" role="alert">
-              <AlertCircle
-                className="h-10 w-10 text-error-text mx-auto mb-3"
-                aria-hidden="true"
-              />
-              <p className="text-lg font-medium mb-2 text-center">
-                {he ? "שגיאה בטעינת פרטים" : "Failed to load details"}
-              </p>
-              <p className="text-muted-foreground text-center mb-4">
-                {detailError}
-              </p>
-              <div className="flex justify-center">
-                <button
-                  type="button"
-                  className="miro-button miro-button-secondary gap-2"
-                  onClick={() =>
-                    fetchCustomerDetail(selectedCustomer.customer.id)
-                  }
-                >
-                  <RotateCcw className="h-4 w-4" aria-hidden="true" />
-                  {he ? "נסה שוב" : "Retry"}
-                </button>
+      <Drawer
+        open={selectedCustomer !== null}
+        onClose={closeDetail}
+        title={he ? "פרטי לקוח" : "Customer details"}
+        side="end"
+        closeLabel={he ? "סגירה" : "Close"}
+      >
+        {selectedCustomer ? (
+          <>
+            {detailLoading && (
+              <div
+                className="customers-manager__drawer-loading"
+                role="status"
+                aria-live="polite"
+              >
+                <div
+                  className="customers-manager__spinner"
+                  aria-hidden="true"
+                />
+                <p>{he ? "טוען פרטים…" : "Loading details…"}</p>
               </div>
-            </div>
-          )}
+            )}
 
-          {!detailLoading && !detailError && (
-            <div className="customers-manager__drawer-content">
-              {/* Profile Section */}
-              <section className="customers-manager__section">
-                <h4 className="customers-manager__section-title flex items-center gap-2">
-                  <User className="h-5 w-5" aria-hidden="true" />
-                  {he ? "פרופיל" : "Profile"}
-                </h4>
-                <div className="customers-manager__detail-grid">
-                  <div className="customers-manager__detail-field">
-                    <span className="customers-manager__detail-label">
-                      {he ? "שם מלא" : "Full name"}
-                    </span>
-                    <span className="customers-manager__detail-value">
-                      {selectedCustomer.customer.full_name ||
-                        (he ? "לא זמין" : "N/A")}
-                    </span>
-                  </div>
-                  <div className="customers-manager__detail-field">
-                    <span className="customers-manager__detail-label">
-                      {he ? "אימייל" : "Email"}
-                    </span>
-                    <a
-                      href={`mailto:${selectedCustomer.customer.email}`}
-                      className="customers-manager__detail-value customers-manager__email"
-                    >
-                      {selectedCustomer.customer.email}
-                    </a>
-                  </div>
-                  <div className="customers-manager__detail-field">
-                    <span className="customers-manager__detail-label">
-                      {he ? "טלפון" : "Phone"}
-                    </span>
-                    <span className="customers-manager__detail-value">
-                      {selectedCustomer.customer.phone ? (
-                        <a href={`tel:${selectedCustomer.customer.phone}`}>
-                          {selectedCustomer.customer.phone}
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground">
-                          {he ? "לא זמין" : "N/A"}
-                        </span>
-                      )}
-                    </span>
-                  </div>
-                  <div className="customers-manager__detail-field">
-                    <span className="customers-manager__detail-label">
-                      {he ? "תפקיד" : "Role"}
-                    </span>
-                    <span className="customers-manager__detail-value">
-                      {getRoleBadge(selectedCustomer.customer.role)}
-                    </span>
-                  </div>
-                  <div className="customers-manager__detail-field">
-                    <span className="customers-manager__detail-label">
-                      {he ? "מצב חשבון" : "Account status"}
-                    </span>
-                    <span className="customers-manager__detail-value">
-                      {getStatusBadge(selectedCustomer.customer.account_status)}
-                    </span>
-                  </div>
-                  <div className="customers-manager__detail-field">
-                    <span className="customers-manager__detail-label">
-                      {he ? "תאריך הצטרפות" : "Joined"}
-                    </span>
-                    <time
-                      className="customers-manager__detail-value"
-                      dateTime={selectedCustomer.customer.created_at}
-                    >
-                      {formatDate(selectedCustomer.customer.created_at)}
-                    </time>
-                  </div>
-                  <div className="customers-manager__detail-field">
-                    <span className="customers-manager__detail-label">
-                      {he ? "פעילות אחרונה" : "Last seen"}
-                    </span>
-                    <time
-                      className="customers-manager__detail-value"
-                      dateTime={selectedCustomer.customer.last_seen_at ?? ""}
-                    >
-                      {formatDate(selectedCustomer.customer.last_seen_at)}
-                    </time>
-                  </div>
-                  <div className="customers-manager__detail-field">
-                    <span className="customers-manager__detail-label">
-                      {he ? "מזהה" : "ID"}
-                    </span>
-                    <code className="customers-manager__detail-value font-mono text-sm">
-                      {selectedCustomer.customer.id}
-                    </code>
-                  </div>
+            {detailError && !detailLoading && (
+              <div className="customers-manager__drawer-error p-6" role="alert">
+                <AlertCircle
+                  className="h-10 w-10 text-error-text mx-auto mb-3"
+                  aria-hidden="true"
+                />
+                <p className="text-lg font-medium mb-2 text-center">
+                  {he ? "שגיאה בטעינת פרטים" : "Failed to load details"}
+                </p>
+                <p className="text-muted-foreground text-center mb-4">
+                  {detailError}
+                </p>
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    className="miro-button miro-button-secondary gap-2"
+                    onClick={() =>
+                      fetchCustomerDetail(selectedCustomer.customer.id)
+                    }
+                  >
+                    <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                    {he ? "נסה שוב" : "Retry"}
+                  </button>
                 </div>
-              </section>
+              </div>
+            )}
 
-              {/* Orders Section */}
-              <section className="customers-manager__section">
-                <h4 className="customers-manager__section-title flex items-center gap-2">
-                  <Package className="h-5 w-5" aria-hidden="true" />
-                  {he
-                    ? `הזמנות (${selectedCustomer.orders.length})`
-                    : `Orders (${selectedCustomer.orders.length})`}
-                </h4>
-                {selectedCustomer.orders.length === 0 ? (
-                  <p className="customers-manager__empty-text">
-                    {he ? "אין הזמנות" : "No orders"}
-                  </p>
-                ) : (
-                  <div className="customers-manager__orders-list">
-                    {selectedCustomer.orders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="customers-manager__order-item"
+            {!detailLoading && !detailError && (
+              <div className="customers-manager__drawer-content">
+                {/* Profile Section */}
+                <section className="customers-manager__section">
+                  <h4 className="customers-manager__section-title flex items-center gap-2">
+                    <User className="h-5 w-5" aria-hidden="true" />
+                    {he ? "פרופיל" : "Profile"}
+                  </h4>
+                  <div className="customers-manager__detail-grid">
+                    <div className="customers-manager__detail-field">
+                      <span className="customers-manager__detail-label">
+                        {he ? "שם מלא" : "Full name"}
+                      </span>
+                      <span className="customers-manager__detail-value">
+                        {selectedCustomer.customer.full_name ||
+                          (he ? "לא זמין" : "N/A")}
+                      </span>
+                    </div>
+                    <div className="customers-manager__detail-field">
+                      <span className="customers-manager__detail-label">
+                        {he ? "אימייל" : "Email"}
+                      </span>
+                      <a
+                        href={`mailto:${selectedCustomer.customer.email}`}
+                        className="customers-manager__detail-value customers-manager__email"
                       >
-                        <div className="customers-manager__order-main">
-                          <code className="customers-manager__order-number">
-                            {order.order_number}
-                          </code>
-                          <span className="customers-manager__order-date">
-                            {formatDate(order.created_at)}
+                        <OverflowText
+                          text={selectedCustomer.customer.email}
+                          dir="ltr"
+                          focusable={false}
+                        />
+                      </a>
+                    </div>
+                    <div className="customers-manager__detail-field">
+                      <span className="customers-manager__detail-label">
+                        {he ? "טלפון" : "Phone"}
+                      </span>
+                      <span className="customers-manager__detail-value">
+                        {selectedCustomer.customer.phone ? (
+                          <a href={`tel:${selectedCustomer.customer.phone}`}>
+                            {selectedCustomer.customer.phone}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">
+                            {he ? "לא זמין" : "N/A"}
                           </span>
-                        </div>
-                        <div className="customers-manager__order-details">
-                          {getOrderStatusBadge(order.status)}
-                          <span className="customers-manager__order-total font-mono tabular-nums">
-                            {formatCurrency(order.total)}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-
-              {/* Service Requests Section */}
-              <section className="customers-manager__section">
-                <h4 className="customers-manager__section-title flex items-center gap-2">
-                  <ClipboardList className="h-5 w-5" aria-hidden="true" />
-                  {he
-                    ? `פניות שירות (${selectedCustomer.serviceRequests.length})`
-                    : `Service Requests (${selectedCustomer.serviceRequests.length})`}
-                </h4>
-                {selectedCustomer.serviceRequests.length === 0 ? (
-                  <p className="customers-manager__empty-text">
-                    {he ? "אין פניות שירות" : "No service requests"}
-                  </p>
-                ) : (
-                  <div className="customers-manager__requests-list">
-                    {selectedCustomer.serviceRequests.map((req) => (
-                      <div
-                        key={req.id}
-                        className="customers-manager__request-item"
+                        )}
+                      </span>
+                    </div>
+                    <div className="customers-manager__detail-field">
+                      <span className="customers-manager__detail-label">
+                        {he ? "תפקיד" : "Role"}
+                      </span>
+                      <span className="customers-manager__detail-value">
+                        {getRoleBadge(selectedCustomer.customer.role)}
+                      </span>
+                    </div>
+                    <div className="customers-manager__detail-field">
+                      <span className="customers-manager__detail-label">
+                        {he ? "מצב חשבון" : "Account status"}
+                      </span>
+                      <span className="customers-manager__detail-value">
+                        {getStatusBadge(
+                          selectedCustomer.customer.account_status,
+                        )}
+                      </span>
+                    </div>
+                    <div className="customers-manager__detail-field">
+                      <span className="customers-manager__detail-label">
+                        {he ? "תאריך הצטרפות" : "Joined"}
+                      </span>
+                      <time
+                        className="customers-manager__detail-value"
+                        dateTime={selectedCustomer.customer.created_at}
                       >
-                        <div className="customers-manager__request-main">
-                          <span className="customers-manager__request-service">
-                            {req.service_id}
-                          </span>
-                          <span className="customers-manager__request-date">
-                            {formatDate(req.created_at)}
-                          </span>
-                        </div>
-                        <div className="customers-manager__request-details">
-                          {getRequestStatusBadge(req.status)}
-                          <p className="customers-manager__request-message text-sm text-muted-foreground line-clamp-1">
-                            {req.message}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                        {formatDate(selectedCustomer.customer.created_at)}
+                      </time>
+                    </div>
+                    <div className="customers-manager__detail-field">
+                      <span className="customers-manager__detail-label">
+                        {he ? "פעילות אחרונה" : "Last seen"}
+                      </span>
+                      <time
+                        className="customers-manager__detail-value"
+                        dateTime={selectedCustomer.customer.last_seen_at ?? ""}
+                      >
+                        {formatDate(selectedCustomer.customer.last_seen_at)}
+                      </time>
+                    </div>
+                    <div className="customers-manager__detail-field">
+                      <span className="customers-manager__detail-label">
+                        {he ? "מזהה" : "ID"}
+                      </span>
+                      <code className="customers-manager__detail-value font-mono text-sm">
+                        {selectedCustomer.customer.id}
+                      </code>
+                    </div>
                   </div>
-                )}
-              </section>
+                </section>
 
-              {/* Activity Events Section - Split into Product vs Service */}
-              <section className="customers-manager__section">
-                <h4 className="customers-manager__section-title flex items-center gap-2">
-                  <Activity className="h-5 w-5" aria-hidden="true" />
-                  {he ? "פעילות אחרונה" : "Recent Activity"}
-                </h4>
-                {selectedCustomer.events.length === 0 ? (
-                  <p className="customers-manager__empty-text">
-                    {he ? "אין פעילות מתועדת" : "No recorded activity"}
-                  </p>
-                ) : (
-                  <>
-                    {/* Product Activity */}
-                    {productEvents.length > 0 && (
-                      <div className="customers-manager__activity-group">
-                        <h5 className="customers-manager__activity-group-title flex items-center gap-2">
-                          <Package
-                            className="h-4 w-4 text-primary"
-                            aria-hidden="true"
-                          />
-                          {he ? "פעילות מוצרים" : "Product Activity"}
-                          <span className="customers-manager__activity-count">
-                            {productEvents.length}
-                          </span>
-                        </h5>
-                        <div className="customers-manager__activity-list">
-                          {productEvents.slice(0, 20).map((event, idx) => (
-                            <div
-                              key={idx}
-                              className="customers-manager__activity-item"
-                            >
-                              <span className="customers-manager__activity-type">
-                                {getEventLabel(event.event_type, he)}
-                              </span>
-                              {event.product_id && (
-                                <span className="customers-manager__activity-product font-mono text-xs text-muted-foreground">
-                                  Product: {event.product_id.slice(0, 8)}…
-                                </span>
-                              )}
-                              <time
-                                className="customers-manager__activity-time"
-                                dateTime={event.created_at}
-                              >
-                                {formatDate(event.created_at)}
-                              </time>
-                            </div>
-                          ))}
-                          {productEvents.length > 20 && (
-                            <p className="customers-manager__activity-more text-sm text-muted-foreground">
-                              {he
-                                ? `ועוד ${productEvents.length - 20} אירועים…`
-                                : `And ${productEvents.length - 20} more…`}
-                            </p>
-                          )}
+                {/* Orders Section */}
+                <section className="customers-manager__section">
+                  <h4 className="customers-manager__section-title flex items-center gap-2">
+                    <Package className="h-5 w-5" aria-hidden="true" />
+                    {he
+                      ? `הזמנות (${selectedCustomer.orders.length})`
+                      : `Orders (${selectedCustomer.orders.length})`}
+                  </h4>
+                  {selectedCustomer.orders.length === 0 ? (
+                    <p className="customers-manager__empty-text">
+                      {he ? "אין הזמנות" : "No orders"}
+                    </p>
+                  ) : (
+                    <div className="customers-manager__orders-list">
+                      {selectedCustomer.orders.map((order) => (
+                        <div
+                          key={order.id}
+                          className="customers-manager__order-item"
+                        >
+                          <div className="customers-manager__order-main">
+                            <code className="customers-manager__order-number">
+                              {order.order_number}
+                            </code>
+                            <span className="customers-manager__order-date">
+                              {formatDate(order.created_at)}
+                            </span>
+                          </div>
+                          <div className="customers-manager__order-details">
+                            {getOrderStatusBadge(order.status)}
+                            <span className="customers-manager__order-total font-mono tabular-nums">
+                              {formatCurrency(order.total)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      ))}
+                    </div>
+                  )}
+                </section>
 
-                    {/* Search Activity */}
-                    {searchEvents.length > 0 && (
-                      <div className="customers-manager__activity-group">
-                        <h5 className="customers-manager__activity-group-title flex items-center gap-2">
-                          <Search
-                            className="h-4 w-4 text-secondary-accent"
-                            aria-hidden="true"
-                          />
-                          {he ? "פעילות חיפוש" : "Search Activity"}
-                          <span className="customers-manager__activity-count">
-                            {searchEvents.length}
-                          </span>
-                        </h5>
-                        <div className="customers-manager__activity-list">
-                          {searchEvents.slice(0, 20).map((event, idx) => (
-                            <div
-                              key={idx}
-                              className="customers-manager__activity-item"
-                            >
-                              <span className="customers-manager__activity-type">
-                                {getEventLabel(event.event_type, he)}
-                              </span>
-                              {event.search_query && (
-                                <span className="customers-manager__activity-query text-sm">
-                                  {'"'}
-                                  {event.search_query}
-                                  {'"'}
-                                </span>
-                              )}
-                              <time
-                                className="customers-manager__activity-time"
-                                dateTime={event.created_at}
-                              >
-                                {formatDate(event.created_at)}
-                              </time>
-                            </div>
-                          ))}
-                          {searchEvents.length > 20 && (
-                            <p className="customers-manager__activity-more text-sm text-muted-foreground">
-                              {he
-                                ? `ועוד ${searchEvents.length - 20} אירועים…`
-                                : `And ${searchEvents.length - 20} more…`}
+                {/* Service Requests Section */}
+                <section className="customers-manager__section">
+                  <h4 className="customers-manager__section-title flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5" aria-hidden="true" />
+                    {he
+                      ? `פניות שירות (${selectedCustomer.serviceRequests.length})`
+                      : `Service Requests (${selectedCustomer.serviceRequests.length})`}
+                  </h4>
+                  {selectedCustomer.serviceRequests.length === 0 ? (
+                    <p className="customers-manager__empty-text">
+                      {he ? "אין פניות שירות" : "No service requests"}
+                    </p>
+                  ) : (
+                    <div className="customers-manager__requests-list">
+                      {selectedCustomer.serviceRequests.map((req) => (
+                        <div
+                          key={req.id}
+                          className="customers-manager__request-item"
+                        >
+                          <div className="customers-manager__request-main">
+                            <span className="customers-manager__request-service">
+                              {req.service_id}
+                            </span>
+                            <span className="customers-manager__request-date">
+                              {formatDate(req.created_at)}
+                            </span>
+                          </div>
+                          <div className="customers-manager__request-details">
+                            {getRequestStatusBadge(req.status)}
+                            <p className="customers-manager__request-message text-sm text-muted-foreground line-clamp-1">
+                              {req.message}
                             </p>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </section>
-            </div>
-          )}
-        </aside>
-      )}
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                {/* Activity Events Section - Split into Product vs Service */}
+                <section className="customers-manager__section">
+                  <h4 className="customers-manager__section-title flex items-center gap-2">
+                    <Activity className="h-5 w-5" aria-hidden="true" />
+                    {he ? "פעילות אחרונה" : "Recent Activity"}
+                  </h4>
+                  {selectedCustomer.events.length === 0 ? (
+                    <p className="customers-manager__empty-text">
+                      {he ? "אין פעילות מתועדת" : "No recorded activity"}
+                    </p>
+                  ) : (
+                    <>
+                      {/* Product Activity */}
+                      {productEvents.length > 0 && (
+                        <div className="customers-manager__activity-group">
+                          <h5 className="customers-manager__activity-group-title flex items-center gap-2">
+                            <Package
+                              className="h-4 w-4 text-primary"
+                              aria-hidden="true"
+                            />
+                            {he ? "פעילות מוצרים" : "Product Activity"}
+                            <span className="customers-manager__activity-count">
+                              {productEvents.length}
+                            </span>
+                          </h5>
+                          <div className="customers-manager__activity-list">
+                            {productEvents.slice(0, 20).map((event, idx) => (
+                              <div
+                                key={idx}
+                                className="customers-manager__activity-item"
+                              >
+                                <span className="customers-manager__activity-type">
+                                  {getEventLabel(event.event_type, he)}
+                                </span>
+                                {event.product_id && (
+                                  <span className="customers-manager__activity-product font-mono text-xs text-muted-foreground">
+                                    Product: {event.product_id.slice(0, 8)}…
+                                  </span>
+                                )}
+                                <time
+                                  className="customers-manager__activity-time"
+                                  dateTime={event.created_at}
+                                >
+                                  {formatDate(event.created_at)}
+                                </time>
+                              </div>
+                            ))}
+                            {productEvents.length > 20 && (
+                              <p className="customers-manager__activity-more text-sm text-muted-foreground">
+                                {he
+                                  ? `ועוד ${productEvents.length - 20} אירועים…`
+                                  : `And ${productEvents.length - 20} more…`}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Search Activity */}
+                      {searchEvents.length > 0 && (
+                        <div className="customers-manager__activity-group">
+                          <h5 className="customers-manager__activity-group-title flex items-center gap-2">
+                            <Search
+                              className="h-4 w-4 text-secondary-accent"
+                              aria-hidden="true"
+                            />
+                            {he ? "פעילות חיפוש" : "Search Activity"}
+                            <span className="customers-manager__activity-count">
+                              {searchEvents.length}
+                            </span>
+                          </h5>
+                          <div className="customers-manager__activity-list">
+                            {searchEvents.slice(0, 20).map((event, idx) => (
+                              <div
+                                key={idx}
+                                className="customers-manager__activity-item"
+                              >
+                                <span className="customers-manager__activity-type">
+                                  {getEventLabel(event.event_type, he)}
+                                </span>
+                                {event.search_query && (
+                                  <span className="customers-manager__activity-query text-sm">
+                                    {'"'}
+                                    <OverflowText text={event.search_query} />
+                                    {'"'}
+                                  </span>
+                                )}
+                                <time
+                                  className="customers-manager__activity-time"
+                                  dateTime={event.created_at}
+                                >
+                                  {formatDate(event.created_at)}
+                                </time>
+                              </div>
+                            ))}
+                            {searchEvents.length > 20 && (
+                              <p className="customers-manager__activity-more text-sm text-muted-foreground">
+                                {he
+                                  ? `ועוד ${searchEvents.length - 20} אירועים…`
+                                  : `And ${searchEvents.length - 20} more…`}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </section>
+              </div>
+            )}
+          </>
+        ) : null}
+      </Drawer>
     </div>
   );
 }

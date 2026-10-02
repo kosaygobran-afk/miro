@@ -46,11 +46,11 @@ test.describe("Storefront merchandising interactions", () => {
 
     await media.hover();
     await expect(card).toHaveAttribute("data-preview-intent", "true");
-    await page.waitForTimeout(800);
+    await page.waitForTimeout(70);
     await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
 
     await expect(page.locator(".sf-hover-preview")).toBeVisible({
-      timeout: 700,
+      timeout: 800,
     });
     const bounds = await page.locator(".sf-hover-preview").boundingBox();
     const mediaBounds = await media.boundingBox();

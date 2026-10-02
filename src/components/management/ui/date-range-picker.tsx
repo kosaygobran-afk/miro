@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { CalendarDays } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import { Dialog } from "./dialog";
+import { CalendarDays, ChevronDown } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 
 /**
@@ -73,7 +74,22 @@ export function resolveDateRange(
   preset: Exclude<DateRangePreset, "custom">,
   base: Date = new Date(),
 ): { from: string; to: string } {
-  const today = new Date(base.getFullYear(), base.getMonth(), base.getDate());
+  if (preset === "all") return { from: "", to: "" };
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone: "Asia/Jerusalem",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+      .formatToParts(base)
+      .map(({ type, value }) => [type, value]),
+  );
+  const today = new Date(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+  );
   if (preset === "today") {
     const day = toISODate(today);
     return { from: day, to: day };
@@ -130,6 +146,8 @@ export function DateRangePicker({
   trailing,
   className,
 }: DateRangePickerProps) {
+  const [open, setOpen] = useState(false);
+  const he = labels.fromLabel !== "From";
   const presetText: Record<Exclude<DateRangePreset, "custom">, string> = {
     today: labels.today,
     last7: labels.last7,
@@ -152,53 +170,70 @@ export function DateRangePicker({
     onChange({ preset, from: range.from, to: range.to });
   };
 
+  const summary =
+    value.preset === "custom"
+      ? [value.from, value.to].filter(Boolean).join(" — ") || labels.custom
+      : presetText[value.preset];
   return (
-    <div
-      className={["mgmt-date-range", className].filter(Boolean).join(" ")}
-      role="group"
-      aria-label={labels.groupLabel}
-    >
-      <div className="mgmt-date-range__presets">
-        <CalendarDays
-          size={16}
-          aria-hidden="true"
-          className="mgmt-date-range__icon"
-        />
-        {presetOrder.map((preset) => (
+    <div className={["mgmt-date-range", className].filter(Boolean).join(" ")}>
+      <button
+        type="button"
+        className="mgmt-date-range__trigger"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        <CalendarDays size={18} aria-hidden="true" />
+        <span className="mgmt-date-range__trigger-text">
+          <span>{labels.groupLabel}</span>
+          <strong>{summary}</strong>
+        </span>
+        <ChevronDown size={16} aria-hidden="true" />
+      </button>
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        title={labels.groupLabel}
+        size="sm"
+        closeLabel={he ? "סגירה" : "Close"}
+        footer={
           <button
-            key={preset}
             type="button"
-            className={[
-              "mgmt-date-range__preset",
-              value.preset === preset
-                ? "mgmt-date-range__preset--active"
-                : null,
-            ]
-              .filter(Boolean)
-              .join(" ")}
-            aria-pressed={value.preset === preset}
-            onClick={() => selectPreset(preset)}
+            className="mgmt-button mgmt-button--primary"
+            onClick={() => setOpen(false)}
           >
-            {presetText[preset]}
+            {he ? "סיום" : "Done"}
           </button>
-        ))}
-        <button
-          type="button"
-          className={[
-            "mgmt-date-range__preset",
-            value.preset === "custom"
-              ? "mgmt-date-range__preset--active"
-              : null,
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          aria-pressed={value.preset === "custom"}
-          onClick={() => selectPreset("custom")}
+        }
+      >
+        <div
+          className="mgmt-date-range__presets"
+          role="group"
+          aria-label={labels.groupLabel}
         >
-          {labels.custom}
-        </button>
-      </div>
-      {value.preset === "custom" ? (
+          {presetOrder.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              className="mgmt-date-range__preset"
+              aria-pressed={value.preset === preset}
+              onClick={() => {
+                selectPreset(preset);
+                setOpen(false);
+              }}
+            >
+              {presetText[preset]}
+            </button>
+          ))}
+          <button
+            type="button"
+            className="mgmt-date-range__preset"
+            aria-pressed={value.preset === "custom"}
+            onClick={() => selectPreset("custom")}
+          >
+            {labels.custom}
+          </button>
+        </div>
         <div className="mgmt-date-range__custom">
           <label className="mgmt-date-range__field">
             <span className="mgmt-date-range__field-label">
@@ -207,12 +242,16 @@ export function DateRangePicker({
             <input
               type="date"
               className="mgmt-date-range__input"
+              dir="ltr"
               value={value.from}
               max={value.to || undefined}
               onChange={(event) =>
-                onChange({ ...value, from: event.target.value })
+                onChange({
+                  preset: "custom",
+                  from: event.target.value,
+                  to: value.to,
+                })
               }
-              dir="ltr"
             />
           </label>
           <label className="mgmt-date-range__field">
@@ -222,16 +261,20 @@ export function DateRangePicker({
             <input
               type="date"
               className="mgmt-date-range__input"
+              dir="ltr"
               value={value.to}
               min={value.from || undefined}
               onChange={(event) =>
-                onChange({ ...value, to: event.target.value })
+                onChange({
+                  preset: "custom",
+                  from: value.from,
+                  to: event.target.value,
+                })
               }
-              dir="ltr"
             />
           </label>
         </div>
-      ) : null}
+      </Dialog>
       {trailing ? (
         <div className="mgmt-date-range__trailing">{trailing}</div>
       ) : null}

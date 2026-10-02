@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ScrollRegion } from "./scroll-region";
 
 export type DataTableProps = {
   /** Header cells: a single <tr> containing <th> elements. */
@@ -16,6 +17,8 @@ export type DataTableProps = {
   /** Minimum table width before the horizontal scroll container kicks in. */
   minWidth?: number | string;
   className?: string;
+  tableClassName?: string;
+  columnWidths?: readonly string[];
 };
 
 /**
@@ -32,23 +35,32 @@ export function DataTable({
   stickyHeader = true,
   minWidth = "40rem",
   className,
+  tableClassName,
+  columnWidths,
 }: DataTableProps) {
   return (
     <div className={["mgmt-table", className].filter(Boolean).join(" ")}>
-      <div
+      <ScrollRegion
         className="mgmt-table__scroll"
-        role="region"
-        tabIndex={0}
-        aria-label={typeof caption === "string" ? caption : undefined}
+        label={typeof caption === "string" ? caption : undefined}
       >
         <table
-          className="mgmt-table__table"
+          className={["mgmt-table__table", tableClassName]
+            .filter(Boolean)
+            .join(" ")}
           style={{
             minWidth: typeof minWidth === "number" ? `${minWidth}px` : minWidth,
           }}
         >
           {caption ? (
             <caption className="mgmt-table__caption">{caption}</caption>
+          ) : null}
+          {columnWidths ? (
+            <colgroup>
+              {columnWidths.map((width, index) => (
+                <col key={index} style={{ width }} />
+              ))}
+            </colgroup>
           ) : null}
           <thead
             className={
@@ -63,7 +75,7 @@ export function DataTable({
             {isEmpty ? null : children}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
       {isEmpty ? <div className="mgmt-table__empty">{emptyState}</div> : null}
     </div>
   );

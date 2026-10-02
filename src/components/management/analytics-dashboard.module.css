@@ -159,3 +159,69 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* Same neon reporting language as Finance and Requests. */
+.root {
+  min-inline-size: 0;
+}
+.headerGrid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.cardField {
+  min-inline-size: 0;
+  border-radius: 1.25rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+}
+.rankingLabel {
+  white-space: normal;
+  overflow: visible;
+  min-inline-size: 0;
+}
+.rankingFill {
+  background: linear-gradient(90deg, var(--report-cyan), var(--report-violet));
+}
+.rankingTrack {
+  block-size: 0.4rem;
+}
+.productCell {
+  min-inline-size: 0;
+  max-inline-size: 18rem;
+  align-items: center;
+}
+.productCell > span {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+.filterLabel {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.filterLabel select {
+  min-inline-size: 10rem;
+  max-inline-size: 100%;
+}
+.activitySummary strong {
+  color: var(--report-cyan);
+}
+.activitySummary > div:nth-child(2) strong {
+  color: var(--report-violet);
+}
+.activitySummary > div:nth-child(3) strong {
+  color: var(--accent-text);
+}
+@media (max-width: 75rem) {
+  .headerGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 35rem) {
+  .headerGrid,
+  .activitySummary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -20,6 +20,7 @@ import {
   type SaleOrder,
 } from "./sales-types";
 import styles from "./sales.module.css";
+import { ReportChoices } from "./ui/reporting-workspace";
 
 const MAX_LINES = 10;
 
@@ -304,7 +305,14 @@ function VariantSearch({
 
 /* ---------- Sales panel ---------- */
 
-export function SalesPanel({ locale }: { locale: "he" | "en" }) {
+export function SalesPanel({
+  locale,
+  initialView = "history",
+}: {
+  locale: "he" | "en";
+  initialView?: "history" | "record";
+}) {
+  const [view, setView] = useState<"history" | "record">(initialView);
   const he = locale === "he";
   const t = (map: Record<"he" | "en", string>) => map[locale];
 
@@ -535,488 +543,507 @@ export function SalesPanel({ locale }: { locale: "he" | "en" }) {
   );
 
   return (
-    <section>
+    <section className="mgmt-page-stack">
       <PageHeader title={t(copy.pageTitle)} subtitle={t(copy.pageSubtitle)} />
 
-      <FormSection
-        title={t(copy.recordSectionTitle)}
-        description={t(copy.recordSectionDescription)}
-      >
-        {successText ? (
-          <div className={styles.noticeWrap}>
-            <Notice
-              tone="success"
-              onDismiss={() => setSuccessText("")}
-              dismissLabel={t(copy.noticeDismiss)}
-            >
-              {successText}
-            </Notice>
-          </div>
-        ) : null}
-
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            openReview();
-          }}
+      <ReportChoices
+        label={he ? "תצוגת מכירות" : "Sales workspace view"}
+        value={view}
+        onChange={setView}
+        options={[
+          {
+            value: "history",
+            label: he ? "היסטוריית מכירות" : "Sales history",
+          },
+          { value: "record", label: he ? "רישום מכירה" : "Record a sale" },
+        ]}
+      />
+      <div className="mgmt-sale-view" hidden={view !== "record"}>
+        <FormSection
+          icon={<Plus size={19} aria-hidden="true" />}
+          title={t(copy.recordSectionTitle)}
+          description={t(copy.recordSectionDescription)}
         >
-          {/* Customer */}
-          <fieldset>
-            <legend className={styles.fieldLabel}>
-              {t(copy.customerSectionTitle)}
-            </legend>
-            <div className={styles.formGrid}>
-              <div className={styles.field}>
-                {account ? (
-                  <span className={styles.fieldHint}>
-                    {t(copy.accountSearchLabel)}
-                  </span>
-                ) : (
-                  <label
-                    className={styles.fieldHint}
-                    htmlFor="sale-customer-search"
-                  >
-                    {t(copy.accountSearchLabel)}
-                  </label>
-                )}
-                <CustomerSearch
-                  locale={locale}
-                  selected={account}
-                  onSelect={handleAccountSelect}
-                  onClear={() => setAccount(null)}
-                />
-                <span className={styles.fieldHint}>
-                  {account ? t(copy.accountLinkedNote) : t(copy.guestNote)}
-                </span>
-              </div>
-              <div className={styles.field}>
-                <label
-                  className={styles.fieldLabel}
-                  htmlFor="sale-customer-name"
-                >
-                  {t(copy.fieldName)}
-                </label>
-                <input
-                  id="sale-customer-name"
-                  type="text"
-                  className={styles.input}
-                  value={customerName}
-                  disabled={saving}
-                  required
-                  aria-invalid={Boolean(formErrors.customer) || undefined}
-                  aria-describedby={
-                    formErrors.customer ? "sale-customer-error" : undefined
-                  }
-                  onChange={(event) => setCustomerName(event.target.value)}
-                />
-              </div>
-              <div className={styles.field}>
-                <label
-                  className={styles.fieldLabel}
-                  htmlFor="sale-customer-email"
-                >
-                  {t(copy.fieldEmail)}
-                </label>
-                <input
-                  id="sale-customer-email"
-                  type="email"
-                  dir="ltr"
-                  className={styles.input}
-                  value={customerEmail}
-                  disabled={saving}
-                  required
-                  aria-invalid={Boolean(formErrors.customer) || undefined}
-                  aria-describedby={
-                    formErrors.customer ? "sale-customer-error" : undefined
-                  }
-                  onChange={(event) => setCustomerEmail(event.target.value)}
-                />
-              </div>
-              <div className={styles.field}>
-                <label
-                  className={styles.fieldLabel}
-                  htmlFor="sale-customer-phone"
-                >
-                  {t(copy.fieldPhone)}
-                </label>
-                <input
-                  id="sale-customer-phone"
-                  type="tel"
-                  dir="ltr"
-                  className={styles.input}
-                  value={customerPhone}
-                  disabled={saving}
-                  onChange={(event) => setCustomerPhone(event.target.value)}
-                />
-              </div>
-            </div>
-            {formErrors.customer ? (
-              <p
-                id="sale-customer-error"
-                className={styles.fieldError}
-                role="alert"
+          {successText ? (
+            <div className={styles.noticeWrap}>
+              <Notice
+                tone="success"
+                onDismiss={() => setSuccessText("")}
+                dismissLabel={t(copy.noticeDismiss)}
               >
-                {formErrors.customer}
-              </p>
-            ) : null}
-          </fieldset>
+                {successText}
+              </Notice>
+            </div>
+          ) : null}
 
-          {/* Items */}
-          <fieldset className={styles.noticeWrap}>
-            <legend className={styles.fieldLabel}>
-              {t(copy.itemsSectionTitle)}
-            </legend>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              openReview();
+            }}
+          >
+            {/* Customer */}
+            <fieldset>
+              <legend className={styles.fieldLabel}>
+                {t(copy.customerSectionTitle)}
+              </legend>
+              <div className={styles.formGrid}>
+                <div className={styles.field}>
+                  {account ? (
+                    <span className={styles.fieldHint}>
+                      {t(copy.accountSearchLabel)}
+                    </span>
+                  ) : (
+                    <label
+                      className={styles.fieldHint}
+                      htmlFor="sale-customer-search"
+                    >
+                      {t(copy.accountSearchLabel)}
+                    </label>
+                  )}
+                  <CustomerSearch
+                    locale={locale}
+                    selected={account}
+                    onSelect={handleAccountSelect}
+                    onClear={() => setAccount(null)}
+                  />
+                  <span className={styles.fieldHint}>
+                    {account ? t(copy.accountLinkedNote) : t(copy.guestNote)}
+                  </span>
+                </div>
+                <div className={styles.field}>
+                  <label
+                    className={styles.fieldLabel}
+                    htmlFor="sale-customer-name"
+                  >
+                    {t(copy.fieldName)}
+                  </label>
+                  <input
+                    id="sale-customer-name"
+                    type="text"
+                    className={styles.input}
+                    value={customerName}
+                    disabled={saving}
+                    required
+                    aria-invalid={Boolean(formErrors.customer) || undefined}
+                    aria-describedby={
+                      formErrors.customer ? "sale-customer-error" : undefined
+                    }
+                    onChange={(event) => setCustomerName(event.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label
+                    className={styles.fieldLabel}
+                    htmlFor="sale-customer-email"
+                  >
+                    {t(copy.fieldEmail)}
+                  </label>
+                  <input
+                    id="sale-customer-email"
+                    type="email"
+                    dir="ltr"
+                    className={styles.input}
+                    value={customerEmail}
+                    disabled={saving}
+                    required
+                    aria-invalid={Boolean(formErrors.customer) || undefined}
+                    aria-describedby={
+                      formErrors.customer ? "sale-customer-error" : undefined
+                    }
+                    onChange={(event) => setCustomerEmail(event.target.value)}
+                  />
+                </div>
+                <div className={styles.field}>
+                  <label
+                    className={styles.fieldLabel}
+                    htmlFor="sale-customer-phone"
+                  >
+                    {t(copy.fieldPhone)}
+                  </label>
+                  <input
+                    id="sale-customer-phone"
+                    type="tel"
+                    dir="ltr"
+                    className={styles.input}
+                    value={customerPhone}
+                    disabled={saving}
+                    onChange={(event) => setCustomerPhone(event.target.value)}
+                  />
+                </div>
+              </div>
+              {formErrors.customer ? (
+                <p
+                  id="sale-customer-error"
+                  className={styles.fieldError}
+                  role="alert"
+                >
+                  {formErrors.customer}
+                </p>
+              ) : null}
+            </fieldset>
 
-            {lines.map((line, index) => {
-              const tracked =
-                (line.product?.tracking_mode ?? "none") !== "none";
-              return (
-                <div key={line.key} className={styles.lineItem}>
-                  <div className={`${styles.field} ${styles.grow4}`}>
-                    {line.variant && line.product ? (
-                      <span className={styles.fieldHint}>
-                        {t(copy.productSearchLabel)}
-                      </span>
-                    ) : (
+            {/* Items */}
+            <fieldset className={styles.noticeWrap}>
+              <legend className={styles.fieldLabel}>
+                {t(copy.itemsSectionTitle)}
+              </legend>
+
+              {lines.map((line, index) => {
+                const tracked =
+                  (line.product?.tracking_mode ?? "none") !== "none";
+                return (
+                  <div key={line.key} className={styles.lineItem}>
+                    <div className={`${styles.field} ${styles.grow4}`}>
+                      {line.variant && line.product ? (
+                        <span className={styles.fieldHint}>
+                          {t(copy.productSearchLabel)}
+                        </span>
+                      ) : (
+                        <label
+                          className={styles.fieldHint}
+                          htmlFor={`sale-variant-${index}`}
+                        >
+                          {t(copy.productSearchLabel)}
+                        </label>
+                      )}
+                      {line.variant && line.product ? (
+                        <>
+                          <span className={styles.selectionPill}>
+                            <span dir="auto">
+                              {he ? line.product.name_he : line.product.name_en}
+                              {line.variant.color_he || line.variant.color_en
+                                ? ` · ${he ? line.variant.color_he : line.variant.color_en}`
+                                : ""}
+                            </span>
+                            <span className={styles.mono} dir="ltr">
+                              {line.variant.sku}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateLine(line.key, {
+                                  variantId: "",
+                                  product: null,
+                                  variant: null,
+                                  unitPrice: 0,
+                                })
+                              }
+                              disabled={saving}
+                              aria-label={t(copy.productClear)}
+                            >
+                              <X size={13} aria-hidden="true" />
+                            </button>
+                          </span>
+                          <span className={styles.fieldHint}>
+                            {tracked
+                              ? `${t(copy.stockAvailable)}: ${line.variant.stock_qty}`
+                              : t(copy.stockUntracked)}
+                          </span>
+                        </>
+                      ) : (
+                        <VariantSearch
+                          locale={locale}
+                          inputId={`sale-variant-${index}`}
+                          disabled={saving}
+                          onPick={(product, variant) =>
+                            handleVariantPick(line.key, product, variant)
+                          }
+                        />
+                      )}
+                    </div>
+
+                    <div className={`${styles.field} ${styles.grow2}`}>
                       <label
                         className={styles.fieldHint}
-                        htmlFor={`sale-variant-${index}`}
+                        htmlFor={`sale-qty-${index}`}
                       >
-                        {t(copy.productSearchLabel)}
+                        {t(copy.qty)}
                       </label>
-                    )}
-                    {line.variant && line.product ? (
-                      <>
-                        <span className={styles.selectionPill}>
-                          <span dir="auto">
-                            {he ? line.product.name_he : line.product.name_en}
-                            {line.variant.color_he || line.variant.color_en
-                              ? ` · ${he ? line.variant.color_he : line.variant.color_en}`
-                              : ""}
-                          </span>
-                          <span className={styles.mono} dir="ltr">
-                            {line.variant.sku}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateLine(line.key, {
-                                variantId: "",
-                                product: null,
-                                variant: null,
-                                unitPrice: 0,
-                              })
-                            }
-                            disabled={saving}
-                            aria-label={t(copy.productClear)}
-                          >
-                            <X size={13} aria-hidden="true" />
-                          </button>
-                        </span>
-                        <span className={styles.fieldHint}>
-                          {tracked
-                            ? `${t(copy.stockAvailable)}: ${line.variant.stock_qty}`
-                            : t(copy.stockUntracked)}
-                        </span>
-                      </>
-                    ) : (
-                      <VariantSearch
-                        locale={locale}
-                        inputId={`sale-variant-${index}`}
+                      <input
+                        id={`sale-qty-${index}`}
+                        type="number"
+                        min="1"
+                        step="1"
+                        // Untracked stock (tracking_mode "none") gets no
+                        // stock-based max; the server remains authoritative.
+                        max={tracked ? line.variant?.stock_qty : undefined}
+                        className={styles.input}
+                        value={line.quantity}
                         disabled={saving}
-                        onPick={(product, variant) =>
-                          handleVariantPick(line.key, product, variant)
+                        required
+                        onChange={(event) =>
+                          updateLine(line.key, {
+                            quantity: parseInt(event.target.value, 10) || 1,
+                          })
                         }
                       />
-                    )}
-                  </div>
+                    </div>
 
-                  <div className={`${styles.field} ${styles.grow2}`}>
-                    <label
-                      className={styles.fieldHint}
-                      htmlFor={`sale-qty-${index}`}
-                    >
-                      {t(copy.qty)}
-                    </label>
-                    <input
-                      id={`sale-qty-${index}`}
-                      type="number"
-                      min="1"
-                      step="1"
-                      // Untracked stock (tracking_mode "none") gets no
-                      // stock-based max; the server remains authoritative.
-                      max={tracked ? line.variant?.stock_qty : undefined}
-                      className={styles.input}
-                      value={line.quantity}
-                      disabled={saving}
-                      required
-                      onChange={(event) =>
-                        updateLine(line.key, {
-                          quantity: parseInt(event.target.value, 10) || 1,
-                        })
-                      }
-                    />
-                  </div>
+                    <div className={`${styles.field} ${styles.grow2}`}>
+                      <label
+                        className={styles.fieldHint}
+                        htmlFor={`sale-price-${index}`}
+                      >
+                        {t(copy.unitPrice)}
+                      </label>
+                      <input
+                        id={`sale-price-${index}`}
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        dir="ltr"
+                        className={styles.input}
+                        value={line.unitPrice}
+                        disabled={saving}
+                        onChange={(event) =>
+                          updateLine(line.key, {
+                            unitPrice: parseFloat(event.target.value) || 0,
+                          })
+                        }
+                      />
+                    </div>
 
-                  <div className={`${styles.field} ${styles.grow2}`}>
-                    <label
-                      className={styles.fieldHint}
-                      htmlFor={`sale-price-${index}`}
-                    >
-                      {t(copy.unitPrice)}
-                    </label>
-                    <input
-                      id={`sale-price-${index}`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      dir="ltr"
-                      className={styles.input}
-                      value={line.unitPrice}
-                      disabled={saving}
-                      onChange={(event) =>
-                        updateLine(line.key, {
-                          unitPrice: parseFloat(event.target.value) || 0,
-                        })
-                      }
-                    />
-                  </div>
+                    <div className={`${styles.field} ${styles.grow2}`}>
+                      <label
+                        className={styles.fieldHint}
+                        htmlFor={`sale-discount-${index}`}
+                      >
+                        {t(copy.discountPerUnit)}
+                      </label>
+                      <input
+                        id={`sale-discount-${index}`}
+                        type="number"
+                        min="0"
+                        max={line.unitPrice}
+                        step="0.01"
+                        dir="ltr"
+                        className={styles.input}
+                        value={line.discountPerUnit}
+                        disabled={saving}
+                        onChange={(event) =>
+                          updateLine(line.key, {
+                            discountPerUnit:
+                              parseFloat(event.target.value) || 0,
+                          })
+                        }
+                      />
+                    </div>
 
-                  <div className={`${styles.field} ${styles.grow2}`}>
-                    <label
-                      className={styles.fieldHint}
-                      htmlFor={`sale-discount-${index}`}
-                    >
-                      {t(copy.discountPerUnit)}
-                    </label>
-                    <input
-                      id={`sale-discount-${index}`}
-                      type="number"
-                      min="0"
-                      max={line.unitPrice}
-                      step="0.01"
-                      dir="ltr"
-                      className={styles.input}
-                      value={line.discountPerUnit}
-                      disabled={saving}
-                      onChange={(event) =>
-                        updateLine(line.key, {
-                          discountPerUnit: parseFloat(event.target.value) || 0,
-                        })
-                      }
-                    />
+                    <div className={`${styles.field} ${styles.grow2}`}>
+                      <button
+                        type="button"
+                        className={styles.iconButton}
+                        onClick={() =>
+                          setLines((prev) =>
+                            prev.length <= 1
+                              ? prev
+                              : prev.filter((entry) => entry.key !== line.key),
+                          )
+                        }
+                        disabled={saving || lines.length <= 1}
+                        aria-label={t(copy.removeItem)}
+                      >
+                        <Trash2 size={15} aria-hidden="true" />
+                      </button>
+                    </div>
                   </div>
+                );
+              })}
 
-                  <div className={`${styles.field} ${styles.grow2}`}>
-                    <button
-                      type="button"
-                      className={styles.iconButton}
-                      onClick={() =>
-                        setLines((prev) =>
-                          prev.length <= 1
-                            ? prev
-                            : prev.filter((entry) => entry.key !== line.key),
-                        )
-                      }
-                      disabled={saving || lines.length <= 1}
-                      aria-label={t(copy.removeItem)}
-                    >
-                      <Trash2 size={15} aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+              {lines.length < MAX_LINES ? (
+                <button
+                  type="button"
+                  className="mgmt-button mgmt-button--ghost"
+                  onClick={() =>
+                    setLines((prev) => [...prev, newLine(nextKey())])
+                  }
+                  disabled={saving}
+                >
+                  <Plus size={15} aria-hidden="true" />
+                  {t(copy.addItem)}
+                </button>
+              ) : null}
 
-            {lines.length < MAX_LINES ? (
+              {formErrors.items ? (
+                <p className={styles.fieldError} role="alert">
+                  {formErrors.items}
+                </p>
+              ) : null}
+            </fieldset>
+
+            {/* Live totals */}
+            <div className={styles.summaryStrip}>
+              <div>
+                <p className={styles.summaryLabel}>{t(copy.liveGross)}</p>
+                <p className={styles.summaryValue} dir="ltr">
+                  {formatIls(live.grossBefore, locale)}
+                </p>
+              </div>
+              <div>
+                <p className={styles.summaryLabel}>{t(copy.liveDiscounts)}</p>
+                <p className={styles.summaryValue} dir="ltr">
+                  -{formatIls(live.discounts, locale)}
+                </p>
+              </div>
+              <div>
+                <p className={styles.summaryLabel}>{t(copy.liveItems)}</p>
+                <p className={styles.summaryValue}>{live.items}</p>
+              </div>
+              <div>
+                <p className={styles.summaryLabel}>{t(copy.liveTotal)}</p>
+                <p className={styles.summaryValue} dir="ltr">
+                  {formatIls(liveTotal, locale)}
+                </p>
+              </div>
+            </div>
+
+            <div className={styles.formActions}>
+              <button
+                type="submit"
+                className="mgmt-button mgmt-button--primary"
+                disabled={saving}
+              >
+                <CheckCircle2 size={15} aria-hidden="true" />
+                {t(copy.reviewButton)}
+              </button>
+            </div>
+          </form>
+        </FormSection>
+
+        {/* Pre-submit review */}
+        <Dialog
+          open={reviewOpen}
+          onClose={() => {
+            if (!saving) setReviewOpen(false);
+          }}
+          title={t(copy.reviewTitle)}
+          description={t(copy.reviewDescription)}
+          size="lg"
+          closeLabel={t(copy.cancelLabel)}
+          footer={
+            <div className="mgmt-dialog__actions">
               <button
                 type="button"
                 className="mgmt-button mgmt-button--ghost"
-                onClick={() =>
-                  setLines((prev) => [...prev, newLine(nextKey())])
-                }
+                onClick={() => setReviewOpen(false)}
                 disabled={saving}
               >
-                <Plus size={15} aria-hidden="true" />
-                {t(copy.addItem)}
+                {t(copy.cancelLabel)}
               </button>
-            ) : null}
-
-            {formErrors.items ? (
-              <p className={styles.fieldError} role="alert">
-                {formErrors.items}
-              </p>
-            ) : null}
-          </fieldset>
-
-          {/* Live totals */}
-          <div className={styles.summaryStrip}>
-            <div>
-              <p className={styles.summaryLabel}>{t(copy.liveGross)}</p>
-              <p className={styles.summaryValue} dir="ltr">
-                {formatIls(live.grossBefore, locale)}
-              </p>
+              <button
+                type="button"
+                className="mgmt-button mgmt-button--primary"
+                onClick={() => void recordSale()}
+                disabled={saving}
+                aria-busy={saving || undefined}
+              >
+                <CheckCircle2 size={15} aria-hidden="true" />
+                {saving ? t(copy.recording) : t(copy.confirmRecord)}
+              </button>
             </div>
-            <div>
-              <p className={styles.summaryLabel}>{t(copy.liveDiscounts)}</p>
-              <p className={styles.summaryValue} dir="ltr">
-                -{formatIls(live.discounts, locale)}
-              </p>
-            </div>
-            <div>
-              <p className={styles.summaryLabel}>{t(copy.liveItems)}</p>
-              <p className={styles.summaryValue}>{live.items}</p>
-            </div>
-            <div>
-              <p className={styles.summaryLabel}>{t(copy.liveTotal)}</p>
-              <p className={styles.summaryValue} dir="ltr">
-                {formatIls(liveTotal, locale)}
-              </p>
-            </div>
+          }
+        >
+          <div className={styles.reviewCustomer}>
+            <strong dir="auto">{customerName}</strong>
+            <span dir="ltr">{customerEmail}</span>
+            {customerPhone ? <span dir="ltr">{customerPhone}</span> : null}
+            <span className={styles.reviewAccountBadge}>
+              {account
+                ? t(copy.reviewAccountLinked)
+                : t(copy.reviewAccountGuest)}
+            </span>
           </div>
 
-          <div className={styles.formActions}>
-            <button
-              type="submit"
-              className="mgmt-button mgmt-button--primary"
-              disabled={saving}
-            >
-              <CheckCircle2 size={15} aria-hidden="true" />
-              {t(copy.reviewButton)}
-            </button>
-          </div>
-        </form>
-      </FormSection>
-
-      {/* Pre-submit review */}
-      <Dialog
-        open={reviewOpen}
-        onClose={() => {
-          if (!saving) setReviewOpen(false);
-        }}
-        title={t(copy.reviewTitle)}
-        description={t(copy.reviewDescription)}
-        size="lg"
-        closeLabel={t(copy.cancelLabel)}
-        footer={
-          <div className="mgmt-dialog__actions">
-            <button
-              type="button"
-              className="mgmt-button mgmt-button--ghost"
-              onClick={() => setReviewOpen(false)}
-              disabled={saving}
-            >
-              {t(copy.cancelLabel)}
-            </button>
-            <button
-              type="button"
-              className="mgmt-button mgmt-button--primary"
-              onClick={() => void recordSale()}
-              disabled={saving}
-              aria-busy={saving || undefined}
-            >
-              <CheckCircle2 size={15} aria-hidden="true" />
-              {saving ? t(copy.recording) : t(copy.confirmRecord)}
-            </button>
-          </div>
-        }
-      >
-        <div className={styles.reviewCustomer}>
-          <strong dir="auto">{customerName}</strong>
-          <span dir="ltr">{customerEmail}</span>
-          {customerPhone ? <span dir="ltr">{customerPhone}</span> : null}
-          <span className={styles.reviewAccountBadge}>
-            {account ? t(copy.reviewAccountLinked) : t(copy.reviewAccountGuest)}
-          </span>
-        </div>
-
-        <div className={styles.reviewTableWrap}>
-          <table className={styles.reviewTable}>
-            <caption className={styles.fieldHint}>
-              {t(copy.reviewItemsTitle)}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">{t(copy.colProduct)}</th>
-                <th scope="col">{t(copy.colSku)}</th>
-                <th scope="col">{t(copy.colQty)}</th>
-                <th scope="col">{t(copy.colUnitPrice)}</th>
-                <th scope="col">{t(copy.colDiscountUnit)}</th>
-                <th scope="col">{t(copy.colLineDiscount)}</th>
-                <th scope="col">{t(copy.colGross)}</th>
-                <th scope="col">{t(copy.colVat)}</th>
-                <th scope="col">{t(copy.colNet)}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {review.map(({ line, totals }) => (
-                <tr key={line.key}>
-                  <td dir="auto">
-                    {line.product
-                      ? he
-                        ? line.product.name_he
-                        : line.product.name_en
-                      : "—"}
-                    {line.variant &&
-                    (line.variant.color_he || line.variant.color_en)
-                      ? ` · ${he ? line.variant.color_he : line.variant.color_en}`
-                      : ""}
-                  </td>
-                  <td>
-                    <span className={styles.mono} dir="ltr">
-                      {line.variant?.sku ?? "—"}
-                    </span>
-                  </td>
-                  <td>{line.quantity}</td>
-                  <td dir="ltr">{formatIls(line.unitPrice, locale)}</td>
-                  <td dir="ltr">{formatIls(line.discountPerUnit, locale)}</td>
-                  <td dir="ltr">{formatIls(totals.lineDiscount, locale)}</td>
-                  <td dir="ltr">{formatIls(totals.gross, locale)}</td>
-                  <td dir="ltr">
-                    {vatRate === null ? "—" : formatIls(totals.vat, locale)}
-                  </td>
-                  <td dir="ltr">
-                    {vatRate === null ? "—" : formatIls(totals.net, locale)}
-                  </td>
+          <div className={styles.reviewTableWrap}>
+            <table className={styles.reviewTable}>
+              <caption className={styles.fieldHint}>
+                {t(copy.reviewItemsTitle)}
+              </caption>
+              <thead>
+                <tr>
+                  <th scope="col">{t(copy.colProduct)}</th>
+                  <th scope="col">{t(copy.colSku)}</th>
+                  <th scope="col">{t(copy.colQty)}</th>
+                  <th scope="col">{t(copy.colUnitPrice)}</th>
+                  <th scope="col">{t(copy.colDiscountUnit)}</th>
+                  <th scope="col">{t(copy.colLineDiscount)}</th>
+                  <th scope="col">{t(copy.colGross)}</th>
+                  <th scope="col">{t(copy.colVat)}</th>
+                  <th scope="col">{t(copy.colNet)}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className={styles.reviewTotals}>
-          <div className={styles.reviewTotalsRow}>
-            <span>{t(copy.reviewSubtotalNet)}</span>
-            <span dir="ltr">
-              {vatRate === null ? "—" : formatIls(reviewTotals.net, locale)}
-            </span>
+              </thead>
+              <tbody>
+                {review.map(({ line, totals }) => (
+                  <tr key={line.key}>
+                    <td dir="auto">
+                      {line.product
+                        ? he
+                          ? line.product.name_he
+                          : line.product.name_en
+                        : "—"}
+                      {line.variant &&
+                      (line.variant.color_he || line.variant.color_en)
+                        ? ` · ${he ? line.variant.color_he : line.variant.color_en}`
+                        : ""}
+                    </td>
+                    <td>
+                      <span className={styles.mono} dir="ltr">
+                        {line.variant?.sku ?? "—"}
+                      </span>
+                    </td>
+                    <td>{line.quantity}</td>
+                    <td dir="ltr">{formatIls(line.unitPrice, locale)}</td>
+                    <td dir="ltr">{formatIls(line.discountPerUnit, locale)}</td>
+                    <td dir="ltr">{formatIls(totals.lineDiscount, locale)}</td>
+                    <td dir="ltr">{formatIls(totals.gross, locale)}</td>
+                    <td dir="ltr">
+                      {vatRate === null ? "—" : formatIls(totals.vat, locale)}
+                    </td>
+                    <td dir="ltr">
+                      {vatRate === null ? "—" : formatIls(totals.net, locale)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className={styles.reviewTotalsRow}>
-            <span>{t(copy.reviewDiscount)}</span>
-            <span dir="ltr">-{formatIls(reviewTotals.discount, locale)}</span>
-          </div>
-          <div className={styles.reviewTotalsRow}>
-            <span>{t(copy.reviewVat)}</span>
-            <span dir="ltr">
-              {vatRate === null ? "—" : formatIls(reviewTotals.vat, locale)}
-            </span>
-          </div>
-          <div className={styles.reviewTotalsRow} data-strong>
-            <span>{t(copy.reviewTotal)}</span>
-            <span dir="ltr">{formatIls(reviewTotals.gross, locale)}</span>
-          </div>
-        </div>
 
-        <p className={styles.fieldHint}>
-          {vatRate === null
-            ? t(copy.vatRateUnavailable)
-            : `${t(copy.vatRateNotePrefix)} ${vatRate}% · ${t(copy.vatEstimateNote)}`}
-        </p>
+          <div className={styles.reviewTotals}>
+            <div className={styles.reviewTotalsRow}>
+              <span>{t(copy.reviewSubtotalNet)}</span>
+              <span dir="ltr">
+                {vatRate === null ? "—" : formatIls(reviewTotals.net, locale)}
+              </span>
+            </div>
+            <div className={styles.reviewTotalsRow}>
+              <span>{t(copy.reviewDiscount)}</span>
+              <span dir="ltr">-{formatIls(reviewTotals.discount, locale)}</span>
+            </div>
+            <div className={styles.reviewTotalsRow}>
+              <span>{t(copy.reviewVat)}</span>
+              <span dir="ltr">
+                {vatRate === null ? "—" : formatIls(reviewTotals.vat, locale)}
+              </span>
+            </div>
+            <div className={styles.reviewTotalsRow} data-strong>
+              <span>{t(copy.reviewTotal)}</span>
+              <span dir="ltr">{formatIls(reviewTotals.gross, locale)}</span>
+            </div>
+          </div>
 
-        {saveError ? <Notice tone="danger">{saveError}</Notice> : null}
-      </Dialog>
+          <p className={styles.fieldHint}>
+            {vatRate === null
+              ? t(copy.vatRateUnavailable)
+              : `${t(copy.vatRateNotePrefix)} ${vatRate}% · ${t(copy.vatEstimateNote)}`}
+          </p>
 
-      <SalesHistoryView locale={locale} reloadKey={historyReloadKey} />
+          {saveError ? <Notice tone="danger">{saveError}</Notice> : null}
+        </Dialog>
+      </div>
+      <div className="mgmt-sale-view" hidden={view !== "history"}>
+        <SalesHistoryView locale={locale} reloadKey={historyReloadKey} />
+      </div>
     </section>
   );
 }

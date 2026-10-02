@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import { ReportChoices } from "./ui/reporting-workspace";
+import { OverflowText } from "./ui/overflow-text";
 import Link from "next/link";
 import {
   AlertTriangle,
@@ -110,6 +115,9 @@ export function OverviewPanel({
   activity,
 }: OverviewPanelProps) {
   const he = locale === "he";
+  const [detailView, setDetailView] = useState<"operations" | "activity">(
+    "operations",
+  );
   const base = `/${locale}/admin`;
 
   const netVatNote = (bucket: SalesBucket) =>
@@ -132,7 +140,7 @@ export function OverviewPanel({
           label: t(locale, overviewCopy.staleEnquiries),
           value: attention.data.staleEnquiries,
           icon: <Timer size={18} />,
-          href: `${base}/requests?status=new`,
+          href: `${base}/requests?status=new&stale=true`,
           tone:
             attention.data.staleEnquiries > 0
               ? ("warning" as MetricCardTone)
@@ -179,7 +187,20 @@ export function OverviewPanel({
     <section className={styles.root}>
       <PageHeader
         title={t(locale, overviewCopy.title)}
-        subtitle={t(locale, overviewCopy.subtitle)}
+        subtitle={
+          he
+            ? "הדופק של MIRO: מכירות, פניות ופעולות שצריך לקדם היום."
+            : "The pulse of MIRO: sales, enquiries, and the work to move forward today."
+        }
+        actions={
+          <Link
+            href={`${base}/sales?view=record`}
+            className="mgmt-button mgmt-button--primary"
+          >
+            <ShoppingCart size={17} aria-hidden="true" />
+            {he ? "רישום מכירה" : "Record a sale"}
+          </Link>
+        }
       />
 
       {/* ROW 1 — primary KPIs (orders-backed only) */}
@@ -229,7 +250,7 @@ export function OverviewPanel({
         {attention.error || !attention.data || !attentionCards ? (
           <PanelError locale={locale} />
         ) : (
-          <div className={styles.cardGrid}>
+          <div className={`${styles.cardGrid} ${styles.attentionGrid}`}>
             {attentionCards.map((card) => (
               <Link
                 key={card.key}
@@ -253,8 +274,20 @@ export function OverviewPanel({
         )}
       </div>
 
+      <ReportChoices
+        label={he ? "פרטי הסקירה" : "Overview details"}
+        value={detailView}
+        onChange={setDetailView}
+        options={[
+          { value: "operations", label: he ? "מלאי ומכירות" : "Stock & sales" },
+          {
+            value: "activity",
+            label: he ? "פעילות אחרונה" : "Recent activity",
+          },
+        ]}
+      />
       {/* ROW 3 — operations */}
-      <div className={styles.row}>
+      <div className={styles.row} hidden={detailView !== "operations"}>
         <h2 className={styles.rowTitle}>
           {t(locale, overviewCopy.operationsRow)}
         </h2>
@@ -302,7 +335,7 @@ export function OverviewPanel({
                       return (
                         <li key={mover.id} className={styles.moverItem}>
                           <span className={styles.moverName} dir="auto">
-                            {name ?? "—"}
+                            <OverflowText text={name ?? "—"} />
                           </span>
                           <span className={styles.moverCount}>
                             {mover.unitsSold.toLocaleString(
@@ -353,14 +386,18 @@ export function OverviewPanel({
                     <td>
                       <span className={styles.ltrText}>{sale.orderNumber}</span>
                     </td>
-                    <td dir="auto">{sale.customerName ?? "—"}</td>
+                    <td dir="auto">
+                      <OverflowText text={sale.customerName ?? "—"} />
+                    </td>
                     <td>
                       <span className={styles.ltrText}>
                         {formatCurrency(sale.total, locale)}
                       </span>
                     </td>
                     {showRecordedByColumn ? (
-                      <td dir="auto">{sale.recordedByName ?? "—"}</td>
+                      <td dir="auto">
+                        <OverflowText text={sale.recordedByName ?? "—"} />
+                      </td>
                     ) : null}
                     <td>
                       {formatRelativeTime(sale.createdAt, nowIso, locale)}
@@ -374,7 +411,7 @@ export function OverviewPanel({
       </div>
 
       {/* ROW 4 — activity */}
-      <div className={styles.row}>
+      <div className={styles.row} hidden={detailView !== "activity"}>
         <h2 className={styles.rowTitle}>
           {t(locale, overviewCopy.activityRow)}
         </h2>

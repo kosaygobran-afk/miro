@@ -39,8 +39,22 @@ export async function withManagementAuth(
     };
   }
 
-  const admin = createAdminClient();
-  return { ok: true, actor, admin };
+  try {
+    const admin = createAdminClient();
+    return { ok: true, actor, admin };
+  } catch {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        {
+          error:
+            "Management data is unavailable. Please contact the project administrator.",
+          code: "management_configuration",
+        },
+        { status: 503 },
+      ),
+    };
+  }
 }
 
 export function errorResponse(

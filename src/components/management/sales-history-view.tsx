@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, ChevronDown, ReceiptText } from "lucide-react";
 import {
+  OverflowText,
   DataTable,
   DateRangePicker,
   EmptyState,
@@ -168,6 +169,7 @@ export function SalesHistoryView({
         <>
           <div aria-busy={loading}>
             <DataTable
+              tableClassName="mgmt-sales-table"
               caption={t(copy.tableCaption)}
               minWidth="56rem"
               isEmpty={orders.length === 0}
@@ -187,7 +189,9 @@ export function SalesHistoryView({
                   <th scope="col">{t(copy.colItems)}</th>
                   <th scope="col">{t(copy.colVat)}</th>
                   <th scope="col">{t(copy.colTotal)}</th>
-                  <th scope="col" aria-label={t(copy.colToggle)} />
+                  <th scope="col">
+                    <span className="sr-only">{t(copy.colToggle)}</span>
+                  </th>
                 </tr>
               }
             >
@@ -209,7 +213,7 @@ export function SalesHistoryView({
                       <span className={styles.customerCell}>
                         <span dir="auto">{order.customer_name}</span>
                         <span className={styles.customerEmail} dir="ltr">
-                          {order.customer_email}
+                          <OverflowText text={order.customer_email} dir="ltr" />
                         </span>
                       </span>
                     </td>

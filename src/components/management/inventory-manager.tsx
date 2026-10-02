@@ -1,8 +1,14 @@
 "use client";
 
+import { SearchField, OverflowText, PageHeader, Dialog } from "./ui";
+
+import { ReportChoices } from "./ui/reporting-workspace";
+import { CollectionSummary } from "./ui/collection-summary";
+import Link from "next/link";
+
 import { useState, useEffect, useCallback } from "react";
+import { ScrollRegion } from "@/components/management/ui/scroll-region";
 import {
-  Search,
   Filter,
   Package,
   AlertTriangle,
@@ -193,15 +199,22 @@ function toReplenishmentItems(variants: Variant[]): ReplenishmentItem[] {
 
 interface InventoryManagerProps {
   locale: "he" | "en";
+  initialStockFilter?: "all" | "low" | "out_of_stock";
 }
 
-export function InventoryManager({ locale }: InventoryManagerProps) {
+export function InventoryManager({
+  locale,
+  initialStockFilter = "all",
+}: InventoryManagerProps) {
   const he = locale === "he";
   const [variants, setVariants] = useState<Variant[]>([]);
   const [replenishment, setReplenishment] = useState<ReplenishmentItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [lowStockFilter, setLowStockFilter] = useState(false);
+  const [stockFilter, setStockFilter] = useState<
+    "all" | "low" | "out_of_stock"
+  >(initialStockFilter);
+  const lowStockFilter = stockFilter === "low";
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">(
@@ -263,7 +276,12 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
           lowStock: lowStockFilter,
           signal,
         });
-        if (!signal?.aborted) setVariants(items);
+        if (!signal?.aborted)
+          setVariants(
+            stockFilter === "out_of_stock"
+              ? items.filter((variant) => variant.stock_qty <= 0)
+              : items,
+          );
       } catch (cause) {
         if (!signal?.aborted) {
           setError(
@@ -278,7 +296,7 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
         if (!signal?.aborted) setLoading(false);
       }
     },
-    [search, lowStockFilter, he],
+    [search, lowStockFilter, stockFilter, he],
   );
 
   const fetchReplenishment = useCallback(async (signal?: AbortSignal) => {
@@ -500,6 +518,63 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
 
   return (
     <div className="inventory-manager space-y-6">
+      <PageHeader
+        title={he ? "המלאי, בשליטה" : "Inventory, under control"}
+        subtitle={
+          he
+            ? "מלאי זמין, חידוש אספקה ותנועות — תמונה ברורה לכל וריאנט."
+            : "Available stock, replenishment and movements. A clear picture for every variant."
+        }
+        actions={
+          <Link
+            href={`/${locale}/admin/suppliers`}
+            className="mgmt-button mgmt-button--secondary"
+          >
+            <Truck size={17} aria-hidden="true" />
+            {he ? "ספקים" : "Suppliers"}
+          </Link>
+        }
+      />
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "וריאנטים בסינון" : "Variants in this filter",
+            value: loading ? "—" : variants.length,
+          },
+          {
+            label: he ? "יחידות זמינות בסינון" : "Stock units in this filter",
+            value: loading
+              ? "—"
+              : variants.reduce((sum, variant) => sum + variant.stock_qty, 0),
+          },
+          {
+            label: he ? "מלאי נמוך בסינון" : "Low stock in this filter",
+            value: loading
+              ? "—"
+              : variants.filter(
+                  (variant) =>
+                    variant.stock_qty > 0 &&
+                    variant.stock_qty <= variant.low_stock_threshold,
+                ).length,
+          },
+          {
+            label: he ? "אזלו בסינון" : "Out of stock in this filter",
+            value: loading
+              ? "—"
+              : variants.filter((variant) => variant.stock_qty <= 0).length,
+          },
+        ]}
+      />
+      <ReportChoices
+        label={he ? "מצב מלאי" : "Stock status"}
+        value={stockFilter}
+        onChange={setStockFilter}
+        options={[
+          { value: "all", label: he ? "כל המלאי" : "All stock" },
+          { value: "low", label: he ? "מלאי נמוך" : "Low stock" },
+          { value: "out_of_stock", label: he ? "אזלו" : "Out of stock" },
+        ]}
+      />
       {message && (
         <div
           className={`inventory-manager__toast ${messageType === "success" ? "inventory-manager__toast--success" : "inventory-manager__toast--error"}`}
@@ -527,7 +602,12 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                 : `${replenishment.length} variants below reorder point`}
             </p>
           </div>
-          <div className="inventory-manager__replenishment-list">
+          <div
+            className="inventory-manager__replenishment-list"
+            tabIndex={0}
+            role="region"
+            aria-label={he ? "רשימת השלמת מלאי" : "Replenishment list"}
+          >
             {replenishment.slice(0, 10).map((item) => (
               <div
                 key={item.id}
@@ -581,26 +661,26 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
             </h2>
           </div>
           <div className="inventory-manager__header-right">
-            <div className="inventory-manager__search">
-              <Search className="h-4 w-4" aria-hidden="true" />
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={
-                  he
-                    ? "חיפוש SKU, ברקוד, שם מוצר..."
-                    : "Search SKU, barcode, product name..."
-                }
-                className="miro-input"
-                aria-label={he ? "חיפוש מלאי" : "Search inventory"}
-              />
-            </div>
+            <SearchField
+              className="mgmt-inventory-search"
+              value={search}
+              onValueChange={setSearch}
+              label={he ? "חיפוש מלאי" : "Search inventory"}
+              placeholder={
+                he
+                  ? "חיפוש SKU, ברקוד, שם מוצר…"
+                  : "Search SKU, barcode or product name…"
+              }
+              clearLabel={he ? "ניקוי חיפוש" : "Clear search"}
+            />
+
             <label className="inventory-manager__filter-toggle">
               <input
                 type="checkbox"
                 checked={lowStockFilter}
-                onChange={(e) => setLowStockFilter(e.target.checked)}
+                onChange={(e) =>
+                  setStockFilter(e.target.checked ? "low" : "all")
+                }
               />
               <Filter className="h-4 w-4" aria-hidden="true" />
               <span>{he ? "מלאי נמוך בלבד" : "Low stock only"}</span>
@@ -650,8 +730,15 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
         ) : (
           <>
             {/* Desktop Table */}
-            <div className="inventory-manager__table-wrapper">
-              <table className="inventory-manager__table" role="grid">
+            <ScrollRegion
+              className="inventory-manager__table-wrapper"
+              label={
+                he
+                  ? "טבלת ניהול מלאי וריאנטים"
+                  : "Variant inventory management table"
+              }
+            >
+              <table className="inventory-manager__table">
                 <caption className="sr-only">
                   {he
                     ? "טבלת ניהול מלאי וריאנטים"
@@ -692,7 +779,10 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                                 : variant.products?.name_en}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {variant.products?.slug}
+                              <OverflowText
+                                text={variant.products?.slug ?? "—"}
+                                dir="ltr"
+                              />
                             </p>
                           </div>
                         </td>
@@ -792,12 +882,12 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                   )}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
 
             {/* Mobile Card View */}
             <div className="inventory-manager__card-list" role="list">
               {variants.map((variant) => (
-                <article
+                <div
                   key={variant.id}
                   className="inventory-manager__card"
                   role="listitem"
@@ -1034,397 +1124,410 @@ export function InventoryManager({ locale }: InventoryManagerProps) {
                       )}
                     </div>
                   )}
-                </article>
+                </div>
               ))}
             </div>
           </>
         )}
 
         {/* Modals - Receive */}
-        {receiveModal.variant && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() =>
+        <Dialog
+          open={receiveModal.variant !== null}
+          onClose={() => {
+            if (!busyVariant)
               setReceiveModal({
                 variant: null,
                 quantity: "",
                 unitCost: "",
                 reference: "",
-              })
-            }
-          >
-            <div
-              className="bg-background rounded-xl shadow-xl max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="border-b border-border-subtle p-4 flex items-center justify-between">
-                <h3 className="text-lg font-black">
-                  {he ? "קבלת מלאי חדשה" : "New Stock Receipt"}
-                </h3>
+              });
+          }}
+          title={he ? "קבלת מלאי חדשה" : "New stock receipt"}
+          closeLabel={he ? "סגירה" : "Close"}
+          size="sm"
+        >
+          {receiveModal.variant ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {he ? "מוצר" : "Product"}:{" "}
+                {he
+                  ? receiveModal.variant.products?.name_he
+                  : receiveModal.variant.products?.name_en}{" "}
+                (SKU: {receiveModal.variant.sku})
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {he ? "מלאי נוכחי" : "Current stock"}:{" "}
+                {receiveModal.variant.stock_qty}
+              </p>
+              <div>
+                <label
+                  htmlFor="receiveModal-quantity"
+                  className="block text-sm font-medium mb-1"
+                >
+                  {he ? "כמות שהתקבלה" : "Quantity Received"}
+                </label>
+                <input
+                  id="receiveModal-quantity"
+                  type="number"
+                  min="1"
+                  max="10000"
+                  className="miro-input"
+                  placeholder={he ? "כמות" : "Quantity"}
+                  value={receiveModal.quantity}
+                  onChange={(e) =>
+                    setReceiveModal((prev) => ({
+                      ...prev,
+                      quantity: e.target.value,
+                    }))
+                  }
+                />
               </div>
-              <div className="p-4 space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {he ? "מוצר" : "Product"}:{" "}
+              <div>
+                <label
+                  htmlFor="receiveModal-unit-cost"
+                  className="block text-sm font-medium mb-1"
+                >
+                  {he ? "עלות ליחידה (₪)" : "Unit Cost (₪)"}
+                </label>
+                <input
+                  id="receiveModal-unit-cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="miro-input"
+                  placeholder="0.00"
+                  value={receiveModal.unitCost}
+                  onChange={(e) =>
+                    setReceiveModal((prev) => ({
+                      ...prev,
+                      unitCost: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="receiveModal-reference"
+                  className="block text-sm font-medium mb-1"
+                >
                   {he
-                    ? receiveModal.variant.products?.name_he
-                    : receiveModal.variant.products?.name_en}{" "}
-                  (SKU: {receiveModal.variant.sku})
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {he ? "מלאי נוכחי" : "Current stock"}:{" "}
-                  {receiveModal.variant.stock_qty}
-                </p>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "כמות שהתקבלה" : "Quantity Received"}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="10000"
-                    className="miro-input"
-                    placeholder={he ? "כמות" : "Quantity"}
-                    value={receiveModal.quantity}
-                    onChange={(e) =>
-                      setReceiveModal((prev) => ({
-                        ...prev,
-                        quantity: e.target.value,
-                      }))
-                    }
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "עלות ליחידה (₪)" : "Unit Cost (₪)"}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className="miro-input"
-                    placeholder="0.00"
-                    value={receiveModal.unitCost}
-                    onChange={(e) =>
-                      setReceiveModal((prev) => ({
-                        ...prev,
-                        unitCost: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he
-                      ? "אסמכתא (מספר הזמנה, חשבונית...)"
-                      : "Reference (PO, invoice...)"}
-                  </label>
-                  <input
-                    type="text"
-                    className="miro-input"
-                    placeholder={he ? "אופציונלי" : "Optional"}
-                    value={receiveModal.reference}
-                    onChange={(e) =>
-                      setReceiveModal((prev) => ({
-                        ...prev,
-                        reference: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-2 border-t border-border-subtle">
-                  <button
-                    className="miro-button miro-button-secondary"
-                    onClick={() =>
-                      setReceiveModal({
-                        variant: null,
-                        quantity: "",
-                        unitCost: "",
-                        reference: "",
-                      })
-                    }
-                  >
-                    {he ? "ביטול" : "Cancel"}
-                  </button>
-                  <button
-                    className="miro-button miro-button-primary"
-                    onClick={submitReceive}
-                    disabled={busyVariant === receiveModal.variant.id}
-                  >
-                    {busyVariant === receiveModal.variant.id ? (
-                      <>
-                        <Loader2
-                          className="h-4 w-4 animate-spin me-2"
-                          aria-hidden="true"
-                        />
-                        {he ? "שומר..." : "Saving..."}
-                      </>
-                    ) : he ? (
-                      "אישור קבלה"
-                    ) : (
-                      "Confirm Receipt"
-                    )}
-                  </button>
-                </div>
+                    ? "אסמכתא (מספר הזמנה, חשבונית...)"
+                    : "Reference (PO, invoice...)"}
+                </label>
+                <input
+                  id="receiveModal-reference"
+                  type="text"
+                  className="miro-input"
+                  placeholder={he ? "אופציונלי" : "Optional"}
+                  value={receiveModal.reference}
+                  onChange={(e) =>
+                    setReceiveModal((prev) => ({
+                      ...prev,
+                      reference: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border-subtle">
+                <button
+                  className="miro-button miro-button-secondary"
+                  onClick={() =>
+                    setReceiveModal({
+                      variant: null,
+                      quantity: "",
+                      unitCost: "",
+                      reference: "",
+                    })
+                  }
+                >
+                  {he ? "ביטול" : "Cancel"}
+                </button>
+                <button
+                  className="miro-button miro-button-primary"
+                  onClick={submitReceive}
+                  disabled={busyVariant === receiveModal.variant.id}
+                >
+                  {busyVariant === receiveModal.variant.id ? (
+                    <>
+                      <Loader2
+                        className="h-4 w-4 animate-spin me-2"
+                        aria-hidden="true"
+                      />
+                      {he ? "שומר..." : "Saving..."}
+                    </>
+                  ) : he ? (
+                    "אישור קבלה"
+                  ) : (
+                    "Confirm Receipt"
+                  )}
+                </button>
               </div>
             </div>
-          </div>
-        )}
+          ) : null}
+        </Dialog>
 
         {/* Modals - Adjust */}
-        {adjustModal.variant && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() =>
-              setAdjustModal({ variant: null, counted: "", reason: "" })
-            }
-          >
-            <div
-              className="bg-background rounded-xl shadow-xl max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="border-b border-border-subtle p-4 flex items-center justify-between">
-                <h3 className="text-lg font-black">
-                  {he ? "התאמת מלאי" : "Adjust Stock"}
-                </h3>
+        <Dialog
+          open={adjustModal.variant !== null}
+          onClose={() => {
+            if (!busyVariant)
+              setAdjustModal({ variant: null, counted: "", reason: "" });
+          }}
+          title={he ? "התאמת מלאי" : "Adjust stock"}
+          closeLabel={he ? "סגירה" : "Close"}
+          size="sm"
+        >
+          {adjustModal.variant ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {he ? "מוצר" : "Product"}:{" "}
+                {he
+                  ? adjustModal.variant.products?.name_he
+                  : adjustModal.variant.products?.name_en}{" "}
+                (SKU: {adjustModal.variant.sku})
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {he ? "מלאי נוכחי" : "Current stock"}:{" "}
+                {adjustModal.variant.stock_qty}
+              </p>
+              <div>
+                <label
+                  htmlFor="adjustModal-counted"
+                  className="block text-sm font-medium mb-1"
+                >
+                  {he ? "כמות נספרת בפועל" : "Physically Counted Quantity"}
+                </label>
+                <input
+                  id="adjustModal-counted"
+                  type="number"
+                  min="0"
+                  max="100000"
+                  className="miro-input"
+                  value={adjustModal.counted}
+                  onChange={(e) =>
+                    setAdjustModal((prev) => ({
+                      ...prev,
+                      counted: e.target.value,
+                    }))
+                  }
+                />
               </div>
-              <div className="p-4 space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {he ? "מוצר" : "Product"}:{" "}
-                  {he
-                    ? adjustModal.variant.products?.name_he
-                    : adjustModal.variant.products?.name_en}{" "}
-                  (SKU: {adjustModal.variant.sku})
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {he ? "מלאי נוכחי" : "Current stock"}:{" "}
-                  {adjustModal.variant.stock_qty}
-                </p>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "כמות נספרת בפועל" : "Physically Counted Quantity"}
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100000"
-                    className="miro-input"
-                    value={adjustModal.counted}
-                    onChange={(e) =>
-                      setAdjustModal((prev) => ({
-                        ...prev,
-                        counted: e.target.value,
-                      }))
-                    }
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "סיבת ההתאמה" : "Adjustment Reason"}
-                  </label>
-                  <select
-                    className="miro-input"
-                    value={adjustModal.reason}
-                    onChange={(e) =>
-                      setAdjustModal((prev) => ({
-                        ...prev,
-                        reason: e.target.value,
-                      }))
-                    }
-                    required
-                  >
-                    <option value="">
-                      {he ? "בחר סיבה" : "Select reason"}
+              <div>
+                <label
+                  htmlFor="adjustModal-reason"
+                  className="block text-sm font-medium mb-1"
+                >
+                  {he ? "סיבת ההתאמה" : "Adjustment Reason"}
+                </label>
+                <select
+                  id="adjustModal-reason"
+                  className="miro-input"
+                  value={adjustModal.reason}
+                  onChange={(e) =>
+                    setAdjustModal((prev) => ({
+                      ...prev,
+                      reason: e.target.value,
+                    }))
+                  }
+                  required
+                >
+                  <option value="">{he ? "בחר סיבה" : "Select reason"}</option>
+                  {adjustReasons.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {he ? r.label.he : r.label.en}
                     </option>
-                    {adjustReasons.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {he ? r.label.he : r.label.en}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex justify-end gap-2 pt-2 border-t border-border-subtle">
-                  <button
-                    className="miro-button miro-button-secondary"
-                    onClick={() =>
-                      setAdjustModal({ variant: null, counted: "", reason: "" })
-                    }
-                  >
-                    {he ? "ביטול" : "Cancel"}
-                  </button>
-                  <button
-                    className="miro-button miro-button-primary"
-                    onClick={submitAdjust}
-                    disabled={
-                      busyVariant === adjustModal.variant.id ||
-                      !adjustModal.reason
-                    }
-                  >
-                    {busyVariant === adjustModal.variant.id ? (
-                      <>
-                        <Loader2
-                          className="h-4 w-4 animate-spin me-2"
-                          aria-hidden="true"
-                        />
-                        {he ? "שומר..." : "Saving..."}
-                      </>
-                    ) : he ? (
-                      "אישור התאמה"
-                    ) : (
-                      "Confirm Adjustment"
-                    )}
-                  </button>
-                </div>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border-subtle">
+                <button
+                  className="miro-button miro-button-secondary"
+                  onClick={() =>
+                    setAdjustModal({ variant: null, counted: "", reason: "" })
+                  }
+                >
+                  {he ? "ביטול" : "Cancel"}
+                </button>
+                <button
+                  className="miro-button miro-button-primary"
+                  onClick={submitAdjust}
+                  disabled={
+                    busyVariant === adjustModal.variant.id ||
+                    !adjustModal.reason
+                  }
+                >
+                  {busyVariant === adjustModal.variant.id ? (
+                    <>
+                      <Loader2
+                        className="h-4 w-4 animate-spin me-2"
+                        aria-hidden="true"
+                      />
+                      {he ? "שומר..." : "Saving..."}
+                    </>
+                  ) : he ? (
+                    "אישור התאמה"
+                  ) : (
+                    "Confirm Adjustment"
+                  )}
+                </button>
               </div>
             </div>
-          </div>
-        )}
+          ) : null}
+        </Dialog>
 
         {/* Modals - Out Movement */}
-        {outModal.variant && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            onClick={() =>
+        <Dialog
+          open={outModal.variant !== null}
+          onClose={() => {
+            if (!busyVariant)
               setOutModal({
                 variant: null,
                 type: "damage",
                 delta: "",
                 reference: "",
                 note: "",
-              })
-            }
-          >
-            <div
-              className="bg-background rounded-xl shadow-xl max-w-md w-full"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="border-b border-border-subtle p-4 flex items-center justify-between">
-                <h3 className="text-lg font-black">
-                  {he ? "הוצאת מלאי ידנית" : "Manual Stock Out"}
-                </h3>
+              });
+          }}
+          title={he ? "הוצאת מלאי" : "Out movement"}
+          closeLabel={he ? "סגירה" : "Close"}
+          size="sm"
+        >
+          {outModal.variant ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                {he ? "מוצר" : "Product"}:{" "}
+                {he
+                  ? outModal.variant.products?.name_he
+                  : outModal.variant.products?.name_en}{" "}
+                (SKU: {outModal.variant.sku})
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {he ? "מלאי נוכחי" : "Current stock"}:{" "}
+                {outModal.variant.stock_qty}
+              </p>
+              <div>
+                <label
+                  htmlFor="outModal-type"
+                  className="block text-sm font-medium mb-1"
+                >
+                  {he ? "סוג הוצאה" : "Out Type"}
+                </label>
+                <select
+                  id="outModal-type"
+                  className="miro-input"
+                  value={outModal.type}
+                  onChange={(e) =>
+                    setOutModal((prev) => ({ ...prev, type: e.target.value }))
+                  }
+                >
+                  {movementTypes.map((m) => (
+                    <option key={m.value} value={m.value}>
+                      {he ? m.label.he : m.label.en}
+                    </option>
+                  ))}
+                </select>
               </div>
-              <div className="p-4 space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  {he ? "מוצר" : "Product"}:{" "}
-                  {he
-                    ? outModal.variant.products?.name_he
-                    : outModal.variant.products?.name_en}{" "}
-                  (SKU: {outModal.variant.sku})
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {he ? "מלאי נוכחי" : "Current stock"}:{" "}
-                  {outModal.variant.stock_qty}
-                </p>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "סוג הוצאה" : "Out Type"}
-                  </label>
-                  <select
-                    className="miro-input"
-                    value={outModal.type}
-                    onChange={(e) =>
-                      setOutModal((prev) => ({ ...prev, type: e.target.value }))
-                    }
-                  >
-                    {movementTypes.map((m) => (
-                      <option key={m.value} value={m.value}>
-                        {he ? m.label.he : m.label.en}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "כמות להוצאה" : "Quantity to Remove"}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={outModal.variant.stock_qty}
-                    className="miro-input"
-                    value={outModal.delta}
-                    onChange={(e) =>
-                      setOutModal((prev) => ({
-                        ...prev,
-                        delta: e.target.value,
-                      }))
-                    }
-                    autoFocus
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "אסמכתא" : "Reference"}
-                  </label>
-                  <input
-                    type="text"
-                    className="miro-input"
-                    placeholder={he ? "אופציונלי" : "Optional"}
-                    value={outModal.reference}
-                    onChange={(e) =>
-                      setOutModal((prev) => ({
-                        ...prev,
-                        reference: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "הערה" : "Note"}
-                  </label>
-                  <textarea
-                    className="miro-input"
-                    rows={2}
-                    placeholder={he ? "אופציונלי" : "Optional"}
-                    value={outModal.note}
-                    onChange={(e) =>
-                      setOutModal((prev) => ({ ...prev, note: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="flex justify-end gap-2 pt-2 border-t border-border-subtle">
-                  <button
-                    className="miro-button miro-button-secondary"
-                    onClick={() =>
-                      setOutModal({
-                        variant: null,
-                        type: "damage",
-                        delta: "",
-                        reference: "",
-                        note: "",
-                      })
-                    }
-                  >
-                    {he ? "ביטול" : "Cancel"}
-                  </button>
-                  <button
-                    className="miro-button miro-button-primary"
-                    onClick={submitOut}
-                    disabled={
-                      busyVariant === outModal.variant.id || !outModal.delta
-                    }
-                  >
-                    {busyVariant === outModal.variant.id ? (
-                      <>
-                        <Loader2
-                          className="h-4 w-4 animate-spin me-2"
-                          aria-hidden="true"
-                        />
-                        {he ? "שומר..." : "Saving..."}
-                      </>
-                    ) : he ? (
-                      "אישור הוצאה"
-                    ) : (
-                      "Confirm Out"
-                    )}
-                  </button>
-                </div>
+              <div>
+                <label
+                  htmlFor="outModal-quantity"
+                  className="block text-sm font-medium mb-1"
+                >
+                  {he ? "כמות להוצאה" : "Quantity to Remove"}
+                </label>
+                <input
+                  id="outModal-quantity"
+                  type="number"
+                  min="1"
+                  max={outModal.variant.stock_qty}
+                  className="miro-input"
+                  value={outModal.delta}
+                  onChange={(e) =>
+                    setOutModal((prev) => ({
+                      ...prev,
+                      delta: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="outModal-reference"
+                  className="block text-sm font-medium mb-1"
+                >
+                  {he ? "אסמכתא" : "Reference"}
+                </label>
+                <input
+                  id="outModal-reference"
+                  type="text"
+                  className="miro-input"
+                  placeholder={he ? "אופציונלי" : "Optional"}
+                  value={outModal.reference}
+                  onChange={(e) =>
+                    setOutModal((prev) => ({
+                      ...prev,
+                      reference: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div>
+                <label
+                  htmlFor="outModal-note"
+                  className="block text-sm font-medium mb-1"
+                >
+                  {he ? "הערה" : "Note"}
+                </label>
+                <textarea
+                  id="outModal-note"
+                  className="miro-input"
+                  rows={2}
+                  placeholder={he ? "אופציונלי" : "Optional"}
+                  value={outModal.note}
+                  onChange={(e) =>
+                    setOutModal((prev) => ({ ...prev, note: e.target.value }))
+                  }
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-border-subtle">
+                <button
+                  className="miro-button miro-button-secondary"
+                  onClick={() =>
+                    setOutModal({
+                      variant: null,
+                      type: "damage",
+                      delta: "",
+                      reference: "",
+                      note: "",
+                    })
+                  }
+                >
+                  {he ? "ביטול" : "Cancel"}
+                </button>
+                <button
+                  className="miro-button miro-button-primary"
+                  onClick={submitOut}
+                  disabled={
+                    busyVariant === outModal.variant.id || !outModal.delta
+                  }
+                >
+                  {busyVariant === outModal.variant.id ? (
+                    <>
+                      <Loader2
+                        className="h-4 w-4 animate-spin me-2"
+                        aria-hidden="true"
+                      />
+                      {he ? "שומר..." : "Saving..."}
+                    </>
+                  ) : he ? (
+                    "אישור הוצאה"
+                  ) : (
+                    "Confirm Out"
+                  )}
+                </button>
               </div>
             </div>
-          </div>
-        )}
+          ) : null}
+        </Dialog>
       </div>
     </div>
   );

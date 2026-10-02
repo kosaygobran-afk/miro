@@ -1,5 +1,6 @@
 import Link from "next/link";
-import Image from "next/image";
+import { StoreHeroBackdrop } from "@/features/store-design/store-hero-backdrop";
+import { CompanyRail } from "@/features/store-design/company-rail";
 import {
   ArrowLeft,
   ArrowRight,
@@ -80,15 +81,7 @@ export default async function ProductsPage({
       />
       <StoreLiveRefresh />
       <section className="sf-hero" aria-labelledby="store-title">
-        <div className="sf-hero-image">
-          <Image
-            src="/images/security-studio.png"
-            alt=""
-            fill
-            sizes="(max-width: 700px) 100vw, 75vw"
-            preload
-          />
-        </div>
+        <StoreHeroBackdrop locale={locale} />
         <div className="sf-hero-grid" aria-hidden="true" />
         <div className="miro-container sf-hero-inner">
           <div className="sf-hero-copy">
@@ -133,6 +126,7 @@ export default async function ProductsPage({
         ariaLabel={copy.category}
       />
 
+      <CompanyRail locale={locale} />
       <ProductMovingRail products={catalog.products} locale={locale} />
 
       <section

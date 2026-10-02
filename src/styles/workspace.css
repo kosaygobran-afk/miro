@@ -927,6 +927,7 @@
 }
 
 .inventory-manager__replenishment-list {
+  padding-inline-end: 0.5rem;
   max-height: 240px;
   overflow-y: auto;
 }
@@ -1126,12 +1127,13 @@
 }
 
 .inventory-manager__table-wrapper {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 .inventory-manager__table {
   width: 100%;
+  min-inline-size: 82rem;
   border-collapse: collapse;
   font-size: 0.875rem;
 }
@@ -1150,6 +1152,7 @@
 }
 
 .inventory-manager__table td {
+  white-space: nowrap;
   padding: 0.875rem 1rem;
   border-bottom: 1px solid var(--border-subtle);
   vertical-align: middle;
@@ -1227,8 +1230,12 @@
   gap: 0.375rem;
 }
 
+.inventory-manager__table .inventory-manager__actions {
+  flex-wrap: nowrap;
+}
+
 .inventory-manager__actions .miro-button {
-  min-height: 36px;
+  min-height: 44px;
   padding: 0.375rem 0.625rem;
   font-size: 0.75rem;
 }

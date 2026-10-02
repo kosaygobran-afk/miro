@@ -4,6 +4,7 @@ import {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useId,
   useRef,
   useState,
@@ -123,6 +124,9 @@ function OverlayPortalHost() {
  */
 export function OverlayStackProvider({ children }: { children: ReactNode }) {
   const [overlays, setOverlays] = useState<OverlayRegistration[]>([]);
+  // Keyboard handlers must see registration immediately, before React's next
+  // state commit. A fast Escape after opening must still find the top overlay.
+  const overlaysRef = useRef<OverlayRegistration[]>([]);
   const scrollLockCount = useRef(0);
   const originalBodyOverflow = useRef<string>("");
 
@@ -131,18 +135,20 @@ export function OverlayStackProvider({ children }: { children: ReactNode }) {
   const register = useCallback(
     (registration: OverlayRegistration): (() => void) => {
       const id = registration.id;
-      setOverlays((prev) => {
-        const exists = prev.some((o) => o.id === id);
-        if (exists) return prev;
-        return [...prev, registration];
-      });
+      if (!overlaysRef.current.some((overlay) => overlay.id === id)) {
+        overlaysRef.current = [...overlaysRef.current, registration];
+        setOverlays(overlaysRef.current);
+      }
       return () => unregisterRef.current?.(id);
     },
     [],
   );
 
   const unregister = useCallback((id: string) => {
-    setOverlays((prev) => prev.filter((o) => o.id !== id));
+    overlaysRef.current = overlaysRef.current.filter(
+      (overlay) => overlay.id !== id,
+    );
+    setOverlays(overlaysRef.current);
   }, []);
 
   // Initialize unregisterRef
@@ -152,13 +158,14 @@ export function OverlayStackProvider({ children }: { children: ReactNode }) {
 
   // Compute topmost close handler without extra state
   const getTopmostClose = useCallback(() => {
-    const topmost = overlays[overlays.length - 1];
+    const topmost = overlaysRef.current[overlaysRef.current.length - 1];
     return topmost?.onClose ?? null;
-  }, [overlays]);
+  }, []);
 
   const isTopmost = useCallback(
-    (id: string) => overlays[overlays.length - 1]?.id === id,
-    [overlays],
+    (id: string) =>
+      overlaysRef.current[overlaysRef.current.length - 1]?.id === id,
+    [],
   );
 
   // Manage body scroll lock with reference counting
@@ -177,22 +184,27 @@ export function OverlayStackProvider({ children }: { children: ReactNode }) {
     }
   }, [overlays.length]);
 
-  // Make background content inert when modal dialog is open
-  useEffect(() => {
-    const hasModalDialog = overlays.some((o) => o.type === "dialog");
-    const mainContent = document.getElementById("main-content");
-    const header = document.querySelector("header");
-    const sidebar = document.querySelector(".mgmt-sidebar");
-
-    if (hasModalDialog) {
-      mainContent?.setAttribute("inert", "");
-      header?.setAttribute("inert", "");
-      sidebar?.setAttribute("inert", "");
-    } else {
-      mainContent?.removeAttribute("inert");
-      header?.removeAttribute("inert");
-      sidebar?.removeAttribute("inert");
+  // Both drawers and dialogs are modal. Preserve pre-existing inert state and
+  // suspend lower overlays while a nested dialog is open.
+  useLayoutEffect(() => {
+    if (overlays.length === 0) return;
+    const suspended = new Map<Element, boolean>();
+    const suspend = (element: Element | null) => {
+      if (!element || suspended.has(element)) return;
+      suspended.set(element, element.hasAttribute("inert"));
+      element.setAttribute("inert", "");
+    };
+    suspend(document.getElementById("main-content"));
+    suspend(document.querySelector(".miro-site-header"));
+    suspend(document.querySelector(".mgmt-sidebar"));
+    for (const overlay of overlays.slice(0, -1)) {
+      suspend(overlay.panelRef.current?.parentElement ?? null);
     }
+    return () => {
+      for (const [element, wasInert] of suspended) {
+        if (!wasInert) element.removeAttribute("inert");
+      }
+    };
   }, [overlays]);
 
   // Cleanup on unmount
@@ -202,10 +214,6 @@ export function OverlayStackProvider({ children }: { children: ReactNode }) {
         document.body.style.overflow = originalBodyOverflow.current;
         scrollLockCount.current = 0;
       }
-      // Remove inert from all
-      document
-        .querySelectorAll("[inert]")
-        .forEach((el) => el.removeAttribute("inert"));
     };
   }, []);
 
@@ -245,6 +253,7 @@ export function useOverlayA11y({
   const onCloseRef = useRef(onClose);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const focusRestoredRef = useRef(false);
+  const restoreOnCloseRef = useRef(false);
 
   // Keep onCloseRef current
   useEffect(() => {
@@ -262,8 +271,17 @@ export function useOverlayA11y({
   }, [panelRef]);
 
   // Register/unregister with the stack
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
+
+    // Capture the trigger before the parent applies modal background inert.
+    if (!focusRestoredRef.current) {
+      previouslyFocusedRef.current =
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null;
+      focusRestoredRef.current = true;
+    }
 
     const unregister = register({
       id,
@@ -273,9 +291,19 @@ export function useOverlayA11y({
     });
 
     return () => {
+      restoreOnCloseRef.current = isTopmost(id);
+      const trigger = previouslyFocusedRef.current;
       unregister();
+      // Runs after the provider releases inert, and also when the overlay
+      // component itself unmounts rather than rendering open=false.
+      if (restoreOnCloseRef.current && trigger) {
+        requestAnimationFrame(() => {
+          if (trigger.isConnected && !trigger.closest("[inert]"))
+            trigger.focus();
+        });
+      }
     };
-  }, [open, panelRef, register, id, type]);
+  }, [open, panelRef, register, id, type, isTopmost]);
 
   // Handle Escape and Tab only for the topmost overlay
   useEffect(() => {
@@ -326,21 +354,10 @@ export function useOverlayA11y({
   // Focus management on open/close
   useEffect(() => {
     if (!open) {
-      // Restore focus when this overlay closes (only if topmost)
-      if (previouslyFocusedRef.current && isTopmost(id)) {
-        const el = previouslyFocusedRef.current;
-        if (el.isConnected) {
-          el.focus();
-        } else {
-          // Fallback to a predictable focusable element
-          const fallback = document.querySelector<HTMLElement>(
-            'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])',
-          );
-          fallback?.focus();
-        }
-      }
+      // Registration cleanup restores the trigger after inert is released.
       previouslyFocusedRef.current = null;
       focusRestoredRef.current = false;
+      restoreOnCloseRef.current = false;
       return;
     }
 

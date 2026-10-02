@@ -3,10 +3,18 @@ type Locale = "he" | "en";
 export function StockIndicator({
   quantity,
   locale,
+  unconfirmed = false,
 }: {
   quantity: number;
   locale: Locale;
+  unconfirmed?: boolean;
 }) {
+  if (unconfirmed)
+    return (
+      <span className="sf-availability-pending">
+        {locale === "he" ? "זמינות לפי בירור" : "Availability on request"}
+      </span>
+    );
   const count = Math.max(0, Math.floor(quantity));
   const level =
     count >= 15

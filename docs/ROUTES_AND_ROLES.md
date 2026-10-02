@@ -4,8 +4,9 @@ Route groups in parentheses are organization only. They do not appear in URLs.
 
 ## Public Routes
 
-- `/he` and `/en` - homepage
-- `/he/store` and `/en/store` - public store preview
+- `/he` and `/en` - canonical public storefront
+- `/he/home` and `/en/home` - secondary home/services introduction
+- `/he/store` and `/en/store` - permanent redirects to the canonical storefront
 - `/he/store/[category]` and `/en/store/[category]` - store category preview
 - `/he/cart` and `/en/cart` - browser-persisted customer cart
 - `/he/checkout` and `/en/checkout` - delivery details and checkout request (no online payment or stock reservation)
@@ -78,3 +79,11 @@ There is no role selector, no worker signup form and no CEO signup form.
 - `/api/management/{tax,settings}` writes are CEO-only (`manageTax`/`manageSettings`, enforced in route AND in `set_tax_rate`/`set_business_setting` RPCs).
 - `/api/track` accepts only whitelisted analytics event shapes (same-origin, zod); analytics reads are admin/CEO only.
 - Mutation endpoints validate input and same-origin requests. All private pages are noindex.
+
+## Store design studio — 2026-10-02
+
+- `/[locale]/admin/store-design`: active CEO edits/publishes and uploads; active admin sees a read-only preview. Other roles are denied.
+- `GET /api/management/storefront/design`: CEO/admin current public-design record and revision.
+- `PUT /api/management/storefront/design`: CEO-only validated publication with revision conflict handling.
+- `POST /api/management/storefront/design/assets`: CEO-only validated image upload; publication remains a separate action.
+- Anonymous database RPCs `get_public_storefront_design` and `get_public_inventory_defaults` return only their defined public fields. Private settings are not readable through these projections.

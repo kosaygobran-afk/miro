@@ -1,0 +1,25 @@
+{
+  "checks": [
+    "8 categories, 5 backgrounds, 8 equal-size local brand marks",
+    "all category routes return 200",
+    "10-second background rotation and pause work",
+    "brand rail pause control works",
+    "card +/- quantity, header count, persistence and zero removal",
+    "reference gallery works; unconfirmed models are quote-only",
+    "fast 3D rail hover stays positioned and closes with Escape",
+    "desktop Hebrew/English and dark/medium/light pass WCAG A/AA axe",
+    "320px Hebrew/English, all themes: no overflow; 3D dialog stays in viewport",
+    "reduced motion disables automatic rails",
+    "CEO design studio passes WCAG A/AA axe in all three themes",
+    "discarding a draft restores saved fields and enables conflict reload",
+    "CEO logo upload is publicly readable; unsafe SVG and spoofed image content are rejected",
+    "real CEO form save persists and updates a second open anonymous storefront",
+    "stale design saves return 409",
+    "admin sees design, fields are read-only, backend rejects publishing",
+    "admin image uploads denied",
+    "anonymous design writes denied",
+    "no browser runtime errors"
+  ],
+  "runtimeErrors": [],
+  "violations": []
+}

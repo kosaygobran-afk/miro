@@ -47,6 +47,29 @@
   fill: var(--secondary-accent);
   background: var(--secondary-accent);
 }
+.cyan {
+  fill: var(--report-cyan, var(--secondary-accent));
+  background: var(--report-cyan, var(--secondary-accent));
+}
+.violet {
+  fill: var(--report-violet, var(--accent-text));
+  background: var(--report-violet, var(--accent-text));
+}
+.line.gold {
+  stroke: var(--accent-text);
+}
+.line.teal {
+  stroke: var(--secondary-accent);
+}
+.line {
+  fill: none;
+}
+.line.cyan {
+  stroke: var(--report-cyan, var(--secondary-accent));
+}
+.line.violet {
+  stroke: var(--report-violet, var(--accent-text));
+}
 .note {
   margin: 0;
   color: var(--muted-foreground);

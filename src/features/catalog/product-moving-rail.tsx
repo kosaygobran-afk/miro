@@ -7,7 +7,10 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import Image from "next/image";
+import { OverflowLabel } from "./overflow-label";
+import { ProductMedia } from "./product-media";
+import { AddToCartButton } from "@/features/cart/add-to-cart-button";
+import { useStoreDesign } from "@/features/store-design/design-context";
 import Link from "next/link";
 import { ArrowUpRight, Eye, Pause, Play } from "lucide-react";
 import { storeCopy } from "@/features/catalog/store-copy";
@@ -44,12 +47,21 @@ function RailProduct({
   product,
   locale,
   isDuplicate = false,
+  onPreviewChange,
 }: {
   product: Product;
   locale: "he" | "en";
   isDuplicate?: boolean;
+  onPreviewChange: (id: string, open: boolean) => void;
 }) {
   const [showPreview, setShowPreview] = useState(false);
+  const closePreview = useCallback(() => setShowPreview(false), []);
+  const keepPreviewOpen = useCallback(() => setShowPreview(true), []);
+  const onVisibilityChange = useCallback(
+    (open: boolean) => onPreviewChange(product.id, open),
+    [product.id, onPreviewChange],
+  );
+
   const [openedExplicitly, setOpenedExplicitly] = useState(false);
   const cardRef = useRef<HTMLAnchorElement | null>(null);
   const previewButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -99,8 +111,9 @@ function RailProduct({
           product={product}
           locale={locale}
           isOpen={showPreview}
-          onClose={() => setShowPreview(false)}
-          onKeepOpen={() => setShowPreview(true)}
+          onClose={closePreview}
+          onKeepOpen={keepPreviewOpen}
+          onVisibilityChange={onVisibilityChange}
           triggerRef={cardRef}
           focusOnOpen={openedExplicitly}
           returnFocusRef={previewButtonRef}
@@ -116,30 +129,13 @@ function RailProduct({
         dir={locale === "he" ? "rtl" : "ltr"}
       >
         <div className="sf-moving-rail-media">
-          {primaryImage ? (
-            <Image
-              src={primaryImage.url}
-              alt={altText}
-              fill
-              sizes="(max-width: 600px) 11.5rem, (max-width: 1024px) 13.25rem, 14.5rem"
-              className="sf-moving-rail-image"
-            />
-          ) : (
-            <div className="sf-moving-rail-placeholder" aria-hidden="true">
-              <svg
-                width="48"
-                height="48"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1"
-              >
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <circle cx="8.5" cy="8.5" r="1.5" />
-                <path d="M21 15l-5-5L5 17" />
-              </svg>
-            </div>
-          )}
+          <ProductMedia
+            product={product}
+            src={primaryImage?.url}
+            alt={altText}
+            sizes="(max-width: 600px) 11.5rem, 14.5rem"
+            className="sf-moving-rail-image"
+          />
           {product.promoBadges && product.promoBadges.length > 0 ? (
             <StickerCluster
               badges={product.promoBadges}
@@ -156,7 +152,7 @@ function RailProduct({
             {product.categoryLabel ?? product.category}
           </p>
           <h3 className="sf-moving-rail-title" dir="auto">
-            {product.name}
+            <OverflowLabel>{product.name}</OverflowLabel>
           </h3>
           <div className="sf-moving-rail-price">
             <div className="sf-price-display__amount">
@@ -189,6 +185,29 @@ function RailProduct({
           </div>
         </div>
       </Link>
+      {!isDuplicate &&
+      effectivePrice !== null &&
+      product.stockState !== "out" ? (
+        <div className="sf-moving-rail-cart">
+          <AddToCartButton
+            compact
+            locale={locale}
+            item={{
+              productId: product.id,
+              variantId:
+                (
+                  product.variants.find((v) => v.isDefault && v.stockQty > 0) ??
+                  product.variants.find((v) => v.stockQty > 0)
+                )?.id ?? null,
+              slug: product.slug,
+              category: product.category,
+              name: product.name,
+              imageUrl: primaryImage?.url ?? null,
+              unitPrice: effectivePrice,
+            }}
+          />
+        </div>
+      ) : null}
       {!isDuplicate ? (
         <button
           ref={previewButtonRef}
@@ -215,12 +234,25 @@ export function ProductMovingRail({
   className = "",
 }: ProductMovingRailProps) {
   const isRtl = locale === "he";
+  const { products: motion } = useStoreDesign();
+  const [previews, setPreviews] = useState<string[]>([]);
+  const onPreviewChange = useCallback(
+    (id: string, open: boolean) =>
+      setPreviews((current) =>
+        open
+          ? current.includes(id)
+            ? current
+            : [...current, id]
+          : current.includes(id)
+            ? current.filter((key) => key !== id)
+            : current,
+      ),
+    [],
+  );
   const featuredProducts = products
     .filter(
       (product) =>
-        product.railSortOrder !== null &&
-        product.railSortOrder !== undefined &&
-        product.priceIls !== null,
+        product.railSortOrder !== null && product.railSortOrder !== undefined,
     )
     .sort((a, b) => (a.railSortOrder ?? 0) - (b.railSortOrder ?? 0));
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -230,7 +262,7 @@ export function ProductMovingRail({
   const segmentRef = useRef<HTMLDivElement | null>(null);
   const [manualPaused, setManualPaused] = useState(false);
   const [interactionPaused, setInteractionPaused] = useState(false);
-  const isPaused = manualPaused || interactionPaused;
+  const isPaused = manualPaused || interactionPaused || previews.length > 0;
 
   const updateAnimationMetrics = useCallback(() => {
     const track = trackRef.current;
@@ -238,10 +270,10 @@ export function ProductMovingRail({
     if (!track || !segment) return;
     const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
     const shift = segment.getBoundingClientRect().width + gap;
-    const duration = Math.max(36, Math.min(120, shift / 28));
+    const duration = Math.max(15, shift / motion.pixelsPerSecond);
     track.style.setProperty("--sf-rail-shift", `-${shift}px`);
     track.style.setProperty("--sf-rail-duration", `${duration}s`);
-  }, []);
+  }, [motion.pixelsPerSecond]);
 
   useEffect(() => {
     if (!shouldAnimate) return;
@@ -277,6 +309,7 @@ export function ProductMovingRail({
             product={product}
             locale={locale}
             isDuplicate={duplicate}
+            onPreviewChange={onPreviewChange}
           />
         </div>
       ))}

@@ -3,6 +3,7 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
 import { authRequestUrl } from "@/lib/password-recovery";
+import { supabaseFetch } from "@/lib/supabase/fetch";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -44,6 +45,7 @@ export default async function proxy(request: NextRequest) {
     request.cookies.getAll().some(({ name }) => name.startsWith("sb-"))
   ) {
     const supabase = createServerClient(url, key, {
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll(cookies) {

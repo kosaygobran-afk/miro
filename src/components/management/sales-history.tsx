@@ -1,5 +1,7 @@
 "use client";
 
+import { ScrollRegion } from "./ui/scroll-region";
+
 import React, { useMemo } from "react";
 import {
   ChevronDown,
@@ -313,8 +315,11 @@ export function SalesHistory({
         ) : (
           <>
             {/* Desktop Table */}
-            <div className="sales-history__table-wrapper">
-              <table className="sales-history__table" role="grid">
+            <ScrollRegion
+              className="sales-history__table-wrapper"
+              label={he ? "היסטוריית מכירות" : "Sales history table"}
+            >
+              <table className="sales-history__table">
                 <caption className="sr-only">
                   {he ? "טבלת היסטוריית מכירות" : "Sales history table"}
                 </caption>
@@ -504,7 +509,7 @@ export function SalesHistory({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
 
             {/* Mobile Card View */}
             <div className="sales-history__card-list" role="list">
