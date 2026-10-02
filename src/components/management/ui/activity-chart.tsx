@@ -1,6 +1,10 @@
 import styles from "./activity-chart.module.css";
 
-type Series = { label: string; values: number[]; tone: "gold" | "teal" };
+type Series = {
+  label: string;
+  values: number[];
+  tone: "gold" | "teal" | "cyan" | "violet";
+};
 
 /** Daily aggregates: retain exact values in a keyboard-accessible data table. */
 export function ActivityChart({
@@ -9,12 +13,14 @@ export function ActivityChart({
   locale,
   unit,
   note,
+  kind = "bar",
 }: {
   days: string[];
   series: Series[];
   locale: "en" | "he";
   unit: string;
   note: string;
+  kind?: "bar" | "line";
 }) {
   const he = locale === "he";
   const number = new Intl.NumberFormat(he ? "he-IL" : "en-IL", {
@@ -83,12 +89,42 @@ export function ActivityChart({
               </g>
             );
           })}
+          {kind === "line"
+            ? series.map((item) => (
+                <polyline
+                  key={item.label}
+                  fill="none"
+                  strokeWidth="2.5"
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  className={`${styles[item.tone]} ${styles.line}`}
+                  points={days
+                    .map(
+                      (_, index) =>
+                        `${76 + index * slot + slot / 2},${y(item.values[index] ?? 0)}`,
+                    )
+                    .join(" ")}
+                />
+              ))
+            : null}
           {days.map((day, index) => (
             <g key={day}>
               {series.map((item, seriesIndex) => {
                 const value = item.values[index] ?? 0;
                 const barWidth = Math.min(24, slot / (series.length + 1));
-                return (
+                return kind === "line" ? (
+                  <circle
+                    key={item.label}
+                    cx={76 + index * slot + slot / 2}
+                    cy={y(value)}
+                    r="4"
+                    className={styles[item.tone]}
+                  >
+                    <title>
+                      {date(day)} · {item.label}: {number.format(value)}
+                    </title>
+                  </circle>
+                ) : (
                   <rect
                     key={item.label}
                     x={

@@ -2,6 +2,8 @@ import { requireRole } from "@/lib/auth";
 import { getDirection, isLocale, type Locale } from "@/lib/i18n";
 import { ManagementShell } from "@/components/management/shell/management-shell";
 import "@/styles/management.css";
+import "@/styles/console.css";
+import "@/styles/business-console.css";
 
 /**
  * Management console layout. Resolves the actor role/status on the server

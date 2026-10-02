@@ -21,6 +21,7 @@ const listQuerySchema = z.object({
     .enum(["all", ...REQUEST_STATUSES])
     .optional()
     .default("all"),
+  stale: z.enum(["true", "false"]).optional(),
   assigned: z
     .union([z.enum(["any", "unassigned"]), z.string().uuid()])
     .optional()
@@ -143,6 +144,7 @@ export async function GET(request: Request) {
 
   const {
     status,
+    stale,
     assigned,
     source,
     productId,
@@ -172,6 +174,13 @@ export async function GET(request: Request) {
     .order("created_at", { ascending: false });
 
   if (status !== "all") query = query.eq("status", status);
+  if (stale === "true")
+    query = query
+      .eq("status", "new")
+      .lte(
+        "created_at",
+        new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
+      );
   if (assigned === "unassigned") query = query.is("assigned_to", null);
   else if (assigned !== "any") query = query.eq("assigned_to", assigned);
   if (source) query = query.eq("source", source);

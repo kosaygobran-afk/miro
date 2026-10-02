@@ -15,7 +15,14 @@ import {
   SunMoon,
   X,
 } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { createPortal } from "react-dom";
 import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
 import { Brand } from "@/components/layout/brand";
 import { AccountMenu } from "@/components/layout/account-menu";
@@ -88,6 +95,7 @@ export function HeaderClient({
   const productsButton = useRef<HTMLButtonElement>(null);
   const productsMenu = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
+  const mobileNavigationRef = useRef<HTMLDivElement>(null);
   const themeMode = useSyncExternalStore(
     subscribeTheme,
     readTheme,
@@ -120,6 +128,26 @@ export function HeaderClient({
       label: he ? "מצב בהיר" : "Light theme",
     },
   ];
+
+  // The floating panel scrolls with the document, outside the sticky header.
+  // It never creates a second scroll container or expands the header offset.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const header = headerRef.current;
+    const panel = mobileNavigationRef.current;
+    if (!header || !panel) return;
+    const place = () => {
+      panel.style.top = `${header.getBoundingClientRect().bottom + window.scrollY}px`;
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(header);
+    window.addEventListener("resize", place);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", place);
+    };
+  }, [open]);
 
   // Measure header height for sticky coordination
   useEffect(() => {
@@ -155,6 +183,8 @@ export function HeaderClient({
     if (!open && !productsOpen) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
+      // Escape dismisses the top account popup before its parent navigation.
+      if (document.querySelector(".premium-account-dropdown")) return;
       if (productsOpen) {
         setProductsOpen(false);
         productsButton.current?.focus();
@@ -400,57 +430,60 @@ export function HeaderClient({
             </button>
           </div>
         </div>
-        {open && (
-          <div
-            id="mobile-navigation"
-            className="premium-mobile-navigation"
-            suppressHydrationWarning
-          >
-            <div className="miro-container">
-              {searchForm("premium-mobile-search")}
-              <nav aria-label={labels.navLabel}>{navLinksView(true)}</nav>
-              <div className="premium-mobile-shortcuts">
+        {open &&
+          createPortal(
+            <div
+              id="mobile-navigation"
+              ref={mobileNavigationRef}
+              className="premium-mobile-navigation"
+              suppressHydrationWarning
+            >
+              <div className="miro-container">
+                {searchForm("premium-mobile-search")}
+                <nav aria-label={labels.navLabel}>{navLinksView(true)}</nav>
+                <div className="premium-mobile-shortcuts">
+                  <Link
+                    href={withLocale(locale, "services/home")}
+                    onClick={closeNavigation}
+                  >
+                    {labels.nav.homeServices}
+                    <Arrow size={16} aria-hidden="true" />
+                  </Link>
+                  <Link
+                    href={withLocale(locale, "services/business")}
+                    onClick={closeNavigation}
+                  >
+                    {labels.nav.business}
+                    <Arrow size={16} aria-hidden="true" />
+                  </Link>
+                  <AccountMenu
+                    locale={locale}
+                    labels={{
+                      account: labels.actions.account,
+                      logout: labels.actions.logout,
+                      switchToStorefront: labels.actions.switchToStorefront,
+                      manageAccount: labels.actions.manageAccount,
+                      workerArea: labels.actions.workerArea,
+                      adminConsole: labels.actions.adminConsole,
+                      myAccount: labels.actions.myAccount,
+                      userMenu: labels.actions.userMenu,
+                      roleBadge: labels.actions.roleBadge,
+                    }}
+                    onNavigate={closeNavigation}
+                  />
+                </div>
                 <Link
-                  href={withLocale(locale, "services/home")}
+                  href={withLocale(locale, "contact")}
+                  className="miro-button miro-button-primary"
                   onClick={closeNavigation}
                 >
-                  {labels.nav.homeServices}
-                  <Arrow size={16} aria-hidden="true" />
+                  {labels.actions.requestQuote}
+                  <Check size={16} aria-hidden="true" />
                 </Link>
-                <Link
-                  href={withLocale(locale, "services/business")}
-                  onClick={closeNavigation}
-                >
-                  {labels.nav.business}
-                  <Arrow size={16} aria-hidden="true" />
-                </Link>
-                <AccountMenu
-                  locale={locale}
-                  labels={{
-                    account: labels.actions.account,
-                    logout: labels.actions.logout,
-                    switchToStorefront: labels.actions.switchToStorefront,
-                    manageAccount: labels.actions.manageAccount,
-                    workerArea: labels.actions.workerArea,
-                    adminConsole: labels.actions.adminConsole,
-                    myAccount: labels.actions.myAccount,
-                    userMenu: labels.actions.userMenu,
-                    roleBadge: labels.actions.roleBadge,
-                  }}
-                  onNavigate={closeNavigation}
-                />
               </div>
-              <Link
-                href={withLocale(locale, "contact")}
-                className="miro-button miro-button-primary"
-                onClick={closeNavigation}
-              >
-                {labels.actions.requestQuote}
-                <Check size={16} aria-hidden="true" />
-              </Link>
-            </div>
-          </div>
-        )}
+            </div>,
+            document.body,
+          )}
       </header>
     </>
   );

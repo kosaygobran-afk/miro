@@ -1,6 +1,6 @@
 {
   "name": "miro-website",
-  "version": "0.0.7",
+  "version": "0.1.0",
   "private": true,
   "packageManager": "npm@11.18.0",
   "scripts": {

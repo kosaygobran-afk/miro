@@ -611,7 +611,15 @@ export function ProductEditor({
   const BackArrow = he ? ArrowRight : ArrowLeft;
 
   return (
-    <div>
+    <div className="mgmt-page-stack">
+      <PageHeader
+        title={he ? initialForm.name_he : initialForm.name_en}
+        subtitle={
+          he
+            ? "פרטי המוצר, מדיה, וריאנטים ומחירים — מחוברים לקטלוג ולחנות."
+            : "Product details, media, variants and pricing — connected to your catalog and store."
+        }
+      />
       <div ref={setStickyBarRef} className={styles.stickyBar}>
         <button
           type="button"
@@ -623,6 +631,8 @@ export function ProductEditor({
           <span>{editorCopy.back[locale]}</span>
         </button>
         <PageHeader
+          variant="plain"
+          headingLevel={2}
           title={
             <span dir="auto">
               {he ? initialForm.name_he : initialForm.name_en}

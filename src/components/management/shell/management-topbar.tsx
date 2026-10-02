@@ -3,7 +3,7 @@
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, Moon, Sun, SunMoon, Store } from "lucide-react";
+import { Menu, Moon, Sun, SunMoon, Store, Pause, Play } from "lucide-react";
 import { roleLabel, type AppRole } from "@/lib/roles";
 import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
 import {
@@ -13,7 +13,9 @@ import {
   mgmtNavSectionLabel,
   mgmtShellCopy,
 } from "./nav-config";
+import { IconAction } from "../ui/icon-action";
 import { AccountMenu } from "./account-menu";
+import { WorkspaceTools } from "./workspace-tools";
 
 type ThemeMode = "dark" | "medium" | "light";
 
@@ -32,6 +34,14 @@ function readTheme(): ThemeMode {
   return theme === "light" || theme === "medium" ? theme : "dark";
 }
 const serverTheme = (): ThemeMode => "dark";
+
+function subscribeTextMotion(callback: () => void) {
+  window.addEventListener("miro-text-motion", callback);
+  return () => window.removeEventListener("miro-text-motion", callback);
+}
+function readTextMotion() {
+  return document.documentElement.dataset.textMotion === "paused";
+}
 
 export type ManagementTopbarProps = {
   locale: Locale;
@@ -66,6 +76,11 @@ export function ManagementTopbar({
   const restricted = item.ceoOnly && role !== "ceo";
 
   const he = locale === "he";
+  const textPaused = useSyncExternalStore(
+    subscribeTextMotion,
+    readTextMotion,
+    () => false,
+  );
   const themeMode = useSyncExternalStore(
     subscribeTheme,
     readTheme,
@@ -145,7 +160,9 @@ export function ManagementTopbar({
         <div className="mgmt-topbar__text">
           <nav
             className="mgmt-topbar__breadcrumb"
-            aria-label={locale === "he" ? "פירורי לחם" : "Breadcrumb"}
+            aria-label={
+              locale === "he" ? "נתיב סביבת העבודה" : "Workspace breadcrumb"
+            }
           >
             <ol className="mgmt-topbar__breadcrumb-list">
               <li className="mgmt-topbar__breadcrumb-item">
@@ -194,11 +211,13 @@ export function ManagementTopbar({
         </div>
       </div>
       <div className="mgmt-topbar__end">
+        <WorkspaceTools locale={locale} role={role} />
         <Link
-          href={withLocale(locale)}
+          href={withLocale(locale, "store")}
           className="mgmt-topbar__storefront-link"
+          aria-label={mgmtShellCopy.storefrontLink[locale]}
         >
-          <Store size={16} aria-hidden="true" />
+          <Store size={18} aria-hidden="true" />
           <span className="mgmt-topbar__storefront-text">
             {mgmtShellCopy.storefrontLink[locale]}
           </span>
@@ -216,7 +235,7 @@ export function ManagementTopbar({
             aria-pressed={themeMode === "dark"}
             onClick={() => chooseTheme("dark")}
           >
-            <Moon size={16} aria-hidden="true" />
+            <Moon size={18} aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -226,7 +245,7 @@ export function ManagementTopbar({
             aria-pressed={themeMode === "medium"}
             onClick={() => chooseTheme("medium")}
           >
-            <SunMoon size={16} aria-hidden="true" />
+            <SunMoon size={18} aria-hidden="true" />
           </button>
           <button
             type="button"
@@ -236,9 +255,33 @@ export function ManagementTopbar({
             aria-pressed={themeMode === "light"}
             onClick={() => chooseTheme("light")}
           >
-            <Sun size={16} aria-hidden="true" />
+            <Sun size={18} aria-hidden="true" />
           </button>
         </div>
+        <IconAction
+          label={
+            textPaused
+              ? he
+                ? "הפעלת תנועת טקסט"
+                : "Resume scrolling text"
+              : he
+                ? "עצירת תנועת טקסט"
+                : "Pause scrolling text"
+          }
+          aria-pressed={textPaused}
+          onClick={() => {
+            document.documentElement.dataset.textMotion = textPaused
+              ? "running"
+              : "paused";
+            window.dispatchEvent(new Event("miro-text-motion"));
+          }}
+        >
+          {textPaused ? (
+            <Play size={18} aria-hidden="true" />
+          ) : (
+            <Pause size={18} aria-hidden="true" />
+          )}
+        </IconAction>
         <button
           type="button"
           className="mgmt-topbar__lang-btn"

@@ -1,4 +1,5 @@
 import { requireRole } from "@/lib/auth";
+import { israelDayStart } from "@/lib/management-audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isLocale, type Locale } from "@/lib/i18n";
 import {
@@ -53,16 +54,14 @@ export default async function AdminOverviewPage({
 
   // All dashboard dates are computed here server-side so the render stays pure.
   const now = new Date();
-  const startOfToday = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
-  ).toISOString();
-  const startOfMonth = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    1,
-  ).toISOString();
+  const businessDay = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jerusalem",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
+  const startOfToday = israelDayStart(businessDay);
+  const startOfMonth = israelDayStart(`${businessDay.slice(0, 7)}-01`);
   const staleBefore = new Date(
     now.getTime() - STALE_ENQUIRY_AGE_MS,
   ).toISOString();

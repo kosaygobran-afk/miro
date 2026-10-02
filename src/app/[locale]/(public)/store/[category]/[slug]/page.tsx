@@ -257,14 +257,25 @@ export default async function ProductDetailPage({
                   )}
                 </>
               }
-              stockBadge={getStockBadge(
-                product.stockState,
-                product.stockQty,
-                product.outOfStockPolicy,
-                product.expectedRestockDate,
-                copy,
-                locale,
-              )}
+              availabilityUnconfirmed={product.availabilityUnconfirmed}
+              stockBadge={
+                product.availabilityUnconfirmed ? (
+                  <span className="sf-availability-pending">
+                    {locale === "he"
+                      ? "זמינות לפי בירור"
+                      : "Availability on request"}
+                  </span>
+                ) : (
+                  getStockBadge(
+                    product.stockState,
+                    product.stockQty,
+                    product.outOfStockPolicy,
+                    product.expectedRestockDate,
+                    copy,
+                    locale,
+                  )
+                )
+              }
               stockQty={product.stockQty}
               description={
                 product.shortDescription ? (

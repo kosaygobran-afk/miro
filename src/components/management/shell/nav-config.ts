@@ -7,6 +7,7 @@ import {
   Landmark,
   LayoutDashboard,
   Package,
+  Palette,
   ScrollText,
   Settings,
   ShieldCheck,
@@ -36,7 +37,8 @@ export type MgmtNavItemKey =
   | "users"
   | "audit"
   | "settings"
-  | "storefrontMerchandising";
+  | "storefrontMerchandising"
+  | "storeDesign";
 
 export type MgmtNavItem = {
   key: MgmtNavItemKey;
@@ -125,6 +127,13 @@ export const mgmtNavSections: MgmtNavSection[] = [
         section: "commerce",
         icon: Users,
         ceoOnly: false,
+      },
+      {
+        key: "storeDesign",
+        href: "/admin/store-design",
+        section: "commerce",
+        icon: Palette,
+        ceoOnly: true,
       },
       {
         key: "storefrontMerchandising",
@@ -223,6 +232,7 @@ const itemLabels: Record<MgmtNavItemKey, LocalizedText> = {
   users: { he: "משתמשים", en: "Users" },
   audit: { he: "יומן פעולות", en: "Audit" },
   settings: { he: "הגדרות", en: "Settings" },
+  storeDesign: { he: "עיצוב החנות", en: "Store design" },
   storefrontMerchandising: { he: "מוצרים בבר הזז", en: "Moving product rail" },
 };
 
@@ -282,6 +292,10 @@ const itemSubtitles: Record<MgmtNavItemKey, LocalizedText> = {
   settings: {
     he: "הגדרות סביבת העבודה והעסק.",
     en: "Workspace and business settings.",
+  },
+  storeDesign: {
+    he: "רקעים, סמלי חברות ותנועת החנות.",
+    en: "Backgrounds, company logos and store motion.",
   },
   storefrontMerchandising: {
     he: "בחירת המוצרים שיופיעו בפס המוצרים הזז בחנות, סדר ההצגה, מבצעים ומדבקות.",

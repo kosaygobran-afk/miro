@@ -14,6 +14,13 @@ async function waitForAnimations(page: import("@playwright/test").Page) {
     await Promise.all(
       document
         .getAnimations()
+        // Company/product/text rails intentionally loop forever. Wait for
+        // finite entrance transitions, not an infinite animation's promise.
+        .filter(
+          (animation) =>
+            animation.playState !== "paused" &&
+            Number.isFinite(animation.effect?.getComputedTiming().endTime),
+        )
         .map((animation) => animation.finished.catch(() => undefined)),
     );
   });

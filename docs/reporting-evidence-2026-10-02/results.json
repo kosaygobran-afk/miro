@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-02",
+  "checks": [
+    "real admin login without permission bypass",
+    "live requests protected API/database contract",
+    "live finance protected API/database contract",
+    "live analytics protected API/database contract",
+    "live suppliers protected API/database contract",
+    "anonymous report/request APIs denied",
+    "en/dark/1440: layout, drawers, Escape/focus restoration",
+    "en/dark/390: layout, drawers, Escape/focus restoration",
+    "en/medium/1440: layout, drawers, Escape/focus restoration",
+    "en/medium/390: layout, drawers, Escape/focus restoration",
+    "en/light/1440: layout, drawers, Escape/focus restoration",
+    "en/light/390: layout, drawers, Escape/focus restoration",
+    "he/dark/1440: layout, drawers, Escape/focus restoration",
+    "he/dark/390: layout, drawers, Escape/focus restoration",
+    "he/medium/1440: layout, drawers, Escape/focus restoration",
+    "he/medium/390: layout, drawers, Escape/focus restoration",
+    "he/light/1440: layout, drawers, Escape/focus restoration",
+    "he/light/390: layout, drawers, Escape/focus restoration",
+    "Finance All, order charts, bars and daily ledger",
+    "Finance failed refresh preserves figures; range/refresh race settles",
+    "Analytics All, actual product_search metric, product editor/store detail routes",
+    "Request board opens details; failed assignment cannot leak into later status patch",
+    "clipped display rails animate; reduced motion stops them; typed text is static",
+    "supplier company cell/header centered",
+    "axe: all three reporting pages in all three themes",
+    "no browser runtime errors"
+  ],
+  "liveFailures": [],
+  "fixtureNote": "Populated reporting interactions use browser-only synthetic API responses; protected route/auth and initial database contract checks use the live configured database."
+}

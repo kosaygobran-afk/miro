@@ -692,6 +692,16 @@ export function SettingsPanel({
         }
       />
 
+      <nav
+        className="mgmt-settings-index mgmt-section-switcher"
+        aria-label={he ? "חלקי הגדרות" : "Settings sections"}
+      >
+        <a href="#settings-tax">{he ? "שיעורי מס" : "Tax rates"}</a>
+        <a href="#settings-inventory">{he ? "מלאי" : "Inventory"}</a>
+        <a href="#settings-finance">{he ? "כספים" : "Finance"}</a>
+        <a href="#settings-contact">{he ? "פרטי קשר" : "Contact details"}</a>
+      </nav>
+
       {globalNotice && (
         <Notice
           tone={globalNotice.type === "success" ? "success" : "danger"}
@@ -712,15 +722,9 @@ export function SettingsPanel({
 
       {/* Tax Section */}
       <FormSection
-        title={
-          <>
-            <DollarSign
-              className="h-5 w-5 text-primary me-2"
-              aria-hidden="true"
-            />
-            {he ? "שיעורי מס" : "Tax Rates"}
-          </>
-        }
+        sectionId="settings-tax"
+        icon={<DollarSign size={19} aria-hidden="true" />}
+        title={he ? "שיעורי מס" : "Tax Rates"}
         description={
           he
             ? "ניהול שיעורי מע״מ פעילים, מתוזמנים והיסטוריים"
@@ -740,7 +744,7 @@ export function SettingsPanel({
         }
       >
         {/* Current Active Rate - Prominent Display */}
-        <div className="mgmt-form-section__body">
+        <div className="settings-section-content">
           {taxLoading && (
             <ErrorState
               title={he ? "טוען שיעורי מס…" : "Loading tax rates…"}
@@ -1044,19 +1048,16 @@ export function SettingsPanel({
 
       {/* Business Settings Section - Inventory Defaults */}
       <FormSection
-        title={
-          <>
-            <Package className="h-5 w-5 text-primary me-2" aria-hidden="true" />
-            {he ? "ברירות מחדל למלאי" : "Inventory Defaults"}
-          </>
-        }
+        sectionId="settings-inventory"
+        icon={<Package size={19} aria-hidden="true" />}
+        title={he ? "ברירות מחדל למלאי" : "Inventory Defaults"}
         description={
           he
             ? "הגדרות סף מלאי נמוך ומדיניות חוסר במלאי"
             : "Configure low stock threshold and out of stock policy"
         }
       >
-        <div className="mgmt-form-section__body">
+        <div className="settings-section-content">
           {inventoryState.loading && (
             <div className="mgmt-section-loading" role="status">
               <Loader2 size={18} className="animate-spin" aria-hidden="true" />
@@ -1168,22 +1169,16 @@ export function SettingsPanel({
 
       {/* Business Settings Section - Finance Settings */}
       <FormSection
-        title={
-          <>
-            <DollarSign
-              className="h-5 w-5 text-primary me-2"
-              aria-hidden="true"
-            />
-            {he ? "הגדרות פיננסיות" : "Finance Settings"}
-          </>
-        }
+        sectionId="settings-finance"
+        icon={<DollarSign size={19} aria-hidden="true" />}
+        title={he ? "הגדרות פיננסיות" : "Finance Settings"}
         description={
           he
             ? "מטבע ברירת מחדל ותצוגת מחירים (לצורכי תצוגה בלבד)"
             : "Default currency and price display (display purposes only)"
         }
       >
-        <div className="mgmt-form-section__body">
+        <div className="settings-section-content">
           {financeState.loading && (
             <div className="mgmt-section-loading" role="status">
               <Loader2 size={18} className="animate-spin" aria-hidden="true" />
@@ -1296,22 +1291,16 @@ export function SettingsPanel({
 
       {/* Public Contact Settings Section */}
       <FormSection
-        title={
-          <>
-            <Building2
-              className="h-5 w-5 text-primary me-2"
-              aria-hidden="true"
-            />
-            {he ? "פרטי קשר ציבוריים" : "Public Contact Info"}
-          </>
-        }
+        sectionId="settings-contact"
+        icon={<Building2 size={19} aria-hidden="true" />}
+        title={he ? "פרטי קשר ציבוריים" : "Public Contact Info"}
         description={
           he
             ? "פרטים שיוצגו באתר החנות ובחשבוניות"
             : "Details shown on the storefront and invoices"
         }
       >
-        <div className="mgmt-form-section__body">
+        <div className="settings-section-content">
           {publicContactState.loading && (
             <div className="mgmt-section-loading" role="status">
               <Loader2 size={18} className="animate-spin" aria-hidden="true" />

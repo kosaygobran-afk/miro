@@ -6,7 +6,9 @@ export type ProductVisualKind =
   | "router"
   | "switch"
   | "cable"
-  | "lock";
+  | "lock"
+  | "server"
+  | "power";
 
 export function getProductVisualKind(product: {
   id: string;
@@ -16,6 +18,8 @@ export function getProductVisualKind(product: {
 }): ProductVisualKind {
   const text =
     `${product.id} ${product.name} ${product.category} ${product.icon ?? ""}`.toLowerCase();
+  if (/nvr|server|recorder|cloudkey|הקלטה/.test(text)) return "server";
+  if (/adapter|poe-af|poe-at|poe-plus|מתאם|power/.test(text)) return "power";
   if (/doorbell|intercom|אינטרקום|פעמון/.test(text)) return "intercom";
   if (/lock|מנעול|key/.test(text)) return "lock";
   if (/alarm|siren|אזעקה|sensor|גלאי/.test(text)) return "alarm";

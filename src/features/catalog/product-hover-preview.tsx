@@ -10,6 +10,9 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import { ProductMedia } from "./product-media";
+import { AddToCartButton } from "@/features/cart/add-to-cart-button";
+import { useStoreDesign } from "@/features/store-design/design-context";
 import Link from "next/link";
 import { ArrowUpRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
@@ -28,6 +31,7 @@ interface ProductHoverPreviewProps {
   isOpen: boolean;
   onClose: () => void;
   onKeepOpen?: () => void;
+  onVisibilityChange?: (visible: boolean) => void;
   triggerRef: React.RefObject<HTMLElement | null>;
   focusOnOpen?: boolean;
   returnFocusRef?: React.RefObject<HTMLElement | null>;
@@ -35,7 +39,6 @@ interface ProductHoverPreviewProps {
 
 type PreviewPhase = "closed" | "open" | "closing";
 
-const HOVER_INTENT_MS = 1000;
 const CLOSE_GRACE_MS = 220;
 const EXIT_MS = 140;
 const emptySubscribe = () => () => {};
@@ -64,11 +67,15 @@ export function ProductHoverPreview({
   isOpen,
   onClose,
   onKeepOpen,
+  onVisibilityChange,
   triggerRef,
   focusOnOpen = false,
   returnFocusRef,
 }: ProductHoverPreviewProps) {
   const copy = storeCopy[locale] as StoreCopy;
+  const { products: motion } = useStoreDesign();
+  const PreviousArrow = locale === "he" ? ChevronRight : ChevronLeft;
+  const NextArrow = locale === "he" ? ChevronLeft : ChevronRight;
   const titleId = useId();
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
@@ -107,6 +114,11 @@ export function ProductHoverPreview({
     ? formatPrice(compareAtPrice, locale, copy.priceUnpublished)
     : null;
 
+  useEffect(() => {
+    onVisibilityChange?.(phase !== "closed");
+    return () => onVisibilityChange?.(false);
+  }, [phase, onVisibilityChange]);
+
   const updatePhase = useCallback((next: PreviewPhase) => {
     phaseRef.current = next;
     setPhase(next);
@@ -128,7 +140,7 @@ export function ProductHoverPreview({
 
     const triggerRect = trigger.getBoundingClientRect();
     const preview = previewRef.current;
-    const gutter = 32;
+    const gutter = 16;
     const width =
       preview?.offsetWidth ?? Math.min(420, window.innerWidth - gutter * 2);
     const height =
@@ -224,7 +236,7 @@ export function ProductHoverPreview({
           updatePhase("open");
           openTimerRef.current = null;
         },
-        hasFinePointer && !focusOnOpen ? HOVER_INTENT_MS : 0,
+        hasFinePointer && !focusOnOpen ? motion.hoverDelayMs : 0,
       );
     } else if (phaseRef.current !== "closed") {
       graceTimerRef.current = window.setTimeout(
@@ -243,6 +255,7 @@ export function ProductHoverPreview({
     clearTimer,
     focusOnOpen,
     hasFinePointer,
+    motion.hoverDelayMs,
     isOpen,
     keepOpen,
     updatePhase,
@@ -343,41 +356,29 @@ export function ProductHoverPreview({
                   aria-label={`${copy.thumbnailLabel} ${index + 1}`}
                   aria-current={index === activeImageIndex ? "true" : undefined}
                 >
-                  <Image src={image.url} alt="" fill sizes="52px" />
+                  <Image
+                    src={image.url}
+                    alt=""
+                    fill
+                    sizes="52px"
+                    unoptimized={image.url.endsWith(".svg")}
+                  />
                 </button>
               ))}
             </div>
           ) : null}
           <div className="sf-hover-preview-media">
-            {allImages.length > 0 ? (
-              <Image
-                key={allImages[activeImageIndex].id}
-                src={allImages[activeImageIndex].url}
-                alt={
-                  locale === "he"
-                    ? (allImages[activeImageIndex].altHe ?? product.name)
-                    : (allImages[activeImageIndex].altEn ?? product.name)
-                }
-                fill
-                sizes="(max-width: 720px) calc(100vw - 5rem), 360px"
-                className="sf-hover-preview-image"
-              />
-            ) : (
-              <div className="sf-hover-preview-placeholder" aria-hidden="true">
-                <svg
-                  width="72"
-                  height="72"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1"
-                >
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <circle cx="8.5" cy="8.5" r="1.5" />
-                  <path d="M21 15l-5-5L5 17" />
-                </svg>
-              </div>
-            )}
+            <ProductMedia
+              product={product}
+              src={allImages[activeImageIndex]?.url}
+              alt={
+                locale === "he"
+                  ? (allImages[activeImageIndex]?.altHe ?? product.name)
+                  : (allImages[activeImageIndex]?.altEn ?? product.name)
+              }
+              sizes="(max-width: 720px) calc(100vw - 5rem), 360px"
+              className="sf-hover-preview-image"
+            />
             {allImages.length > 1 ? (
               <>
                 <button
@@ -388,7 +389,7 @@ export function ProductHoverPreview({
                     locale === "he" ? "התמונה הקודמת" : "Previous image"
                   }
                 >
-                  <ChevronLeft size={20} aria-hidden="true" />
+                  <PreviousArrow size={20} aria-hidden="true" />
                 </button>
                 <button
                   type="button"
@@ -396,11 +397,15 @@ export function ProductHoverPreview({
                   onClick={showNextImage}
                   aria-label={locale === "he" ? "התמונה הבאה" : "Next image"}
                 >
-                  <ChevronRight size={20} aria-hidden="true" />
+                  <NextArrow size={20} aria-hidden="true" />
                 </button>
               </>
             ) : null}
-            <span className="sf-hover-preview-count" aria-live="polite">
+            <span
+              className="sf-hover-preview-count"
+              dir="ltr"
+              aria-live="polite"
+            >
               {activeImageIndex + 1}/{Math.max(allImages.length, 1)}
             </span>
           </div>
@@ -430,7 +435,11 @@ export function ProductHoverPreview({
                 </small>
               )}
             </div>
-            <StockIndicator quantity={product.stockQty} locale={locale} />
+            <StockIndicator
+              quantity={product.stockQty}
+              locale={locale}
+              unconfirmed={product.availabilityUnconfirmed}
+            />
             {discountPercent !== null && formattedCompareAtPrice ? (
               <>
                 <span className="sf-hover-preview-compare-at" dir="auto">
@@ -465,7 +474,47 @@ export function ProductHoverPreview({
             </div>
           ) : null}
 
+          {product.images[0]?.url.match(
+            /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
+          ) ? (
+            <p className="sf-hover-preview-illustration">{copy.illustration}</p>
+          ) : null}
+          <p className="sf-hover-preview-description" dir="auto">
+            {product.shortDescription || product.description}
+          </p>
+          {Object.keys(product.specifications ?? {}).length ? (
+            <dl className="sf-hover-preview-specs">
+              {Object.entries(product.specifications ?? {})
+                .slice(0, 3)
+                .map(([key, value]) => (
+                  <div key={key}>
+                    <dt dir="auto">{key}</dt>
+                    <dd dir="auto">{value}</dd>
+                  </div>
+                ))}
+            </dl>
+          ) : null}
           <div className="sf-hover-preview-footer">
+            {effectivePrice !== null && product.stockState !== "out" ? (
+              <AddToCartButton
+                compact
+                locale={locale}
+                item={{
+                  productId: product.id,
+                  variantId:
+                    (
+                      product.variants.find(
+                        (v) => v.isDefault && v.stockQty > 0,
+                      ) ?? product.variants.find((v) => v.stockQty > 0)
+                    )?.id ?? null,
+                  slug: product.slug,
+                  category: product.category,
+                  name: product.name,
+                  imageUrl: allImages[0]?.url ?? null,
+                  unitPrice: effectivePrice,
+                }}
+              />
+            ) : null}
             <Link
               href={`/${locale}/store/${product.category}/${product.slug}`}
               className="sf-hover-preview-link"

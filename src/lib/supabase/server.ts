@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabaseFetch } from "./fetch";
 
 function getPublicSupabaseKey() {
   const key =
@@ -21,6 +22,7 @@ export async function createServerSupabaseClient(): Promise<SupabaseClient> {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     getPublicSupabaseKey(),
     {
+      global: { fetch: supabaseFetch },
       cookies: {
         getAll() {
           return cookieStore.getAll();

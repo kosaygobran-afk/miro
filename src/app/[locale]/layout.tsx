@@ -6,6 +6,9 @@ import "../globals.css";
 import "@/styles/premium.css";
 import "@/styles/experience.css";
 import "@/styles/storefront.css";
+import "@/styles/customer-refinement.css";
+import { getPublicStorefrontDesign } from "@/lib/storefront-design-server";
+import { StoreDesignProvider } from "@/features/store-design/design-context";
 import { Footer } from "@/components/layout/footer";
 import { Header } from "@/components/layout/header";
 import { RecoveryRedirect } from "@/components/auth/recovery-redirect";
@@ -71,6 +74,7 @@ export default async function LocaleLayout({
   }
 
   const locale: Locale = rawLocale;
+  const storeDesign = await getPublicStorefrontDesign();
   return (
     <html
       lang={locale}
@@ -81,22 +85,24 @@ export default async function LocaleLayout({
     >
       <body>
         <ThemeBootstrap />
-        <CartProvider>
-          <RecoveryRedirect locale={locale} />
-          <a className="premium-skip-link" href="#main-content">
-            {locale === "he" ? "דילוג לתוכן הראשי" : "Skip to main content"}
-          </a>
-          <SiteChrome>
-            <Header locale={locale} />
-          </SiteChrome>
-          <main id="main-content" tabIndex={-1} className="miro-main">
-            {children}
-          </main>
-          <SiteChrome>
-            <Footer locale={locale} />
-          </SiteChrome>
-          {process.env.VERCEL ? <SpeedInsights /> : null}
-        </CartProvider>
+        <StoreDesignProvider design={storeDesign}>
+          <CartProvider>
+            <RecoveryRedirect locale={locale} />
+            <a className="premium-skip-link" href="#main-content">
+              {locale === "he" ? "דילוג לתוכן הראשי" : "Skip to main content"}
+            </a>
+            <SiteChrome>
+              <Header locale={locale} />
+            </SiteChrome>
+            <main id="main-content" tabIndex={-1} className="miro-main">
+              {children}
+            </main>
+            <SiteChrome>
+              <Footer locale={locale} />
+            </SiteChrome>
+            {process.env.VERCEL ? <SpeedInsights /> : null}
+          </CartProvider>
+        </StoreDesignProvider>
       </body>
     </html>
   );

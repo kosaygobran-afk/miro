@@ -512,6 +512,111 @@ export function ProductVisual({
           <circle cx="158" cy="188" r="7" fill="#0b1218" stroke="#778994" />
         </g>
       )}
+      {kind === "server" && (
+        <g>
+          <path
+            d="M56 97 103 58h167l-30 39Z"
+            fill={paint("edge")}
+            stroke="#76848e"
+          />
+          <rect
+            x="48"
+            y="97"
+            width="199"
+            height="76"
+            rx="9"
+            fill={paint("dark")}
+            stroke="#8c999f"
+            strokeWidth="2"
+          />
+          {[0, 1, 2, 3].map((n) => (
+            <g key={n}>
+              <rect
+                x={62 + n * 43}
+                y="113"
+                width="36"
+                height="42"
+                rx="4"
+                fill="#111820"
+                stroke="#75858f"
+              />
+              <path
+                d={`M${68 + n * 43} 121h24m-24 8h24m-24 8h24`}
+                stroke="#576873"
+                strokeWidth="2"
+              />
+              <circle cx={86 + n * 43} cy="149" r="2" fill="#e4bd53" />
+            </g>
+          ))}
+          <path
+            d="m247 102 22-31v68l-22 30Z"
+            fill={paint("edge")}
+            stroke="#697a85"
+          />
+          <circle cx="231" cy="165" r="2" fill="#ffdc6c" />
+          <path
+            d="M60 174v8h12v-8m149 0v8h12v-8"
+            stroke="#4e5c65"
+            strokeWidth="4"
+          />
+        </g>
+      )}
+      {kind === "power" && (
+        <g>
+          <path
+            d="M99 87 133 62h110l-33 25Z"
+            fill={paint("edge")}
+            stroke="#687b86"
+          />
+          <rect
+            x="95"
+            y="85"
+            width="122"
+            height="79"
+            rx="12"
+            fill={paint("dark")}
+            stroke="#83939c"
+            strokeWidth="2"
+          />
+          <rect
+            x="109"
+            y="117"
+            width="29"
+            height="21"
+            rx="3"
+            fill="#071017"
+            stroke="#7b8e98"
+          />
+          <rect
+            x="171"
+            y="117"
+            width="29"
+            height="21"
+            rx="3"
+            fill="#071017"
+            stroke="#7b8e98"
+          />
+          {[0, 1, 2, 3].map((n) => (
+            <path
+              key={n}
+              d={`M${115 + n * 5} 122v8m62-8v8`}
+              stroke="#dbbd68"
+              strokeWidth="2"
+            />
+          ))}
+          <circle cx="156" cy="107" r="3" fill="#ecd067" />
+          <path
+            d="M95 121H76c-24 0-33 12-33 35s17 32 38 32h24"
+            stroke="#647b88"
+            strokeWidth="8"
+          />
+          <path
+            d="M216 99l30-24v72l-30 17Z"
+            fill={paint("edge")}
+            stroke="#637884"
+          />
+        </g>
+      )}
     </svg>
   );
 }

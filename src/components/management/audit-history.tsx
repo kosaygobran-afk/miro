@@ -1,12 +1,31 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, SearchCheck, ScrollText, Eye, X } from "lucide-react";
+import {
+  DataTable,
+  Toolbar,
+  PageHeader,
+  DateRangePicker,
+  dateRangeLabels,
+  type DateRangeValue,
+  EmptyState,
+  ErrorState,
+  ListSkeleton,
+  IconAction,
+  Dialog,
+  OverflowText,
+  StatusBadge,
+} from "./ui";
+import { CollectionSummary } from "./ui/collection-summary";
+import { useDebouncedValue } from "./use-debounced-value";
 
 type AuditEvent = {
   id: string;
   action: string;
-  user_id: string;
+  user_id: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
   details: Record<string, unknown>;
   created_at: string;
   profiles: { full_name: string | null } | null;
@@ -14,17 +33,22 @@ type AuditEvent = {
 
 export function AuditHistory({ locale }: { locale: "he" | "en" }) {
   const he = locale === "he";
-  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
+  const [events, setEvents] = useState<AuditEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filters, setFilters] = useState({
-    action: "" as string | null,
-    limit: 50,
-    offset: 0,
+  const [search, setSearch] = useState("");
+  const [action, setAction] = useState("");
+  const [entityType, setEntityType] = useState("");
+  const [range, setRange] = useState<DateRangeValue>({
+    preset: "all",
+    from: "",
+    to: "",
   });
+  const [limit, setLimit] = useState(25);
+  const [offset, setOffset] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-  const [refreshing, setRefreshing] = useState(false);
-
+  const [selected, setSelected] = useState<AuditEvent | null>(null);
+  const debouncedSearch = useDebouncedValue(search, 400);
   const actions = [
     "product_created",
     "product_updated",
@@ -115,252 +139,401 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         request_update: "Request Updated",
       };
 
-  const loadAuditHistory = useCallback(async () => {
-    setLoading(true);
-    setError("");
-    try {
-      const queryParams = new URLSearchParams();
-      if (filters.action) queryParams.append("action", filters.action);
-      queryParams.append("limit", String(filters.limit));
-      queryParams.append("offset", String(filters.offset));
-
-      const response = await fetch(
-        `/api/management/audit?${queryParams.toString()}`,
-        { cache: "no-store" },
-      );
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to load audit history");
+  const load = useCallback(
+    async (signal?: AbortSignal) => {
+      setLoading(true);
+      setError("");
+      const params = new URLSearchParams({
+        limit: String(limit),
+        offset: String(offset),
+      });
+      if (debouncedSearch) params.set("q", debouncedSearch);
+      if (action) params.set("action", action);
+      if (entityType) params.set("entityType", entityType);
+      if (range.from) params.set("from", range.from);
+      if (range.to) params.set("to", range.to);
+      try {
+        const response = await fetch(`/api/management/audit?${params}`, {
+          cache: "no-store",
+          signal,
+        });
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(
+            he
+              ? "לא ניתן לטעון את יומן הביקורת"
+              : "Unable to load audit history",
+          );
+        if (!signal?.aborted) {
+          setEvents(data.auditEvents ?? []);
+          setTotalCount(data.totalCount ?? 0);
+        }
+      } catch (failure) {
+        if (!signal?.aborted)
+          setError(
+            failure instanceof Error
+              ? failure.message
+              : he
+                ? "שגיאת חיבור"
+                : "Connection error",
+          );
+      } finally {
+        if (!signal?.aborted) setLoading(false);
       }
-
-      const { auditEvents: events, totalCount } = await response.json();
-      setAuditEvents((prev) =>
-        filters.offset > 0 ? [...prev, ...events] : events,
-      );
-      setTotalCount(totalCount);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : he
-            ? "שגיאה בטעינה"
-            : "Load failed",
-      );
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [filters.action, filters.limit, filters.offset, he]);
-
+    },
+    [
+      debouncedSearch,
+      action,
+      entityType,
+      range.from,
+      range.to,
+      limit,
+      offset,
+      he,
+    ],
+  );
   useEffect(() => {
+    const controller = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadAuditHistory();
-  }, [loadAuditHistory]);
-
-  const handleFilterChange = (field: string, value: string | null) => {
-    setFilters((prev) => ({
-      ...prev,
-      [field]: value,
-      offset: 0, // Reset offset when filters change
-    }));
-  };
-
-  const handleRefresh = () => {
-    setRefreshing(true);
-    loadAuditHistory();
-  };
-
-  const handleLoadMore = () => {
-    setFilters((prev) => ({
-      ...prev,
-      offset: prev.limit + prev.offset,
-    }));
-  };
-
-  if (loading) {
-    return (
-      <div className="miro-card p-12 text-center">
-        <div className="flex items-center justify-center mb-4">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-        </div>
-        <p className="text-muted-foreground">
-          {he ? "מטעינה היסטוריית ביקורת..." : "Loading audit history..."}
-        </p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="miro-card border-destructive/50 bg-destructive/5 p-6">
-        <div className="flex items-center gap-3">
-          <div className="h-5 w-5 text-destructive">
-            {/* Simple alert icon */}
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-          </div>
-          <span className="text-destructive">{error}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (auditEvents.length === 0 && totalCount === 0) {
-    return (
-      <div className="miro-card p-8 text-center">
-        <p className="text-muted-foreground">
-          {he ? "אין רשומות ביקורת להצגה" : "No audit records to display"}
-        </p>
-      </div>
-    );
+    void load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
+  const formatDate = (value: string) =>
+    new Intl.DateTimeFormat(he ? "he-IL" : "en-GB", {
+      timeZone: "Asia/Jerusalem",
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  const filtered = Boolean(
+    search || action || entityType || range.preset !== "all",
+  );
+  function reset() {
+    setSearch("");
+    setAction("");
+    setEntityType("");
+    setRange({ preset: "all", from: "", to: "" });
+    setOffset(0);
   }
 
   return (
-    <div className="space-y-6">
-      <div className="miro-card p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-black">
-              {he ? "היסטוריית ביקורת" : "Audit History"}
-            </h2>
-            <p className="mt-1 text-muted-foreground">
-              {he
-                ? `הצגת ${totalCount} רשומות ביקורת`
-                : `Showing ${totalCount} audit records`}
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
-            <button
-              className="miro-button miro-button-secondary"
-              onClick={handleRefresh}
-              disabled={refreshing}
-            >
-              {refreshing ? (
-                <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4" />
-                </>
-              )}
-              <span className="ms-2">{he ? "רענן" : "Refresh"}</span>
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-6">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                {he ? "פעולה" : "Action"}
-              </label>
-              <select
-                value={filters.action ?? ""}
-                onChange={(e) =>
-                  handleFilterChange("action", e.target.value || null)
+    <section className="mgmt-audit-page mgmt-page-stack">
+      <PageHeader
+        title={he ? "יומן ביקורת" : "Audit history"}
+        subtitle={
+          he
+            ? "מעקב אחר שינויים, פעולות ניהול ורשומות מערכת"
+            : "Trace management changes, actions and system records"
+        }
+        actions={
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--ghost"
+            onClick={() => void load()}
+            disabled={loading}
+          >
+            <RefreshCw size={18} aria-hidden="true" />
+            {he ? "רענון" : "Refresh"}
+          </button>
+        }
+      />
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "רשומות תואמות" : "Matching records",
+            value: loading ? "—" : totalCount,
+          },
+          {
+            label: he ? "בעמוד הנוכחי" : "On this page",
+            value: loading ? "—" : events.length,
+          },
+          {
+            label: he ? "סוגי פעולה בעמוד" : "Action types on this page",
+            value: loading
+              ? "—"
+              : new Set(events.map((event) => event.action)).size,
+          },
+          {
+            label: he ? "סוגי רשומה בעמוד" : "Entity types on this page",
+            value: loading
+              ? "—"
+              : new Set(
+                  events.map((event) => event.entity_type).filter(Boolean),
+                ).size,
+          },
+        ]}
+      />
+      <Toolbar
+        searchValue={search}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setOffset(0);
+        }}
+        searchLabel={he ? "חיפוש ביומן הביקורת" : "Search audit history"}
+        searchPlaceholder={
+          he
+            ? "חיפוש פעולה, סוג רשומה, כתובת או מזהה רשומה…"
+            : "Search action, entity, slug or record ID…"
+        }
+      >
+        <label className="mgmt-filter-field">
+          <span>{he ? "פעולה" : "Action"}</span>
+          <select
+            className="miro-input"
+            value={action}
+            onChange={(event) => {
+              setAction(event.target.value);
+              setOffset(0);
+            }}
+          >
+            <option value="">{he ? "כל הפעולות" : "All actions"}</option>
+            {[
+              ...new Set<string>([
+                ...actions,
+                ...events.map((event) => event.action),
+              ]),
+            ].map((key) => (
+              <option key={key} value={key}>
+                {actionLabels[key] ?? key.replaceAll("_", " ")}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="mgmt-filter-field">
+          <span>{he ? "סוג רשומה" : "Entity"}</span>
+          <select
+            className="miro-input"
+            value={entityType}
+            onChange={(event) => {
+              setEntityType(event.target.value);
+              setOffset(0);
+            }}
+          >
+            <option value="">{he ? "כל הרשומות" : "All entities"}</option>
+            {[
+              "product",
+              "category",
+              "service",
+              "supplier",
+              "variant",
+              "user",
+              "request",
+              "order",
+              "setting",
+              "tax_rate",
+            ].map((key) => (
+              <option key={key} value={key}>
+                {he
+                  ? ({
+                      product: "מוצר",
+                      category: "קטגוריה",
+                      service: "שירות",
+                      supplier: "ספק",
+                      variant: "וריאנט",
+                      user: "משתמש",
+                      request: "בקשה",
+                      order: "הזמנה",
+                      setting: "הגדרה",
+                      tax_rate: "שיעור מס",
+                    }[key] ?? key)
+                  : key.replaceAll("_", " ")}
+              </option>
+            ))}
+          </select>
+        </label>
+        <DateRangePicker
+          value={range}
+          labels={dateRangeLabels(locale)}
+          onChange={(next) => {
+            setRange(next);
+            setOffset(0);
+          }}
+        />
+        {filtered ? (
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--ghost"
+            onClick={reset}
+          >
+            <X size={16} aria-hidden="true" />
+            {he ? "איפוס מסננים" : "Reset filters"}
+          </button>
+        ) : null}
+      </Toolbar>
+      <div className="mgmt-results-bar">
+        <span className="mgmt-data-chip">
+          <ScrollText size={16} aria-hidden="true" />
+          {totalCount.toLocaleString(he ? "he-IL" : "en-GB")}{" "}
+          {he ? "רשומות" : "records"}
+        </span>
+        <span>
+          {he ? "התאריכים לפי שעון ישראל" : "Dates shown in Israel time"}
+        </span>
+      </div>
+      {error ? (
+        <ErrorState
+          title={error}
+          onRetry={() => void load()}
+          retryLabel={he ? "ניסיון נוסף" : "Retry"}
+        />
+      ) : loading && events.length === 0 ? (
+        <ListSkeleton rows={5} />
+      ) : (
+        <div aria-busy={loading}>
+          <DataTable
+            caption={he ? "רשומות ביקורת" : "Audit records"}
+            minWidth="70rem"
+            tableClassName="mgmt-audit-records"
+            isEmpty={events.length === 0}
+            emptyState={
+              <EmptyState
+                icon={<SearchCheck size={24} />}
+                title={he ? "לא נמצאו רשומות" : "No matching records"}
+                description={
+                  he
+                    ? "נסו טווח תאריכים או מסננים אחרים"
+                    : "Try another date range or reset the filters"
                 }
-                className="miro-input"
-              >
-                <option value="">{he ? "הכל" : "All"}</option>
-                {actions.map((action) => (
-                  <option key={action} value={action}>
-                    {actionLabels[action]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="miro-card">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border-subtle text-sm">
-            <caption className="sr-only">
-              {he ? "טבלת היסטוריית ביקורת" : "Audit history table"}
-            </caption>
-            <thead className="bg-surface-muted">
+                compact
+              />
+            }
+            head={
               <tr>
-                <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {he ? "תאריך" : "Date"}
-                </th>
-                <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {he ? "משתמש" : "User"}
-                </th>
-                <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {he ? "פעולה" : "Action"}
-                </th>
-                <th className="px-4 py-3 text-start text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  {he ? "פרטים" : "Details"}
-                </th>
+                <th scope="col">{he ? "מועד" : "Timestamp"}</th>
+                <th scope="col">{he ? "מבצע" : "Actor"}</th>
+                <th scope="col">{he ? "פעולה" : "Action"}</th>
+                <th scope="col">{he ? "רשומה" : "Entity"}</th>
+                <th scope="col">{he ? "פרטים" : "Details"}</th>
+                <th scope="col">{he ? "פתיחה" : "Open"}</th>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-border-subtle">
-              {auditEvents.map((event) => (
-                <tr key={event.id} className="hover:bg-surface-muted/50">
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {new Date(event.created_at).toLocaleString(
-                      he ? "he-IL" : "en-IL",
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {event.profiles?.full_name ||
+            }
+          >
+            {events.map((event) => (
+              <tr key={event.id}>
+                <td>
+                  <time dateTime={event.created_at} dir="ltr">
+                    {formatDate(event.created_at)}
+                  </time>
+                </td>
+                <td>
+                  <OverflowText
+                    text={
+                      event.profiles?.full_name ||
                       event.user_id ||
-                      (he ? "לא ידוע" : "Unknown")}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-capitalize font-medium">
-                    {actionLabels[event.action] || event.action}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {/* Simplified details display */}
-                    {JSON.stringify(event.details)
-                      .replace(/[{}]/g, "")
-                      .replace(/"/g, "").length > 50
-                      ? `${JSON.stringify(event.details)
-                          .replace(/[{}]/g, "")
-                          .replace(/"/g, "")
-                          .substring(0, 50)}...`
-                      : JSON.stringify(event.details)
-                          .replace(/[{}]/g, "")
-                          .replace(/"/g, "")}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      (he ? "מערכת" : "System")
+                    }
+                  />
+                </td>
+                <td>
+                  <StatusBadge tone="neutral">
+                    {actionLabels[event.action] ??
+                      event.action.replaceAll("_", " ")}
+                  </StatusBadge>
+                </td>
+                <td>
+                  <span className="mgmt-table-cell-stack">
+                    <span>{event.entity_type ?? "—"}</span>
+                    <OverflowText
+                      text={event.entity_id ?? "—"}
+                      dir="ltr"
+                      className="mgmt-identifier"
+                    />
+                  </span>
+                </td>
+                <td>
+                  <OverflowText
+                    text={
+                      Object.entries(event.details ?? {})
+                        .map(
+                          ([key, value]) =>
+                            `${key.replaceAll("_", " ")}: ${typeof value === "object" ? JSON.stringify(value) : String(value)}`,
+                        )
+                        .join(" · ") || "—"
+                    }
+                  />
+                </td>
+                <td>
+                  <IconAction
+                    label={he ? "פתיחת רשומת ביקורת" : "Open audit record"}
+                    onClick={() => setSelected(event)}
+                  >
+                    <Eye size={18} aria-hidden="true" />
+                  </IconAction>
+                </td>
+              </tr>
+            ))}
+          </DataTable>
         </div>
-
-        {auditEvents.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 text-sm text-muted-foreground">
-            <div>
-              {he
-                ? `מוצגות ${auditEvents.length} מתוך ${totalCount} רשומות`
-                : `Showing ${auditEvents.length} of ${totalCount} records`}
-            </div>
-            {totalCount > filters.limit + filters.offset && (
-              <button
-                className="miro-button miro-button-secondary"
-                onClick={handleLoadMore}
-              >
-                {he ? "הטען עוד" : "Load More"}
-              </button>
-            )}
-          </div>
-        )}
+      )}
+      <div className="mgmt-list-footer">
+        <p aria-live="polite">
+          {totalCount
+            ? `${offset + 1}–${Math.min(offset + events.length, totalCount)} / ${totalCount}`
+            : "0 / 0"}
+        </p>
+        <label className="mgmt-filter-field">
+          <span>{he ? "רשומות בעמוד" : "Rows per page"}</span>
+          <select
+            className="miro-input"
+            value={limit}
+            onChange={(event) => {
+              setLimit(Number(event.target.value));
+              setOffset(0);
+            }}
+          >
+            {[25, 50, 100].map((size) => (
+              <option key={size}>{size}</option>
+            ))}
+          </select>
+        </label>
+        <div className="mgmt-row-actions">
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--ghost"
+            disabled={loading || offset === 0}
+            onClick={() => setOffset(Math.max(0, offset - limit))}
+          >
+            {he ? "הקודם" : "Previous"}
+          </button>
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--ghost"
+            disabled={loading || offset + limit >= totalCount}
+            onClick={() => setOffset(offset + limit)}
+          >
+            {he ? "הבא" : "Next"}
+          </button>
+        </div>
       </div>
-    </div>
+      <Dialog
+        open={selected !== null}
+        onClose={() => setSelected(null)}
+        title={he ? "פרטי רשומת ביקורת" : "Audit record details"}
+        closeLabel={he ? "סגירה" : "Close"}
+        size="md"
+      >
+        {selected ? (
+          <dl className="mgmt-audit-details">
+            {Object.entries({
+              id: selected.id,
+              action: selected.action,
+              actor: selected.profiles?.full_name ?? selected.user_id,
+              timestamp: formatDate(selected.created_at),
+              entity: selected.entity_type,
+              entity_id: selected.entity_id,
+              details: selected.details,
+            }).map(([key, value]) => (
+              <div key={key}>
+                <dt>{key.replaceAll("_", " ")}</dt>
+                <dd dir="auto">
+                  {typeof value === "object"
+                    ? JSON.stringify(value, null, 2)
+                    : String(value ?? "—")}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ) : null}
+      </Dialog>
+    </section>
   );
 }

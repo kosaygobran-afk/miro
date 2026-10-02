@@ -49,3 +49,8 @@ export {
   type DateRangeValue,
   type DateRangeLabels,
 } from "./date-range-picker";
+
+export { IconAction, IconLink, ActivationSwitch } from "./icon-action";
+
+export { OverflowText } from "./overflow-text";
+export { SearchField } from "./search-field";

@@ -1,15 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowUp, Plus, Pencil, Trash2, Wrench } from "lucide-react";
 import {
-  ArrowDown,
-  ArrowUp,
-  Plus,
-  RotateCcw,
-  Trash2,
-  Wrench,
-} from "lucide-react";
-import {
+  ActivationSwitch,
+  OverflowText,
+  IconAction,
   ConfirmationDialog,
   DataTable,
   Dialog,
@@ -30,6 +26,9 @@ import {
   type VisualKind,
 } from "../visual-picker";
 import { servicesCopy as copy } from "./copy";
+import { buildOrderUpdates } from "@/lib/management-ordering";
+import { CollectionSummary } from "../ui/collection-summary";
+import { ReportChoices } from "../ui/reporting-workspace";
 import styles from "./services-manager.module.css";
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -324,6 +323,7 @@ function PairListEditor<T extends Record<string, string>>({
 /* ---------- Services manager ---------- */
 
 export function ServicesManager({ locale }: { locale: "he" | "en" }) {
+  const he = locale === "he";
   const [services, setServices] = useState<ServiceRow[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
     "loading",
@@ -334,6 +334,12 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
   } | null>(null);
   const noticeTimer = useRef<number | null>(null);
   const [search, setSearch] = useState("");
+  const [visibility, setVisibility] = useState<"all" | "active" | "inactive">(
+    "all",
+  );
+  const [reordering, setReordering] = useState(false);
+  const reorderLock = useRef(false);
+  const [toggling, setToggling] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceRow | null>(null);
@@ -381,14 +387,15 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return services;
     return services.filter(
       (s) =>
-        s.name_he.toLowerCase().includes(needle) ||
-        s.name_en.toLowerCase().includes(needle) ||
-        s.slug.toLowerCase().includes(needle),
+        (visibility === "all" || s.is_active === (visibility === "active")) &&
+        (!needle ||
+          [s.name_he, s.name_en, s.slug].some((value) =>
+            value.toLowerCase().includes(needle),
+          )),
     );
-  }, [services, search]);
+  }, [services, search, visibility]);
 
   function setField<K extends keyof ServiceForm>(
     key: K,
@@ -518,6 +525,8 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
   }
 
   async function toggleActive(row: ServiceRow) {
+    if (toggling) return;
+    setToggling(true);
     try {
       const response = await fetch(
         row.is_active
@@ -537,27 +546,34 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
       await load();
     } catch {
       showNotice("danger", copy.saveFailed[locale]);
+    } finally {
+      setToggling(false);
     }
   }
 
   async function moveSort(row: ServiceRow, delta: number) {
-    const next = row.sort_order + delta;
+    if (reorderLock.current) return;
+    const updates = buildOrderUpdates(services, row.id, delta);
+    if (!updates.length) return;
+    reorderLock.current = true;
+    setReordering(true);
     try {
-      const response = await fetch("/api/management/services", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: row.id, sort_order: next }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error);
+      for (const update of updates) {
+        const response = await fetch("/api/management/services", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(update),
+        });
+        if (!response.ok) throw new Error("reorder_failed");
+      }
+      await load();
       showNotice("success", copy.sorted[locale]);
-      setServices((prev) =>
-        prev
-          .map((s) => (s.id === row.id ? { ...s, sort_order: next } : s))
-          .sort((a, b) => a.sort_order - b.sort_order),
-      );
     } catch {
       showNotice("danger", copy.saveFailed[locale]);
+      await load();
+    } finally {
+      reorderLock.current = false;
+      setReordering(false);
     }
   }
 
@@ -590,6 +606,11 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
         />
         <ErrorState
           title={copy.loadErrorTitle[locale]}
+          description={
+            locale === "he"
+              ? "לא ניתן לגשת לנתוני הניהול. נסו שוב; אם השגיאה נמשכת, פנו למנהל הפרויקט לבדיקת החיבור וההרשאות."
+              : "Management data could not be accessed. Retry; if the error continues, contact the project administrator to check the connection and permissions."
+          }
           onRetry={() => {
             setLoadState("loading");
             void load();
@@ -627,6 +648,42 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
         </Notice>
       ) : null}
 
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "נטענו במערכת" : "Loaded records",
+            value: services.length,
+          },
+          {
+            label: he ? "מפורסמים" : "Active",
+            value: services.filter((row) => row.is_active).length,
+          },
+          {
+            label: he ? "לא פעילים" : "Inactive",
+            value: services.filter((row) => !row.is_active).length,
+          },
+          {
+            label: he ? "ללא תמונה" : "Without an image",
+            value: services.filter((row) => !row.image_url).length,
+          },
+        ]}
+        scope={
+          he
+            ? "סיכום הרשומות שנטענו. החיפוש והסינון חלים על קבוצה זו."
+            : "Summary of loaded records. Search and visibility filters apply to this collection."
+        }
+      />
+      <ReportChoices
+        label={he ? "מצב תצוגה" : "Visibility filter"}
+        value={visibility}
+        onChange={setVisibility}
+        options={[
+          { value: "all", label: he ? "הכל" : "All records" },
+          { value: "active", label: he ? "פעילים" : "Active" },
+          { value: "inactive", label: he ? "לא פעילים" : "Inactive" },
+        ]}
+      />
+
       <Toolbar
         searchValue={search}
         onSearchChange={setSearch}
@@ -635,6 +692,8 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
       />
 
       <DataTable
+        columnWidths={["7%", "17%", "17%", "20%", "17%", "10%", "12%"]}
+        tableClassName="mgmt-services-table"
         caption={copy.tableCaption[locale]}
         isEmpty={visible.length === 0}
         emptyState={
@@ -655,7 +714,7 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
             compact
           />
         }
-        minWidth="48rem"
+        minWidth="68rem"
         head={
           <tr>
             <th scope="col">{copy.colVisual[locale]}</th>
@@ -695,16 +754,22 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
               <td dir="auto">{row.name_he}</td>
               <td dir="auto">{row.name_en}</td>
               <td>
-                <span className={styles.slugValue} dir="ltr">
-                  {row.slug}
-                </span>
+                <OverflowText
+                  text={row.slug}
+                  dir="ltr"
+                  className={styles.slugValue}
+                />
               </td>
               <td>
                 <span className={styles.sortCell}>
-                  <span className={styles.sortValue}>{row.sort_order}</span>
+                  <span className={styles.sortValue}>
+                    {services.findIndex((service) => service.id === row.id) + 1}
+                  </span>
                   <button
                     type="button"
-                    className={styles.stepperButton}
+                    className="mgmt-icon-action"
+                    disabled={reordering || services[0]?.id === row.id}
+                    title={copy.sortUp[locale]}
                     onClick={() => void moveSort(row, -1)}
                     aria-label={copy.sortUp[locale]}
                   >
@@ -712,7 +777,9 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
                   </button>
                   <button
                     type="button"
-                    className={styles.stepperButton}
+                    className="mgmt-icon-action"
+                    disabled={reordering || services.at(-1)?.id === row.id}
+                    title={copy.sortDown[locale]}
                     onClick={() => void moveSort(row, 1)}
                     aria-label={copy.sortDown[locale]}
                   >
@@ -732,23 +799,18 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
               </td>
               <td>
                 <span className={styles.actionsCell}>
-                  <button
-                    type="button"
-                    className="miro-button miro-button-secondary"
+                  <IconAction
+                    label={copy.edit[locale]}
                     onClick={() => openEdit(row)}
                   >
-                    {copy.edit[locale]}
-                  </button>
-                  <button
-                    type="button"
-                    className="miro-button miro-button-secondary"
+                    <Pencil size={17} aria-hidden="true" />
+                  </IconAction>
+                  <ActivationSwitch
+                    active={row.is_active}
+                    disabled={toggling}
+                    label={`${row.is_active ? copy.statusActive[locale] : copy.statusInactive[locale]} · ${row.is_active ? copy.deactivate[locale] : copy.reactivate[locale]}`}
                     onClick={() => void toggleActive(row)}
-                  >
-                    <RotateCcw size={14} aria-hidden="true" />
-                    {row.is_active
-                      ? copy.deactivate[locale]
-                      : copy.reactivate[locale]}
-                  </button>
+                  />
                 </span>
               </td>
             </tr>

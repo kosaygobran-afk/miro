@@ -27,6 +27,7 @@ import {
 import { PromoBadge } from "@/features/catalog/product-promo-badge";
 import type { PromoBadge as StorePromoBadge } from "@/features/catalog/product-data";
 import { storefrontMerchandisingCopy as copy } from "./copy";
+import { CollectionSummary } from "../ui/collection-summary";
 import styles from "./storefront-merchandising.module.css";
 
 type RailItem = {
@@ -906,8 +907,47 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         </Notice>
       ) : null}
 
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "מוצרים בפס" : "Rail entries",
+            value: railItems.length,
+          },
+          {
+            label: he ? "מופעלים" : "Enabled entries",
+            value: railItems.filter((item) => item.is_active).length,
+          },
+          {
+            label: he ? "סוגי מדבקות" : "Badge styles",
+            value: badgeTypes.length,
+          },
+          {
+            label: he ? "מבצעים מופעלים בפס" : "Enabled rail promotions",
+            value: railItems.filter((item) => item.promotion?.is_active).length,
+          },
+        ]}
+      />
+      <nav
+        className="mgmt-section-switcher"
+        aria-label={he ? "ניהול תצוגת החנות" : "Store presentation sections"}
+      >
+        <a href="#merchandising-rail">
+          {he ? "מוצרים וסדר" : "Products & order"}
+        </a>
+        <a href="#merchandising-preview">{he ? "תצוגה מקדימה" : "Preview"}</a>
+        <a href="#merchandising-badges">
+          {he ? "עיצוב מדבקות" : "Badge styles"}
+        </a>
+      </nav>
+
       {/* Moving Rail Section */}
-      <section className={styles.section} aria-labelledby="rail-heading">
+      <section
+        id="merchandising-rail"
+        className={styles.section}
+        aria-label={
+          he ? "הגדרות פס מוצרי החנות" : "Store product rail configuration"
+        }
+      >
         <h2 id="rail-heading" className={styles.sectionTitle}>
           {copy[locale].railSectionTitle}
         </h2>
@@ -1138,6 +1178,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         {/* Live Preview */}
         <div
           className={styles.previewSection}
+          id="merchandising-preview"
           aria-labelledby="preview-heading"
         >
           <h3 id="preview-heading" className={styles.previewTitle}>
@@ -1199,7 +1240,11 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
       </section>
 
       {/* Badge Library Section */}
-      <section className={styles.section} aria-labelledby="badges-heading">
+      <section
+        id="merchandising-badges"
+        className={styles.section}
+        aria-labelledby="badges-heading"
+      >
         <div className={styles.sectionHeader}>
           <h2 id="badges-heading" className={styles.sectionTitle}>
             {copy[locale].badgeSectionTitle}

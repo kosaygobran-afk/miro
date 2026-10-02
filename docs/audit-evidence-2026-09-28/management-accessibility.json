@@ -1,0 +1,648 @@
+[
+  {
+    "locale": "en",
+    "section": "",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "aria-required-children",
+        "impact": "critical",
+        "count": 1,
+        "targets": [[".overview-panel__stats-grid"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "aria-required-children",
+        "impact": "critical",
+        "count": 1,
+        "targets": [[".overview-panel__stats-grid"]]
+      },
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "aria-required-children",
+        "impact": "critical",
+        "count": 1,
+        "targets": [[".overview-panel__stats-grid"]]
+      },
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [["span[title=\"CEO\"]"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/products",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": []
+  },
+  {
+    "locale": "en",
+    "section": "/products",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 24,
+    "violations": [
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/products",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 24,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [["span[title=\"CEO\"]"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/inventory",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": []
+  },
+  {
+    "locale": "en",
+    "section": "/inventory",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/inventory",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 27,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [["span[title=\"CEO\"]"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/sales",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": []
+  },
+  {
+    "locale": "en",
+    "section": "/sales",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".text-primary"]]
+      },
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/sales",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 2,
+        "targets": [["span[title=\"CEO\"]"], [".text-primary"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/settings",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "label",
+        "impact": "critical",
+        "count": 1,
+        "targets": [["input[min=\"0\"]"]]
+      },
+      {
+        "id": "select-name",
+        "impact": "critical",
+        "count": 2,
+        "targets": [
+          ["div:nth-child(2) > select"],
+          ["div:nth-child(1) > select"]
+        ]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/settings",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 6,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".text-4xl"]]
+      },
+      {
+        "id": "label",
+        "impact": "critical",
+        "count": 1,
+        "targets": [["input[min=\"0\"]"]]
+      },
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      },
+      {
+        "id": "select-name",
+        "impact": "critical",
+        "count": 2,
+        "targets": [
+          ["div:nth-child(2) > select"],
+          ["div:nth-child(1) > select"]
+        ]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/settings",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 2,
+        "targets": [["span[title=\"CEO\"]"], [".text-4xl"]]
+      },
+      {
+        "id": "label",
+        "impact": "critical",
+        "count": 1,
+        "targets": [["input[min=\"0\"]"]]
+      },
+      {
+        "id": "select-name",
+        "impact": "critical",
+        "count": 2,
+        "targets": [
+          ["div:nth-child(2) > select"],
+          ["div:nth-child(1) > select"]
+        ]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/requests",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": []
+  },
+  {
+    "locale": "en",
+    "section": "/requests",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "en",
+    "section": "/requests",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [["span[title=\"CEO\"]"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "aria-required-children",
+        "impact": "critical",
+        "count": 1,
+        "targets": [[".overview-panel__stats-grid"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "aria-required-children",
+        "impact": "critical",
+        "count": 1,
+        "targets": [[".overview-panel__stats-grid"]]
+      },
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "aria-required-children",
+        "impact": "critical",
+        "count": 1,
+        "targets": [[".overview-panel__stats-grid"]]
+      },
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [["span[title=\"מנכ״ל\"]"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/products",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": []
+  },
+  {
+    "locale": "he",
+    "section": "/products",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 24,
+    "violations": [
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/products",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 24,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [["span[title=\"מנכ״ל\"]"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/inventory",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": []
+  },
+  {
+    "locale": "he",
+    "section": "/inventory",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/inventory",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 25,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [["span[title=\"מנכ״ל\"]"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/sales",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": []
+  },
+  {
+    "locale": "he",
+    "section": "/sales",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".text-primary"]]
+      },
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/sales",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 2,
+        "targets": [["span[title=\"מנכ״ל\"]"], [".text-primary"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/settings",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "label",
+        "impact": "critical",
+        "count": 1,
+        "targets": [["input[min=\"0\"]"]]
+      },
+      {
+        "id": "select-name",
+        "impact": "critical",
+        "count": 2,
+        "targets": [
+          ["div:nth-child(2) > select"],
+          ["div:nth-child(1) > select"]
+        ]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/settings",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".text-4xl"]]
+      },
+      {
+        "id": "label",
+        "impact": "critical",
+        "count": 1,
+        "targets": [["input[min=\"0\"]"]]
+      },
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      },
+      {
+        "id": "select-name",
+        "impact": "critical",
+        "count": 2,
+        "targets": [
+          ["div:nth-child(2) > select"],
+          ["div:nth-child(1) > select"]
+        ]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/settings",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 2,
+        "targets": [["span[title=\"מנכ״ל\"]"], [".text-4xl"]]
+      },
+      {
+        "id": "label",
+        "impact": "critical",
+        "count": 1,
+        "targets": [["input[min=\"0\"]"]]
+      },
+      {
+        "id": "select-name",
+        "impact": "critical",
+        "count": 2,
+        "targets": [
+          ["div:nth-child(2) > select"],
+          ["div:nth-child(1) > select"]
+        ]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/requests",
+    "width": 1440,
+    "theme": "dark",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": []
+  },
+  {
+    "locale": "he",
+    "section": "/requests",
+    "width": 390,
+    "theme": "light",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "link-name",
+        "impact": "serious",
+        "count": 1,
+        "targets": [[".mgmt-topbar__storefront-link"]]
+      }
+    ]
+  },
+  {
+    "locale": "he",
+    "section": "/requests",
+    "width": 768,
+    "theme": "medium",
+    "overflow": false,
+    "clippedControls": 0,
+    "violations": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "count": 1,
+        "targets": [["span[title=\"מנכ״ל\"]"]]
+      }
+    ]
+  }
+]

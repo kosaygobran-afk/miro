@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
+import { OverflowLabel } from "./overflow-label";
+import { ProductMedia } from "./product-media";
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,8 +14,7 @@ import {
   Eye,
 } from "lucide-react";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
-import { ProductVisual } from "@/components/products/ProductVisual";
-import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
+
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
 import { trackProductImpression } from "@/components/analytics/track";
@@ -60,7 +60,6 @@ export function ProductCard({
   const keepPreviewOpen = useCallback(() => setShowHoverPreview(true), []);
   const cardRef = useRef<HTMLElement | null>(null);
   const previewButtonRef = useRef<HTMLButtonElement | null>(null);
-  const kind = getProductVisualKind(product);
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
   const primaryImage = getPrimaryImage(product);
 
@@ -222,23 +221,18 @@ export function ProductCard({
             <span className="sf-product-badge">{product.badge}</span>
           )}
 
-          {primaryImage ? (
-            <Image
-              src={primaryImage.url}
-              alt={altText}
-              fill
-              sizes="(max-width: 600px) 100vw, (max-width: 1100px) 50vw, 25vw"
-              className="sf-product-visual"
-              style={{ objectFit: "contain" }}
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          ) : (
-            <ProductVisual kind={kind} />
-          )}
+          <ProductMedia
+            product={product}
+            src={primaryImage?.url}
+            alt={altText}
+            sizes="(max-width: 600px) 100vw, (max-width: 1100px) 50vw, 25vw"
+            className="sf-product-visual"
+          />
 
-          {!primaryImage && (
+          {(!primaryImage ||
+            product.images[0]?.url.match(
+              /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
+            )) && (
             <span className="sf-product-illustration-caption">
               {copy.illustration}
             </span>
@@ -277,7 +271,7 @@ export function ProductCard({
             className="sf-product-title-link"
             aria-label={`${copy.details}: ${product.name}`}
           >
-            {product.name}
+            <OverflowLabel>{product.name}</OverflowLabel>
           </Link>
         </h3>
         <p className="sf-product-description" dir="auto">
@@ -304,7 +298,11 @@ export function ProductCard({
               </small>
             )}
           </div>
-          <StockIndicator quantity={product.stockQty} locale={locale} />
+          <StockIndicator
+            quantity={product.stockQty}
+            locale={locale}
+            unconfirmed={product.availabilityUnconfirmed}
+          />
           <div className="sf-product-price__promotion">
             {discountPercent !== null && formattedCompareAtPrice && (
               <>

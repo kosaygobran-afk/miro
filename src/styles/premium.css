@@ -137,7 +137,7 @@ body {
   position: fixed;
   top: -6rem;
   inset-inline-start: 1rem;
-  z-index: 100;
+  z-index: 1300;
   padding: 0.8rem 1.2rem;
   background: var(--primary);
   color: #111;
@@ -174,6 +174,8 @@ body {
   letter-spacing: 0.2em;
 }
 .premium-header {
+  isolation: isolate;
+  z-index: 900;
   box-shadow: 0 4px 16px rgb(0 0 0 / 4%);
 }
 .premium-header-inner {
@@ -273,7 +275,8 @@ body {
   border-radius: 0.875rem;
   background: var(--surface);
   box-shadow: var(--shadow-lift);
-  animation: miro-menu-enter 160ms ease;
+  z-index: 20;
+  animation: miro-popover-enter 160ms ease;
 }
 .premium-dropdown > p {
   font-size: 0.72rem;
@@ -436,6 +439,9 @@ body {
 .premium-mobile-navigation {
   display: none;
 }
+#mobile-navigation {
+  animation: miro-popover-enter 180ms ease-out;
+}
 .premium-footer {
   background: var(--surface);
   border-top: 1px solid var(--border-subtle);
@@ -569,10 +575,17 @@ body {
   }
   .premium-mobile-navigation {
     display: block;
+    position: absolute;
+    inset-inline: 0;
+    z-index: 1100;
     border-top: 1px solid var(--border-subtle);
-    background: var(--surface);
-    max-height: calc(100dvh - 76px);
-    overflow-y: auto;
+    border-bottom: 1px solid var(--border-control);
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    -webkit-backdrop-filter: blur(28px) saturate(1.35);
+    backdrop-filter: blur(28px) saturate(1.35);
+    box-shadow: 0 20px 45px rgb(0 0 0 / 22%);
+    max-height: none;
+    overflow: visible;
     padding-block: 1.25rem;
   }
   .premium-mobile-navigation nav {
@@ -789,17 +802,31 @@ body {
   letter-spacing: 0.04em;
 }
 .premium-account-dropdown {
-  position: absolute;
-  top: calc(100% + 0.5rem);
-  inset-inline-end: 0;
-  min-width: 260px;
+  position: fixed;
+  inset: auto;
+  min-width: 0;
+  width: min(280px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 0.5rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  background: var(--surface);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  -webkit-backdrop-filter: blur(24px) saturate(1.35);
+  backdrop-filter: blur(24px) saturate(1.35);
   box-shadow: var(--shadow-lift);
-  animation: miro-menu-enter 160ms ease;
-  z-index: 50;
+  animation: miro-popover-enter 160ms ease;
+  z-index: 1200;
+}
+/* Keep text fully visible during entrance; glass blurs the imagery beneath it. */
+@keyframes miro-popover-enter {
+  from {
+    transform: translateY(4px);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
 .premium-account-header {
   display: flex;
@@ -889,21 +916,52 @@ body {
   background: var(--surface-muted);
   color: #ff6b6b;
 }
-@media (max-width: 1199px) {
-  .premium-account-dropdown {
-    inset-inline-end: -1rem;
-    min-width: 280px;
-  }
-}
-@media (max-width: 767px) {
-  .premium-account-dropdown {
-    inset-inline-start: 0;
-    inset-inline-end: auto;
-    min-width: 240px;
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   .premium-account-dropdown {
     animation: none;
+  }
+}
+
+/* Keep authenticated controls reachable on narrow phones. */
+@media (max-width: 767px) {
+  .premium-header-actions .premium-account-trigger.compact {
+    width: 36px;
+    min-height: 36px;
+    padding: 0;
+    gap: 3px;
+    justify-content: center;
+  }
+}
+@media (max-width: 480px) {
+  .premium-header-actions .premium-icon-button {
+    width: 32px;
+    min-width: 32px;
+    padding-inline: 0;
+  }
+  .premium-header-actions .premium-theme-selector > button {
+    width: 24px;
+  }
+  .premium-header-inner .premium-brand-name {
+    font-size: 1.7rem;
+  }
+  .premium-header-inner .premium-brand-caption {
+    font-size: 0.4rem;
+  }
+}
+@media (max-width: 359px) {
+  .premium-header-actions .premium-icon-button {
+    width: 30px;
+    min-width: 30px;
+    padding-inline: 0;
+  }
+  .premium-header-actions .premium-account-trigger.compact {
+    width: 33px;
+    gap: 1px;
+  }
+  .premium-header-actions .premium-theme-selector > button {
+    width: 22px;
+  }
+  .premium-header-inner .premium-brand-name {
+    font-size: 1.5rem;
   }
 }

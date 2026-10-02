@@ -165,12 +165,14 @@ test.describe("customer cart and checkout", () => {
   }) => {
     await page.locator(".sf-product-card .sf-add-cart-button").first().click();
     await page.locator(".premium-cart-link").click();
+    await expect(page).toHaveTitle(/Cart/);
     let results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
     expect(results.violations).toEqual([]);
 
     await page.getByRole("link", { name: "Continue to checkout" }).click();
+    await expect(page).toHaveTitle(/Checkout/);
     results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();

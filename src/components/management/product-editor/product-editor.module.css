@@ -425,3 +425,59 @@
   height: auto;
   object-fit: contain;
 }
+
+/* Premium editing studio. Preserve sticky measurements and all editor sections. */
+.stickyBar {
+  background: var(--surface);
+  border-radius: 1rem;
+  padding: 1rem;
+  box-shadow: 0 8px 32px #00000012;
+}
+.stickyBar :global(.mgmt-page-header__title) {
+  font-size: 1rem;
+}
+.stickyBar :global(.mgmt-page-header__breadcrumb) {
+  display: none;
+}
+.layout {
+  gap: 1.25rem;
+  grid-template-columns: 12.5rem minmax(0, 1fr);
+}
+.sectionNav {
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  border-radius: 1rem;
+  padding: 0.65rem;
+}
+.sectionNavItem {
+  min-block-size: 2.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.8rem;
+  gap: 0.65rem;
+}
+.sectionNavItemActive,
+.sectionNavItemActive:hover {
+  background: color-mix(in srgb, var(--report-cyan) 10%, var(--surface));
+  color: var(--report-cyan);
+  font-weight: 600;
+}
+.sectionNavItem:focus-visible {
+  outline-color: var(--report-cyan);
+}
+.chip {
+  border-radius: 0.55rem;
+  padding: 0.3rem 0.5rem;
+}
+@media (max-width: 72rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .sectionNav {
+    display: flex;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+  .sectionNavItem {
+    flex: 1 1 auto;
+  }
+}

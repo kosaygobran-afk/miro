@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
+import { useEffect, useState, type FocusEvent, type PointerEvent } from "react";
+import { createPortal } from "react-dom";
 import { withLocale, type Locale } from "@/lib/i18n";
 import type { AppRole } from "@/lib/roles";
 import {
@@ -39,6 +41,39 @@ export function AdminNav({
   const activeKey = matchMgmtNav(pathname ?? `/${locale}/admin`, locale).item
     .key;
   const isCeo = role === "ceo";
+  const [tooltip, setTooltip] = useState<{
+    label: string;
+    top: number;
+    left?: number;
+    right?: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const dismiss = () => setTooltip(null);
+    window.addEventListener("scroll", dismiss, true);
+    window.addEventListener("resize", dismiss);
+    window.addEventListener("keydown", dismiss);
+    return () => {
+      window.removeEventListener("scroll", dismiss, true);
+      window.removeEventListener("resize", dismiss);
+      window.removeEventListener("keydown", dismiss);
+    };
+  }, []);
+
+  function showTooltip(
+    event: FocusEvent<HTMLAnchorElement> | PointerEvent<HTMLAnchorElement>,
+    label: string,
+  ) {
+    if (!collapsed) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltip({
+      label,
+      top: rect.top + rect.height / 2,
+      ...(locale === "he"
+        ? { right: window.innerWidth - rect.left + 16 }
+        : { left: rect.right + 16 }),
+    });
+  }
 
   return (
     <nav
@@ -66,6 +101,10 @@ export function AdminNav({
                   <Link
                     href={withLocale(locale, item.href)}
                     onClick={onNavigate}
+                    onPointerEnter={(event) => showTooltip(event, label)}
+                    onPointerLeave={() => setTooltip(null)}
+                    onFocus={(event) => showTooltip(event, label)}
+                    onBlur={() => setTooltip(null)}
                     className={[
                       "mgmt-nav__link",
                       isActive ? "mgmt-nav__link--active" : null,
@@ -118,6 +157,22 @@ export function AdminNav({
           </ul>
         </div>
       ))}
+      {collapsed && tooltip
+        ? createPortal(
+            <span
+              className="mgmt-nav-tooltip"
+              style={{
+                top: tooltip.top,
+                left: tooltip.left,
+                right: tooltip.right,
+              }}
+              aria-hidden="true"
+            >
+              {tooltip.label}
+            </span>,
+            document.body,
+          )
+        : null}
     </nav>
   );
 }

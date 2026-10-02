@@ -10,6 +10,11 @@ import {
   UserCheck,
   X,
 } from "lucide-react";
+import { PageHeader } from "./ui/page-header";
+import { Toolbar } from "./ui/toolbar";
+import { CollectionSummary } from "./ui/collection-summary";
+import { OverflowText } from "./ui/overflow-text";
+import { ScrollRegion } from "./ui/scroll-region";
 import { roleLabel, type AppRole } from "@/lib/roles";
 
 type ManagedUser = {
@@ -67,7 +72,21 @@ export function UsersManagement({
 }) {
   const he = locale === "he";
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  function usersForFilter() {
+    return users.filter(
+      (user) =>
+        (roleFilter === "all" || user.role === roleFilter) &&
+        (statusFilter === "all" || user.account_status === statusFilter) &&
+        [user.full_name, user.email, user.phone].some((value) =>
+          value?.toLowerCase().includes(query.trim().toLowerCase()),
+        ),
+    );
+  }
   const [users, setUsers] = useState<ManagedUser[]>(initialUsers);
+  const filteredUsers = usersForFilter();
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">(
     "success",
@@ -307,12 +326,96 @@ export function UsersManagement({
 
   return (
     <div className="users-management space-y-6">
+      <PageHeader
+        title={he ? "אנשים והרשאות" : "People and permissions"}
+        subtitle={
+          he
+            ? "צפייה בחשבונות ובתפקידים, עם שליטה ברורה בהתאם להרשאות שלך."
+            : "A clear view of accounts and roles, with controls that respect your permissions."
+        }
+        actions={
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--secondary"
+            disabled={busy}
+            onClick={() => loadUsers(true)}
+          >
+            <RotateCcw size={17} aria-hidden="true" />
+            {he ? "רענון" : "Refresh"}
+          </button>
+        }
+      />
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "חשבונות שנטענו" : "Loaded accounts",
+            value: users.length,
+          },
+          {
+            label: he ? "פעילים" : "Active",
+            value: users.filter((user) => user.account_status === "active")
+              .length,
+          },
+          {
+            label: he ? "צוות ניהול" : "Management team",
+            value: users.filter((user) => ["admin", "ceo"].includes(user.role))
+              .length,
+          },
+          {
+            label: he ? "מושהים או חסומים" : "Suspended or blocked",
+            value: users.filter((user) => user.account_status !== "active")
+              .length,
+          },
+        ]}
+        scope={
+          he
+            ? "סיכום החשבונות שנטענו לתצוגה."
+            : "Summary of accounts loaded into this view."
+        }
+      />
+      <Toolbar
+        searchValue={query}
+        onSearchChange={setQuery}
+        searchLabel={he ? "חיפוש חשבונות" : "Search accounts"}
+        searchPlaceholder={
+          he ? "שם, אימייל או טלפון…" : "Name, email or phone…"
+        }
+      >
+        <label className="mgmt-filter-field">
+          {he ? "תפקיד" : "Role"}
+          <select
+            className="mgmt-select"
+            value={roleFilter}
+            onChange={(event) => setRoleFilter(event.target.value)}
+          >
+            <option value="all">{he ? "כל התפקידים" : "All roles"}</option>
+            {(["customer", "worker", "admin", "ceo"] as const).map((role) => (
+              <option key={role} value={role}>
+                {roleLabel(role, locale)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="mgmt-filter-field">
+          {he ? "מצב" : "Status"}
+          <select
+            className="mgmt-select"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
+            <option value="all">{he ? "כל המצבים" : "All statuses"}</option>
+            <option value="active">{he ? "פעיל" : "Active"}</option>
+            <option value="suspended">{he ? "מושהה" : "Suspended"}</option>
+            <option value="blocked">{he ? "חסום" : "Blocked"}</option>
+          </select>
+        </label>
+      </Toolbar>
       <div className="miro-card">
         <div className="border-b border-border-subtle p-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black">
-                {he ? "ניהול משתמשים" : "User Management"}
+                {he ? "ספר החשבונות" : "Account directory"}
               </h2>
               <p className="mt-1 text-muted-foreground">
                 {he
@@ -347,14 +450,17 @@ export function UsersManagement({
           )}
         </div>
 
-        {users.length === 0 ? (
+        {filteredUsers.length === 0 ? (
           <div className="users-management__empty" role="status">
             {he ? "אין משתמשים במערכת" : "No users in the system"}
           </div>
         ) : (
           <>
-            <div className="users-management__table-wrapper">
-              <table className="users-management__table" role="grid">
+            <ScrollRegion
+              className="users-management__table-wrapper"
+              label={he ? "טבלת ניהול משתמשים" : "User management table"}
+            >
+              <table className="users-management__table">
                 <caption className="sr-only">
                   {he ? "טבלת ניהול משתמשים" : "User management table"}
                 </caption>
@@ -384,12 +490,16 @@ export function UsersManagement({
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map((user) => (
+                  {filteredUsers.map((user) => (
                     <tr key={user.id}>
                       <td className="users-management__td">
                         <div className="users-management__user-info">
                           <p className="users-management__user-name">
-                            {user.full_name || (he ? "ללא שם" : "No name")}
+                            <OverflowText
+                              text={
+                                user.full_name || (he ? "ללא שם" : "No name")
+                              }
+                            />
                           </p>
                           <p className="users-management__user-id">
                             {user.id.slice(0, 8)}…
@@ -401,7 +511,11 @@ export function UsersManagement({
                           href={`mailto:${user.email}`}
                           className="users-management__email"
                         >
-                          {user.email}
+                          <OverflowText
+                            text={user.email}
+                            dir="ltr"
+                            focusable={false}
+                          />
                         </a>
                       </td>
                       <td className="users-management__td">
@@ -603,12 +717,12 @@ export function UsersManagement({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </ScrollRegion>
 
             {/* Mobile Card View */}
             <div className="users-management__card-list" role="list">
-              {users.map((user) => (
-                <article
+              {filteredUsers.map((user) => (
+                <div
                   key={user.id}
                   className="users-management__card"
                   role="listitem"
@@ -616,7 +730,9 @@ export function UsersManagement({
                   <div className="users-management__card-header">
                     <div>
                       <p className="users-management__card-name">
-                        {user.full_name || (he ? "ללא שם" : "No name")}
+                        <OverflowText
+                          text={user.full_name || (he ? "ללא שם" : "No name")}
+                        />
                       </p>
                       <p className="users-management__card-id">
                         {user.id.slice(0, 8)}…
@@ -635,7 +751,11 @@ export function UsersManagement({
                         href={`mailto:${user.email}`}
                         className="users-management__card-email"
                       >
-                        {user.email}
+                        <OverflowText
+                          text={user.email}
+                          dir="ltr"
+                          focusable={false}
+                        />
                       </a>
                     </div>
                     <div className="users-management__card-field">
@@ -838,7 +958,7 @@ export function UsersManagement({
                       </>
                     )}
                   </div>
-                </article>
+                </div>
               ))}
             </div>
 

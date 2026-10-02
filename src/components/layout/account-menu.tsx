@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown, LayoutDashboard, LogOut, UserRound } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { roleLabel, type AppRole } from "@/lib/roles";
 
@@ -46,6 +47,39 @@ export function AccountMenu({
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownId = useId();
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const button = buttonRef.current;
+    const dropdown = dropdownRef.current;
+    if (!button || !dropdown) return;
+    const place = () => {
+      const anchor = button.getBoundingClientRect();
+      const width = Math.min(280, window.innerWidth - 32);
+      dropdown.style.width = `${width}px`;
+      const preferredLeft =
+        locale === "he" ? anchor.left : anchor.right - width;
+      dropdown.style.left = `${Math.max(16, Math.min(preferredLeft, window.innerWidth - width - 16))}px`;
+      // Reserve the entrance's 4px translation inside the lower gutter too.
+      dropdown.style.top = `${Math.max(16, Math.min(anchor.bottom + 8, window.innerHeight - dropdown.offsetHeight - 20))}px`;
+    };
+    place();
+    const observer = new ResizeObserver(place);
+    observer.observe(button);
+    observer.observe(dropdown);
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    dropdown
+      .querySelector<HTMLElement>('[role="menuitem"]')
+      ?.focus({ preventScroll: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open, locale]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -85,7 +119,11 @@ export function AccountMenu({
       buttonRef.current?.focus();
     }
     function onPointerDown(event: PointerEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node) &&
+        !dropdownRef.current?.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -160,7 +198,8 @@ export function AccountMenu({
         className={`premium-account-trigger ${compact ? "compact" : ""}`}
         aria-label={labels.userMenu}
         aria-expanded={open}
-        aria-controls="account-dropdown"
+        aria-controls={open ? dropdownId : undefined}
+        aria-haspopup="menu"
         onClick={() => setOpen(!open)}
       >
         <UserRound size={19} aria-hidden="true" />
@@ -174,61 +213,88 @@ export function AccountMenu({
         )}
         <ChevronDown size={13} aria-hidden="true" />
       </button>
-      {open && (
-        <div
-          id="account-dropdown"
-          className="premium-account-dropdown"
-          role="menu"
-        >
-          <div className="premium-account-header">
-            <div className="premium-account-avatar" aria-hidden="true">
-              <UserRound size={24} />
-            </div>
-            <div className="premium-account-info">
-              <p className="premium-account-display-name">
-                {session.name ?? "User"}
-              </p>
-              {role && (
-                <span className="premium-account-role">
-                  {roleLabel(role, locale)}
-                </span>
-              )}
-            </div>
-          </div>
-          <Link
-            href={roleDestination}
-            className="premium-account-primary-action"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onNavigate?.();
+      {open &&
+        createPortal(
+          <div
+            ref={dropdownRef}
+            id={dropdownId}
+            className="premium-account-dropdown"
+            role="menu"
+            aria-label={labels.userMenu}
+            onKeyDown={(event) => {
+              if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key))
+                return;
+              event.preventDefault();
+              const items = Array.from(
+                event.currentTarget.querySelectorAll<HTMLElement>(
+                  '[role="menuitem"]',
+                ),
+              );
+              const current = items.indexOf(
+                document.activeElement as HTMLElement,
+              );
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? items.length - 1
+                    : (current +
+                        (event.key === "ArrowDown" ? 1 : -1) +
+                        items.length) %
+                      items.length;
+              items[next]?.focus();
             }}
           >
-            <RoleButtonIcon size={18} aria-hidden="true" />
-            <span>{roleButtonLabel}</span>
-          </Link>
-          <Link
-            href={withLocale(locale)}
-            className="premium-account-secondary-action"
-            role="menuitem"
-            onClick={() => {
-              setOpen(false);
-              onNavigate?.();
-            }}
-          >
-            {labels.switchToStorefront}
-          </Link>
-          <button
-            type="button"
-            className="premium-account-logout"
-            role="menuitem"
-            onClick={handleLogout}
-          >
-            <LogOut size={18} aria-hidden="true" />
-            <span>{labels.logout}</span>
-          </button>
-        </div>
-      )}
+            <div className="premium-account-header">
+              <div className="premium-account-avatar" aria-hidden="true">
+                <UserRound size={24} />
+              </div>
+              <div className="premium-account-info">
+                <p className="premium-account-display-name">
+                  {session.name ?? "User"}
+                </p>
+                {role && (
+                  <span className="premium-account-role">
+                    {roleLabel(role, locale)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <Link
+              href={roleDestination}
+              className="premium-account-primary-action"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onNavigate?.();
+              }}
+            >
+              <RoleButtonIcon size={18} aria-hidden="true" />
+              <span>{roleButtonLabel}</span>
+            </Link>
+            <Link
+              href={withLocale(locale)}
+              className="premium-account-secondary-action"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onNavigate?.();
+              }}
+            >
+              {labels.switchToStorefront}
+            </Link>
+            <button
+              type="button"
+              className="premium-account-logout"
+              role="menuitem"
+              onClick={handleLogout}
+            >
+              <LogOut size={18} aria-hidden="true" />
+              <span>{labels.logout}</span>
+            </button>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

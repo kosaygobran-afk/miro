@@ -1,15 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, Inbox, X } from "lucide-react";
 import {
+  ChevronLeft,
+  Inbox,
+  X,
+  RefreshCw,
+  SlidersHorizontal,
+  UserRound,
+  Clock3,
+  MessageSquare,
+} from "lucide-react";
+import {
+  OverflowText,
+  IconAction,
   DataTable,
   DateRangePicker,
   EmptyState,
   ErrorState,
   ListSkeleton,
   Notice,
-  PageHeader,
+  Drawer,
+  MetricCard,
   StatusBadge,
   Toolbar,
   dateRangeLabels,
@@ -27,6 +39,13 @@ import {
 } from "./types";
 import styles from "./requests-queue.module.css";
 
+import { israelDayStart } from "@/lib/management-audit";
+import {
+  ReportingHeader,
+  ReportChoices,
+  reportingStyles as report,
+} from "../ui/reporting-workspace";
+
 const PAGE_SIZE = 25;
 const STALE_AFTER_HOURS = 48;
 
@@ -35,11 +54,13 @@ function isRequestStatus(status: string): status is RequestStatus {
 }
 
 function toFromIso(date: string): string {
-  return new Date(`${date}T00:00:00`).toISOString();
+  return israelDayStart(date);
 }
 
 function toToIso(date: string): string {
-  return new Date(`${date}T23:59:59.999`).toISOString();
+  return new Date(
+    new Date(israelDayStart(date, true)).getTime() - 1,
+  ).toISOString();
 }
 
 function ageText(ageMs: number, locale: "he" | "en"): string {
@@ -194,17 +215,27 @@ export function RequestsQueue({
   locale,
   selfId,
   selfName,
+  initialStatus = "all",
+  initialStale = false,
 }: {
   locale: "he" | "en";
   selfId: string;
   selfName: string;
+  initialStatus?: "all" | RequestStatus;
+  initialStale?: boolean;
 }) {
   const he = locale === "he";
   const t = (map: Record<"he" | "en", string>) => map[locale];
 
+  const [view, setView] = useState<"table" | "board">("table");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+
   // Filters
-  const [statusTab, setStatusTab] = useState<"all" | RequestStatus>("all");
+  const [statusTab, setStatusTab] = useState<"all" | RequestStatus>(
+    initialStatus,
+  );
   const [assigned, setAssigned] = useState("any");
+  const [staleOnly, setStaleOnly] = useState(initialStale);
   const [source, setSource] = useState("");
   const [localeFilter, setLocaleFilter] = useState("");
   const [productOption, setProductOption] =
@@ -245,6 +276,7 @@ export function RequestsQueue({
     () =>
       JSON.stringify([
         statusTab,
+        staleOnly,
         assigned,
         source,
         localeFilter,
@@ -257,6 +289,7 @@ export function RequestsQueue({
       ]),
     [
       statusTab,
+      staleOnly,
       assigned,
       source,
       localeFilter,
@@ -273,6 +306,7 @@ export function RequestsQueue({
     const controller = new AbortController();
     const params = new URLSearchParams();
     params.set("status", statusTab);
+    if (staleOnly) params.set("stale", "true");
     params.set("assigned", assigned);
     if (source) params.set("source", source);
     if (productOption) params.set("productId", productOption.id);
@@ -325,21 +359,29 @@ export function RequestsQueue({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchKey fully encodes every parameter used here
   }, [fetchKey, locale]);
 
-  // Staff directory for the assignee filter and the drawer (one bounded
-  // listing per assignable role; the users API accepts a single role value).
+  // Active assignees use bounded API pages; do not lose choices after row 100.
   useEffect(() => {
     const controller = new AbortController();
     Promise.all(
-      (["worker", "admin", "ceo"] as const).map((role) =>
-        fetch(`/api/management/users?role=${role}&limit=100`, {
-          cache: "no-store",
-          signal: controller.signal,
-        })
-          .then((res) => (res.ok ? res.json() : { users: [] }))
-          .then((data) =>
-            Array.isArray(data.users) ? (data.users as StaffMember[]) : [],
-          ),
-      ),
+      (["worker", "admin", "ceo"] as const).map(async (role) => {
+        const members: StaffMember[] = [];
+        let offset = 0;
+        while (!controller.signal.aborted) {
+          const response = await fetch(
+            `/api/management/users?role=${role}&status=active&limit=100&offset=${offset}`,
+            { cache: "no-store", signal: controller.signal },
+          );
+          if (!response.ok) throw new Error("Staff directory unavailable");
+          const data = await response.json();
+          const page = Array.isArray(data.users)
+            ? (data.users as StaffMember[])
+            : [];
+          members.push(...page);
+          offset += page.length;
+          if (page.length < 100 || offset >= (data.totalCount ?? offset)) break;
+        }
+        return members;
+      }),
     )
       .then((lists) => {
         if (controller.signal.aborted) return;
@@ -389,6 +431,7 @@ export function RequestsQueue({
     setSelected((prev) =>
       prev && prev.id === id ? { ...prev, ...patch } : prev,
     );
+    setReloadKey((key) => key + 1);
   };
 
   const statusLabel = (status: string): string =>
@@ -398,9 +441,124 @@ export function RequestsQueue({
   const pages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   const showSkeleton = loading && rows.length === 0 && !error;
 
+  const resetFilters = () => {
+    setStatusTab("all");
+    setStaleOnly(false);
+    setAssigned("any");
+    setSource("");
+    setLocaleFilter("");
+    setProductOption(null);
+    setSearchInput("");
+    setDateRange(null);
+    setOffset(0);
+  };
+  const advancedCount = [
+    assigned !== "any",
+    !!source,
+    !!localeFilter,
+    !!productOption,
+    !!dateRange,
+    staleOnly,
+  ].filter(Boolean).length;
+  const overdue = rows.filter(
+    (row) =>
+      row.status === "new" &&
+      loadedAt !== null &&
+      loadedAt - new Date(row.created_at).getTime() >=
+        STALE_AFTER_HOURS * 3_600_000,
+  ).length;
   return (
-    <section>
-      <PageHeader title={t(copy.pageTitle)} subtitle={t(copy.pageSubtitle)} />
+    <section className={`${styles.stack} ${report.workspace}`}>
+      <ReportingHeader
+        locale={locale}
+        section="requests"
+        title={he ? "כל פנייה. הצעד הבא." : "Every request. A clear next step."}
+        subtitle={
+          he
+            ? "פניות מהאתר ומהחנות, אנשי הקשר והצוות המטפל — במקום אחד."
+            : "Website and store enquiries, customer details, and the team handling them — together."
+        }
+        actions={
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--secondary"
+            disabled={loading}
+            onClick={() => setReloadKey((key) => key + 1)}
+          >
+            <RefreshCw size={17} aria-hidden="true" />
+            {he ? "רענון פניות" : "Refresh queue"}
+          </button>
+        }
+      />
+      <div className={report.metrics}>
+        <MetricCard
+          icon={<Inbox size={20} />}
+          label={he ? "פניות התואמות לסינון" : "Matching requests"}
+          value={loading ? "—" : totalCount}
+        />
+        <MetricCard
+          icon={<MessageSquare size={20} />}
+          label={he ? "חדשות בעמוד זה" : "New on this page"}
+          value={
+            loading ? "—" : rows.filter((row) => row.status === "new").length
+          }
+        />
+        <MetricCard
+          icon={<UserRound size={20} />}
+          label={he ? "ללא שיוך בעמוד זה" : "Unassigned on this page"}
+          value={loading ? "—" : rows.filter((row) => !row.assignedTo).length}
+        />
+        <MetricCard
+          icon={<Clock3 size={20} />}
+          label={
+            he ? "ממתינות מעל 48 שעות בעמוד" : "New for over 48h on this page"
+          }
+          value={loading ? "—" : overdue}
+        />
+      </div>
+      <div className={report.toolbar}>
+        <ReportChoices
+          label={he ? "תצוגת פניות" : "Queue view"}
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "table", label: he ? "טבלה" : "Table" },
+            { value: "board", label: he ? "לוח עבודה" : "Work board" },
+          ]}
+        />
+        <div className={styles.quickActions}>
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--ghost"
+            aria-pressed={assigned === selfId}
+            onClick={() =>
+              setFilter(() => setAssigned(assigned === selfId ? "any" : selfId))
+            }
+          >
+            {he ? "הפניות שלי" : "Assigned to me"}
+          </button>
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--secondary"
+            onClick={() => setFiltersOpen(true)}
+          >
+            <SlidersHorizontal size={17} aria-hidden="true" />
+            {he ? "סינון מתקדם" : "Advanced filters"}
+            {advancedCount ? (
+              <span className={styles.filterCount}>{advancedCount}</span>
+            ) : null}
+          </button>
+          {advancedCount || statusTab !== "all" || searchInput ? (
+            <button
+              type="button"
+              className="mgmt-button mgmt-button--ghost"
+              onClick={resetFilters}
+            >
+              {he ? "נקה סינון" : "Reset filters"}
+            </button>
+          ) : null}
+        </div>
+      </div>
 
       <Toolbar
         searchValue={searchInput}
@@ -434,7 +592,35 @@ export function RequestsQueue({
               </button>
             ))}
           </div>
+        </div>
+      </Toolbar>
 
+      <Drawer
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title={he ? "סינון פניות" : "Filter requests"}
+        side="end"
+        className={report.drawer}
+        closeLabel={he ? "סגירה" : "Close"}
+      >
+        <div className={styles.drawerFilters}>
+          <p className={report.muted}>
+            {he
+              ? "בחר את הפניות שחשובות לעבודה שלך. הסינון חל על כל התוצאות."
+              : "Focus on the requests that matter. Filters apply across all results."}
+          </p>
+          <label className="flex items-center gap-3 min-h-11">
+            <input
+              type="checkbox"
+              checked={staleOnly}
+              onChange={(event) =>
+                setFilter(() => setStaleOnly(event.target.checked))
+              }
+            />
+            {he
+              ? "פניות חדשות הממתינות מעל 48 שעות"
+              : "New requests waiting over 48 hours"}
+          </label>
           <div className={styles.selectWrap}>
             <label className={styles.selectLabel} htmlFor="rq-assignee">
               {t(copy.assigneeLabel)}
@@ -518,25 +704,39 @@ export function RequestsQueue({
           >
             {t(copy.dateFilterToggle)}
           </button>
-        </div>
-      </Toolbar>
+          {dateRange ? (
+            <div className={styles.dateFilterPanel}>
+              <DateRangePicker
+                value={dateRange}
+                onChange={(next) => setFilter(() => setDateRange(next))}
+                labels={dateRangeLabels(locale)}
+              />
+              <button
+                type="button"
+                className={styles.toggleButton}
+                onClick={() => setFilter(() => setDateRange(null))}
+              >
+                {t(copy.dateFilterClear)}
+              </button>
+            </div>
+          ) : null}
 
-      {dateRange ? (
-        <div className={styles.dateFilterPanel}>
-          <DateRangePicker
-            value={dateRange}
-            onChange={(next) => setFilter(() => setDateRange(next))}
-            labels={dateRangeLabels(locale)}
-          />
           <button
             type="button"
-            className={styles.toggleButton}
-            onClick={() => setFilter(() => setDateRange(null))}
+            className="mgmt-button mgmt-button--primary"
+            onClick={() => setFiltersOpen(false)}
           >
-            {t(copy.dateFilterClear)}
+            {he ? "הצג תוצאות" : "Show results"}
+          </button>
+          <button
+            type="button"
+            className="mgmt-button mgmt-button--ghost"
+            onClick={resetFilters}
+          >
+            {he ? "נקה סינון" : "Reset filters"}
           </button>
         </div>
-      ) : null}
+      </Drawer>
 
       {staffError ? <Notice tone="warning">{staffError}</Notice> : null}
 
@@ -552,133 +752,231 @@ export function RequestsQueue({
       ) : (
         <>
           <div aria-busy={loading}>
-            <DataTable
-              caption={t(copy.tableCaption)}
-              minWidth="56rem"
-              isEmpty={rows.length === 0}
-              emptyState={
-                <EmptyState
-                  icon={<Inbox size={22} aria-hidden="true" />}
-                  title={t(copy.emptyTitle)}
-                  description={t(copy.emptyDescription)}
-                />
-              }
-              head={
-                <tr>
-                  <th scope="col">{t(copy.colContact)}</th>
-                  <th scope="col">{t(copy.colProduct)}</th>
-                  <th scope="col">{t(copy.colReceived)}</th>
-                  <th scope="col">{t(copy.colStatus)}</th>
-                  <th scope="col">{t(copy.colAssignee)}</th>
-                  <th scope="col" aria-label={t(copy.colOpen)} />
-                </tr>
-              }
-            >
-              {rows.map((row) => {
-                const received = formatReceived(row.created_at, locale);
-                const ageMs =
-                  loadedAt === null
-                    ? 0
-                    : loadedAt - new Date(row.created_at).getTime();
-                const stale =
-                  row.status === "new" &&
-                  loadedAt !== null &&
-                  ageMs >= STALE_AFTER_HOURS * 3_600_000;
-                const productName = row.product
-                  ? he
-                    ? row.product.name_he
-                    : row.product.name_en
-                  : null;
-                return (
-                  <tr key={row.id}>
-                    <td>
-                      <div className={styles.contactCell}>
-                        <span className={styles.contactName} dir="auto">
-                          {row.customer.name}
+            {view === "board" && rows.length > 0 ? (
+              <>
+                <p className={report.muted}>
+                  {he
+                    ? "הלוח מציג את העמוד הנוכחי. עבור בין עמודים כדי לראות פניות נוספות."
+                    : "The board shows the current page. Use pagination to see more requests."}
+                </p>
+                <div className={styles.board}>
+                  {REQUEST_STATUSES.map((status) => (
+                    <section
+                      key={status}
+                      className={styles.boardColumn}
+                      data-status={status}
+                      aria-label={statusLabel(status)}
+                    >
+                      <h2 className={styles.boardTitle}>
+                        <span>{statusLabel(status)}</span>
+                        <span>
+                          {rows.filter((row) => row.status === status).length}
                         </span>
-                        <span className={styles.contactLinks}>
-                          {row.customer.phone ? (
-                            <a href={`tel:${row.customer.phone}`} dir="ltr">
-                              {row.customer.phone}
-                            </a>
-                          ) : null}
-                          <a href={`mailto:${row.customer.email}`} dir="ltr">
-                            {row.customer.email}
-                          </a>
-                          {row.customer.phone ? (
-                            <a
-                              href={whatsappHref(row.customer.phone)}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {t(copy.whatsappAction)}
-                            </a>
-                          ) : null}
-                        </span>
-                      </div>
-                    </td>
-                    <td>
-                      {productName ? (
-                        <>
-                          <span dir="auto">{productName}</span>
-                          {row.variant ? (
-                            <>
-                              {" "}
-                              <span className={styles.productMeta} dir="ltr">
-                                {row.variant.sku}
+                      </h2>
+                      {rows
+                        .filter((row) => row.status === status)
+                        .map((row) => (
+                          <button
+                            key={row.id}
+                            type="button"
+                            className={styles.requestCard}
+                            onClick={() => setSelected(row)}
+                          >
+                            <OverflowText
+                              text={row.customer.name}
+                              focusable={false}
+                            />
+                            <span className={styles.productMeta}>
+                              <OverflowText
+                                text={
+                                  row.product
+                                    ? he
+                                      ? row.product.name_he
+                                      : row.product.name_en
+                                    : t(copy.noProduct)
+                                }
+                                focusable={false}
+                              />
+                            </span>
+                            <span className={styles.cardMessage}>
+                              {row.message}
+                            </span>
+                            <span className={styles.cardFooter}>
+                              <time dateTime={row.created_at}>
+                                {new Date(row.created_at).toLocaleDateString(
+                                  he ? "he-IL" : "en-IL",
+                                  {
+                                    timeZone: "Asia/Jerusalem",
+                                    month: "short",
+                                    day: "numeric",
+                                  },
+                                )}
+                              </time>
+                              <span>
+                                {row.assignedTo
+                                  ? row.assignedTo.displayName || selfName
+                                  : t(copy.unassignedShort)}
                               </span>
-                            </>
-                          ) : null}
-                        </>
-                      ) : (
-                        <span className={styles.productMeta}>
-                          {t(copy.noProduct)}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <time dateTime={received.dateTime} dir="ltr">
-                        {received.text}
-                      </time>
-                      {stale ? (
-                        <span className={styles.ageBadge}>
-                          {ageText(ageMs, locale)}
-                        </span>
+                            </span>
+                          </button>
+                        ))}
+                      {!rows.some((row) => row.status === status) ? (
+                        <p className={report.muted}>
+                          {he
+                            ? "אין פניות בעמוד זה"
+                            : "No requests on this page"}
+                        </p>
                       ) : null}
-                    </td>
-                    <td>
-                      <StatusBadge status={row.status}>
-                        {statusLabel(row.status)}
-                      </StatusBadge>
-                    </td>
-                    <td>
-                      {row.assignedTo ? (
-                        <span dir="auto">
-                          {row.assignedTo.id === selfId
-                            ? selfName || row.assignedTo.displayName
-                            : (row.assignedTo.displayName ??
-                              t(copy.assigneeUnassigned))}
-                        </span>
-                      ) : (
-                        <span className={styles.productMeta}>
-                          {t(copy.unassignedShort)}
-                        </span>
-                      )}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className={styles.rowChevron}
-                        aria-label={t(copy.openDetails)}
-                        onClick={() => setSelected(row)}
-                      >
-                        <ChevronLeft size={16} aria-hidden="true" />
-                      </button>
-                    </td>
+                    </section>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <DataTable
+                tableClassName={styles.queueTable}
+                caption={t(copy.tableCaption)}
+                minWidth="56rem"
+                isEmpty={rows.length === 0}
+                emptyState={
+                  <EmptyState
+                    icon={<Inbox size={22} aria-hidden="true" />}
+                    title={t(copy.emptyTitle)}
+                    description={t(copy.emptyDescription)}
+                  />
+                }
+                head={
+                  <tr>
+                    <th scope="col">{t(copy.colContact)}</th>
+                    <th scope="col">{t(copy.colProduct)}</th>
+                    <th scope="col">{t(copy.colReceived)}</th>
+                    <th scope="col">{t(copy.colStatus)}</th>
+                    <th scope="col">{t(copy.colAssignee)}</th>
+                    <th scope="col">
+                      <span className="sr-only">{t(copy.colOpen)}</span>
+                    </th>
                   </tr>
-                );
-              })}
-            </DataTable>
+                }
+              >
+                {rows.map((row) => {
+                  const received = formatReceived(row.created_at, locale);
+                  const ageMs =
+                    loadedAt === null
+                      ? 0
+                      : loadedAt - new Date(row.created_at).getTime();
+                  const stale =
+                    row.status === "new" &&
+                    loadedAt !== null &&
+                    ageMs >= STALE_AFTER_HOURS * 3_600_000;
+                  const productName = row.product
+                    ? he
+                      ? row.product.name_he
+                      : row.product.name_en
+                    : null;
+                  return (
+                    <tr key={row.id}>
+                      <td>
+                        <div className={styles.contactCell}>
+                          <span className={styles.contactName} dir="auto">
+                            <OverflowText text={row.customer.name} />
+                          </span>
+                          <span className={styles.contactLinks}>
+                            {row.customer.phone ? (
+                              <a href={`tel:${row.customer.phone}`} dir="ltr">
+                                <OverflowText
+                                  text={row.customer.phone}
+                                  dir="ltr"
+                                  focusable={false}
+                                />
+                              </a>
+                            ) : null}
+                            <a href={`mailto:${row.customer.email}`} dir="ltr">
+                              <OverflowText
+                                text={row.customer.email}
+                                dir="ltr"
+                                focusable={false}
+                              />
+                            </a>
+                            {row.customer.phone ? (
+                              <a
+                                href={whatsappHref(row.customer.phone)}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {t(copy.whatsappAction)}
+                              </a>
+                            ) : null}
+                          </span>
+                        </div>
+                      </td>
+                      <td>
+                        {productName ? (
+                          <>
+                            <OverflowText text={productName} />
+                            {row.variant ? (
+                              <>
+                                {" "}
+                                <span className={styles.productMeta} dir="ltr">
+                                  <OverflowText
+                                    text={row.variant.sku}
+                                    dir="ltr"
+                                  />
+                                </span>
+                              </>
+                            ) : null}
+                          </>
+                        ) : (
+                          <span className={styles.productMeta}>
+                            {t(copy.noProduct)}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <time dateTime={received.dateTime} dir="ltr">
+                          {received.text}
+                        </time>
+                        {stale ? (
+                          <span className={styles.ageBadge}>
+                            {ageText(ageMs, locale)}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td>
+                        <StatusBadge status={row.status}>
+                          {statusLabel(row.status)}
+                        </StatusBadge>
+                      </td>
+                      <td>
+                        {row.assignedTo ? (
+                          <span dir="auto">
+                            <OverflowText
+                              text={
+                                (row.assignedTo.id === selfId
+                                  ? selfName || row.assignedTo.displayName
+                                  : row.assignedTo.displayName) ??
+                                t(copy.assigneeUnassigned)
+                              }
+                            />
+                          </span>
+                        ) : (
+                          <span className={styles.productMeta}>
+                            {t(copy.unassignedShort)}
+                          </span>
+                        )}
+                      </td>
+                      <td>
+                        <IconAction
+                          className={styles.rowChevron}
+                          label={t(copy.openDetails)}
+                          onClick={() => setSelected(row)}
+                        >
+                          <ChevronLeft size={16} aria-hidden="true" />
+                        </IconAction>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </DataTable>
+            )}
           </div>
 
           {totalCount > 0 ? (

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Mail, MessageCircle, Phone } from "lucide-react";
-import { DetailPanel, Drawer, Notice, StatusBadge } from "../ui";
+import { DetailPanel, Drawer, Notice, StatusBadge, OverflowText } from "../ui";
 import { requestDrawerCopy as copy, requestStatusLabels } from "./copy";
 import {
   REQUEST_STATUSES,
@@ -11,6 +11,7 @@ import {
   type StaffMember,
 } from "./types";
 import styles from "./requests-queue.module.css";
+import { reportingStyles } from "../ui/reporting-workspace";
 
 function isRequestStatus(status: string): status is RequestStatus {
   return (REQUEST_STATUSES as readonly string[]).includes(status);
@@ -109,7 +110,7 @@ export function RequestDrawer({
     const nextAssignee =
       update.assignedTo !== undefined
         ? update.assignedTo || null
-        : assignedToId || null;
+        : request.assignedTo?.id || null;
     try {
       const res = await fetch("/api/management/requests", {
         method: "PATCH",
@@ -131,6 +132,7 @@ export function RequestDrawer({
         });
         return;
       }
+      setAssignedToId(nextAssignee ?? "");
       onUpdated(request.id, {
         status: nextStatus,
         assignedTo: nextAssignee
@@ -156,7 +158,10 @@ export function RequestDrawer({
     <Drawer
       open={open}
       onClose={onClose}
-      title={request.customer.name || t(copyMap.detailsTitle)}
+      className={reportingStyles.drawer}
+      title={
+        <OverflowText text={request.customer.name || t(copyMap.detailsTitle)} />
+      }
       side="start"
       closeLabel={t(copyMap.closeLabel)}
     >
@@ -164,12 +169,12 @@ export function RequestDrawer({
         <h3 className={styles.drawerSectionTitle}>{t(copyMap.contactTitle)}</h3>
         <div className={styles.contactCard}>
           <span className={styles.contactName} dir="auto">
-            {request.customer.name}
+            <OverflowText text={request.customer.name} />
           </span>
           {request.customer.phone ? (
-            <span dir="ltr">{request.customer.phone}</span>
+            <OverflowText text={request.customer.phone} dir="ltr" />
           ) : null}
-          <span dir="ltr">{request.customer.email}</span>
+          <OverflowText text={request.customer.email} dir="ltr" />
           <div className={styles.contactActions}>
             {request.customer.phone ? (
               <a
@@ -220,7 +225,7 @@ export function RequestDrawer({
               label: t(copyMap.requestIdRow),
               value: (
                 <span dir="ltr" className={styles.productMeta}>
-                  {request.id}
+                  <OverflowText text={request.id} dir="ltr" />
                 </span>
               ),
             },
@@ -241,7 +246,7 @@ export function RequestDrawer({
           </h3>
           <div className={styles.productCard}>
             <span className={styles.productName} dir="auto">
-              {productName}
+              <OverflowText text={productName ?? ""} />
             </span>
             {request.variant ? (
               <span className={styles.productMeta}>
@@ -253,7 +258,7 @@ export function RequestDrawer({
             ) : null}
             <a
               className={styles.productLink}
-              href={`/${locale}/admin/products`}
+              href={`/${locale}/admin/products/${request.product.id}`}
             >
               {t(copyMap.openProductEditor)} →
             </a>
@@ -282,7 +287,6 @@ export function RequestDrawer({
             value={assignedToId}
             disabled={busy}
             onChange={(event) => {
-              setAssignedToId(event.target.value);
               void patch({ assignedTo: event.target.value });
             }}
           >

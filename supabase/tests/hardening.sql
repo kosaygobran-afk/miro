@@ -334,22 +334,16 @@ begin
   end if;
 end $$;
 
--- Anonymous enquiry intake: succeeds with caps; cannot self-triage
+-- Public enquiries now use the server intake route; anonymous direct writes are denied.
 do $$ begin
-  insert into public.service_requests(name, email, message, locale, status, assigned_to)
-  values ('Anon Visitor', 'anon@example.invalid', 'Please contact me', 'he', 'spam',
-          '00000000-0000-0000-0000-000000000201');
+  begin
+    insert into public.service_requests(name, email, message, locale, status, assigned_to)
+    values ('Anon Visitor', 'anon@example.invalid', 'Please contact me', 'he', 'spam',
+            '00000000-0000-0000-0000-000000000201');
+    raise exception 'Anonymous direct request insert unexpectedly allowed';
+  exception when insufficient_privilege then null; end;
 end $$;
 reset role;
-do $$ begin
-  if not exists (
-    select 1 from public.service_requests
-    where email = 'anon@example.invalid' and status = 'new'
-      and assigned_to is null
-  ) then
-    raise exception 'Anon request triage fields not forced';
-  end if;
-end $$;
 
 -- ============================================================
 -- 10. CEO-only controls reject non-CEO callers

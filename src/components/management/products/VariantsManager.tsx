@@ -1,5 +1,8 @@
 "use client";
 
+import { ScrollRegion } from "../ui/scroll-region";
+import { Dialog } from "../ui/dialog";
+
 import { useState, useCallback } from "react";
 import { Plus, Edit, Eye, EyeOff } from "lucide-react";
 
@@ -326,8 +329,11 @@ export function VariantsManager({
       {/* Desktop Table */}
       <div className="hidden lg:block">
         <div className="miro-card overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" role="grid">
+          <ScrollRegion
+            className="overflow-x-auto mgmt-variants-table"
+            label={he ? "וריאנטים" : "Variants table"}
+          >
+            <table className="w-full text-sm">
               <caption className="sr-only">
                 {he ? "טבלת ניהול וריאנטים" : "Variants management table"}
               </caption>
@@ -521,7 +527,7 @@ export function VariantsManager({
                 ))}
               </tbody>
             </table>
-          </div>
+          </ScrollRegion>
         </div>
       </div>
 
@@ -701,370 +707,382 @@ export function VariantsManager({
       </div>
 
       {/* Variant Form Modal */}
-      {showForm && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="variant-form-title"
+      <Dialog
+        open={showForm}
+        onClose={() => {
+          if (saving) return;
+          setShowForm(false);
+          resetForm();
+        }}
+        title={
+          editingVariant
+            ? he
+              ? "ערוך וריאנט"
+              : "Edit Variant"
+            : he
+              ? "הוסף וריאנט"
+              : "Add Variant"
+        }
+        closeLabel={he ? "סגור" : "Close"}
+        size="lg"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submitForm();
+          }}
+          className="p-6 space-y-6"
         >
-          <div className="bg-background rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="border-b border-border-subtle p-6 flex items-center justify-between">
-              <h3 id="variant-form-title" className="text-xl font-black">
-                {editingVariant
-                  ? he
-                    ? "ערוך וריאנט"
-                    : "Edit Variant"
-                  : he
-                    ? "הוסף וריאנט"
-                    : "Add Variant"}
-              </h3>
-              <button
-                className="text-muted-foreground hover:text-foreground"
-                onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}
-                aria-label={he ? "סגור" : "Close"}
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label
+                htmlFor="variant-form-sku"
+                className="block text-sm font-medium mb-1"
               >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
+                {he ? "מק״ט (SKU) *" : "SKU *"}
+              </label>
+              <input
+                id="variant-form-sku"
+                type="text"
+                value={formData.sku}
+                onChange={(e) => handleFormChange("sku", e.target.value)}
+                className="miro-input"
+                required
+                disabled={!!(disabled || saving || editingVariant)}
+                placeholder="UNIQUE-SKU-001"
+                aria-required="true"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                {he
+                  ? "מזהה ייחודי חובה. לא ניתן לשינוי לאחר יצירה."
+                  : "Required unique identifier. Cannot be changed after creation."}
+              </p>
             </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void submitForm();
-              }}
-              className="p-6 space-y-6"
-            >
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "מק״ט (SKU) *" : "SKU *"}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.sku}
-                    onChange={(e) => handleFormChange("sku", e.target.value)}
-                    className="miro-input"
-                    required
-                    disabled={!!(disabled || saving || editingVariant)}
-                    placeholder="UNIQUE-SKU-001"
-                    aria-required="true"
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {he
-                      ? "מזהה ייחודי חובה. לא ניתן לשינוי לאחר יצירה."
-                      : "Required unique identifier. Cannot be changed after creation."}
-                  </p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "ברקוד" : "Barcode"}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.barcode}
-                    onChange={(e) =>
-                      handleFormChange("barcode", e.target.value)
-                    }
-                    className="miro-input"
-                    placeholder="1234567890123"
-                    disabled={disabled || saving}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "צבע (עברית)" : "Color (Hebrew)"}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.color_he}
-                    onChange={(e) =>
-                      handleFormChange("color_he", e.target.value)
-                    }
-                    className="miro-input"
-                    placeholder={he ? "למשל: שחור" : "e.g., Black"}
-                    disabled={disabled || saving}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "צבע (אנגלית)" : "Color (English)"}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.color_en}
-                    onChange={(e) =>
-                      handleFormChange("color_en", e.target.value)
-                    }
-                    className="miro-input"
-                    placeholder={he ? "למשל: Black" : "e.g., Black"}
-                    disabled={disabled || saving}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "קוד צבע Hex" : "Color Hex"}
-                  </label>
-                  <input
-                    type="color"
-                    value={formData.color_hex || "#000000"}
-                    onChange={(e) =>
-                      handleFormChange("color_hex", e.target.value)
-                    }
-                    className="miro-input h-10 cursor-pointer"
-                    disabled={disabled || saving}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "מחיר מכירה (₪)" : "Sale Price (₪)"}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.price_override}
-                    onChange={(e) =>
-                      handleFormChange("price_override", e.target.value)
-                    }
-                    className="miro-input"
-                    min="0"
-                    step="0.01"
-                    placeholder={
-                      he
-                        ? "משאיר ריק למחיר מוצר"
-                        : "Leave empty for product price"
-                    }
-                    disabled={disabled || saving}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "עלות רכישה (₪)" : "Purchase Cost (₪)"}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.cost_override}
-                    onChange={(e) =>
-                      handleFormChange("cost_override", e.target.value)
-                    }
-                    className="miro-input"
-                    min="0"
-                    step="0.01"
-                    placeholder={
-                      he
-                        ? "משאיר ריק לעלות מוצר"
-                        : "Leave empty for product cost"
-                    }
-                    disabled={disabled || saving}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "סף מלאי נמוך" : "Low Stock Threshold"}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.low_stock_threshold}
-                    onChange={(e) =>
-                      handleFormChange(
-                        "low_stock_threshold",
-                        Number(e.target.value),
-                      )
-                    }
-                    className="miro-input"
-                    min="0"
-                    step="1"
-                    disabled={disabled || saving}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "נקודת הזמנה חוזרת" : "Reorder Point"}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.reorder_point}
-                    onChange={(e) =>
-                      handleFormChange("reorder_point", e.target.value)
-                    }
-                    className="miro-input"
-                    min="0"
-                    step="1"
-                    placeholder={he ? "אופציונלי" : "Optional"}
-                    disabled={disabled || saving}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "כמות הזמנה חוזרת" : "Reorder Qty"}
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.reorder_qty}
-                    onChange={(e) =>
-                      handleFormChange("reorder_qty", e.target.value)
-                    }
-                    className="miro-input"
-                    min="0"
-                    step="1"
-                    placeholder={he ? "אופציונלי" : "Optional"}
-                    disabled={disabled || saving}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "מק״ט ספק" : "Supplier SKU"}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.supplier_sku}
-                    onChange={(e) =>
-                      handleFormChange("supplier_sku", e.target.value)
-                    }
-                    className="miro-input"
-                    placeholder={he ? "מק״ט אצל הספק" : "Supplier's SKU"}
-                    disabled={disabled || saving}
-                  />
-                </div>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    {he ? "ספק" : "Supplier"}
-                  </label>
-                  <select
-                    value={formData.supplier_id}
-                    onChange={(e) =>
-                      handleFormChange("supplier_id", e.target.value)
-                    }
-                    className="miro-input"
-                    disabled={disabled || saving}
-                  >
-                    <option value="">{he ? "ללא ספק" : "No supplier"}</option>
-                    {suppliers
-                      .filter((s) => s.is_active !== false)
-                      .map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.company_name}
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <div className="flex items-center gap-4 pt-6">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_default}
-                      onChange={(e) =>
-                        handleFormChange("is_default", e.target.checked)
-                      }
-                      className="rounded border-border-subtle"
-                      disabled={disabled || saving}
-                    />
-                    <span>{he ? "וריאנט ברירת מחדל" : "Default variant"}</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.is_active}
-                      onChange={(e) =>
-                        handleFormChange("is_active", e.target.checked)
-                      }
-                      className="rounded border-border-subtle"
-                      disabled={disabled || saving}
-                    />
-                    <span>{he ? "פעיל" : "Active"}</span>
-                  </label>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 border-t border-border-subtle pt-6">
-                <button
-                  type="button"
-                  className="miro-button miro-button-secondary"
-                  onClick={() => {
-                    setShowForm(false);
-                    resetForm();
-                  }}
-                  disabled={saving}
-                >
-                  {he ? "ביטול" : "Cancel"}
-                </button>
-                <button
-                  type="submit"
-                  className="miro-button miro-button-primary"
-                  disabled={saving || disabled}
-                >
-                  {saving ? (
-                    <>
-                      <svg
-                        className="me-2 h-4 w-4 animate-spin"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        />
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                      {he ? "שומר..." : "Saving..."}
-                    </>
-                  ) : (
-                    <>
-                      <svg
-                        className="me-2 h-4 w-4"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      {he ? "שמור" : "Save"}
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
+            <div>
+              <label
+                htmlFor="variant-form-barcode"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "ברקוד" : "Barcode"}
+              </label>
+              <input
+                id="variant-form-barcode"
+                type="text"
+                value={formData.barcode}
+                onChange={(e) => handleFormChange("barcode", e.target.value)}
+                className="miro-input"
+                placeholder="1234567890123"
+                disabled={disabled || saving}
+              />
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label
+                htmlFor="variant-form-color_he"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "צבע (עברית)" : "Color (Hebrew)"}
+              </label>
+              <input
+                id="variant-form-color_he"
+                type="text"
+                value={formData.color_he}
+                onChange={(e) => handleFormChange("color_he", e.target.value)}
+                className="miro-input"
+                placeholder={he ? "למשל: שחור" : "e.g., Black"}
+                disabled={disabled || saving}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="variant-form-color_en"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "צבע (אנגלית)" : "Color (English)"}
+              </label>
+              <input
+                id="variant-form-color_en"
+                type="text"
+                value={formData.color_en}
+                onChange={(e) => handleFormChange("color_en", e.target.value)}
+                className="miro-input"
+                placeholder={he ? "למשל: Black" : "e.g., Black"}
+                disabled={disabled || saving}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="variant-form-color_hex"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "קוד צבע Hex" : "Color Hex"}
+              </label>
+              <input
+                id="variant-form-color_hex"
+                type="color"
+                value={formData.color_hex || "#000000"}
+                onChange={(e) => handleFormChange("color_hex", e.target.value)}
+                className="miro-input h-10 cursor-pointer"
+                disabled={disabled || saving}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label
+                htmlFor="variant-form-price_override"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "מחיר מכירה (₪)" : "Sale Price (₪)"}
+              </label>
+              <input
+                id="variant-form-price_override"
+                type="number"
+                value={formData.price_override}
+                onChange={(e) =>
+                  handleFormChange("price_override", e.target.value)
+                }
+                className="miro-input"
+                min="0"
+                step="0.01"
+                placeholder={
+                  he ? "משאיר ריק למחיר מוצר" : "Leave empty for product price"
+                }
+                disabled={disabled || saving}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="variant-form-cost_override"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "עלות רכישה (₪)" : "Purchase Cost (₪)"}
+              </label>
+              <input
+                id="variant-form-cost_override"
+                type="number"
+                value={formData.cost_override}
+                onChange={(e) =>
+                  handleFormChange("cost_override", e.target.value)
+                }
+                className="miro-input"
+                min="0"
+                step="0.01"
+                placeholder={
+                  he ? "משאיר ריק לעלות מוצר" : "Leave empty for product cost"
+                }
+                disabled={disabled || saving}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="variant-form-low_stock_threshold"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "סף מלאי נמוך" : "Low Stock Threshold"}
+              </label>
+              <input
+                id="variant-form-low_stock_threshold"
+                type="number"
+                value={formData.low_stock_threshold}
+                onChange={(e) =>
+                  handleFormChange(
+                    "low_stock_threshold",
+                    Number(e.target.value),
+                  )
+                }
+                className="miro-input"
+                min="0"
+                step="1"
+                disabled={disabled || saving}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label
+                htmlFor="variant-form-reorder_point"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "נקודת הזמנה חוזרת" : "Reorder Point"}
+              </label>
+              <input
+                id="variant-form-reorder_point"
+                type="number"
+                value={formData.reorder_point}
+                onChange={(e) =>
+                  handleFormChange("reorder_point", e.target.value)
+                }
+                className="miro-input"
+                min="0"
+                step="1"
+                placeholder={he ? "אופציונלי" : "Optional"}
+                disabled={disabled || saving}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="variant-form-reorder_qty"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "כמות הזמנה חוזרת" : "Reorder Qty"}
+              </label>
+              <input
+                id="variant-form-reorder_qty"
+                type="number"
+                value={formData.reorder_qty}
+                onChange={(e) =>
+                  handleFormChange("reorder_qty", e.target.value)
+                }
+                className="miro-input"
+                min="0"
+                step="1"
+                placeholder={he ? "אופציונלי" : "Optional"}
+                disabled={disabled || saving}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="variant-form-supplier_sku"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "מק״ט ספק" : "Supplier SKU"}
+              </label>
+              <input
+                id="variant-form-supplier_sku"
+                type="text"
+                value={formData.supplier_sku}
+                onChange={(e) =>
+                  handleFormChange("supplier_sku", e.target.value)
+                }
+                className="miro-input"
+                placeholder={he ? "מק״ט אצל הספק" : "Supplier's SKU"}
+                disabled={disabled || saving}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label
+                htmlFor="variant-form-supplier_id"
+                className="block text-sm font-medium mb-1"
+              >
+                {he ? "ספק" : "Supplier"}
+              </label>
+              <select
+                id="variant-form-supplier_id"
+                value={formData.supplier_id}
+                onChange={(e) =>
+                  handleFormChange("supplier_id", e.target.value)
+                }
+                className="miro-input"
+                disabled={disabled || saving}
+              >
+                <option value="">{he ? "ללא ספק" : "No supplier"}</option>
+                {suppliers
+                  .filter((s) => s.is_active !== false)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.company_name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-4 pt-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_default}
+                  onChange={(e) =>
+                    handleFormChange("is_default", e.target.checked)
+                  }
+                  className="rounded border-border-subtle"
+                  disabled={disabled || saving}
+                />
+                <span>{he ? "וריאנט ברירת מחדל" : "Default variant"}</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.is_active}
+                  onChange={(e) =>
+                    handleFormChange("is_active", e.target.checked)
+                  }
+                  className="rounded border-border-subtle"
+                  disabled={disabled || saving}
+                />
+                <span>{he ? "פעיל" : "Active"}</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 border-t border-border-subtle pt-6">
+            <button
+              type="button"
+              className="miro-button miro-button-secondary"
+              onClick={() => {
+                setShowForm(false);
+                resetForm();
+              }}
+              disabled={saving}
+            >
+              {he ? "ביטול" : "Cancel"}
+            </button>
+            <button
+              type="submit"
+              className="miro-button miro-button-primary"
+              disabled={saving || disabled}
+            >
+              {saving ? (
+                <>
+                  <svg
+                    className="me-2 h-4 w-4 animate-spin"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    />
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    />
+                  </svg>
+                  {he ? "שומר..." : "Saving..."}
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="me-2 h-4 w-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  {he ? "שמור" : "Save"}
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </Dialog>
     </div>
   );
 }

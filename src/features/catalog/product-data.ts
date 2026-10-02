@@ -52,6 +52,7 @@ export interface Product {
   rolePrice?: number;
   variants: ProductVariant[];
   stockQty: number;
+  availabilityUnconfirmed?: boolean;
   stockState: "in_stock" | "low" | "out";
   outOfStockPolicy:
     "keep_visible_contact" | "keep_visible_restock" | "hide_from_public";

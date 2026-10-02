@@ -7,12 +7,26 @@ export const generateMetadata = privateMetadata("admin", "products");
 
 export default async function ProductsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { locale } = await params;
+  const query = await searchParams;
   const safeLocale = (isLocale(locale) ? locale : "he") as Locale;
   await requireRole(safeLocale, ["admin", "ceo"]);
 
-  return <ProductManagement locale={safeLocale} />;
+  const status =
+    typeof query.status === "string" &&
+    ["draft", "active", "hidden", "archived"].includes(query.status)
+      ? query.status
+      : "";
+  return (
+    <ProductManagement
+      key={status}
+      locale={safeLocale}
+      initialStatus={status}
+    />
+  );
 }

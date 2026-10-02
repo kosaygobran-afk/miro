@@ -1,5 +1,7 @@
 "use client";
 
+import { CollectionSummary } from "./ui/collection-summary";
+
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus,
@@ -8,10 +10,13 @@ import {
   RotateCcw,
   Building2,
   Clock,
-  DollarSign,
+  Coins,
   CheckCircle,
 } from "lucide-react";
 import {
+  OverflowText,
+  IconAction,
+  ActivationSwitch,
   DataTable,
   EmptyState,
   ErrorState,
@@ -369,6 +374,34 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
         }
       />
 
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "ספקים שנטענו" : "Loaded suppliers",
+            value: suppliers.length,
+          },
+          {
+            label: he ? "פעילים" : "Active",
+            value: suppliers.filter((supplier) => supplier.is_active).length,
+          },
+          {
+            label: he ? "לא פעילים" : "Inactive",
+            value: suppliers.filter((supplier) => !supplier.is_active).length,
+          },
+          {
+            label: he ? "עם פרטי קשר" : "With contact details",
+            value: suppliers.filter(
+              (supplier) => supplier.phone || supplier.email,
+            ).length,
+          },
+        ]}
+        scope={
+          he
+            ? "סיכום הספקים המוצגים בעמוד זה."
+            : "Summary of suppliers on this page."
+        }
+      />
+
       <section className="miro-card">
         {suppliers.length === 0 ? (
           <EmptyState
@@ -393,6 +426,18 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
             {/* Desktop Table (≥768px) */}
             <div className="hidden md:block">
               <DataTable
+                columnWidths={[
+                  "16%",
+                  "12%",
+                  "12%",
+                  "18%",
+                  "9%",
+                  "13%",
+                  "8%",
+                  "12%",
+                ]}
+                minWidth="80rem"
+                tableClassName="mgmt-supplier-table"
                 stickyHeader
                 caption={he ? "טבלת ניהול ספקים" : "Supplier management table"}
                 isEmpty={suppliers.length === 0}
@@ -422,12 +467,15 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                 {suppliers.map((supplier) => (
                   <tr key={supplier.id}>
                     <td className="p-4">
-                      <div className="flex items-center gap-2">
+                      <div className="mgmt-supplier-company">
                         <Building2
                           className="h-4 w-4 text-muted-foreground"
                           aria-hidden="true"
                         />
-                        <p className="font-medium">{supplier.company_name}</p>
+                        <OverflowText
+                          className="font-medium"
+                          text={supplier.company_name}
+                        />
                       </div>
                       <p className="text-xs text-muted-foreground font-mono">
                         {supplier.id.slice(0, 8)}…
@@ -435,7 +483,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                     </td>
                     <td className="p-4">
                       {supplier.contact_person ? (
-                        <p>{supplier.contact_person}</p>
+                        <OverflowText text={supplier.contact_person} />
                       ) : (
                         <span className="text-muted-foreground">
                           {he ? "לא צוין" : "Not specified"}
@@ -460,7 +508,11 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                           href={`mailto:${supplier.email}`}
                           className="text-primary hover:underline"
                         >
-                          {supplier.email}
+                          <OverflowText
+                            text={supplier.email}
+                            dir="ltr"
+                            focusable={false}
+                          />
                         </a>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -468,74 +520,55 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                     </td>
                     <td className="p-4">
                       {supplier.default_lead_time_days !== null ? (
-                        <>
-                          <Clock
-                            className="h-3 w-3 inline-block align-middle ms-1"
-                            aria-hidden="true"
-                          />
+                        <span className="mgmt-data-chip">
+                          <Clock className="h-3 w-3" aria-hidden="true" />
                           {supplier.default_lead_time_days}
-                        </>
+                        </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </td>
                     <td className="p-4">
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border">
-                        <DollarSign className="h-3 w-3" aria-hidden="true" />
+                      <span className="mgmt-data-chip">
+                        <Coins className="h-3 w-3" aria-hidden="true" />
                         {getCurrencyLabel(supplier.currency, locale)}
                       </span>
                     </td>
                     <td className="p-4">
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={supplier.is_active}
-                          onChange={(e) =>
-                            toggleActive(supplier, e.target.checked)
-                          }
-                          disabled={busy}
-                          className="rounded border-border-subtle"
-                          aria-label={
-                            he
-                              ? "הפעל/השבת ספק"
-                              : "Activate/deactivate supplier"
-                          }
-                        />
-                        <span className="ms-2 text-sm">
-                          {supplier.is_active
+                      <ActivationSwitch
+                        active={supplier.is_active}
+                        disabled={busy}
+                        label={
+                          supplier.is_active
                             ? he
-                              ? "פעיל"
-                              : "Active"
+                              ? "פעיל · השבת ספק"
+                              : "Active · Deactivate supplier"
                             : he
-                              ? "לא פעיל"
-                              : "Inactive"}
-                        </span>
-                      </label>
+                              ? "לא פעיל · הפעל ספק"
+                              : "Inactive · Activate supplier"
+                        }
+                        onClick={() =>
+                          void toggleActive(supplier, !supplier.is_active)
+                        }
+                      />
                     </td>
                     <td className="p-4">
-                      <div className="flex items-center gap-2">
-                        <button
-                          className="miro-button miro-button-secondary text-sm"
+                      <div className="mgmt-row-actions">
+                        <IconAction
+                          label={he ? "ערוך ספק" : "Edit supplier"}
                           onClick={() => openEditForm(supplier)}
                           disabled={busy}
-                          aria-label={he ? "ערוך ספק" : "Edit supplier"}
                         >
-                          <Edit className="h-3 w-3" aria-hidden="true" />
-                          <span className="hidden sm:inline">
-                            {he ? "עריכה" : "Edit"}
-                          </span>
-                        </button>
-                        <button
-                          className="miro-button miro-button-secondary text-sm text-destructive hover:bg-destructive/10"
+                          <Edit size={17} aria-hidden="true" />
+                        </IconAction>
+                        <IconAction
+                          label={he ? "מחיקת ספק" : "Delete supplier"}
+                          tone="danger"
                           onClick={() => startDeleteConfirm(supplier.id)}
                           disabled={busy}
-                          aria-label={he ? "מחיקת ספק" : "Delete supplier"}
                         >
-                          <Trash2 className="h-3 w-3" aria-hidden="true" />
-                          <span className="hidden sm:inline">
-                            {he ? "מחיקה" : "Delete"}
-                          </span>
-                        </button>
+                          <Trash2 size={17} aria-hidden="true" />
+                        </IconAction>
                       </div>
                     </td>
                   </tr>
@@ -547,7 +580,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
             <div className="md:hidden">
               <div className="space-y-4" role="list">
                 {suppliers.map((supplier) => (
-                  <article
+                  <div
                     key={supplier.id}
                     className="miro-card p-4"
                     role="listitem"
@@ -560,31 +593,22 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                         />
                         <p className="font-semibold">{supplier.company_name}</p>
                       </div>
-                      <label className="inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={supplier.is_active}
-                          onChange={(e) =>
-                            toggleActive(supplier, e.target.checked)
-                          }
-                          disabled={busy}
-                          className="rounded border-border-subtle"
-                          aria-label={
-                            he
-                              ? "הפעל/השבת ספק"
-                              : "Activate/deactivate supplier"
-                          }
-                        />
-                        <span className="ms-2 text-sm">
-                          {supplier.is_active
+                      <ActivationSwitch
+                        active={supplier.is_active}
+                        disabled={busy}
+                        label={
+                          supplier.is_active
                             ? he
-                              ? "פעיל"
-                              : "Active"
+                              ? "פעיל · השבת ספק"
+                              : "Active · Deactivate supplier"
                             : he
-                              ? "לא פעיל"
-                              : "Inactive"}
-                        </span>
-                      </label>
+                              ? "לא פעיל · הפעל ספק"
+                              : "Inactive · Activate supplier"
+                        }
+                        onClick={() =>
+                          void toggleActive(supplier, !supplier.is_active)
+                        }
+                      />
                     </div>
                     <div className="space-y-2 text-sm">
                       <div className="flex flex-wrap gap-2">
@@ -647,7 +671,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                           {he ? "מטבע:" : "Currency:"}
                         </span>
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border">
-                          <DollarSign className="h-3 w-3" aria-hidden="true" />
+                          <Coins className="h-3 w-3" aria-hidden="true" />
                           {getCurrencyLabel(supplier.currency, locale)}
                         </span>
                       </div>
@@ -680,7 +704,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                         {he ? "מחיקה" : "Delete"}
                       </button>
                     </div>
-                  </article>
+                  </div>
                 ))}
               </div>
             </div>

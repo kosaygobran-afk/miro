@@ -1,5 +1,9 @@
 "use client";
 
+import { CollectionSummary } from "./ui/collection-summary";
+
+import { ScrollRegion } from "./ui/scroll-region";
+
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -15,7 +19,15 @@ import {
   ImageIcon,
   CalendarDays,
 } from "lucide-react";
-import { ConfirmationDialog, PageHeader } from "./ui";
+import {
+  ConfirmationDialog,
+  PageHeader,
+  Toolbar,
+  OverflowText,
+  IconAction,
+  IconLink,
+} from "./ui";
+import { TextHint } from "./ui/icon-action";
 
 type ProductVariant = {
   id: string;
@@ -136,8 +148,16 @@ function statusBadgeClass(status: string) {
   return `status-badge ${variants[status] ?? "status-badge--suspended"}`;
 }
 
-export function ProductManagement({ locale }: { locale: "he" | "en" }) {
+export function ProductManagement({
+  locale,
+  initialStatus = "",
+}: {
+  locale: "he" | "en";
+  initialStatus?: string;
+}) {
   const he = locale === "he";
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -184,7 +204,10 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
           ),
           fetch("/api/management/categories", { cache: "no-store" }),
         ]);
-        if (!ignore && productsRes.ok && categoriesRes.ok) {
+        if (!productsRes.ok || !categoriesRes.ok) {
+          throw new Error("Failed to load data");
+        }
+        if (!ignore) {
           const { products: productsData } = await productsRes.json();
           const { categories: categoriesData } = await categoriesRes.json();
           setProducts(productsData);
@@ -328,8 +351,16 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
     );
   }
 
+  const filteredProducts = products.filter(
+    (product) =>
+      (!statusFilter || product.status === statusFilter) &&
+      (!search.trim() ||
+        `${product.name_en} ${product.name_he} ${product.slug} ${getDefaultVariant(product)?.sku ?? ""}`
+          .toLowerCase()
+          .includes(search.trim().toLowerCase())),
+  );
   return (
-    <div className="space-y-6">
+    <div className="mgmt-products-page">
       <PageHeader
         title={he ? "ניהול מוצרים" : "Product Management"}
         subtitle={
@@ -349,7 +380,10 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
       />
 
       {error && (
-        <div className="miro-card border-destructive/50 bg-destructive/5 p-4">
+        <div
+          role="alert"
+          className="miro-card border-destructive/50 bg-destructive/5 p-4"
+        >
           <div className="flex items-center gap-2">
             <AlertCircle className="h-5 w-5 text-destructive" />
             <span className="text-destructive">{error}</span>
@@ -357,30 +391,124 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
         </div>
       )}
 
+      <CollectionSummary
+        items={[
+          {
+            label: he ? "מוצרים שנטענו" : "Loaded products",
+            value: products.length,
+          },
+          {
+            label: he ? "פעילים" : "Active",
+            value: products.filter((product) => product.status === "active")
+              .length,
+          },
+          {
+            label: he ? "טיוטות" : "Drafts",
+            value: products.filter((product) => product.status === "draft")
+              .length,
+          },
+          {
+            label: he ? "בארכיון" : "Archived",
+            value: products.filter((product) => product.status === "archived")
+              .length,
+          },
+        ]}
+        scope={
+          he
+            ? "סיכום המוצרים שנטענו לפי הסינון הנוכחי."
+            : "Summary of products loaded for the current filters."
+        }
+      />
+
+      <Toolbar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchLabel={he ? "חיפוש מוצרים" : "Search products"}
+        searchPlaceholder={
+          he
+            ? "חיפוש לפי שם מוצר, כתובת או SKU…"
+            : "Search by product name, slug or SKU…"
+        }
+      >
+        <label className="mgmt-filter-field">
+          <span>{he ? "סטטוס" : "Status"}</span>
+          <select
+            className="miro-input"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+          >
+            <option value="">{he ? "כל הסטטוסים" : "All statuses"}</option>
+            {(["draft", "active", "hidden", "archived"] as const).map(
+              (status) => (
+                <option key={status} value={status}>
+                  {statusLabel(status, he)}
+                </option>
+              ),
+            )}
+          </select>
+        </label>
+      </Toolbar>
       <div className="miro-card overflow-hidden">
-        <div className="overflow-x-auto">
+        <ScrollRegion
+          className="overflow-x-auto mgmt-products-table"
+          label={he ? "טבלת ניהול מוצרים" : "Product management table"}
+        >
           <table className="min-w-full text-sm">
             <caption className="sr-only">
               {he ? "טבלת ניהול מוצרים" : "Product management table"}
             </caption>
+            <colgroup>
+              {[
+                "7%",
+                "18%",
+                "10%",
+                "12%",
+                "9%",
+                "8%",
+                "6%",
+                "6%",
+                "10%",
+                "14%",
+              ].map((width, index) => (
+                <col key={index} style={{ width }} />
+              ))}
+            </colgroup>
             <thead>
               <tr className="border-b border-border-subtle bg-surface-muted text-start">
-                <th className="p-4">{he ? "תמונה" : "Image"}</th>
-                <th className="p-4">{he ? "שמות" : "Names"}</th>
-                <th className="p-4">{he ? "קטגוריה" : "Category"}</th>
-                <th className="p-4">{he ? "SKU ברירת מחדל" : "Default SKU"}</th>
-                <th className="p-4">
+                <th scope="col" className="p-4">
+                  {he ? "תמונה" : "Image"}
+                </th>
+                <th scope="col" className="p-4">
+                  {he ? "שם" : "Name"}
+                </th>
+                <th scope="col" className="p-4">
+                  {he ? "קטגוריה" : "Category"}
+                </th>
+                <th scope="col" className="p-4">
+                  {he ? "SKU ברירת מחדל" : "Default SKU"}
+                </th>
+                <th scope="col" className="p-4">
                   {he ? "מחיר אפקטיבי" : "Effective Price"}
                 </th>
-                <th className="p-4">{he ? "סטטוס" : "Status"}</th>
-                <th className="p-4">{he ? "מומלץ" : "Featured"}</th>
-                <th className="p-4">{he ? "סה״כ מלאי" : "Total Stock"}</th>
-                <th className="p-4">{he ? "עודכן" : "Updated"}</th>
-                <th className="p-4">{he ? "פעולות" : "Actions"}</th>
+                <th scope="col" className="p-4">
+                  {he ? "סטטוס" : "Status"}
+                </th>
+                <th scope="col" className="p-4">
+                  {he ? "מומלץ" : "Featured"}
+                </th>
+                <th scope="col" className="p-4">
+                  {he ? "סה״כ מלאי" : "Total Stock"}
+                </th>
+                <th scope="col" className="p-4">
+                  {he ? "עודכן" : "Updated"}
+                </th>
+                <th scope="col" className="p-4">
+                  {he ? "פעולות" : "Actions"}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {products.map((product) => {
+              {filteredProducts.map((product) => {
                 const defaultVariant = getDefaultVariant(product);
                 const effectivePrice = getEffectivePrice(product);
                 const totalStock = getTotalStock(product);
@@ -433,23 +561,20 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                       )}
                     </td>
                     <td className="p-4">
-                      <div>
-                        <p className="font-medium">
-                          {he ? product.name_he : product.name_en}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {he ? product.name_en : product.name_he}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-mono">
-                          {product.slug}
-                        </p>
-                      </div>
+                      <TextHint
+                        text={he ? product.name_he : product.name_en}
+                        dir={he ? "rtl" : "ltr"}
+                        detail={`${he ? product.name_en : product.name_he}\n${product.slug}`}
+                      />
                     </td>
                     <td className="p-4">
                       {getCategoryName(product.category_id)}
                     </td>
                     <td className="p-4 font-mono text-sm">
-                      {defaultVariant?.sku ?? "—"}
+                      <OverflowText
+                        text={defaultVariant?.sku ?? "—"}
+                        dir="ltr"
+                      />
                     </td>
                     <td className="p-4">
                       {product.price === null ? (
@@ -496,105 +621,85 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
                         role="group"
                         aria-label={he ? "פעולות מוצר" : "Product actions"}
                       >
-                        <Link
+                        <IconLink
                           href={`/${locale}/admin/products/${product.id}`}
-                          className="product-management__action"
-                          aria-label={he ? "עריכה" : "Edit"}
-                          data-tooltip={he ? "עריכה" : "Edit"}
+                          label={he ? "עריכה" : "Edit"}
                         >
                           <Edit aria-hidden="true" />
-                        </Link>
+                        </IconLink>
                         {product.status === "active" ? (
                           <>
-                            <button
-                              type="button"
-                              className="product-management__action product-management__action--warning"
+                            <IconAction
                               onClick={() =>
                                 void handleStatusChange(product.id, "hidden")
                               }
                               disabled={saving}
-                              aria-label={he ? "הסתר" : "Hide"}
-                              data-tooltip={he ? "הסתר" : "Hide"}
+                              label={he ? "הסתר" : "Hide"}
                             >
                               <EyeOff aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              className="product-management__action product-management__action--danger"
+                            </IconAction>
+                            <IconAction
                               onClick={() =>
                                 void handleStatusChange(product.id, "archived")
                               }
                               disabled={saving}
-                              aria-label={he ? "ארכב" : "Archive"}
-                              data-tooltip={he ? "ארכב" : "Archive"}
+                              tone="danger"
+                              label={he ? "ארכב" : "Archive"}
                             >
                               <Archive aria-hidden="true" />
-                            </button>
+                            </IconAction>
                           </>
                         ) : product.status === "hidden" ? (
                           <>
-                            <button
-                              type="button"
-                              className="product-management__action"
+                            <IconAction
                               onClick={() =>
                                 void handleStatusChange(product.id, "active")
                               }
                               disabled={saving}
-                              aria-label={he ? "פרסם" : "Publish"}
-                              data-tooltip={he ? "פרסם" : "Publish"}
+                              label={he ? "פרסם" : "Publish"}
                             >
                               <Eye aria-hidden="true" />
-                            </button>
-                            <button
-                              type="button"
-                              className="product-management__action product-management__action--danger"
+                            </IconAction>
+                            <IconAction
                               onClick={() =>
                                 void handleStatusChange(product.id, "archived")
                               }
                               disabled={saving}
-                              aria-label={he ? "ארכב" : "Archive"}
-                              data-tooltip={he ? "ארכב" : "Archive"}
+                              tone="danger"
+                              label={he ? "ארכב" : "Archive"}
                             >
                               <Archive aria-hidden="true" />
-                            </button>
+                            </IconAction>
                           </>
                         ) : product.status === "draft" ? (
-                          <button
-                            type="button"
-                            className="product-management__action product-management__action--primary"
+                          <IconAction
                             onClick={() =>
                               void handleStatusChange(product.id, "active")
                             }
                             disabled={saving}
-                            aria-label={he ? "פרסם" : "Publish"}
-                            data-tooltip={he ? "פרסם" : "Publish"}
+                            label={he ? "פרסם" : "Publish"}
                           >
                             <Eye aria-hidden="true" />
-                          </button>
+                          </IconAction>
                         ) : (
-                          <button
-                            type="button"
-                            className="product-management__action"
+                          <IconAction
                             onClick={() =>
                               void handleStatusChange(product.id, "draft")
                             }
                             disabled={saving}
-                            aria-label={he ? "שחזר לטיוטה" : "Restore to draft"}
-                            data-tooltip={he ? "שחזר לטיוטה" : "Restore"}
+                            label={he ? "שחזר לטיוטה" : "Restore to draft"}
                           >
                             <RotateCcw aria-hidden="true" />
-                          </button>
+                          </IconAction>
                         )}
                         {product.status === "draft" && (
-                          <button
-                            type="button"
-                            className="product-management__action product-management__action--danger"
+                          <IconAction
                             onClick={() => setPendingDeleteId(product.id)}
-                            aria-label={he ? "ארכב טיוטה" : "Archive draft"}
-                            data-tooltip={he ? "ארכב טיוטה" : "Archive draft"}
+                            tone="danger"
+                            label={he ? "ארכב טיוטה" : "Archive draft"}
                           >
                             <Archive aria-hidden="true" />
-                          </button>
+                          </IconAction>
                         )}
                       </div>
                     </td>
@@ -603,12 +708,16 @@ export function ProductManagement({ locale }: { locale: "he" | "en" }) {
               })}
             </tbody>
           </table>
-        </div>
-        {products.length === 0 && (
+        </ScrollRegion>
+        {filteredProducts.length === 0 && (
           <div className="p-12 text-center text-muted-foreground">
-            {he
-              ? "אין מוצרים עדיין. לחץ על 'הוסף מוצר' כדי להתחיל."
-              : "No products yet. Click 'Add Product' to get started."}
+            {search || statusFilter
+              ? he
+                ? "אין מוצרים התואמים למסננים"
+                : "No products match these filters"
+              : he
+                ? "אין מוצרים עדיין. לחץ על 'הוסף מוצר' כדי להתחיל."
+                : "No products yet. Click 'Add Product' to get started."}
           </div>
         )}
       </div>
