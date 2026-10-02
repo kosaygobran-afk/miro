@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { notFound } from "next/navigation";
 import { Lock, MonitorSmartphone, Palette } from "lucide-react";
 import { devPreviewRobots } from "@/lib/seo";

@@ -12,7 +12,7 @@ export default async function WorkerPage({
   const safeLocale = isLocale(locale) ? locale : "he";
   await requireRole(safeLocale, ["worker", "admin", "ceo"]);
   return (
-    <section className="miro-section">
+    <section className="miro-section" data-management-surface="true">
       <div className="miro-container space-y-6">
         <h1 className="text-3xl font-black">
           {safeLocale === "he" ? "סביבת העבודה" : "Your workspace"}

@@ -6,7 +6,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { roleLabel, type AppRole } from "@/lib/roles";
 import { withLocale, type Locale } from "@/lib/i18n";

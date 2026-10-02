@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/motion/use-motion-router";
 import { createClient } from "@/lib/supabase/client";
 import { Notice } from "./ui";
 import {

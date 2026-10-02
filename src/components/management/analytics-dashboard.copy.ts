@@ -56,12 +56,12 @@ export const analyticsCopy = {
     en: "Service requests recorded in range",
   },
   metricConversion: {
-    he: "שיעור צפייה → פניה",
-    en: "View → enquiry conversion",
+    he: "יחס אירועי בקשת מידע לצפיות",
+    en: "Enquiry click / view event ratio",
   },
   conversionNote: {
-    he: "המבוסס על קליקי פניה מתוך צפיות בדפי מוצר",
-    en: "Based on enquiry clicks out of product detail views",
+    he: "קליקי בקשת מידע חלקי אירועי צפייה; לא שיעור של לקוחות ייחודיים",
+    en: "Enquiry click events divided by detail views; not a unique-customer rate",
   },
   enquiryClickCount: { he: "קליקי פנייה", en: "enquiry clicks" },
   activityTitle: { he: "פעילות יומית", en: "Daily activity" },
@@ -87,7 +87,7 @@ export const analyticsCopy = {
   colUniqueViewers: { he: "צופים ייחודיים", en: "Unique viewers" },
   colContactClicks: { he: "לחיצות על פנייה", en: "Contact clicks" },
   colEnquiries: { he: "פניות", en: "Enquiries" },
-  colConversion: { he: "צפייה → פניה", en: "View → enquiry" },
+  colConversion: { he: "יחס בקשת מידע לצפיות", en: "Enquiry / view ratio" },
   tableEmptyTitle: {
     he: "אין נתוני מוצרים לטווח שנבחר",
     en: "No product data for the selected range",

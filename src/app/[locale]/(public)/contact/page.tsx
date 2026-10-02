@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { ContactForm } from "@/components/contact/contact-form";

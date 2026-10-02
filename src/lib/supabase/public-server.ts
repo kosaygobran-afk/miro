@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { supabaseFetch } from "./fetch";
 
 let publicServerClient: SupabaseClient | null = null;
 
@@ -29,6 +30,7 @@ export function createPublicServerClient(): SupabaseClient {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     getPublicSupabaseKey(),
     {
+      global: { fetch: supabaseFetch },
       auth: {
         autoRefreshToken: false,
         persistSession: false,

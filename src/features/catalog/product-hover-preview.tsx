@@ -9,11 +9,15 @@ import {
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
-import Image from "next/image";
+import { RevealImage as Image } from "@/components/ui/reveal-image";
 import { ProductMedia } from "./product-media";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
+import {
+  useAnimationSettings,
+  useAnimationFeature,
+} from "@/components/motion/animation-provider";
 import { useStoreDesign } from "@/features/store-design/design-context";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { ArrowUpRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Product, ProductImage } from "@/features/catalog/product-data";
@@ -40,7 +44,6 @@ interface ProductHoverPreviewProps {
 type PreviewPhase = "closed" | "open" | "closing";
 
 const CLOSE_GRACE_MS = 220;
-const EXIT_MS = 140;
 const emptySubscribe = () => () => {};
 
 function subscribeToMediaQuery(query: string, callback: () => void) {
@@ -97,10 +100,12 @@ export function ProductHoverPreview({
     () => false,
   );
   const hasFinePointer = useMediaQuery("(hover: hover) and (pointer: fine)");
-  const prefersReducedMotion = useMediaQuery(
-    "(prefers-reduced-motion: reduce)",
-  );
+  const dialogsEnabled = useAnimationFeature("dialogs");
+  const animationSettings = useAnimationSettings();
+  const systemReducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
 
+  const prefersReducedMotion = systemReducedMotion || !dialogsEnabled;
+  const exitDuration = animationSettings.durations.content;
   const allImages = getSortedImages(product);
   const effectivePrice = product.priceIls;
   const compareAtPrice = product.compareAtPrice ?? null;
@@ -199,10 +204,17 @@ export function ProductHoverPreview({
       updatePhase("closing");
       exitTimerRef.current = window.setTimeout(
         () => finishClose(notifyParent, restoreFocus),
-        prefersReducedMotion ? 0 : EXIT_MS,
+        prefersReducedMotion ? 0 : exitDuration,
       );
     },
-    [clearTimer, finishClose, onClose, prefersReducedMotion, updatePhase],
+    [
+      clearTimer,
+      finishClose,
+      onClose,
+      prefersReducedMotion,
+      exitDuration,
+      updatePhase,
+    ],
   );
 
   const keepOpen = useCallback(() => {

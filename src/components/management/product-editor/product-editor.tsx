@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/motion/motion-link";
+import { useRouter } from "@/components/motion/use-motion-router";
 import {
   ArrowLeft,
   ArrowRight,
@@ -17,7 +17,7 @@ import {
   ErrorState,
   FormField,
   FormSection,
-  ListSkeleton,
+  FormSkeleton,
   Notice,
   PageHeader,
   StatusBadge,
@@ -565,7 +565,10 @@ export function ProductEditor({
   if (loadState === "loading") {
     return (
       <div className="space-y-4" aria-busy="true">
-        <ListSkeleton rows={6} />
+        <FormSkeleton
+          fields={8}
+          label={he ? "טוען מוצר…" : "Loading product…"}
+        />
       </div>
     );
   }

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createPublicServerClient } from "@/lib/supabase/public-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type {
@@ -114,7 +115,7 @@ function shouldHideFromPublic(
   return policy === "hide_from_public" && stockQty <= 0;
 }
 
-export async function getStoreViewer(): Promise<StoreViewer> {
+export const getStoreViewer = cache(async (): Promise<StoreViewer> => {
   const empty: StoreViewer = { role: null, savedProductIds: [] };
   try {
     const supabase = await createServerSupabaseClient();
@@ -147,7 +148,7 @@ export async function getStoreViewer(): Promise<StoreViewer> {
   } catch {
     return empty;
   }
-}
+});
 
 function normalizePrice(
   value: number | string | null | undefined,
@@ -200,20 +201,106 @@ function getProductIcon(categoryKey: string) {
   return iconMap[categoryKey] ?? "shieldCheck";
 }
 
+// React.cache only deduplicates this work during one server render. It never
+// shares cookie-bound catalogue rows or role pricing between visitors.
+const getCatalogRows = cache(async (anonymous: boolean) => {
+  const supabase = anonymous
+    ? createPublicServerClient()
+    : await createServerSupabaseClient();
+  const [
+    categoriesResult,
+    categoryIconsResult,
+    productsResult,
+    variantsResult,
+    imagesResult,
+    badgesResult,
+    promotionsResult,
+    railItemsResult,
+    inventoryDefaults,
+  ] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, slug, name_he, name_en, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true }),
+    // Storefront merchandising is deployed independently of the core
+    // catalog. Keep this projection optional so an older database can still
+    // serve products while the additive migration is being rolled out.
+    supabase.from("categories").select("id, icon_image_url"),
+    supabase
+      .from("products")
+      .select(
+        "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order, tags",
+      )
+      .eq("status", "active")
+      .order("is_featured", { ascending: false })
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("product_variants")
+      .select(
+        "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, is_default, is_active, stock_qty, low_stock_threshold",
+      )
+      .eq("is_active", true),
+    supabase
+      .from("product_images")
+      .select("id, product_id, image_url, alt_he, alt_en, sort_order")
+      .order("sort_order", { ascending: true }),
+    supabase
+      .from("product_promo_badges")
+      .select(
+        "id, product_id, badge_type_id, priority, scheduled_from, scheduled_until, promo_badge_types(key, label_he, label_en, shape, tone, icon_name, is_active)",
+      ),
+    supabase
+      .from("product_public_promotions")
+      .select(
+        "id, product_id, promotion_type, value, compare_at_price, is_active, scheduled_from, scheduled_until",
+      ),
+    supabase
+      .from("storefront_rail_items")
+      .select("product_id, sort_order")
+      .order("sort_order", { ascending: true }),
+    getInventoryDefaults(),
+  ]);
+
+  return {
+    categoriesResult,
+    categoryIconsResult,
+    productsResult,
+    variantsResult,
+    imagesResult,
+    badgesResult,
+    promotionsResult,
+    railItemsResult,
+    inventoryDefaults,
+  };
+});
+
+const getRolePrices = cache(async (role: UserRole, anonymous: boolean) => {
+  if (!role) return new Map<string, number>();
+  const supabase = anonymous
+    ? createPublicServerClient()
+    : await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("product_prices")
+    .select("product_id, price")
+    .eq("role", role);
+  return new Map<string, number>(
+    (data ?? []).map((price) => [price.product_id, Number(price.price)]),
+  );
+});
+
 export async function getStoreCatalog(
   locale: "he" | "en",
   role: UserRole = null,
   anonymous = false,
 ): Promise<StoreCatalog> {
   try {
-    const supabase = anonymous
-      ? createPublicServerClient()
-      : await createServerSupabaseClient();
-
-    // Fetch inventory defaults first (needed for policy resolution)
-    const inventoryDefaults = await getInventoryDefaults();
-
-    const [
+    const [rows, rolePrices] = await Promise.all([
+      getCatalogRows(anonymous),
+      getRolePrices(role, anonymous),
+    ]);
+    const {
       categoriesResult,
       categoryIconsResult,
       productsResult,
@@ -222,50 +309,8 @@ export async function getStoreCatalog(
       badgesResult,
       promotionsResult,
       railItemsResult,
-    ] = await Promise.all([
-      supabase
-        .from("categories")
-        .select("id, slug, name_he, name_en, sort_order")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true }),
-      // Storefront merchandising is deployed independently of the core
-      // catalog. Keep this projection optional so an older database can still
-      // serve products while the additive migration is being rolled out.
-      supabase.from("categories").select("id, icon_image_url"),
-      supabase
-        .from("products")
-        .select(
-          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order, tags",
-        )
-        .eq("status", "active")
-        .order("is_featured", { ascending: false })
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("product_variants")
-        .select(
-          "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, is_default, is_active, stock_qty, low_stock_threshold",
-        )
-        .eq("is_active", true),
-      supabase
-        .from("product_images")
-        .select("id, product_id, image_url, alt_he, alt_en, sort_order")
-        .order("sort_order", { ascending: true }),
-      supabase
-        .from("product_promo_badges")
-        .select(
-          "id, product_id, badge_type_id, priority, scheduled_from, scheduled_until, promo_badge_types(key, label_he, label_en, shape, tone, icon_name, is_active)",
-        ),
-      supabase
-        .from("product_public_promotions")
-        .select(
-          "id, product_id, promotion_type, value, compare_at_price, is_active, scheduled_from, scheduled_until",
-        ),
-      supabase
-        .from("storefront_rail_items")
-        .select("product_id, sort_order")
-        .order("sort_order", { ascending: true }),
-    ]);
+      inventoryDefaults,
+    } = rows;
 
     if (
       categoriesResult.error ||
@@ -351,13 +396,16 @@ export async function getStoreCatalog(
         badgesByProduct.set(badge.product_id, list);
       }
     }
-    // Sort badges by priority (highest first)
-    for (const [, badges] of badgesByProduct) {
-      badges.sort((a, b) => {
-        const aBadge = (badgesResult.data ?? []).find((bd) => bd.id === a.id);
-        const bBadge = (badgesResult.data ?? []).find((bd) => bd.id === b.id);
-        return (bBadge?.priority ?? 0) - (aBadge?.priority ?? 0);
-      });
+    // Resolve priorities once instead of scanning all badges per comparison.
+    const badgePriorityById = new Map(
+      (badgesResult.data ?? []).map((badge) => [badge.id, badge.priority ?? 0]),
+    );
+    for (const badges of badgesByProduct.values()) {
+      badges.sort(
+        (a, b) =>
+          (badgePriorityById.get(b.id) ?? 0) -
+          (badgePriorityById.get(a.id) ?? 0),
+      );
     }
 
     // Build promotion map by product_id
@@ -376,21 +424,6 @@ export async function getStoreCatalog(
               ? Number(promo.compare_at_price)
               : null,
         });
-      }
-    }
-
-    // Fetch role-based prices if role is provided
-    let rolePrices: Map<string, number> = new Map();
-    if (role) {
-      const { data: pricesData } = await supabase
-        .from("product_prices")
-        .select("product_id, price")
-        .eq("role", role);
-
-      if (pricesData) {
-        rolePrices = new Map(
-          pricesData.map((p) => [p.product_id, Number(p.price)]),
-        );
       }
     }
 
@@ -416,6 +449,12 @@ export async function getStoreCatalog(
     const categoryMap = new Map(
       (categoriesResult.data ?? []).map((c) => [c.id, c.slug]),
     );
+    const categoryLabelByKey = new Map<string, string>();
+    for (const category of categories) {
+      if (!categoryLabelByKey.has(category.key)) {
+        categoryLabelByKey.set(category.key, category.label);
+      }
+    }
     const railOrderByProduct = new Map(
       (railItemsResult.data ?? []).map((item) => [
         item.product_id,
@@ -541,7 +580,7 @@ export async function getStoreCatalog(
           basePriceIls: productPrice,
           category: categoryKey,
           categorySlug: categoryKey,
-          categoryLabel: categories.find((c) => c.key === categoryKey)?.label,
+          categoryLabel: categoryLabelByKey.get(categoryKey),
           badge: product.is_featured
             ? locale === "he"
               ? "מהקולקציה"
@@ -602,6 +641,7 @@ export async function getStoreCatalog(
 
 export type SavedProductItem = {
   productId: string;
+  slug: string;
   savedAt: string;
   name: string;
   price: number | null;
@@ -612,13 +652,14 @@ export type SavedProductItem = {
 
 /**
  * Fetches saved products with canonical public-safe data (images from product_images,
- * effective public pricing, stock state). Used by account dashboard.
+ * effective public pricing, stock state). Latest ten saves for the account dashboard.
+ * A failed read returns null so unavailable data never masquerades as an empty list.
  */
 export async function getSavedProductsWithCanonicalData(
   locale: "he" | "en",
   userId: string,
   role: UserRole = null,
-): Promise<SavedProductItem[]> {
+): Promise<SavedProductItem[] | null> {
   try {
     const supabase = await createServerSupabaseClient();
 
@@ -626,36 +667,59 @@ export async function getSavedProductsWithCanonicalData(
       .from("saved_products")
       .select("product_id, created_at")
       .eq("user_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(10);
 
-    if (error || !savedProducts?.length) return [];
+    if (error) return null;
+    if (!savedProducts?.length) return [];
 
     const productIds = savedProducts.map((sp) => sp.product_id);
 
-    const [productsResult, imagesResult, variantsResult] = await Promise.all([
+    const [
+      productsResult,
+      imagesResult,
+      variantsResult,
+      categoryResult,
+      pricesResult,
+    ] = await Promise.all([
       supabase
         .from("products")
         .select(
-          "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order, tags",
+          "id, slug, category_id, name_he, name_en, price, image_url, out_of_stock_policy",
         )
         .in("id", productIds)
         .eq("status", "active"),
       supabase
         .from("product_images")
-        .select("id, product_id, image_url, alt_he, alt_en, sort_order")
+        .select("product_id, image_url, sort_order")
         .in("product_id", productIds)
         .order("sort_order", { ascending: true }),
       supabase
         .from("product_variants")
-        .select(
-          "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, is_default, is_active, stock_qty, low_stock_threshold",
-        )
+        .select("product_id, price_override, is_default, stock_qty")
         .in("product_id", productIds)
         .eq("is_active", true),
+      supabase
+        .from("categories")
+        .select("id, slug, name_he, name_en")
+        .eq("is_active", true),
+      role
+        ? supabase
+            .from("product_prices")
+            .select("product_id, price")
+            .eq("role", role)
+            .in("product_id", productIds)
+        : Promise.resolve({ data: null, error: null }),
     ]);
 
-    if (productsResult.error || imagesResult.error || variantsResult.error) {
-      return [];
+    if (
+      productsResult.error ||
+      imagesResult.error ||
+      variantsResult.error ||
+      categoryResult.error ||
+      pricesResult.error
+    ) {
+      return null;
     }
 
     const imagesByProduct = new Map<string, typeof imagesResult.data>();
@@ -672,34 +736,23 @@ export async function getSavedProductsWithCanonicalData(
       variantsByProduct.set(variant.product_id, list);
     }
 
-    const categoryResult = await supabase
-      .from("categories")
-      .select("id, slug, name_he, name_en, sort_order")
-      .eq("is_active", true);
-
     const categoryMap = new Map(
       (categoryResult.data ?? []).map((c) => [c.id, c]),
     );
-
-    // Fetch role-based prices if role is provided
-    let rolePrices = new Map<string, number>();
-    if (role) {
-      const { data: pricesData } = await supabase
-        .from("product_prices")
-        .select("product_id, price")
-        .eq("role", role);
-
-      if (pricesData) {
-        rolePrices = new Map(
-          pricesData.map((p) => [p.product_id, Number(p.price)]),
-        );
-      }
-    }
+    const rolePrices = new Map<string, number>(
+      (pricesResult.data ?? []).map((price) => [
+        price.product_id,
+        Number(price.price),
+      ]),
+    );
+    const productsById = new Map(
+      (productsResult.data ?? []).map((product) => [product.id, product]),
+    );
 
     const result: SavedProductItem[] = [];
 
     for (const sp of savedProducts) {
-      const product = productsResult.data?.find((p) => p.id === sp.product_id);
+      const product = productsById.get(sp.product_id);
       if (!product) continue;
 
       const productImages = imagesByProduct.get(product.id) ?? [];
@@ -748,6 +801,7 @@ export async function getSavedProductsWithCanonicalData(
 
       result.push({
         productId: product.id,
+        slug: product.slug,
         savedAt: sp.created_at,
         name:
           locale === "he"
@@ -763,6 +817,6 @@ export async function getSavedProductsWithCanonicalData(
     return result;
   } catch (error) {
     console.error("Failed to fetch saved products with canonical data.", error);
-    return [];
+    return null;
   }
 }

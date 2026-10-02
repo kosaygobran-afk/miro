@@ -1,0 +1,216 @@
+/* Appearance 2 refines component geometry; the console's dark palette is preserved. */
+:root[data-appearance-version="2"] .mgmt-shell__main {
+  padding: clamp(1rem, 2.5vw, 2.4rem);
+}
+:root[data-appearance-version="2"] .mgmt-shell__main > :not(script) {
+  width: 100%;
+  max-inline-size: 104rem;
+  margin-inline: auto;
+}
+:root[data-appearance-version="2"] .mgmt-page-header__title {
+  font-size: clamp(1.65rem, 2.3vw, 2.4rem);
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+:root[data-appearance-version="2"] .mgmt-page-header__subtitle {
+  max-inline-size: 72ch;
+  line-height: 1.7;
+}
+:root[data-appearance-version="2"]
+  :is(
+    .mgmt-workspace-header,
+    .mgmt-card,
+    .mgmt-form-section,
+    .mgmt-table,
+    .mgmt-metric-card
+  ) {
+  border-radius: 1.35rem;
+}
+:root[data-appearance-version="2"] .mgmt-form-section {
+  overflow: clip;
+}
+:root[data-appearance-version="2"] .mgmt-form-section__header {
+  padding: clamp(1rem, 1.9vw, 1.65rem);
+  align-items: center;
+}
+:root[data-appearance-version="2"] .mgmt-form-section__body {
+  padding: clamp(1rem, 1.9vw, 1.65rem);
+}
+:root[data-appearance-version="2"]
+  :is(
+    .mgmt-section-icon,
+    .mgmt-workspace-header__icon,
+    .mgmt-metric-card__icon
+  ) {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  min-inline-size: 2.6rem;
+  min-block-size: 2.6rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border-subtle);
+}
+:root[data-appearance-version="2"]
+  :is(.mgmt-section-icon, .mgmt-workspace-header__icon, .mgmt-metric-card__icon)
+  svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  stroke-width: 1.8;
+}
+:root[data-appearance-version="2"] .mgmt-metric-card {
+  padding: clamp(1.1rem, 1.7vw, 1.6rem);
+  min-inline-size: 0;
+}
+:root[data-appearance-version="2"] .mgmt-metric-card__value {
+  font-size: clamp(1.55rem, 2.5vw, 2.3rem);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+:root[data-appearance-version="2"] .mgmt-metric-card__label {
+  line-height: 1.5;
+}
+:root[data-appearance-version="2"] :is(.mgmt-status-badge, .mgmt-role-badge) {
+  border-radius: 999px;
+  white-space: normal;
+  line-height: 1.45;
+}
+:root[data-appearance-version="2"] .mgmt-nav__icon {
+  border-radius: 0.55rem;
+  flex-shrink: 0;
+}
+:root[data-appearance-version="2"] .mgmt-shell svg.lucide {
+  stroke-width: 1.8;
+}
+:root[data-appearance-version="2"]
+  :is(
+    .mgmt-button,
+    .mgmt-icon-action,
+    .mgmt-topbar__lang-btn,
+    .mgmt-topbar__storefront-link
+  ) {
+  border-radius: 0.85rem;
+  min-block-size: 2.7rem;
+  line-height: 1.4;
+}
+:root[data-appearance-version="2"] .mgmt-button {
+  white-space: normal;
+  text-align: center;
+  justify-content: center;
+  padding-block: 0.7rem;
+}
+:root[data-appearance-version="2"]
+  :is(
+    .mgmt-table__table,
+    .users-management__table,
+    .customers-manager__table,
+    .suppliers-manager__table,
+    .inventory-manager__table
+  )
+  :is(th, td) {
+  vertical-align: middle;
+  line-height: 1.6;
+}
+:root[data-appearance-version="2"] .mgmt-table__table td {
+  padding-block: 1rem;
+}
+:root[data-appearance-version="2"]
+  :is(.mgmt-table__caption, .mgmt-form-section__description) {
+  line-height: 1.7;
+}
+:root[data-appearance-version="2"]
+  :is(.mgmt-dialog, .mgmt-drawer, .mgmt-modal) {
+  border-radius: 1.4rem;
+  border: 1px solid var(--border-control);
+}
+:root[data-appearance-version="2"]
+  :is(.mgmt-dialog__header, .mgmt-modal__header) {
+  align-items: center;
+  gap: 1rem;
+}
+:root[data-appearance-version="2"]
+  :is(.mgmt-dialog__title, .mgmt-modal__title, .mgmt-drawer__title) {
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+:root[data-appearance-version="2"] :is(.mgmt-input, .miro-input) {
+  border-radius: 0.8rem;
+  min-block-size: 2.85rem;
+}
+:root[data-appearance-version="2"] .ceo-security > .mgmt-card {
+  align-items: center;
+}
+:root[data-appearance-version="2"] .ceo-security form {
+  display: flex;
+  flex-direction: column;
+}
+:root[data-appearance-version="2"] .ceo-security form > button {
+  margin-block-start: auto;
+  min-block-size: 3rem;
+}
+
+/* Neutral reading surfaces replace icy whites only in the brighter console modes. */
+:root[data-appearance-version="2"][data-theme="light"]
+  :is(.mgmt-shell-root, #mgmt-overlay-portal-host) {
+  --background: #f3f3ef;
+  --foreground: #202b3a;
+  --surface: #fdfdfa;
+  --surface-muted: #edeeeb;
+  --surface-elevated: #fffffc;
+  --muted-foreground: #4e5c6f;
+  --border-subtle: #d2d8dc;
+  --border-control: #7f8e9e;
+  --accent-text: #785500;
+  --focus-ring: #785500;
+  --error-text: #a31f42;
+}
+:root[data-appearance-version="2"][data-theme="medium"]
+  :is(.mgmt-shell-root, #mgmt-overlay-portal-host) {
+  --background: #dfe3e4;
+  --foreground: #1c2a3d;
+  --surface: #edf0ee;
+  --surface-muted: #e0e6e5;
+  --surface-elevated: #f5f7f4;
+  --muted-foreground: #48586c;
+  --border-subtle: #bac5cb;
+  --border-control: #7a8c9d;
+  --accent-text: #715000;
+  --focus-ring: #715000;
+  --error-text: #a31f42;
+}
+
+@media (max-width: 767px) {
+  :root[data-appearance-version="2"] .mgmt-shell__main {
+    padding-inline: 0.85rem;
+  }
+  :root[data-appearance-version="2"] .mgmt-topbar {
+    padding-inline: 0.75rem;
+  }
+  :root[data-appearance-version="2"]
+    :is(.mgmt-form-section__header, .mgmt-page-header__row) {
+    align-items: flex-start;
+  }
+  :root[data-appearance-version="2"]
+    :is(.mgmt-form-section__actions, .mgmt-page-header__actions) {
+    flex-wrap: wrap;
+    max-inline-size: 100%;
+  }
+  :root[data-appearance-version="2"] :is(.mgmt-button, .mgmt-icon-action) {
+    min-block-size: 2.75rem;
+  }
+  :root[data-appearance-version="2"] .mgmt-metric-card__icon {
+    min-inline-size: 2.3rem;
+    min-block-size: 2.3rem;
+  }
+  :root[data-appearance-version="2"] .mgmt-metric-card {
+    padding: 1rem;
+  }
+  :root[data-appearance-version="2"] .mgmt-metric-card__value {
+    font-size: clamp(1.3rem, 5vw, 1.9rem);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-appearance-version="2"] .mgmt-shell * {
+    scroll-behavior: auto;
+  }
+}

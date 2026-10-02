@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { usePathname } from "next/navigation";
 import { ShieldCheck, ArrowUpRight } from "lucide-react";
 import { roleLabel } from "@/lib/roles";

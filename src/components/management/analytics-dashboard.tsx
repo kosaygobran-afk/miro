@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { AnalyticsInsights } from "./analytics-insights";
 import {
   Activity,
   BarChart2,
@@ -27,7 +28,7 @@ import { ErrorState } from "@/components/management/ui/error-state";
 import { MetricCard } from "@/components/management/ui/metric-card";
 import { Notice } from "@/components/management/ui/notice";
 import { Drawer } from "./ui/drawer";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { reportingRangeParams } from "@/lib/management-reporting";
 import { useManagementReport } from "./ui/use-management-report";
 import {
@@ -35,7 +36,7 @@ import {
   ReportChoices,
   reportingStyles as report,
 } from "./ui/reporting-workspace";
-import { ListSkeleton } from "@/components/management/ui/skeleton";
+import { DashboardSkeleton } from "@/components/management/ui/skeleton";
 import { OverflowText } from "./ui/overflow-text";
 import { Toolbar } from "@/components/management/ui/toolbar";
 import {
@@ -47,7 +48,7 @@ import {
 import { ActivityChart } from "./ui/activity-chart";
 import styles from "./analytics-dashboard.module.css";
 
-type AnalyticsResponse = {
+export type AnalyticsResponse = {
   range: { from: string; to: string; generatedAt: string };
   totals: {
     /** product_view events — product detail page views. */
@@ -98,11 +99,13 @@ type AnalyticsResponse = {
 
 function RankingCard({
   title,
+  description,
   emptyLabel,
   items,
   locale,
 }: {
   title: string;
+  description: string;
   emptyLabel: string;
   items: { key: string; label: string; value: number }[];
   locale: Locale;
@@ -111,6 +114,7 @@ function RankingCard({
   return (
     <div className={styles.cardField}>
       <h2 className={styles.sectionTitle}>{title}</h2>
+      <p className={styles.note}>{description}</p>
       {items.length > 0 ? (
         <ol className={styles.rankingList}>
           {items.map((item) => (
@@ -187,18 +191,22 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
       );
     })
     .sort((a, b) => b[sort] - a[sort] || b.views - a.views);
-  const dailyActivity = Object.entries(data?.dailySeries ?? {})
-    .map(([day, eventGroups]) => ({
-      day,
-      events:
-        activityMetric === "all"
-          ? Object.values(eventGroups).reduce(
-              (sum, group) => sum + group.events,
-              0,
-            )
-          : (eventGroups[activityMetric]?.events ?? 0),
-    }))
-    .sort((first, second) => first.day.localeCompare(second.day));
+  const dailyActivity = useMemo(
+    () =>
+      Object.entries(data?.dailySeries ?? {})
+        .map(([day, eventGroups]) => ({
+          day,
+          events:
+            activityMetric === "all"
+              ? Object.values(eventGroups).reduce(
+                  (sum, group) => sum + group.events,
+                  0,
+                )
+              : (eventGroups[activityMetric]?.events ?? 0),
+        }))
+        .sort((first, second) => first.day.localeCompare(second.day)),
+    [data?.dailySeries, activityMetric],
+  );
   const activityTotal = dailyActivity.reduce(
     (sum, point) => sum + point.events,
     0,
@@ -228,7 +236,7 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
   ];
   return (
     <section
-      className={`${styles.root} ${report.workspace}`}
+      className={`${styles.root} ${report.workspace} insight-report-workspace`}
       aria-busy={initialLoading}
     >
       <ReportingHeader
@@ -309,18 +317,14 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
       ) : null}
 
       {initialLoading && !data ? (
-        <>
-          <div className={styles.skeletonGrid} aria-hidden="true">
-            {Array.from({ length: 7 }).map((_, index) => (
-              <MetricCard key={index} label="…" value="" loading />
-            ))}
-          </div>
-          <ListSkeleton rows={6} />
-        </>
-      ) : (
+        <DashboardSkeleton
+          metrics={7}
+          label={he ? "טוען נתוני פעילות…" : "Loading activity insights…"}
+        />
+      ) : data ? (
         <>
           <div
-            className={styles.headerGrid}
+            className={`${styles.headerGrid} motion-content-reveal`}
             aria-label={t(locale, analyticsCopy.title)}
             aria-busy={!totals}
           >
@@ -408,7 +412,9 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
             />
             <MetricCard
               icon={<Eye size={18} />}
-              label={he ? "מוצרים עם צפיות" : "Products with detail views"}
+              label={
+                he ? "מוצרים בקבוצה המובילה" : "Products in the leading cohort"
+              }
               value={
                 data
                   ? formatCount(
@@ -420,14 +426,15 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
               }
               footer={
                 he
-                  ? "מוצרים שונים שנצפו בטווח שנבחר"
-                  : "Distinct products viewed in the selected range"
+                  ? "עד עשרת המוצרים המובילים שהוחזרו, ולא כל הקטלוג"
+                  : "Up to ten returned leading products, rather than the complete catalog"
               }
             />
           </div>
 
           {view === "overview" ? (
             <>
+              <AnalyticsInsights data={data} locale={locale} />
               <section className={styles.insightsGrid}>
                 <div className={`${styles.cardField} ${styles.activityCard}`}>
                   <div>
@@ -537,6 +544,11 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
 
                 <RankingCard
                   title={t(locale, analyticsCopy.topSearchesTitle)}
+                  description={
+                    he
+                      ? "חמש שאילתות החיפוש המובילות לפי אירועי חיפוש שנמדדו בטווח שנבחר."
+                      : "Five leading queries by recorded search events in the selected range."
+                  }
                   emptyLabel={t(locale, analyticsCopy.noRankingData)}
                   items={topSearches.map((item) => ({
                     key: item.searchQuery,
@@ -547,6 +559,11 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
                 />
                 <RankingCard
                   title={t(locale, analyticsCopy.topCategoriesTitle)}
+                  description={
+                    he
+                      ? "חמש הקטגוריות המובילות לפי אירועי צפייה בעמוד קטגוריה, ולא צפיות בפרטי מוצר."
+                      : "Five leading categories by category page view events, separate from product detail views."
+                  }
                   emptyLabel={t(locale, analyticsCopy.noRankingData)}
                   items={topCategories.map((item, index) => ({
                     key: item.categoryId ?? `unknown-${index}`,
@@ -782,7 +799,7 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
             </div>
           )}
         </>
-      )}
+      ) : null}
       <Drawer
         open={optionsOpen}
         onClose={() => setOptionsOpen(false)}

@@ -225,3 +225,25 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Keep the report blocks visually balanced without changing console colors. */
+:global(html[data-appearance-version="2"]) .breakdown {
+  justify-content: center;
+}
+:global(html[data-appearance-version="2"]) .sectionTitle {
+  justify-content: center;
+  text-align: center;
+}
+:global(html[data-appearance-version="2"]) .cardField > .note {
+  text-align: center;
+  line-height: 1.75;
+}
+:global(html[data-appearance-version="2"]) .activitySummary {
+  text-align: center;
+}
+:global(html[data-appearance-version="2"]) .rankingItem {
+  padding-block: 0.35rem;
+}
+:global(html[data-appearance-version="2"]) .activityCard {
+  gap: 1.4rem;
+}

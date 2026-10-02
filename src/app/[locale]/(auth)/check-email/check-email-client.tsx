@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { withLocale, type Locale } from "@/lib/i18n";
 import {
   Mail,

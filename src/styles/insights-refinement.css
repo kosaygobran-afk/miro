@@ -1,0 +1,333 @@
+/* Geometry and hierarchy only: all report colors inherit the established console palette. */
+.insight-analytics-stack,
+.insight-finance-context {
+  display: grid;
+  gap: 1.25rem;
+  min-inline-size: 0;
+}
+:root[data-appearance-version="2"]
+  .mgmt-shell
+  .insight-report-workspace
+  .mgmt-metric-card {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "icon" "content" "footer";
+  grid-template-rows: auto 1fr auto;
+  gap: 0.8rem;
+  text-align: center;
+  align-items: start;
+}
+:root[data-appearance-version="2"]
+  .mgmt-shell
+  .insight-report-workspace
+  .mgmt-metric-card:has(.mgmt-metric-card__icon:empty) {
+  grid-template-areas: "content" "footer";
+  grid-template-rows: 1fr auto;
+}
+:root[data-appearance-version="2"]
+  .mgmt-shell
+  .insight-report-workspace
+  .mgmt-metric-card__icon {
+  justify-self: center;
+  inline-size: 2.9rem;
+  block-size: 2.9rem;
+  border-radius: 0.95rem;
+}
+:root[data-appearance-version="2"]
+  .mgmt-shell
+  .insight-report-workspace
+  .mgmt-metric-card__icon
+  svg {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  stroke-width: 1.7;
+}
+:root[data-appearance-version="2"]
+  .mgmt-shell
+  .insight-report-workspace
+  .mgmt-metric-card__content {
+  justify-items: center;
+  gap: 0.5rem;
+}
+:root[data-appearance-version="2"]
+  .mgmt-shell
+  .insight-report-workspace
+  .mgmt-metric-card__delta {
+  justify-content: center;
+}
+:root[data-appearance-version="2"]
+  .mgmt-shell
+  .insight-report-workspace
+  .mgmt-metric-card__footer {
+  text-align: center;
+}
+.insight-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  min-inline-size: 0;
+}
+.insight-card {
+  min-inline-size: 0;
+  display: grid;
+  align-content: start;
+  gap: 0.9rem;
+  padding: 1.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 1.35rem;
+  background: var(--surface);
+  text-align: center;
+}
+.insight-card-heading {
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+}
+.insight-icon {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  inline-size: 2.9rem;
+  block-size: 2.9rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.95rem;
+  background: var(--surface-muted);
+  color: var(--accent-text);
+}
+.insight-icon svg {
+  inline-size: 1.3rem;
+  block-size: 1.3rem;
+  stroke-width: 1.7;
+}
+.insight-card h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.insight-card-value {
+  font-size: clamp(1.35rem, 2vw, 1.9rem);
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.insight-card p,
+.insight-card-detail {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  line-height: 1.75;
+}
+.insight-card-detail {
+  border-block-start: 1px solid var(--border-subtle);
+  padding-block-start: 0.85rem;
+}
+.insight-card-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  justify-self: center;
+  min-block-size: 2.75rem;
+  padding: 0.5rem 0.75rem;
+  color: var(--accent-text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  border-radius: 0.75rem;
+}
+.insight-card-link:hover {
+  background: var(--surface-muted);
+}
+.insight-card-link:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 3px;
+}
+.insight-section-heading,
+.insight-section-heading > div {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-inline-size: 0;
+}
+.insight-section-heading {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.insight-section-heading h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.insight-section-heading p {
+  margin: 0.35rem 0 0;
+  max-inline-size: 68ch;
+  color: var(--muted-foreground);
+  font-size: 0.82rem;
+  line-height: 1.7;
+}
+.insight-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+.insight-activity-map {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.insight-activity-cell {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  min-inline-size: 0;
+  padding: 1.15rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.95rem;
+  background: var(--surface-muted);
+  text-align: center;
+}
+.insight-activity-cell strong {
+  font-size: 1.55rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.insight-activity-cell span {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.insight-activity-cell small {
+  font-size: 0.7rem;
+  line-height: 1.5;
+  color: var(--muted-foreground);
+}
+.insight-channel-list {
+  display: grid;
+  gap: 1.1rem;
+  margin: 0;
+}
+.insight-channel-list > div {
+  display: grid;
+  gap: 0.6rem;
+}
+.insight-channel-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+.insight-channel-label dt {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.insight-channel-label > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.insight-channel-label > span:last-child {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.insight-channel-list dd {
+  margin: 0;
+}
+.insight-channel-label dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.insight-track {
+  overflow: hidden;
+  block-size: 0.5rem;
+  background: var(--surface-muted);
+  border-radius: 999px;
+}
+.insight-track > span {
+  display: block;
+  block-size: 100%;
+  background: var(--report-cyan, var(--accent-text));
+  border-radius: inherit;
+}
+.insight-channel-list > div:nth-child(2) .insight-track > span {
+  background: var(--report-violet, var(--accent-text));
+}
+.insight-channel-list > div:nth-child(3) .insight-track > span {
+  background: var(--accent-text);
+}
+.insight-definition {
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  padding: 1rem 1.25rem;
+  background: var(--surface);
+}
+.insight-definition summary {
+  min-block-size: 2.75rem;
+  display: list-item;
+  align-content: center;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.insight-definition dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+  margin-block: 1rem 0;
+}
+.insight-definition dt {
+  margin-block-end: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.insight-definition dd {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  line-height: 1.75;
+}
+.insight-workspace-emblem {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+.insight-workspace-emblem .insight-icon {
+  inline-size: 2.4rem;
+  block-size: 2.4rem;
+  border-radius: 0.8rem;
+}
+@media (max-width: 70rem) {
+  .insight-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .insight-summary-grid > :last-child:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+  .insight-columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 40rem) {
+  .insight-summary-grid {
+    grid-template-columns: 1fr;
+  }
+  .insight-summary-grid > :last-child:nth-child(3) {
+    grid-column: auto;
+  }
+  .insight-card {
+    padding: 1.25rem;
+  }
+  .insight-activity-map {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .insight-definition dl {
+    grid-template-columns: 1fr;
+  }
+  .insight-section-heading > div {
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+}

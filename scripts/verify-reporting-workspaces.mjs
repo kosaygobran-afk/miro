@@ -10,7 +10,8 @@ import AxeBuilder from "@axe-core/playwright";
 
 nextEnv.loadEnvConfig(process.cwd());
 const base = process.env.REPORTING_BASE_URL || "http://127.0.0.1:3107";
-const output = "docs/reporting-evidence-2026-10-02";
+const output =
+  process.env.REPORTING_OUTPUT_DIR || "docs/reporting-evidence-2026-10-02";
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const secret = process.env.SUPABASE_SECRET_KEY;
 assert.ok(

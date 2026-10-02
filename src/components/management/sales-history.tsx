@@ -1,5 +1,7 @@
 "use client";
 
+import { TableSkeleton } from "./ui/skeleton";
+
 import { ScrollRegion } from "./ui/scroll-region";
 
 import React, { useMemo } from "react";
@@ -171,14 +173,33 @@ export function SalesHistory({
 
   if (loading) {
     return (
-      <div
-        className="miro-card sales-history__loading"
-        role="status"
-        aria-live="polite"
-      >
-        <div className="sales-history__spinner" aria-hidden="true" />
-        <p>{he ? "טוען היסטוריית מכירות…" : "Loading sales history…"}</p>
-      </div>
+      <TableSkeleton
+        columns={
+          he
+            ? [
+                "הזמנה",
+                "תאריך",
+                "לקוח",
+                "סטטוס",
+                "פריטים",
+                "מע״מ",
+                "סה״כ",
+                "פעולות",
+              ]
+            : [
+                "Order",
+                "Date",
+                "Customer",
+                "Status",
+                "Items",
+                "VAT",
+                "Total",
+                "Actions",
+              ]
+        }
+        leadingImage={false}
+        label={he ? "טוען נתונים…" : "Loading data…"}
+      />
     );
   }
 
@@ -462,7 +483,7 @@ export function SalesHistory({
                                     <th scope="col">{he ? "עלות" : "Cost"}</th>
                                   </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="motion-content-reveal">
                                   {order.order_items.map((item) => (
                                     <tr key={item.id}>
                                       <td>
@@ -599,7 +620,7 @@ export function SalesHistory({
                               <th scope="col">{he ? "עלות" : "Cost"}</th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <tbody className="motion-content-reveal">
                             {order.order_items.map((item) => (
                               <tr key={item.id}>
                                 <td>

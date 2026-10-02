@@ -38,7 +38,8 @@
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--success-text) 18%, transparent),
     0 0 1.5rem color-mix(in srgb, var(--success-text) 28%, transparent);
-  animation: savedPulse 680ms ease-out both;
+  animation: savedPulse var(--motion-button-duration, 160ms)
+    var(--motion-easing, ease-out) both;
 }
 
 .mediaSaved {
@@ -55,7 +56,8 @@
   font-weight: 700;
   box-shadow: 0 0 1.25rem
     color-mix(in srgb, var(--success-text) 16%, transparent);
-  animation: savedSlideIn 420ms ease-out both;
+  animation: savedSlideIn var(--motion-content-duration, 160ms)
+    var(--motion-easing, ease-out) both;
 }
 
 @keyframes savedPulse {
@@ -480,4 +482,9 @@
   .sectionNavItem {
     flex: 1 1 auto;
   }
+}
+
+:global([data-motion-button-feedback="false"]) .saveButtonSaved,
+:global([data-motion-content-reveal="false"]) .mediaSaved {
+  animation: none;
 }

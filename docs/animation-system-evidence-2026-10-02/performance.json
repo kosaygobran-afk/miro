@@ -1,0 +1,103 @@
+{
+  "route": "/en",
+  "viewport": "1440x1000",
+  "runs": 3,
+  "startingTheme": "dark",
+  "measurement": "Local Chromium lab, fresh browser contexts, unthrottled; event timing is a sampled interaction, not field INP. Network/database jitter prevents causal LCP/TTFB claims.",
+  "summaries": {
+    "before": {
+      "lcpMs": 320,
+      "cls": 0.002591595293209877,
+      "ttfbMs": 239.40000000596046,
+      "scriptDecodedBytes": 1284443,
+      "scriptTransferredBytes": 357845,
+      "scriptCount": 15,
+      "themeCommitMs": 0.20000000298023224,
+      "largestRecordedInteractionMs": 72
+    },
+    "after": {
+      "lcpMs": 256,
+      "cls": 0.0018263175154320987,
+      "ttfbMs": 168.70000000298023,
+      "scriptDecodedBytes": 1303681,
+      "scriptTransferredBytes": 364605,
+      "scriptCount": 15,
+      "themeCommitMs": 44.8999999910593,
+      "largestRecordedInteractionMs": 72
+    }
+  },
+  "samples": [
+    {
+      "version": "before",
+      "run": 1,
+      "lcpMs": 320,
+      "cls": 0.002591595293209877,
+      "ttfbMs": 239.40000000596046,
+      "scriptDecodedBytes": 1233028,
+      "scriptTransferredBytes": 339219,
+      "scriptCount": 13,
+      "themeCommitMs": 0.20000000298023224,
+      "largestRecordedInteractionMs": 72
+    },
+    {
+      "version": "before",
+      "run": 2,
+      "lcpMs": 284,
+      "cls": 0.002591595293209877,
+      "ttfbMs": 200.5,
+      "scriptDecodedBytes": 1284443,
+      "scriptTransferredBytes": 357845,
+      "scriptCount": 15,
+      "themeCommitMs": 0.20000000298023224,
+      "largestRecordedInteractionMs": 72
+    },
+    {
+      "version": "before",
+      "run": 3,
+      "lcpMs": 504,
+      "cls": 0.002591595293209877,
+      "ttfbMs": 423.70000000298023,
+      "scriptDecodedBytes": 1284443,
+      "scriptTransferredBytes": 357845,
+      "scriptCount": 15,
+      "themeCommitMs": 0.10000000894069672,
+      "largestRecordedInteractionMs": 72
+    },
+    {
+      "version": "after",
+      "run": 1,
+      "lcpMs": 252,
+      "cls": 0.0018263175154320987,
+      "ttfbMs": 168.70000000298023,
+      "scriptDecodedBytes": 1303681,
+      "scriptTransferredBytes": 364605,
+      "scriptCount": 15,
+      "themeCommitMs": 44.8999999910593,
+      "largestRecordedInteractionMs": 72
+    },
+    {
+      "version": "after",
+      "run": 2,
+      "lcpMs": 256,
+      "cls": 0.0018263175154320987,
+      "ttfbMs": 170.79999999701977,
+      "scriptDecodedBytes": 1303681,
+      "scriptTransferredBytes": 364605,
+      "scriptCount": 15,
+      "themeCommitMs": 46.79999999701977,
+      "largestRecordedInteractionMs": 72
+    },
+    {
+      "version": "after",
+      "run": 3,
+      "lcpMs": 260,
+      "cls": 0.0018263175154320987,
+      "ttfbMs": 166.79999999701977,
+      "scriptDecodedBytes": 1303681,
+      "scriptTransferredBytes": 364605,
+      "scriptCount": 15,
+      "themeCommitMs": 44.70000000298023,
+      "largestRecordedInteractionMs": 72
+    }
+  ]
+}

@@ -1,0 +1,1031 @@
+{
+  "date": "2026-10-02",
+  "runner": "Chromium production build on local3121",
+  "passed": 93,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "visitor cannot open he/account",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 521
+        }
+      ]
+    },
+    {
+      "name": "visitor cannot open he/worker",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 475
+        }
+      ]
+    },
+    {
+      "name": "visitor cannot open he/admin",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 446
+        }
+      ]
+    },
+    {
+      "name": "visitor cannot open en/account",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 465
+        }
+      ]
+    },
+    {
+      "name": "visitor cannot open en/worker",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 527
+        }
+      ]
+    },
+    {
+      "name": "visitor cannot open en/admin",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 472
+        }
+      ]
+    },
+    {
+      "name": "callback rejects external redirect and missing code",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 17
+        }
+      ]
+    },
+    {
+      "name": "anonymous management and account writes are rejected",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 10
+        }
+      ]
+    },
+    {
+      "name": "reset password without a session offers a fresh link",
+      "file": "auth.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 331
+        }
+      ]
+    },
+    {
+      "name": "appearance backup restores original public tokens and console Dark stays unchanged",
+      "file": "customer-evolution.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 323
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/services at 1280px",
+      "file": "customer-evolution.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 678
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /en/login at 390px",
+      "file": "customer-evolution.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 669
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he at 320px",
+      "file": "customer-evolution.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 855
+        }
+      ]
+    },
+    {
+      "name": "enhanced Light stays readable and fits /he/store/cameras/miro-4k-pro at 390px",
+      "file": "customer-evolution.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 676
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 1280px",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1457
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 768px",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1420
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual en button at 390px",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1497
+        }
+      ]
+    },
+    {
+      "name": "theme reveal follows the actual he button at 390px",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1446
+        }
+      ]
+    },
+    {
+      "name": "rapid theme changes settle on the last selection and every mode persists",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 5569
+        }
+      ]
+    },
+    {
+      "name": "browsers without View Transitions still switch and persist themes",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 601
+        }
+      ]
+    },
+    {
+      "name": "reduced motion switches immediately and keeps navigation feedback functional",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1311
+        }
+      ]
+    },
+    {
+      "name": "all saved feature switches apply live and disabling motion preserves interactions",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 466
+        }
+      ]
+    },
+    {
+      "name": "navigation beam responds immediately and waits for dynamic loading to finish",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1203
+        }
+      ]
+    },
+    {
+      "name": "navigation cancellation, failure, same-route links and browser history settle",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1476
+        }
+      ]
+    },
+    {
+      "name": "stalled navigation cancels its beam and leaves the current page usable",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 301
+        }
+      ]
+    },
+    {
+      "name": "rapidly superseded navigation settles when the final destination is the current page",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 265
+        }
+      ]
+    },
+    {
+      "name": "hash-only browser history does not start a page navigation beam",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 313
+        }
+      ]
+    },
+    {
+      "name": "slow category navigation exposes a structured route skeleton and settles",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1300
+        }
+      ]
+    },
+    {
+      "name": "GET search receives immediate navigation feedback for its query",
+      "file": "motion.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1750
+        }
+      ]
+    },
+    {
+      "name": "/he renders with locale metadata",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1335
+        }
+      ]
+    },
+    {
+      "name": "/en renders with locale metadata",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 863
+        }
+      ]
+    },
+    {
+      "name": "/he/home renders with locale metadata",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 331
+        }
+      ]
+    },
+    {
+      "name": "/en/contact renders with locale metadata",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 291
+        }
+      ]
+    },
+    {
+      "name": "root redirects to the Hebrew default locale",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 462
+        }
+      ]
+    },
+    {
+      "name": "store is canonical and appears before Services and Home",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2195
+        }
+      ]
+    },
+    {
+      "name": "old product URLs redirect to the Store section",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 389
+        }
+      ]
+    },
+    {
+      "name": "service detail route does not switch from static to dynamic at runtime",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 350
+        }
+      ]
+    },
+    {
+      "name": "home pages pass automated accessibility smoke checks",
+      "file": "smoke.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 6663
+        }
+      ]
+    },
+    {
+      "name": "adds a product from a card and updates it in the cart",
+      "file": "store-cart.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 4776
+        }
+      ]
+    },
+    {
+      "name": "continues from cart to the checkout request page",
+      "file": "store-cart.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2797
+        }
+      ]
+    },
+    {
+      "name": "submits a validated checkout request and clears the cart",
+      "file": "store-cart.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 3033
+        }
+      ]
+    },
+    {
+      "name": "switching product thumbnails replaces the visible main image",
+      "file": "store-cart.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2013
+        }
+      ]
+    },
+    {
+      "name": "cart and checkout do not overflow a small phone viewport",
+      "file": "store-cart.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1978
+        }
+      ]
+    },
+    {
+      "name": "store, cart, checkout and product navigation return no server errors",
+      "file": "store-cart.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2769
+        }
+      ]
+    },
+    {
+      "name": "cart and checkout pass automated accessibility checks",
+      "file": "store-cart.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2643
+        }
+      ]
+    },
+    {
+      "name": "Hebrew store page passes axe accessibility checks",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2648
+        }
+      ]
+    },
+    {
+      "name": "English store page passes axe accessibility checks",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2679
+        }
+      ]
+    },
+    {
+      "name": "Store page handles optional moving rail",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1861
+        }
+      ]
+    },
+    {
+      "name": "Store page category navigation works",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1930
+        }
+      ]
+    },
+    {
+      "name": "Product grid renders with products",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1967
+        }
+      ]
+    },
+    {
+      "name": "Hover preview appears on product card hover",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2802
+        }
+      ]
+    },
+    {
+      "name": "Keyboard navigation on product grid",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2511
+        }
+      ]
+    },
+    {
+      "name": "Escape key closes hover preview",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 4796
+        }
+      ]
+    },
+    {
+      "name": "Product detail page loads and passes axe",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 4028
+        }
+      ]
+    },
+    {
+      "name": "Product detail page has image gallery with thumbnails",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1811
+        }
+      ]
+    },
+    {
+      "name": "Product detail page variant selection works",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1874
+        }
+      ]
+    },
+    {
+      "name": "Reduced motion disables moving rail animation",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2425
+        }
+      ]
+    },
+    {
+      "name": "Touch/coarse pointer behavior - hover preview opens immediately",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2530
+        }
+      ]
+    },
+    {
+      "name": "Store page responsive at 320px",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1570
+        }
+      ]
+    },
+    {
+      "name": "Store page responsive at desktop",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1701
+        }
+      ]
+    },
+    {
+      "name": "Dark/Medium/Light theme switching",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1827
+        }
+      ]
+    },
+    {
+      "name": "Category page renders with products",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2203
+        }
+      ]
+    },
+    {
+      "name": "Promo price math - strikethrough and discount badge",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1892
+        }
+      ]
+    },
+    {
+      "name": "Inaccessible duplicate marquee content check",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1727
+        }
+      ]
+    },
+    {
+      "name": "Console/hydration errors check",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2847
+        }
+      ]
+    },
+    {
+      "name": "Category uploaded icons render in subnav",
+      "file": "store-comprehensive.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 4409
+        }
+      ]
+    },
+    {
+      "name": "cards place VAT pricing beside an accessible stock tier",
+      "file": "store-merchandising.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1527
+        }
+      ]
+    },
+    {
+      "name": "card presses before its in-place 3D expansion, stays in the viewport, and closes",
+      "file": "store-merchandising.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1181
+        }
+      ]
+    },
+    {
+      "name": "configured moving rail uses a stable seamless track and inaccessible clone",
+      "file": "store-merchandising.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 804
+        }
+      ]
+    },
+    {
+      "name": "touch-sized layout exposes quick preview without horizontal overflow",
+      "file": "store-merchandising.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 643
+        }
+      ]
+    },
+    {
+      "name": "product page gallery exposes side thumbnails and circular arrow navigation",
+      "file": "store-merchandising.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 379
+        }
+      ]
+    },
+    {
+      "name": "reduced motion renders a static scroll rail",
+      "file": "store-merchandising.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 371
+        }
+      ]
+    },
+    {
+      "name": "enhanced storefront has no WCAG A/AA violations",
+      "file": "store-merchandising.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1061
+        }
+      ]
+    },
+    {
+      "name": "desktop overlays stay above imagery: he/dark",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 670
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: he/dark/320",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1076
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: he/dark/390",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1066
+        }
+      ]
+    },
+    {
+      "name": "desktop overlays stay above imagery: he/medium",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 764
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: he/medium/320",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1194
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: he/medium/390",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 2679
+        }
+      ]
+    },
+    {
+      "name": "desktop overlays stay above imagery: he/light",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1750
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: he/light/320",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1072
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: he/light/390",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1082
+        }
+      ]
+    },
+    {
+      "name": "3D preview and gallery controls remain above product images: he",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1232
+        }
+      ]
+    },
+    {
+      "name": "desktop overlays stay above imagery: en/dark",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 577
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: en/dark/320",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1052
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: en/dark/390",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1030
+        }
+      ]
+    },
+    {
+      "name": "desktop overlays stay above imagery: en/medium",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 901
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: en/medium/320",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 989
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: en/medium/390",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1083
+        }
+      ]
+    },
+    {
+      "name": "desktop overlays stay above imagery: en/light",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 545
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: en/light/320",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1093
+        }
+      ]
+    },
+    {
+      "name": "mobile glass navigation uses only page scrolling: en/light/390",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 772
+        }
+      ]
+    },
+    {
+      "name": "3D preview and gallery controls remain above product images: en",
+      "file": "store-overlays.spec.ts",
+      "result": "expected",
+      "attempts": [
+        {
+          "status": "passed",
+          "durationMs": 1299
+        }
+      ]
+    }
+  ]
+}

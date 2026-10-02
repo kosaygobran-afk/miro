@@ -44,12 +44,15 @@ export default async function UsersPage({
   ]);
 
   if (profilesError || rolesError || authError) {
-    // Return empty array on error - UsersManagement will show error state
+    // Preserve a failed request as an error, rather than reporting a falsely empty collection.
     return (
       <UsersManagement
         locale={safeLocale}
         canControlAdmins={isCeo}
         initialUsers={[]}
+        initialError={
+          safeLocale === "he" ? "לא ניתן לטעון משתמשים" : "Unable to load users"
+        }
       />
     );
   }

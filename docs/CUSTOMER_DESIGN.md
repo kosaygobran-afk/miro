@@ -1,6 +1,14 @@
 # Customer storefront design — 2026-10-02
 
-The public storefront preserves MIRO's existing dark/medium/light themes. The new customer layer refines icons, typography, media stages, card controls and motion; it does not adopt the console's neon palette.
+The public storefront supports MIRO's dark/medium/light themes. Version 2 adds calmer charcoal/gold and warm bright palettes, framed icons, consistent component geometry and phone layouts. Version 1 restores the original presentation. The customer layers keep their own palette, separate from the management console.
+
+## Animation controls and appearance restoration
+
+Open `/he/admin/settings#settings-animation` or `/en/admin/settings#settings-animation`. An active CEO can save; Admin can read. The master switch, 13 effect switches and enhanced-appearance switch have bilingual notes. Timing inputs control presentation durations, and styles choose radial/fade theme changes, lift/fade page reveals and easing. Defaults are enabled; reduced-motion preferences take priority. Existing Store Design controls still set rail speeds, hover intent and background intervals, with the global switches deciding whether those decorative effects run.
+
+Version 1 is a protected snapshot of the public theme tokens and motion configuration before the expanded design pass. Prepare the restore in a draft, review it, then Save. A restore does not overwrite visitor theme choice, products, inventory, uploaded design entries, enquiries or orders. Re-enabling enhanced appearance keeps the other motion selections. Version 2 styles remain scoped so future refinements preserve this backup path.
+
+Implementation, timing bounds, security and final checks are in `docs/ANIMATION_SYSTEM.md`. A save updates this window and other same-origin tabs; other devices receive the saved configuration when reloaded. This adds no visitor tracking or outbound messages.
 
 ## Operating the design studio
 

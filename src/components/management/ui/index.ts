@@ -18,8 +18,12 @@ export { ErrorState, type ErrorStateProps } from "./error-state";
 export {
   Skeleton,
   ListSkeleton,
+  TableSkeleton,
+  FormSkeleton,
+  DashboardSkeleton,
   type SkeletonProps,
   type ListSkeletonProps,
+  type TableSkeletonProps,
 } from "./skeleton";
 export { Notice, type NoticeProps, type NoticeTone } from "./notice";
 export { Drawer, type DrawerProps } from "./drawer";

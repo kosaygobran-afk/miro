@@ -1,6 +1,6 @@
 "use client";
-import Image from "next/image";
-import Link from "next/link";
+import { RevealImage as Image } from "@/components/ui/reveal-image";
+import Link from "@/components/motion/motion-link";
 import { useEffect, useState, useCallback } from "react";
 import {
   ArrowDown,

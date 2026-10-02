@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { Search, SlidersHorizontal, ArrowUpRight, Lock } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import type { AppRole } from "@/lib/roles";

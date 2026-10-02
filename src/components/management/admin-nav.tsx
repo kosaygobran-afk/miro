@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
 import { useEffect, useState, type FocusEvent, type PointerEvent } from "react";

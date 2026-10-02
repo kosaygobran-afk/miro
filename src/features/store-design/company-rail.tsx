@@ -1,4 +1,5 @@
 "use client";
+import { useAnimationFeature } from "@/components/motion/animation-provider";
 import Image from "next/image";
 import { Pause, Play } from "lucide-react";
 import { useState, type CSSProperties } from "react";
@@ -7,7 +8,8 @@ import { useReducedMotion } from "./use-reduced-motion";
 export function CompanyRail({ locale }: { locale: "he" | "en" }) {
   const { brands } = useStoreDesign();
   const items = brands.items.filter((item) => item.enabled);
-  const reduceMotion = useReducedMotion();
+  const ambientMotion = useAnimationFeature("ambientMotion");
+  const reduceMotion = useReducedMotion() || !ambientMotion;
   const [paused, setPaused] = useState(false);
   const [interacting, setInteracting] = useState(false);
   if (!brands.enabled || !items.length) return null;
@@ -49,6 +51,9 @@ export function CompanyRail({ locale }: { locale: "he" | "en" }) {
         </div>
         <div
           className="sf-company-viewport"
+          role="region"
+          aria-labelledby="company-rail-title"
+          tabIndex={0}
           data-static={!animated || undefined}
           data-paused={paused || interacting || undefined}
           onMouseEnter={() => setInteracting(true)}

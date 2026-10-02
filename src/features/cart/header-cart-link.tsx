@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { ShoppingCart } from "lucide-react";
 import { useCart } from "@/features/cart/cart-context";
 import { withLocale, type Locale } from "@/lib/i18n";

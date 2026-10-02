@@ -4,6 +4,8 @@ import { ManagementShell } from "@/components/management/shell/management-shell"
 import "@/styles/management.css";
 import "@/styles/console.css";
 import "@/styles/business-console.css";
+import "@/styles/console-evolution.css";
+import "@/styles/insights-refinement.css";
 
 /**
  * Management console layout. Resolves the actor role/status on the server

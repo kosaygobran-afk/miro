@@ -1,4 +1,6 @@
-import Link from "next/link";
+import { Suspense } from "react";
+import { ServiceGridSkeleton } from "@/features/catalog/catalog-skeleton";
+import Link from "@/components/motion/motion-link";
 import { getTranslations } from "next-intl/server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
@@ -39,7 +41,7 @@ export default async function ServicesPage({
   const he = locale === "he";
 
   // Fetch published services from database
-  const services = await getPublishedServices();
+  const services = getPublishedServices();
 
   return (
     <>
@@ -119,7 +121,15 @@ export default async function ServicesPage({
                 : "Four complementary disciplines. One plan that considers them all."}
             </p>
           </div>
-          <ServiceCategoryGrid locale={locale} services={services} />
+          <Suspense
+            fallback={
+              <ServiceGridSkeleton
+                label={he ? "טוען שירותים…" : "Loading services…"}
+              />
+            }
+          >
+            <PublishedServiceGrid locale={locale} services={services} />
+          </Suspense>
         </div>
       </section>
       <section className="experience-section experience-muted-section">
@@ -157,5 +167,20 @@ export default async function ServicesPage({
       <FaqSection locale={locale} />
       <ConsultationBand locale={locale} />
     </>
+  );
+}
+
+async function PublishedServiceGrid({
+  locale,
+  services,
+}: {
+  locale: Locale;
+  services: ReturnType<typeof getPublishedServices>;
+}) {
+  const published = await services;
+  return (
+    <div className="motion-content-reveal">
+      <ServiceCategoryGrid locale={locale} services={published} />
+    </div>
   );
 }

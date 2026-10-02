@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { OverflowLabel } from "./overflow-label";
 import { ProductMedia } from "./product-media";
 import {
@@ -170,7 +170,7 @@ export function ProductCard({
       ref={cardRef}
       className="sf-product-card"
       data-product-name={product.name}
-      data-product-price={product.priceIls ?? 0}
+      data-product-price={product.priceIls ?? undefined}
       data-product-stock-state={product.stockState}
       data-preview-intent={showHoverPreview || undefined}
     >

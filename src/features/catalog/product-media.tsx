@@ -1,5 +1,5 @@
 "use client";
-import Image from "next/image";
+import { RevealImage } from "@/components/ui/reveal-image";
 import { useState } from "react";
 import { ProductVisual } from "@/components/products/ProductVisual";
 import { getProductVisualKind } from "./product-visual-kind";
@@ -20,7 +20,7 @@ export function ProductMedia({
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   return src && failedSrc !== src ? (
-    <Image
+    <RevealImage
       src={src}
       alt={alt}
       fill

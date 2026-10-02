@@ -17,7 +17,7 @@ import {
   Dialog,
   EmptyState,
   ErrorState,
-  ListSkeleton,
+  TableSkeleton,
   Notice,
   PageHeader,
   StatusBadge,
@@ -25,6 +25,7 @@ import {
   FormField,
 } from "../ui";
 import { PromoBadge } from "@/features/catalog/product-promo-badge";
+import { RevealImage } from "@/components/ui/reveal-image";
 import type { PromoBadge as StorePromoBadge } from "@/features/catalog/product-data";
 import { storefrontMerchandisingCopy as copy } from "./copy";
 import { CollectionSummary } from "../ui/collection-summary";
@@ -856,7 +857,20 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
           title={copy[locale].pageTitle}
           subtitle={copy[locale].pageSubtitle}
         />
-        <ListSkeleton rows={6} />
+        <TableSkeleton
+          columns={[
+            copy[locale].railColPosition,
+            copy[locale].railColProduct,
+            copy[locale].railColPrice,
+            copy[locale].railColStatus,
+            copy[locale].railColPromotion,
+            copy[locale].railColBadges,
+            copy[locale].railColSchedule,
+            copy[locale].railColActions,
+          ]}
+          rows={6}
+          minWidth="80rem"
+        />
       </div>
     );
   }
@@ -1018,10 +1032,12 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
               <td>
                 <div className={styles.productCell}>
                   {item.products?.image_url && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
+                    <RevealImage
                       src={item.products.image_url}
                       alt=""
+                      width={52}
+                      height={52}
+                      unoptimized
                       className={styles.productThumb}
                       loading="lazy"
                     />
@@ -1187,6 +1203,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
           <div
             className={styles.previewRail}
             role="region"
+            tabIndex={0}
             aria-label={copy[locale].previewAriaLabel}
           >
             {sortedRailItems.slice(0, 5).map(
@@ -1195,10 +1212,12 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
                 (
                   <div key={item.id} className={styles.previewCard}>
                     {item.products?.image_url && (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
+                      <RevealImage
                         src={item.products.image_url}
                         alt=""
+                        width={240}
+                        height={160}
+                        unoptimized
                         className={styles.previewImage}
                         loading="lazy"
                       />
@@ -1514,10 +1533,12 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
           <div className={styles.dialogStack}>
             <div className={styles.dialogProductHeader}>
               {editingRailItem.products?.image_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <RevealImage
                   src={editingRailItem.products.image_url}
                   alt=""
+                  width={72}
+                  height={72}
+                  unoptimized
                   className={styles.dialogProductImage}
                 />
               ) : null}

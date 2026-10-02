@@ -1,4 +1,5 @@
 "use client";
+import { useAnimationFeature } from "@/components/motion/animation-provider";
 
 import {
   useCallback,
@@ -11,7 +12,7 @@ import { OverflowLabel } from "./overflow-label";
 import { ProductMedia } from "./product-media";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import { useStoreDesign } from "@/features/store-design/design-context";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import { ArrowUpRight, Eye, Pause, Play } from "lucide-react";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
@@ -256,7 +257,9 @@ export function ProductMovingRail({
     )
     .sort((a, b) => (a.railSortOrder ?? 0) - (b.railSortOrder ?? 0));
   const prefersReducedMotion = usePrefersReducedMotion();
-  const shouldAnimate = !prefersReducedMotion && featuredProducts.length >= 3;
+  const ambientMotion = useAnimationFeature("ambientMotion");
+  const shouldAnimate =
+    ambientMotion && !prefersReducedMotion && featuredProducts.length >= 3;
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const segmentRef = useRef<HTMLDivElement | null>(null);

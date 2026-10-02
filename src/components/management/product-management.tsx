@@ -1,16 +1,19 @@
 "use client";
 
+import { TableSkeleton } from "./ui/skeleton";
+import { Pager } from "./pager";
+import { useCollectionPage } from "./use-collection-page";
+
 import { CollectionSummary } from "./ui/collection-summary";
 
 import { ScrollRegion } from "./ui/scroll-region";
 
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
-import Link from "next/link";
+import { RevealImage as Image } from "@/components/ui/reveal-image";
+import Link from "@/components/motion/motion-link";
 import {
   Plus,
   Edit,
-  Loader2,
   AlertCircle,
   Eye,
   EyeOff,
@@ -26,6 +29,7 @@ import {
   OverflowText,
   IconAction,
   IconLink,
+  ErrorState,
 } from "./ui";
 import { TextHint } from "./ui/icon-action";
 
@@ -340,17 +344,6 @@ export function ProductManagement({
     }).format(price);
   };
 
-  if (loading) {
-    return (
-      <div className="miro-card p-12 text-center">
-        <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
-        <p className="mt-4 text-muted-foreground">
-          {he ? "טוען מוצרים..." : "Loading products..."}
-        </p>
-      </div>
-    );
-  }
-
   const filteredProducts = products.filter(
     (product) =>
       (!statusFilter || product.status === statusFilter) &&
@@ -359,6 +352,73 @@ export function ProductManagement({
           .toLowerCase()
           .includes(search.trim().toLowerCase())),
   );
+  const { visibleItems: visibleProducts, pager } = useCollectionPage(
+    filteredProducts,
+    `${search}:${statusFilter}`,
+  );
+
+  if (loading) {
+    return (
+      <TableSkeleton
+        columns={
+          he
+            ? [
+                "תמונה",
+                "מוצר",
+                "קטגוריה",
+                "SKU",
+                "מחיר",
+                "סטטוס",
+                "מומלץ",
+                "סה״כ מלאי",
+                "עודכן",
+                "פעולות",
+              ]
+            : [
+                "Image",
+                "Product",
+                "Category",
+                "SKU",
+                "Price",
+                "Status",
+                "Featured",
+                "Total Stock",
+                "Updated",
+                "Actions",
+              ]
+        }
+        columnWidths={[
+          "7%",
+          "18%",
+          "10%",
+          "12%",
+          "9%",
+          "8%",
+          "6%",
+          "6%",
+          "10%",
+          "14%",
+        ]}
+        leadingImage={true}
+        label={he ? "טוען נתונים…" : "Loading data…"}
+      />
+    );
+  }
+
+  if (error && products.length === 0) {
+    return (
+      <ErrorState
+        title={he ? "לא ניתן לטעון מוצרים" : "Unable to load products"}
+        description={error}
+        retryLabel={he ? "נסה שוב" : "Retry"}
+        onRetry={() => {
+          setLoading(true);
+          void loadData();
+        }}
+      />
+    );
+  }
+
   return (
     <div className="mgmt-products-page">
       <PageHeader
@@ -507,8 +567,8 @@ export function ProductManagement({
                 </th>
               </tr>
             </thead>
-            <tbody>
-              {filteredProducts.map((product) => {
+            <tbody className="motion-content-reveal">
+              {visibleProducts.map((product) => {
                 const defaultVariant = getDefaultVariant(product);
                 const effectivePrice = getEffectivePrice(product);
                 const totalStock = getTotalStock(product);
@@ -721,6 +781,8 @@ export function ProductManagement({
           </div>
         )}
       </div>
+
+      <Pager {...pager} locale={locale} busy={loading || saving} />
 
       <ConfirmationDialog
         open={pendingDeleteId !== null}

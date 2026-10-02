@@ -25,7 +25,8 @@ const service = createClient(
     },
   },
 );
-const output = "docs/reporting-evidence-2026-10-02";
+const output =
+  process.env.CONSOLE_OUTPUT_DIR || "docs/reporting-evidence-2026-10-02";
 const temporary = "/tmp/miro-console-2026-10-02";
 const checks = [];
 const violations = [];
@@ -164,6 +165,42 @@ try {
   for (const path of paths) {
     await page.setViewportSize({ width: 1440, height: 1000 });
     await visit(path);
+    if (path === "") {
+      const versions = await page.evaluate(() => {
+        const root = document.documentElement;
+        const theme = root.dataset.theme;
+        const version = root.dataset.appearanceVersion;
+        root.dataset.theme = "dark";
+        const read = () => ({
+          areas: getComputedStyle(document.querySelector(".mgmt-metric-card"))
+            .gridTemplateAreas,
+          background: getComputedStyle(
+            document.querySelector(".mgmt-shell-root"),
+          )
+            .getPropertyValue("--background")
+            .trim(),
+          foreground: getComputedStyle(
+            document.querySelector(".mgmt-shell-root"),
+          )
+            .getPropertyValue("--foreground")
+            .trim(),
+        });
+        root.dataset.appearanceVersion = "1";
+        const original = read();
+        root.dataset.appearanceVersion = "2";
+        const enhanced = read();
+        root.dataset.theme = theme;
+        root.dataset.appearanceVersion = version;
+        return { original, enhanced };
+      });
+      assert.equal(versions.original.areas, '"content icon" "footer footer"');
+      assert.equal(versions.enhanced.areas, '"icon" "content" "footer"');
+      assert.equal(versions.original.background, versions.enhanced.background);
+      assert.equal(versions.original.foreground, versions.enhanced.foreground);
+      pass(
+        "Version1 restores original shared metric geometry; Version2 keeps CEO Dark colors unchanged",
+      );
+    }
     if (path === "products") {
       const data = [...cache.entries()].find(([key]) =>
         key.startsWith("/api/management/products?"),
@@ -380,7 +417,7 @@ try {
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(taxTrigger).toBeFocused();
   assert.ok(
-    (await page.locator("input:not([disabled])").count()) > 0,
+    (await page.locator("input:enabled").count()) > 0,
     "CEO editable settings available",
   );
   await context.unroute("**/api/management/**");
@@ -400,7 +437,7 @@ try {
   await visit("settings");
   const editable = await page
     .locator(
-      ".mgmt-shell__main input:not([disabled]), .mgmt-shell__main select:not([disabled]), .mgmt-shell__main textarea:not([disabled])",
+      ".mgmt-shell__main input:enabled, .mgmt-shell__main select:enabled, .mgmt-shell__main textarea:enabled",
     )
     .count();
   assert.equal(editable, 0, "admin settings read-only");

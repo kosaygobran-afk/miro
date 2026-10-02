@@ -11,7 +11,7 @@ import {
   type DateRangeValue,
   EmptyState,
   ErrorState,
-  ListSkeleton,
+  TableSkeleton,
   IconAction,
   Dialog,
   OverflowText,
@@ -376,7 +376,13 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
           retryLabel={he ? "ניסיון נוסף" : "Retry"}
         />
       ) : loading && events.length === 0 ? (
-        <ListSkeleton rows={5} />
+        <TableSkeleton
+          columns={
+            he
+              ? ["מועד", "מבצע", "פעולה", "רשומה", "פרטים", "פתיחה"]
+              : ["Timestamp", "Actor", "Action", "Entity", "Details", "Open"]
+          }
+        />
       ) : (
         <div aria-busy={loading}>
           <DataTable

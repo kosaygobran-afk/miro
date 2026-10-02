@@ -1,7 +1,8 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
+import { RevealImage as Image } from "@/components/ui/reveal-image";
+import { CartSkeleton } from "./cart-skeleton";
+import Link from "@/components/motion/motion-link";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/features/cart/cart-context";
 import { cartCopy } from "@/features/cart/cart-copy";
@@ -13,7 +14,7 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
   const copy = cartCopy[locale];
 
   if (!hydrated) {
-    return <div className="sf-cart-loading" aria-busy="true" />;
+    return <CartSkeleton locale={locale} />;
   }
 
   return (

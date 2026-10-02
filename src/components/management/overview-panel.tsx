@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { ReportChoices } from "./ui/reporting-workspace";
 import { OverflowText } from "./ui/overflow-text";
-import Link from "next/link";
+import Link from "@/components/motion/motion-link";
 import {
   AlertTriangle,
   Box,
@@ -184,7 +184,7 @@ export function OverviewPanel({
   );
 
   return (
-    <section className={styles.root}>
+    <section className={`${styles.root} insight-report-workspace`}>
       <PageHeader
         title={t(locale, overviewCopy.title)}
         subtitle={

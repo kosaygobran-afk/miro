@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/components/motion/use-motion-router";
 import { useState } from "react";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { createClient } from "@/lib/supabase/client";
