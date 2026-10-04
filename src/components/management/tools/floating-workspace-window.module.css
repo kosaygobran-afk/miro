@@ -1,0 +1,103 @@
+/* Floating workspace window — layer: above page content/topbar, below modal
+   dialogs (modals start at z-index 120). Position is fixed; on narrow
+   viewports it docks as a bottom sheet. */
+
+.window {
+  position: fixed;
+  inset-inline-end: 1.5rem;
+  inset-block-end: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  width: min(26rem, calc(100vw - 2rem));
+  max-height: min(42rem, calc(100dvh - 3rem));
+  background: var(--background);
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lift);
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .window {
+    transition: none;
+  }
+}
+
+/* Mobile / narrow viewport: docked bottom sheet, no free dragging. */
+.window.sheet {
+  inset-inline: 0;
+  inset-block-end: 0;
+  width: 100%;
+  max-height: 85dvh;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.window.minimized {
+  max-height: none;
+}
+
+.titleBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-subtle);
+  user-select: none;
+  touch-action: none;
+}
+
+.window:not(.sheet) .titleBar {
+  cursor: grab;
+}
+
+.window:not(.sheet) .titleBar:active {
+  cursor: grabbing;
+}
+
+.window.sheet .titleBar {
+  touch-action: auto;
+  cursor: default;
+}
+
+.title {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.iconButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm, 0.375rem);
+  background: transparent;
+  color: var(--foreground);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.iconButton:hover {
+  background: var(--surface-hover, var(--surface));
+}
+
+.iconButton:focus-visible {
+  outline: 2px solid var(--focus-ring, currentColor);
+  outline-offset: 1px;
+}
+
+.content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.75rem;
+}

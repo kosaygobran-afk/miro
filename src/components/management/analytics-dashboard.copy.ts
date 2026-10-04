@@ -120,3 +120,11 @@ export function formatPercent(value: number, locale: Locale): string {
     maximumFractionDigits: 1,
   }).format(value);
 }
+
+export function formatCurrency(value: number, locale: Locale): string {
+  return new Intl.NumberFormat(locale === "he" ? "he-IL" : "en-IL", {
+    style: "currency",
+    currency: "ILS",
+    maximumFractionDigits: 2,
+  }).format(value);
+}

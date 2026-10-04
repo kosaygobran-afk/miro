@@ -5,12 +5,16 @@ import {
   withManagementAuth,
   errorResponse,
   mapPostgresError,
+  checkManagementRateLimit,
+  getClientIp,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { channelDbValues } from "@/lib/sales-channel";
 
 const analyticsParamsSchema = z.object({
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
+  channel: z.enum(["all", "pos", "website"]).default("all"),
 });
 
 // Overview counters are produced by the management_analytics_overview RPC;
@@ -51,10 +55,6 @@ type AnalyticsOverview = {
   top_searches: { query: string; searches: number }[];
 };
 
-type SalesSummary = {
-  current: { orders_count: number } | null;
-};
-
 // Bound for the per-product unique-viewer session fetch. The aggregation
 // RPC intentionally has no per-product detail; a fuller per-product
 // breakdown should become a dedicated RPC (DB follow-up).
@@ -65,45 +65,12 @@ function toNumber(value: unknown): number {
   return typeof num === "number" && Number.isFinite(num) ? num : 0;
 }
 
-// Per-IP rate limiting for management read endpoints (tiered: 60/min, 300/hour)
-async function checkManagementReadRateLimit(
-  admin: ReturnType<typeof import("@/lib/supabase/admin").createAdminClient>,
-  ip: string,
-): Promise<"ok" | "limited" | "error"> {
-  const buckets = [
-    { key: `mgmt:read:ip:1m:${ip}`, limit: 60, window: "1 minute" },
-    { key: `mgmt:read:ip:1h:${ip}`, limit: 300, window: "1 hour" },
-  ] as const;
-  for (const bucket of buckets) {
-    const { data: allowed, error } = await admin.rpc("check_rate_limit", {
-      p_key: bucket.key,
-      p_limit: bucket.limit,
-      p_window: bucket.window,
-    });
-    if (error) {
-      console.error("check_rate_limit failed:", error.code, error.message);
-      return "error";
-    }
-    if (allowed !== true) return "limited";
-  }
-  return "ok";
-}
-
-function getClientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return request.headers.get("x-real-ip")?.trim() || "unknown";
-}
-
 export async function GET(request: Request) {
   const auth = await withManagementAuth(request, "viewAnalytics");
   if (!auth.ok) return auth.response;
 
   // Rate limit management read endpoints per IP
-  const rateLimit = await checkManagementReadRateLimit(
+  const rateLimit = await checkManagementRateLimit(
     auth.admin,
     getClientIp(request),
   );
@@ -125,16 +92,24 @@ export async function GET(request: Request) {
     return errorResponse("Invalid query params", 400, parsed.error.flatten());
   }
 
-  const from = parsed.data.from ?? "1970-01-01T00:00:00.000Z";
-  const to = parsed.data.to ?? new Date().toISOString();
+  const { from, to, channel } = parsed.data;
+  const fromValue = from ?? "1970-01-01T00:00:00.000Z";
+  const toValue = to ?? new Date().toISOString();
 
   // RPCs authorize via active_app_role(), which reads the caller's JWT and
   // is null under the service-role key — run them on the user-context
   // client. Bounded table reads stay on the admin client.
   const client = await createServerSupabaseClient();
   const [overviewResult, summaryResult] = await Promise.all([
-    client.rpc("management_analytics_overview", { p_from: from, p_to: to }),
-    client.rpc("management_sales_summary", { p_from: from, p_to: to }),
+    client.rpc("management_analytics_overview", {
+      p_from: fromValue,
+      p_to: toValue,
+    }),
+    client.rpc("management_sales_summary", {
+      p_from: fromValue,
+      p_to: toValue,
+      p_sources: channel !== "all" ? channelDbValues(channel) : null,
+    }),
   ]);
 
   if (overviewResult.error) {
@@ -151,6 +126,10 @@ export async function GET(request: Request) {
   // sourced from orders via management_sales_summary only. Treat summary
   // failure as non-fatal so the engagement overview still renders.
   let salesCount: number | null = null;
+  let salesByChannel: Record<
+    string,
+    { orders_count: number; gross_total: number; net_total: number }
+  > | null = null;
   if (summaryResult.error) {
     console.error(
       "management_sales_summary failed:",
@@ -158,8 +137,22 @@ export async function GET(request: Request) {
       summaryResult.error.message,
     );
   } else {
-    const summary = summaryResult.data as unknown as SalesSummary;
-    salesCount = summary?.current ? toNumber(summary.current.orders_count) : 0;
+    const summary = summaryResult.data as unknown as {
+      current: {
+        orders_count: number;
+        gross_total: number;
+        net_total: number;
+        by_channel?: Record<
+          string,
+          { orders_count: number; gross_total: number; net_total: number }
+        >;
+      };
+    };
+    salesCount = summary?.current?.orders_count ?? 0;
+    // When channel is 'all', hoist the by_channel section into the response
+    if (channel === "all" && summary?.current?.by_channel) {
+      salesByChannel = summary.current.by_channel;
+    }
   }
 
   // Per-product detail is NOT covered by the overview RPC (it returns only
@@ -298,8 +291,8 @@ export async function GET(request: Request) {
   const { data: dailyData, error: dailyError } = await admin
     .from("v_product_daily_metrics")
     .select("day, event_type, events, unique_sessions, unique_users")
-    .gte("day", from.split("T")[0])
-    .lte("day", to.split("T")[0])
+    .gte("day", fromValue.split("T")[0])
+    .lte("day", toValue.split("T")[0])
     .order("day", { ascending: true });
   if (dailyError) return mapPostgresError(dailyError);
 
@@ -313,6 +306,7 @@ export async function GET(request: Request) {
       from: overview.from,
       to: overview.to,
       generatedAt: overview.generated_at,
+      channel,
     },
     totals: {
       views: toNumber(totals.product_views),
@@ -345,5 +339,6 @@ export async function GET(request: Request) {
     })),
     dailySeries,
     partial: { uniqueViewersCapped },
+    ...(salesByChannel !== null ? { salesByChannel } : {}),
   });
 }

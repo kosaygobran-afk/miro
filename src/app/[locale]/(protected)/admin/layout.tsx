@@ -33,6 +33,7 @@ export default async function AdminLayout({
         role={context.role}
         userName={userName}
         userEmail={context.user.email ?? ""}
+        userId={context.user.id}
       >
         {children}
       </ManagementShell>

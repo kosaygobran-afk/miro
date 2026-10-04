@@ -52,6 +52,16 @@ type FinanceTotals = {
 type FinanceData = {
   range: { from: string; to: string; generatedAt: string };
   totals: FinanceTotals;
+  /** When channel==='all', includes per-channel daily series */
+  channelDailySeries?: {
+    day: string;
+    channel: "pos" | "website" | "legacy";
+    gross: number;
+    net: number;
+    orders: number;
+  }[];
+  /** Echoed channel parameter */
+  channel: "all" | "pos" | "website";
   dailySeries: { day: string; gross: number; net: number; orders: number }[];
   previous: { range: { from: string; to: string }; totals: FinanceTotals };
 };
@@ -62,6 +72,7 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
     preset: "last7",
     ...resolveDateRange("last7"),
   }));
+  const [channel, setChannel] = useState<"all" | "pos" | "website">("all");
   const [view, setView] = useState<"overview" | "daily">("overview");
   const [chartMetric, setChartMetric] = useState<"revenue" | "orders">(
     "revenue",
@@ -72,7 +83,7 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
   >(null);
   const [compare, setCompare] = useState(true);
   const { data, error, loading, reload } = useManagementReport<FinanceData>(
-    `/api/management/finance?${reportingRangeParams(range)}`,
+    `/api/management/finance?${reportingRangeParams(range)}&channel=${channel}`,
     he ? "לא ניתן לטעון נתונים פיננסיים" : "Unable to load finance data",
   );
   const currency = (value: number) =>
@@ -209,6 +220,25 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
           value={range}
           onChange={setRange}
           labels={dateRangeLabels(locale)}
+        />
+        <ReportChoices
+          label={he ? "ערוץ מכירות" : "Sales channel"}
+          value={channel}
+          onChange={setChannel}
+          options={[
+            {
+              value: "all",
+              label: he ? "כל המכירות" : "All Sales",
+            },
+            {
+              value: "pos",
+              label: he ? "מכירות קופה" : "POS Sales",
+            },
+            {
+              value: "website",
+              label: he ? "מכירות אתר" : "Website Sales",
+            },
+          ]}
         />
       </div>
       <p className={s.muted} role="status">
@@ -431,47 +461,150 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
                     ]}
                   />
                   {daily.length ? (
-                    <ActivityChart
-                      kind={chartType}
-                      days={daily.map((point) => point.day.split("T")[0])}
-                      series={
-                        chartMetric === "revenue"
-                          ? [
-                              {
-                                label: he ? "כולל מע״מ" : "Incl. VAT",
-                                values: daily.map((point) => point.gross),
-                                tone: "cyan",
-                              },
-                              {
-                                label: he ? "ללא מע״מ" : "Excl. VAT",
-                                values: daily.map((point) => point.net),
-                                tone: "violet",
-                              },
-                            ]
-                          : [
-                              {
-                                label: he ? "הזמנות" : "Orders",
-                                values: daily.map((point) => point.orders),
-                                tone: "cyan",
-                              },
-                            ]
-                      }
-                      locale={locale}
-                      unit={
-                        chartMetric === "revenue"
-                          ? he
-                            ? "הכנסות · ₪"
-                            : "Revenue · ILS"
-                          : he
-                            ? "מספר הזמנות"
-                            : "Order count"
-                      }
-                      note={
-                        he
-                          ? "סיכומים יומיים לפי אזור הזמן של מסד הנתונים. נתונים מדויקים זמינים מתחת לתרשים."
-                          : "Daily totals follow the database timezone. Exact figures are available below the chart."
-                      }
-                    />
+                    <>
+                      {/* Prepare per-channel series when channel is 'all' */}
+                      {channel === "all" && data?.channelDailySeries ? (
+                        <>
+                          {/* We'll show per-channel series for the selected metric */}
+                          {chartMetric === "revenue" ? (
+                            <>
+                              <ActivityChart
+                                kind={chartType}
+                                days={daily.map(
+                                  (point) => point.day.split("T")[0],
+                                )}
+                                series={[
+                                  {
+                                    label: he ? "מכירות קופה" : "POS Sales",
+                                    values: daily.map((d) => {
+                                      const match =
+                                        data.channelDailySeries?.find(
+                                          (entry) =>
+                                            entry.day === d.day &&
+                                            entry.channel === "pos",
+                                        );
+                                      return match ? match.gross : 0;
+                                    }),
+                                    tone: "salesPos",
+                                  },
+                                  {
+                                    label: he ? "מכירות אתר" : "Website Sales",
+                                    values: daily.map((d) => {
+                                      const match =
+                                        data.channelDailySeries?.find(
+                                          (entry) =>
+                                            entry.day === d.day &&
+                                            entry.channel === "website",
+                                        );
+                                      return match ? match.gross : 0;
+                                    }),
+                                    tone: "salesWebsite",
+                                  },
+                                ]}
+                                locale={locale}
+                                unit={he ? "הכנסות · ₪" : "Revenue · ILS"}
+                                note={
+                                  he
+                                    ? "סיכומים יומיים לפי אזור הזמן של מסד הנתונים, מפוצלים לפי ערוץ מכירות. נתונים מדויקים זמינים מתחת לתרשים."
+                                    : "Daily totals follow the database timezone, split by sales channel. Exact figures are available below the chart."
+                                }
+                              />
+                            </>
+                          ) : (
+                            <>
+                              <ActivityChart
+                                kind={chartType}
+                                days={daily.map(
+                                  (point) => point.day.split("T")[0],
+                                )}
+                                series={[
+                                  {
+                                    label: he ? "הזמנות קופה" : "POS Orders",
+                                    values: daily.map((d) => {
+                                      const match =
+                                        data.channelDailySeries?.find(
+                                          (entry) =>
+                                            entry.day === d.day &&
+                                            entry.channel === "pos",
+                                        );
+                                      return match ? match.orders : 0;
+                                    }),
+                                    tone: "salesPos",
+                                  },
+                                  {
+                                    label: he ? "הזמנות אתר" : "Website Orders",
+                                    values: daily.map((d) => {
+                                      const match =
+                                        data.channelDailySeries?.find(
+                                          (entry) =>
+                                            entry.day === d.day &&
+                                            entry.channel === "website",
+                                        );
+                                      return match ? match.orders : 0;
+                                    }),
+                                    tone: "salesWebsite",
+                                  },
+                                ]}
+                                locale={locale}
+                                unit={he ? "מספר הזמנות" : "Order count"}
+                                note={
+                                  he
+                                    ? "סיכומים יומיים לפי אזור הזמן של מסד הנתונים, מפוצלים לפי ערוץ מכירות. נתונים מדויקים זמינים מתחת לתרשים."
+                                    : "Daily totals follow the database timezone, split by sales channel. Exact figures are available below the chart."
+                                }
+                              />
+                            </>
+                          )}
+                        </>
+                      ) : (
+                        <>
+                          {/* Original behavior when channel is not 'all' */}
+                          <ActivityChart
+                            kind={chartType}
+                            days={daily.map((point) => point.day.split("T")[0])}
+                            series={
+                              chartMetric === "revenue"
+                                ? [
+                                    {
+                                      label: he ? "כולל מע״מ" : "Incl. VAT",
+                                      values: daily.map((point) => point.gross),
+                                      tone: "cyan",
+                                    },
+                                    {
+                                      label: he ? "ללא מע״מ" : "Excl. VAT",
+                                      values: daily.map((point) => point.net),
+                                      tone: "violet",
+                                    },
+                                  ]
+                                : [
+                                    {
+                                      label: he ? "הזמנות" : "Orders",
+                                      values: daily.map(
+                                        (point) => point.orders,
+                                      ),
+                                      tone: "cyan",
+                                    },
+                                  ]
+                            }
+                            locale={locale}
+                            unit={
+                              chartMetric === "revenue"
+                                ? he
+                                  ? "הכנסות · ₪"
+                                  : "Revenue · ILS"
+                                : he
+                                  ? "מספר הזמנות"
+                                  : "Order count"
+                            }
+                            note={
+                              he
+                                ? "סיכומים יומיים לפי אזור הזמן של מסד הנתונים. נתונים מדויקים זמינים מתחת לתרשים."
+                                : "Daily totals follow the database timezone. Exact figures are available below the chart."
+                            }
+                          />
+                        </>
+                      )}
+                    </>
                   ) : (
                     <EmptyState
                       title={
@@ -563,6 +696,11 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
                 <MetricCard
                   label={he ? "יחידות במלאי כעת" : "Units currently in stock"}
                   value={totals ? number(totals.inventoryUnits) : "—"}
+                  footer={
+                    he
+                      ? "הערה: שווי המלאי הוא חנות-רחב ולא מושפע מסינון ערוץ מכירות."
+                      : "Note: Inventory value is store-wide and not affected by sales channel filter."
+                  }
                 />
               </div>
             </>

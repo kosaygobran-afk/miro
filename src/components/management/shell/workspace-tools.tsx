@@ -2,7 +2,14 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "@/components/motion/motion-link";
-import { Search, SlidersHorizontal, ArrowUpRight, Lock } from "lucide-react";
+import {
+  Search,
+  SlidersHorizontal,
+  ArrowUpRight,
+  Lock,
+  ReceiptText,
+  Calculator,
+} from "lucide-react";
 import type { Locale } from "@/lib/i18n";
 import type { AppRole } from "@/lib/roles";
 import { Dialog } from "../ui/dialog";
@@ -10,6 +17,7 @@ import { Drawer } from "../ui/drawer";
 import { SearchField } from "../ui/search-field";
 import { OverflowText } from "../ui/overflow-text";
 import { IconAction } from "../ui/icon-action";
+import { useManagementTools } from "@/components/management/tools/management-tool-provider";
 import {
   mgmtNavItems,
   mgmtNavItemLabel,
@@ -65,6 +73,9 @@ export function WorkspaceTools({
     readDensity,
     () => "comfortable",
   );
+  const { toggleTool, getToolState, getLabels } = useManagementTools();
+  const posState = getToolState("pos");
+  const calcState = getToolState("calculator");
   useEffect(() => {
     const shell = document.querySelector<HTMLElement>(".mgmt-shell");
     if (shell) shell.dataset.density = density;
@@ -112,6 +123,21 @@ export function WorkspaceTools({
         onClick={() => setPreferencesOpen(true)}
       >
         <SlidersHorizontal size={18} aria-hidden="true" />
+      </IconAction>
+      {/* POS and Calculator buttons */}
+      <IconAction
+        label={getLabels("pos").open}
+        aria-pressed={posState?.open ?? false}
+        onClick={() => toggleTool("pos")}
+      >
+        <ReceiptText size={18} aria-hidden="true" />
+      </IconAction>
+      <IconAction
+        label={getLabels("calculator").open}
+        aria-pressed={calcState?.open ?? false}
+        onClick={() => toggleTool("calculator")}
+      >
+        <Calculator size={18} aria-hidden="true" />
       </IconAction>
       <Dialog
         open={searchOpen}

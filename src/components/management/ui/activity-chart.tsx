@@ -3,7 +3,7 @@ import styles from "./activity-chart.module.css";
 type Series = {
   label: string;
   values: number[];
-  tone: "gold" | "teal" | "cyan" | "violet";
+  tone: "gold" | "teal" | "cyan" | "violet" | "salesPos" | "salesWebsite";
 };
 
 /** Daily aggregates: retain exact values in a keyboard-accessible data table. */

@@ -3,8 +3,11 @@ import { z } from "zod";
 import {
   withManagementAuth,
   errorResponse,
+  checkManagementRateLimit,
+  getClientIp,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { channelDbValues, PAYMENT_METHODS } from "@/lib/sales-channel";
 
 const saleItemSchema = z
   .object({
@@ -22,22 +25,32 @@ const saleItemSchema = z
     message: "discountPerUnit must be between 0 and unitPrice",
   });
 
-const saleSchema = z.object({
-  customer: z
-    .object({
-      name: z.string().min(1).max(255),
-      email: z.string().email(),
-      phone: z.string().optional().nullable(),
-      userId: z.string().uuid().optional().nullable(),
-      customer_id: z.string().uuid().optional().nullable(),
-    })
-    .transform(({ userId, customer_id, ...rest }) => ({
-      ...rest,
-      userId: userId ?? customer_id ?? null,
-    })),
-  items: z.array(saleItemSchema).min(1),
-  idempotencyKey: z.string().max(255).optional().nullable(),
-});
+const saleSchema = z
+  .object({
+    customer: z
+      .object({
+        name: z.string().min(1).max(255),
+        email: z.string().email(),
+        phone: z.string().optional().nullable(),
+        userId: z.string().uuid().optional().nullable(),
+      })
+      .strict(),
+    items: z.array(saleItemSchema).min(1),
+    payments: z
+      .array(
+        z
+          .object({
+            method: z.enum(PAYMENT_METHODS),
+            amount: z.number().nonnegative().max(999999999.99),
+            installments: z.number().int().min(1).max(36).default(1),
+            reference: z.string().max(120).optional().nullable(),
+          })
+          .strict(),
+      )
+      .min(1),
+    idempotencyKey: z.string().min(8).max(64),
+  })
+  .strict();
 
 const listParamsSchema = z.object({
   from: z.string().datetime().optional(),
@@ -46,45 +59,12 @@ const listParamsSchema = z.object({
   offset: z.coerce.number().int().nonnegative().default(0),
 });
 
-// Per-IP rate limiting for management read endpoints (tiered: 60/min, 300/hour)
-async function checkManagementReadRateLimit(
-  admin: ReturnType<typeof import("@/lib/supabase/admin").createAdminClient>,
-  ip: string,
-): Promise<"ok" | "limited" | "error"> {
-  const buckets = [
-    { key: `mgmt:read:ip:1m:${ip}`, limit: 60, window: "1 minute" },
-    { key: `mgmt:read:ip:1h:${ip}`, limit: 300, window: "1 hour" },
-  ] as const;
-  for (const bucket of buckets) {
-    const { data: allowed, error } = await admin.rpc("check_rate_limit", {
-      p_key: bucket.key,
-      p_limit: bucket.limit,
-      p_window: bucket.window,
-    });
-    if (error) {
-      console.error("check_rate_limit failed:", error.code, error.message);
-      return "error";
-    }
-    if (allowed !== true) return "limited";
-  }
-  return "ok";
-}
-
-function getClientIp(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  return request.headers.get("x-real-ip")?.trim() || "unknown";
-}
-
 export async function GET(request: Request) {
   const auth = await withManagementAuth(request, "recordSale");
   if (!auth.ok) return auth.response;
 
   // Rate limit management read endpoints per IP
-  const rateLimit = await checkManagementReadRateLimit(
+  const rateLimit = await checkManagementRateLimit(
     auth.admin,
     getClientIp(request),
   );
@@ -109,6 +89,7 @@ export async function GET(request: Request) {
 
   // Check if user is CEO or admin (they see all orders with source='management' or all)
   // For now, all admin/ceo see all management-sourced orders
+  const posSources = channelDbValues("pos");
   let orderQuery = admin
     .from("orders")
     .select(
@@ -121,7 +102,7 @@ export async function GET(request: Request) {
         vat_amount, discount_amount, net_amount)
     `,
     )
-    .eq("source", "management")
+    .in("source", posSources ?? [])
     .order("created_at", { ascending: false });
 
   if (from) {
@@ -134,7 +115,7 @@ export async function GET(request: Request) {
   let countQuery = admin
     .from("orders")
     .select("id", { count: "exact", head: true })
-    .eq("source", "management");
+    .in("source", posSources ?? []);
   if (from) countQuery = countQuery.gte("created_at", from);
   if (to) countQuery = countQuery.lte("created_at", to);
 
@@ -197,6 +178,21 @@ export async function POST(request: Request) {
   const auth = await withManagementAuth(request, "recordSale");
   if (!auth.ok) return auth.response;
 
+  // Rate limit management write endpoints per IP (same tiers as GET)
+  const rateLimit = await checkManagementRateLimit(
+    auth.admin,
+    getClientIp(request),
+  );
+  if (rateLimit === "error") {
+    return errorResponse("Unable to process request", 503);
+  }
+  if (rateLimit === "limited") {
+    return NextResponse.json(
+      { error: "Too many requests", code: "rate_limited" },
+      { status: 429 },
+    );
+  }
+
   const body = await request.json().catch(() => null);
   const parsed = saleSchema.safeParse(body);
   if (!parsed.success) {
@@ -205,20 +201,33 @@ export async function POST(request: Request) {
 
   const client = await createServerSupabaseClient();
   const { customer, items, idempotencyKey } = parsed.data;
-  const { data: orderId, error } = await client.rpc("record_sale", {
+  const { data: orderId, error } = await client.rpc("record_pos_sale", {
     p_customer: {
       name: customer.name,
       email: customer.email,
       phone: customer.phone ?? null,
       customer_id: customer.userId ?? null,
     },
-    p_items: items.map((item) => ({
-      variant_id: item.variantId,
-      quantity: item.quantity,
-      unit_price: item.unitPrice,
-      discount_per_unit: item.discountPerUnit,
+    p_items: items.map(
+      (item: {
+        variantId: string;
+        quantity: number;
+        unitPrice: number;
+        discountPerUnit: number;
+      }) => ({
+        variant_id: item.variantId,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        discount_per_unit: item.discountPerUnit,
+      }),
+    ),
+    p_payments: parsed.data.payments.map((payment) => ({
+      method: payment.method,
+      amount: payment.amount,
+      installments: payment.installments,
+      external_reference: payment.reference,
     })),
-    p_idempotency_key: idempotencyKey ?? null,
+    p_idempotency_key: idempotencyKey,
   });
 
   if (error) {
@@ -240,15 +249,31 @@ export async function POST(request: Request) {
           { status: 400 },
         );
       }
+      if (msg.includes("Payment total does not match order total")) {
+        return NextResponse.json(
+          {
+            error: "Payment total does not match order total",
+            code: "payment_mismatch",
+          },
+          { status: 400 },
+        );
+      }
       return NextResponse.json(
         { error: "Invalid sale data", code: "invalid_sale_data" },
         { status: 400 },
       );
     }
+    if (error.code === "23505") {
+      // Handle duplicate idempotency key
+      return NextResponse.json(
+        { error: "Idempotency key conflict", code: "idempotency_conflict" },
+        { status: 409 },
+      );
+    }
     if (error.code === "42501") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    console.error("record_sale failed:", error.code, error.message);
+    console.error("record_pos_sale failed:", error.code, error.message);
     return NextResponse.json(
       { error: "Failed to record sale" },
       { status: 500 },

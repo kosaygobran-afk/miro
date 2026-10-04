@@ -127,7 +127,22 @@ export function AccountMenu({
             <Store size={15} aria-hidden="true" />
             <span>{mgmtShellCopy.storefrontLink[locale]}</span>
           </a>
-          <form action={`/api/auth/logout?locale=${locale}`} method="POST">
+          <form
+            action={`/api/auth/logout?locale=${locale}`}
+            method="POST"
+            onClick={() => {
+              // Clear all management tools draft session keys when signing out
+              if (typeof window !== "undefined") {
+                const prefix = "miro.management.tools.draft.";
+                for (let i = 0; i < sessionStorage.length; i++) {
+                  const key = sessionStorage.key(i);
+                  if (key && key.startsWith(prefix)) {
+                    sessionStorage.removeItem(key);
+                  }
+                }
+              }
+            }}
+          >
             <button
               type="submit"
               className="mgmt-account__item mgmt-account__item--logout"

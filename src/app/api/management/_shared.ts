@@ -136,3 +136,36 @@ export function mapPriceConstraintError(error: {
     { status: 400 },
   );
 }
+
+// Per-IP rate limiting for management endpoints (tiered: 60/min, 300/hour)
+export async function checkManagementRateLimit(
+  admin: ReturnType<typeof createAdminClient>,
+  ip: string,
+): Promise<"ok" | "limited" | "error"> {
+  const buckets = [
+    { key: `mgmt:read:ip:1m:${ip}`, limit: 60, window: "1 minute" },
+    { key: `mgmt:read:ip:1h:${ip}`, limit: 300, window: "1 hour" },
+  ] as const;
+  for (const bucket of buckets) {
+    const { data: allowed, error } = await admin.rpc("check_rate_limit", {
+      p_key: bucket.key,
+      p_limit: bucket.limit,
+      p_window: bucket.window,
+    });
+    if (error) {
+      console.error("check_rate_limit failed:", error.code, error.message);
+      return "error";
+    }
+    if (allowed !== true) return "limited";
+  }
+  return "ok";
+}
+
+export function getClientIp(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  return request.headers.get("x-real-ip")?.trim() || "unknown";
+}

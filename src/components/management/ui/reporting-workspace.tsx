@@ -1,7 +1,13 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Activity, ArrowUpRight, Banknote, Inbox } from "lucide-react";
+import {
+  Activity,
+  ArrowUpRight,
+  Banknote,
+  Inbox,
+  FileText,
+} from "lucide-react";
 import Link from "@/components/motion/motion-link";
 import { PageHeader } from "./page-header";
 import { OverflowText } from "./overflow-text";
@@ -15,7 +21,7 @@ export function ReportingHeader({
   actions,
 }: {
   locale: "he" | "en";
-  section: "requests" | "finance" | "analytics";
+  section: "requests" | "finance" | "analytics" | "accounts";
   title: string;
   subtitle: string;
   actions?: ReactNode;
@@ -26,7 +32,9 @@ export function ReportingHeader({
       ? Activity
       : section === "finance"
         ? Banknote
-        : Inbox;
+        : section === "accounts"
+          ? FileText
+          : Inbox;
   return (
     <div className={styles.hero}>
       <div className={`${styles.eyebrow} insight-workspace-emblem`}>

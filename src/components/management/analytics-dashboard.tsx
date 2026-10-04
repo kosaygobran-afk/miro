@@ -43,6 +43,7 @@ import {
   analyticsCopy,
   formatCount,
   formatPercent,
+  formatCurrency,
   t,
 } from "./analytics-dashboard.copy";
 import { ActivityChart } from "./ui/activity-chart";
@@ -93,6 +94,13 @@ export type AnalyticsResponse = {
     name: { he: string | null; en: string | null };
     views: number;
   }[];
+  /** When channel==='all', includes sales by channel data */
+  salesByChannel?: {
+    pos: { orders_count: number; gross_total: number; net_total: number };
+    website: { orders_count: number; gross_total: number; net_total: number };
+  };
+  /** Echoed channel parameter */
+  channel: "all" | "pos" | "website";
   dailySeries: Record<string, Record<string, { events: number }>>;
   partial: { uniqueViewersCapped: boolean };
 };
@@ -148,6 +156,7 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
     preset: "last7",
     ...resolveDateRange("last7"),
   }));
+  const [channel, setChannel] = useState<"all" | "pos" | "website">("all");
   const [query, setQuery] = useState("");
   const [view, setView] = useState<"overview" | "products">("overview");
   const [chartType, setChartType] = useState<"line" | "bar">("line");
@@ -166,7 +175,7 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
     loading: initialLoading,
     reload: retry,
   } = useManagementReport<AnalyticsResponse>(
-    `/api/management/analytics?${reportingRangeParams(range)}`,
+    `/api/management/analytics?${reportingRangeParams(range)}&channel=${channel}`,
     t(locale, analyticsCopy.loadFailedTitle),
   );
   const selected =
@@ -293,7 +302,31 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
           onChange={setRange}
           labels={dateRangeLabels(locale)}
         />
+        <ReportChoices
+          label={he ? "ערוץ מכירות" : "Sales channel"}
+          value={channel}
+          onChange={setChannel}
+          options={[
+            {
+              value: "all",
+              label: he ? "כל המכירות" : "All Sales",
+            },
+            {
+              value: "pos",
+              label: he ? "מכירות קופה" : "POS Sales",
+            },
+            {
+              value: "website",
+              label: he ? "מכירות אתר" : "Website Sales",
+            },
+          ]}
+        />
       </div>
+      <p className={report.muted}>
+        {he
+          ? "הסינון לפי ערוץ מכירות חל על מדדי מכירות מבוססי הזמנות; מדדי מעורבות הם פעילות אתר ולא מושפעים מהסינון."
+          : "Channel filter applies to order-based sales metrics; engagement metrics are website activity and are not filtered"}
+      </p>
       <p className={styles.note} role="status">
         {initialLoading
           ? he
@@ -430,6 +463,83 @@ export function AnalyticsDashboard({ locale }: { locale: Locale }) {
                   : "Up to ten returned leading products, rather than the complete catalog"
               }
             />
+            {/* Sales by channel comparison card */}
+            {channel === "all" && data?.salesByChannel ? (
+              <MetricCard
+                tone="accent"
+                icon={<BarChart2 size={18} />}
+                label={he ? "מכירות לפי ערוץ" : "Sales by channel"}
+                value={he ? "השוואה" : "Comparison"}
+                footer={
+                  <>
+                    <div className={styles.flex}>
+                      <div>
+                        <span>{he ? "קופה" : "POS"}</span>:&#160;
+                        <span dir="ltr">
+                          {formatCount(
+                            data.salesByChannel.pos.orders_count,
+                            locale,
+                          )}{" "}
+                          הזמנות
+                        </span>
+                      </div>
+                      <div>
+                        <span>{he ? "אתר" : "Website"}</span>:&#160;
+                        <span dir="ltr">
+                          {formatCount(
+                            data.salesByChannel.website.orders_count,
+                            locale,
+                          )}{" "}
+                          הזמנות
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.flex}>
+                      <div>
+                        <span>{he ? "הכנסה גולמית" : "Gross revenue"}</span>
+                        :&#160;
+                        <span dir="ltr">
+                          {formatCurrency(
+                            data.salesByChannel.pos.gross_total,
+                            locale,
+                          )}
+                        </span>
+                      </div>
+                      <div>
+                        <span>{he ? "הכנסה גולמית" : "Gross revenue"}</span>
+                        :&#160;
+                        <span dir="ltr">
+                          {formatCurrency(
+                            data.salesByChannel.website.gross_total,
+                            locale,
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.flex}>
+                      <div>
+                        <span>{he ? "הכנסה נטו" : "Net revenue"}</span>:&#160;
+                        <span dir="ltr">
+                          {formatCurrency(
+                            data.salesByChannel.pos.net_total,
+                            locale,
+                          )}
+                        </span>
+                      </div>
+                      <div>
+                        <span>{he ? "הכנסה נטו" : "Net revenue"}</span>:&#160;
+                        <span dir="ltr">
+                          {formatCurrency(
+                            data.salesByChannel.website.net_total,
+                            locale,
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  </>
+                }
+              />
+            ) : null}
           </div>
 
           {view === "overview" ? (

@@ -1,0 +1,197 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: var(--font-family);
+}
+
+.displayGroup {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  background: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.display {
+  min-height: 3rem;
+  font-size: 2.5rem;
+  font-weight: 600;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  outline: none;
+  border: none;
+  background: transparent;
+  color: var(--text-color);
+}
+
+.vatNote {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  padding: 1.5rem;
+  background: var(--bg-color);
+  flex: 1;
+}
+
+.button {
+  aspect-ratio: 1;
+  border: none;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 1.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--button-bg-hover);
+}
+
+.button:active {
+  background: var(--button-bg-active);
+}
+
+.buttonDouble {
+  grid-column: span 2;
+  border: none;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-size: 1.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.buttonDouble:hover:not(:disabled) {
+  background: var(--button-bg-hover);
+}
+
+.buttonDouble:active {
+  background: var(--button-bg-active);
+}
+
+.historyPanel {
+  position: relative;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-color);
+  max-height: 200px;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.historyPanelOpen {
+  max-height: 500px;
+}
+
+.historyHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.historyToggle {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+}
+
+.historyToggle:hover {
+  background: var(--button-bg-hover);
+}
+
+.historyTitle {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.historyList {
+  list-style: none;
+  margin: 0;
+  padding: 1rem;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.historyItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.historyItem:last-child {
+  border-bottom: none;
+}
+
+.historyExpression {
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.historyResult {
+  font-weight: 600;
+  flex: 1;
+  text-align: right;
+  margin-left: 1rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.historyTime {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.historyEmpty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.clearHistoryButton {
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
+  background: var(--button-bg-danger);
+  color: var(--button-text);
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background-color 0.2s ease;
+}
+
+.clearHistoryButton:hover:not(:disabled) {
+  background: var(--button-bg-danger-hover);
+}
+
+.clearHistoryButton:active {
+  background: var(--button-bg-danger-active);
+}

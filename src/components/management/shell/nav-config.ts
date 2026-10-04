@@ -15,6 +15,7 @@ import {
   Truck,
   Users,
   Wrench,
+  FileText,
   type LucideIcon,
 } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
@@ -30,6 +31,7 @@ export type MgmtNavItemKey =
   | "inventory"
   | "suppliers"
   | "sales"
+  | "posAccounts"
   | "customers"
   | "requests"
   | "analytics"
@@ -119,6 +121,13 @@ export const mgmtNavSections: MgmtNavSection[] = [
         href: "/admin/sales",
         section: "commerce",
         icon: ShoppingCart,
+        ceoOnly: false,
+      },
+      {
+        key: "posAccounts",
+        href: "/admin/accounts",
+        section: "commerce",
+        icon: FileText,
         ceoOnly: false,
       },
       {
@@ -225,6 +234,7 @@ const itemLabels: Record<MgmtNavItemKey, LocalizedText> = {
   inventory: { he: "מלאי", en: "Inventory" },
   suppliers: { he: "ספקים", en: "Suppliers" },
   sales: { he: "מכירות", en: "Sales" },
+  posAccounts: { he: "חשבונות קופה", en: "POS Accounts" },
   customers: { he: "לקוחות", en: "Customers" },
   requests: { he: "פניות", en: "Requests" },
   analytics: { he: "אנליטיקה", en: "Analytics" },
@@ -264,6 +274,10 @@ const itemSubtitles: Record<MgmtNavItemKey, LocalizedText> = {
   sales: {
     he: "הזמנות, הצעות מחיר ופעילות הכנסות.",
     en: "Orders, quotes and revenue activity.",
+  },
+  posAccounts: {
+    he: "חשבונות קופה, תשלומים ופעילות מכירה.",
+    en: "POS receipts, payments and register activity.",
   },
   customers: {
     he: "חשבונות לקוחות, היסטוריה ויצירת קשר.",
