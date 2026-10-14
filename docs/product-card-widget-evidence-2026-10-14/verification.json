@@ -1,0 +1,51 @@
+{
+  "date": "2026-10-14",
+  "scope": "Public product card widgets and shared grid/rail preview gallery",
+  "checks": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "formatting": "passed",
+    "diff_whitespace": "passed",
+    "production_build_routes": 146
+  },
+  "final_focused_browser": {
+    "chromium": {
+      "passed": 8,
+      "failed": 0
+    },
+    "webkit_desktop_and_iphone": {
+      "passed": 17,
+      "failed": 0,
+      "intentional_touch_skip": 1
+    }
+  },
+  "intermediate_broad_browser": {
+    "passed": 100,
+    "intentional_skips": 49,
+    "deadline_failures": 4,
+    "failed_cases_passed_final_focused_rerun": true
+  },
+  "disposable_eight_image_fixture": {
+    "chromium_cases_passed": 6,
+    "locale_theme_size_combinations": 18,
+    "route_removed": true
+  },
+  "coverage": [
+    "en/he",
+    "dark/medium/light",
+    "320x480/390x900/1440x900",
+    "main image fit and visibility",
+    "separate scrollable thumbnail picker",
+    "localized arrows and keyboard selection",
+    "counter/arrow separation",
+    "footer hit-testing and activation",
+    "long details and focus recovery"
+  ],
+  "limits": [
+    "Development browser verification; production compilation checked separately",
+    "Intermediate matrix had deadline failures; final focused rerun passed",
+    "Physical-device and screen-reader acceptance remain with QA",
+    "Business/legal catalog and media approval remain required"
+  ],
+  "deployed": false
+}

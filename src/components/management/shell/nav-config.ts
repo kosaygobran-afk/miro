@@ -32,6 +32,13 @@ export type MgmtNavItemKey =
   | "suppliers"
   | "sales"
   | "posAccounts"
+  | "pos"
+  | "expenses"
+  | "documents"
+  | "integrations"
+  | "cash"
+  | "recurring"
+  | "commerceReports"
   | "customers"
   | "requests"
   | "analytics"
@@ -157,6 +164,41 @@ export const mgmtNavSections: MgmtNavSection[] = [
     key: "operations",
     items: [
       {
+        key: "pos",
+        href: "/admin/pos",
+        section: "operations",
+        icon: ShoppingCart,
+        ceoOnly: false,
+      },
+      {
+        key: "expenses",
+        href: "/admin/expenses",
+        section: "operations",
+        icon: Landmark,
+        ceoOnly: false,
+      },
+      {
+        key: "documents",
+        href: "/admin/documents",
+        section: "operations",
+        icon: FileText,
+        ceoOnly: false,
+      },
+      {
+        key: "cash",
+        href: "/admin/cash",
+        section: "operations",
+        icon: Landmark,
+        ceoOnly: false,
+      },
+      {
+        key: "recurring",
+        href: "/admin/recurring",
+        section: "operations",
+        icon: ScrollText,
+        ceoOnly: true,
+      },
+      {
         key: "requests",
         href: "/admin/requests",
         section: "operations",
@@ -168,6 +210,13 @@ export const mgmtNavSections: MgmtNavSection[] = [
   {
     key: "insights",
     items: [
+      {
+        key: "commerceReports",
+        href: "/admin/commerce-reports",
+        section: "insights",
+        icon: BarChart3,
+        ceoOnly: false,
+      },
       {
         key: "analytics",
         href: "/admin/analytics",
@@ -187,6 +236,13 @@ export const mgmtNavSections: MgmtNavSection[] = [
   {
     key: "governance",
     items: [
+      {
+        key: "integrations",
+        href: "/admin/integrations",
+        section: "governance",
+        icon: Settings,
+        ceoOnly: true,
+      },
       {
         key: "users",
         href: "/admin/users",
@@ -227,6 +283,13 @@ const sectionLabels: Record<MgmtNavSectionKey, LocalizedText> = {
 };
 
 const itemLabels: Record<MgmtNavItemKey, LocalizedText> = {
+  pos: { he: "קופה", en: "POS" },
+  expenses: { he: "הוצאות", en: "Expenses" },
+  documents: { he: "מסמכים", en: "Documents" },
+  integrations: { he: "פרטי העסק וחיבורים", en: "Business & integrations" },
+  cash: { he: "משמרות מזומן", en: "Cash shifts" },
+  recurring: { he: "חיובים מחזוריים", en: "Recurring" },
+  commerceReports: { he: "דוחות מסחר", en: "Commerce reports" },
   overview: { he: "סקירה", en: "Overview" },
   products: { he: "מוצרים", en: "Products" },
   categories: { he: "קטגוריות", en: "Categories" },
@@ -247,6 +310,34 @@ const itemLabels: Record<MgmtNavItemKey, LocalizedText> = {
 };
 
 const itemSubtitles: Record<MgmtNavItemKey, LocalizedText> = {
+  pos: {
+    he: "קופה מותאמת למחשב ולטלפון.",
+    en: "Register for desktop and phone.",
+  },
+  expenses: {
+    he: "תיעוד, אישור ותשלומי הוצאות.",
+    en: "Expense evidence, approval and payments.",
+  },
+  documents: {
+    he: "טיוטות מסמכים עצמאיות והיסטוריית הפקה.",
+    en: "Internal document drafts and issuance history.",
+  },
+  integrations: {
+    he: "זהות העסק ומוכנות לחיבור ספקים.",
+    en: "Business identity and provider readiness.",
+  },
+  cash: {
+    he: "פתיחה, תנועות וסגירת משמרות.",
+    en: "Opening, movements and closing counts.",
+  },
+  recurring: {
+    he: "לוחות חיוב ומוכנות לחיבור מחזורי.",
+    en: "Schedules and recurring integration readiness.",
+  },
+  commerceReports: {
+    he: "מכירות, תשלומים והוצאות עם היקף נתונים מפורש.",
+    en: "Sales, payments and expenses with explicit data scope.",
+  },
   overview: {
     he: "תמונת מצב חיה של החנות, המכירות והתפעול.",
     en: "Live picture of the store, sales and operations.",

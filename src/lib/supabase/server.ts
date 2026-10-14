@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { cache } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseFetch } from "./fetch";
 
@@ -15,28 +16,32 @@ function getPublicSupabaseKey() {
   return key;
 }
 
-export async function createServerSupabaseClient(): Promise<SupabaseClient> {
-  const cookieStore = await cookies();
+// React caches only within a server render. Route handlers have no render
+// cache, so mutable cookie/session clients never persist across requests.
+export const createServerSupabaseClient = cache(
+  async (): Promise<SupabaseClient> => {
+    const cookieStore = await cookies();
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    getPublicSupabaseKey(),
-    {
-      global: { fetch: supabaseFetch },
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options),
-            );
-          } catch {
-            // Server components cannot always write cookies; proxy refresh handles that case.
-          }
+    return createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      getPublicSupabaseKey(),
+      {
+        global: { fetch: supabaseFetch },
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) =>
+                cookieStore.set(name, value, options),
+              );
+            } catch {
+              // Server components cannot always write cookies; proxy refresh handles that case.
+            }
+          },
         },
       },
-    },
-  );
-}
+    );
+  },
+);

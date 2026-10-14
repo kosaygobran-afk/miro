@@ -20,8 +20,9 @@ import { storeCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
 import { getSiteUrl, pageMetadata } from "@/lib/seo";
 import type { Locale } from "@/lib/i18n";
-import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import { getStorePageData } from "@/lib/store-data";
 import { StoreLiveRefresh } from "@/features/catalog/store-live-refresh";
+import { headers } from "next/headers";
 
 interface ProductsPageProps {
   params: Promise<{ locale: string }>;
@@ -52,8 +53,7 @@ export default async function ProductsPage({
   const copy = storeCopy[locale];
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
 
-  const viewer = await getStoreViewer();
-  const catalog = await getStoreCatalog(locale, viewer.role);
+  const { viewer, catalog } = await getStorePageData(locale);
   const savedProductIds = new Set(viewer.savedProductIds);
 
   const categories = catalog.categories.map((category) => ({
@@ -74,6 +74,7 @@ export default async function ProductsPage({
   return (
     <div className="sf-storefront">
       <script
+        nonce={(await headers()).get("x-nonce") ?? undefined}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(websiteJsonLd).replace(/</g, "\\u003c"),

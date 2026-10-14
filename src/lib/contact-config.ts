@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { cache } from "react";
+import { createPublicServerClient } from "@/lib/supabase/public-server";
+import {
+  cachePublicPresentation,
+  PUBLIC_CONTACT_CONFIG_TAG,
+} from "@/lib/public-presentation-cache";
 
 /**
  * Public contact configuration for the storefront.
@@ -37,6 +42,17 @@ const rpcConfigSchema = z.object({
   hours_he: z.string().nullish(),
   hours_en: z.string().nullish(),
 });
+
+const readPublicContactConfig = cachePublicPresentation(
+  PUBLIC_CONTACT_CONFIG_TAG,
+  async () => {
+    const { data, error } = await createPublicServerClient().rpc(
+      "get_public_contact_config",
+    );
+    if (error) throw error;
+    return rpcConfigSchema.parse(data);
+  },
+);
 
 export type PublicContactConfig = {
   /** Validated phone number for display (whitespace trimmed), or null. */
@@ -89,54 +105,51 @@ function firstText(...values: Array<string | null | undefined>): string | null {
   return null;
 }
 
-export async function getPublicContactConfig(): Promise<PublicContactConfig> {
-  const config = emptyConfig();
+export const getPublicContactConfig = cache(
+  async (): Promise<PublicContactConfig> => {
+    const config = emptyConfig();
 
-  const envPhone = process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim();
-  const envWhatsapp = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP?.trim();
-  const envEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
+    const envPhone = process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim();
+    const envWhatsapp = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP?.trim();
+    const envEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
 
-  let rpc: z.infer<typeof rpcConfigSchema> | null = null;
-  // The RPC also carries address/hours, so it is consulted unless every env
-  // override is set. A failing RPC never breaks rendering - values stay null.
-  if (!(envPhone && envWhatsapp && envEmail)) {
-    try {
-      const supabase = await createServerSupabaseClient();
-      const { data, error } = await supabase.rpc("get_public_contact_config");
-      if (!error) {
-        const parsed = rpcConfigSchema.safeParse(data);
-        if (parsed.success) rpc = parsed.data;
+    let rpc: z.infer<typeof rpcConfigSchema> | null = null;
+    // The RPC also carries address/hours, so it is consulted unless every env
+    // override is set. A failing RPC never breaks rendering - values stay null.
+    if (!(envPhone && envWhatsapp && envEmail)) {
+      try {
+        rpc = await readPublicContactConfig();
+      } catch (error) {
+        console.error("get_public_contact_config RPC failed", error);
       }
-    } catch (error) {
-      console.error("get_public_contact_config RPC failed", error);
     }
-  }
 
-  const phone = phoneSchema.safeParse(firstText(envPhone, rpc?.phone));
-  if (phone.success) {
-    config.phone = phone.data;
-    config.phoneHref = toTelHref(phone.data);
-  }
+    const phone = phoneSchema.safeParse(firstText(envPhone, rpc?.phone));
+    if (phone.success) {
+      config.phone = phone.data;
+      config.phoneHref = toTelHref(phone.data);
+    }
 
-  const whatsapp = whatsappSchema.safeParse(
-    firstText(envWhatsapp, rpc?.whatsapp),
-  );
-  if (whatsapp.success) {
-    config.whatsapp = toWhatsAppNumber(whatsapp.data);
-  }
+    const whatsapp = whatsappSchema.safeParse(
+      firstText(envWhatsapp, rpc?.whatsapp),
+    );
+    if (whatsapp.success) {
+      config.whatsapp = toWhatsAppNumber(whatsapp.data);
+    }
 
-  const email = emailSchema.safeParse(firstText(envEmail, rpc?.email));
-  if (email.success) {
-    config.email = email.data;
-  }
+    const email = emailSchema.safeParse(firstText(envEmail, rpc?.email));
+    if (email.success) {
+      config.email = email.data;
+    }
 
-  config.addressHe = firstText(rpc?.address_he);
-  config.addressEn = firstText(rpc?.address_en);
-  config.hoursHe = firstText(rpc?.hours_he);
-  config.hoursEn = firstText(rpc?.hours_en);
+    config.addressHe = firstText(rpc?.address_he);
+    config.addressEn = firstText(rpc?.address_en);
+    config.hoursHe = firstText(rpc?.hours_he);
+    config.hoursEn = firstText(rpc?.hours_en);
 
-  return config;
-}
+    return config;
+  },
+);
 
 export function toPublicContactActions(
   config: PublicContactConfig,

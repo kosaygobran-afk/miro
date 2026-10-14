@@ -2,7 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  Calculator as CalculatorIcon,
+  ChevronDown,
+  Delete,
+  History,
+  Percent,
+} from "lucide-react";
+import {
   evaluateExpression,
+  getCalculatorKeyboardAction,
   applyVatRate,
   removeVatRate,
   CalculatorError,
@@ -26,6 +34,13 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
   const [history, setHistory] = useState<
     Array<{ time: string; expression: string; result: string }>
   >([]);
+  const [historyStatus, setHistoryStatus] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [historyMutationError, setHistoryMutationError] = useState<
+    "save" | "clear" | null
+  >(null);
+  const [historyReloadKey, setHistoryReloadKey] = useState(0);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -65,31 +80,30 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
     })
       .then(async (res) => {
         if (controller.signal.aborted) return;
-        if (!res.ok) {
-          setHistory([]);
-          return;
-        }
+        if (!res.ok) throw new Error("History unavailable");
         const data = await res.json();
-        const records = Array.isArray(data.records) ? data.records : [];
+        // API returns { history: [...] } - map to local history shape
+        const records = Array.isArray(data.history) ? data.history : [];
         setHistory(
-          records
-            .map(
-              (record: {
-                time: string;
-                expression: string;
-                result: string;
-              }) => ({
-                time: record.time,
-                expression: record.expression,
-                result: record.result,
-              }),
-            )
-            .reverse(), // Most recent first
+          records.map(
+            (record: {
+              created_at: string;
+              expression: string;
+              result: number;
+            }) => ({
+              time: record.created_at,
+              expression: record.expression,
+              result: String(record.result),
+            }),
+          ),
         );
+        setHistoryStatus("ready");
       })
-      .catch(() => setHistory([]));
+      .catch(() => {
+        if (!controller.signal.aborted) setHistoryStatus("error");
+      });
     return () => controller.abort();
-  }, []);
+  }, [historyReloadKey]);
 
   // Save draft when display changes
   useEffect(() => {
@@ -104,38 +118,42 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
   }, [userId, clearDraft]);
 
   const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (error) {
-      // Clear error on any key press when there's an error
-      setError(null);
+    const target = event.target;
+    if (
+      target instanceof HTMLInputElement ||
+      target instanceof HTMLTextAreaElement ||
+      target instanceof HTMLSelectElement ||
+      (target instanceof HTMLElement && target.isContentEditable)
+    ) {
+      return;
+    }
+    if (
+      target instanceof HTMLButtonElement &&
+      (event.key === "Enter" || event.key === " ")
+    ) {
       return;
     }
 
-    const key = event.key;
-
-    // Allow digits, decimal point, and operators
-    if (/[\d.%+\-*/()]/.test(key)) {
-      handleInput(key);
-      return;
-    }
-
-    // Handle Enter as equals
-    if (key === "Enter" || key === "=") {
-      event.preventDefault();
+    const action = getCalculatorKeyboardAction(event.key);
+    if (!action) return;
+    event.preventDefault();
+    if (action.type === "equals") {
       handleEquals();
-      return;
-    }
-
-    // Handle Escape to minimize (this should be handled by the window component)
-    // But we'll also handle it here for safety
-    if (key === "Escape") {
-      // The window component should handle this and minimize
-      return;
+    } else if (action.type === "backspace") {
+      handleBackspace();
+    } else {
+      handleInput(action.value);
     }
   };
 
   const handleInput = (input: string) => {
     if (error) {
       setError(null);
+      if (/^[\d.]$/.test(input)) {
+        setDisplay(input);
+        setPendingInput(false);
+        return;
+      }
     }
 
     if (pendingInput && /[\d.]/.test(input)) {
@@ -148,10 +166,7 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
   };
 
   const handleBackspace = () => {
-    if (error) {
-      setError(null);
-      return;
-    }
+    if (error) setError(null);
 
     setDisplay((prev) => {
       if (prev.length <= 1) return "0";
@@ -239,7 +254,7 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
     }
 
     if (vatRate === null) {
-      setError(t(copy.errorInvalidExpression)); // VAT unavailable
+      setError(t(copy.vatUnavailable));
       return;
     }
 
@@ -264,7 +279,7 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
     }
 
     if (vatRate === null) {
-      setError(t(copy.errorInvalidExpression)); // VAT unavailable
+      setError(t(copy.vatUnavailable));
       return;
     }
 
@@ -283,13 +298,14 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
   };
 
   const saveToHistory = (expression: string) => {
+    setHistoryMutationError(null);
     fetch("/api/management/calculator-history", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ expression, contextPath: "/management/tools" }),
     })
       .then(async (res) => {
-        if (!res.ok) return;
+        if (!res.ok) throw new Error("History save failed");
         const data = await res.json();
         const newRecord = {
           time: new Date().toISOString(),
@@ -297,10 +313,9 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
           result: String(data.result),
         };
         setHistory((prev) => [newRecord, ...prev.slice(0, 19)]); // Keep max 20
+        setHistoryStatus("ready");
       })
-      .catch(() => {
-        // Silently fail - history is enhancement, not core functionality
-      });
+      .catch(() => setHistoryMutationError("save"));
   };
 
   const handleHistoryItemClick = (item: {
@@ -315,115 +330,235 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
 
   const handleClearHistory = () => {
     if (window.confirm(t(copy.clearHistoryConfirm))) {
+      setHistoryMutationError(null);
       fetch("/api/management/calculator-history", {
         method: "DELETE",
       })
-        .then(() => {
+        .then((res) => {
+          if (!res.ok) throw new Error("History clear failed");
           setHistory([]);
+          setHistoryStatus("ready");
         })
-        .catch(() => {
-          // Silently fail
-        });
+        .catch(() => setHistoryMutationError("clear"));
     }
   };
 
   return (
-    <div className={styles.container}>
+    <div
+      className={styles.container}
+      dir={locale === "he" ? "rtl" : "ltr"}
+      onKeyDown={handleKeyPress}
+    >
       <div className={styles.displayGroup}>
+        <div className={styles.displayHeading}>
+          <span className={styles.calculatorName}>
+            <CalculatorIcon size={17} aria-hidden="true" />
+            {t(copy.title)}
+          </span>
+          {vatRate === null ? null : (
+            <span className={styles.vatRateBadge}>
+              <Percent size={14} aria-hidden="true" />
+              <bdi dir="ltr">{vatRate}%</bdi>
+              {t(copy.vatRateLabel)}
+            </span>
+          )}
+        </div>
         <div
           ref={displayRef}
           className={styles.display}
           role="textbox"
           aria-readonly="true"
           tabIndex={0}
-          onKeyDown={handleKeyPress}
+          dir="ltr"
         >
           {display}
         </div>
+        {error ? (
+          <p className={styles.errorMessage} role="alert">
+            {error}
+          </p>
+        ) : null}
         {vatRate === null ? null : (
           <div className={styles.vatNote}>{t(copy.percentNote)}</div>
         )}
       </div>
 
-      <div className={styles.keypad}>
+      <div className={styles.keypad} dir="ltr">
         {/* Row 1: Backspace, Clear, %, / */}
-        <button className={styles.button} onClick={handleBackspace}>
-          {t(copy.backspace)}
+        <button
+          type="button"
+          className={`${styles.button} ${styles.utilityButton}`}
+          onClick={handleBackspace}
+          aria-label={t(copy.backspace)}
+        >
+          <Delete size={19} aria-hidden="true" />
         </button>
-        <button className={styles.button} onClick={handleClear}>
-          {t(copy.clear)}
+        <button
+          type="button"
+          className={`${styles.button} ${styles.utilityButton}`}
+          onClick={handleClear}
+          aria-label={t(copy.clear)}
+        >
+          AC
         </button>
-        <button className={styles.button} onClick={handlePercent}>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.utilityButton}`}
+          onClick={handlePercent}
+          aria-label={t(copy.percent)}
+        >
           {t(copy.percent)}
         </button>
-        <button className={styles.button} onClick={() => handleInput("/")}>
-          {t(copy.divide)}
+        <button
+          type="button"
+          className={`${styles.button} ${styles.operatorButton}`}
+          onClick={() => handleInput("/")}
+          aria-label={t(copy.divide)}
+        >
+          ÷
         </button>
 
         {/* Row 2: 7, 8, 9, * */}
-        <button className={styles.button} onClick={() => handleInput("7")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("7")}
+        >
           7
         </button>
-        <button className={styles.button} onClick={() => handleInput("8")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("8")}
+        >
           8
         </button>
-        <button className={styles.button} onClick={() => handleInput("9")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("9")}
+        >
           9
         </button>
-        <button className={styles.button} onClick={() => handleInput("*")}>
-          {t(copy.multiply)}
+        <button
+          type="button"
+          className={`${styles.button} ${styles.operatorButton}`}
+          onClick={() => handleInput("*")}
+          aria-label={t(copy.multiply)}
+        >
+          ×
         </button>
 
         {/* Row 3: 4, 5, 6, - */}
-        <button className={styles.button} onClick={() => handleInput("4")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("4")}
+        >
           4
         </button>
-        <button className={styles.button} onClick={() => handleInput("5")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("5")}
+        >
           5
         </button>
-        <button className={styles.button} onClick={() => handleInput("6")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("6")}
+        >
           6
         </button>
-        <button className={styles.button} onClick={() => handleInput("-")}>
-          {t(copy.subtract)}
+        <button
+          type="button"
+          className={`${styles.button} ${styles.operatorButton}`}
+          onClick={() => handleInput("-")}
+          aria-label={t(copy.subtract)}
+        >
+          −
         </button>
 
         {/* Row 4: 1, 2, 3, + */}
-        <button className={styles.button} onClick={() => handleInput("1")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("1")}
+        >
           1
         </button>
-        <button className={styles.button} onClick={() => handleInput("2")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("2")}
+        >
           2
         </button>
-        <button className={styles.button} onClick={() => handleInput("3")}>
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput("3")}
+        >
           3
         </button>
-        <button className={styles.button} onClick={() => handleInput("+")}>
-          {t(copy.add)}
+        <button
+          type="button"
+          className={`${styles.button} ${styles.operatorButton}`}
+          onClick={() => handleInput("+")}
+          aria-label={t(copy.add)}
+        >
+          +
         </button>
 
         {/* Row 5: 0, ., ±, = */}
         <button
-          className={styles.buttonDouble}
+          type="button"
+          className={styles.button}
           onClick={() => handleInput("0")}
         >
           0
         </button>
-        <button className={styles.button} onClick={() => handleInput(".")}>
-          {t(copy.decimal)}
+        <button
+          type="button"
+          className={styles.button}
+          onClick={() => handleInput(".")}
+          aria-label={t(copy.decimal)}
+        >
+          .
         </button>
-        <button className={styles.button} onClick={handleSign}>
-          {t(copy.sign)}
+        <button
+          type="button"
+          className={`${styles.button} ${styles.utilityButton}`}
+          onClick={handleSign}
+          aria-label={t(copy.sign)}
+        >
+          ±
         </button>
-        <button className={styles.button} onClick={handleEquals}>
-          {t(copy.equals)}
+        <button
+          type="button"
+          className={`${styles.button} ${styles.equalsButton}`}
+          onClick={handleEquals}
+          aria-label={t(copy.equals)}
+        >
+          =
         </button>
 
         {/* Row 6: VAT buttons */}
-        <button className={styles.button} onClick={handleVatAdd}>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.vatButton}`}
+          onClick={handleVatAdd}
+        >
+          <Percent size={15} aria-hidden="true" />
           {t(copy.vatAdd)}
         </button>
-        <button className={styles.button} onClick={handleVatSubtract}>
+        <button
+          type="button"
+          className={`${styles.button} ${styles.vatButton}`}
+          onClick={handleVatSubtract}
+        >
+          <Percent size={15} aria-hidden="true" />
           {t(copy.vatSubtract)}
         </button>
       </div>
@@ -434,71 +569,90 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
       >
         <div className={styles.historyHeader}>
           <button
+            type="button"
             className={styles.historyToggle}
             onClick={() => setHistoryOpen(!historyOpen)}
-            aria-label={t(historyOpen ? copy.minimize : copy.history)}
+            aria-label={t(copy.history)}
+            aria-expanded={historyOpen}
+            aria-controls="calculator-history-list"
           >
-            {historyOpen ? (
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M5 12h14"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            ) : (
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden="true"
-              >
-                <path
-                  d="M12 5l0 14"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </svg>
-            )}
+            <History size={16} aria-hidden="true" />
+            <ChevronDown
+              size={14}
+              className={`${styles.historyChevron} ${historyOpen ? styles.historyChevronOpen : ""}`}
+              aria-hidden="true"
+            />
           </button>
-          <span className={styles.historyTitle}>{t(copy.history)}</span>
+          <span className={styles.historyTitle}>
+            <History size={16} aria-hidden="true" />
+            {t(copy.history)}
+          </span>
         </div>
 
-        {history.length === 0 ? (
+        {historyStatus === "loading" ? (
+          <p className={styles.historyFeedback} role="status">
+            {t(copy.historyLoading)}
+          </p>
+        ) : null}
+        {historyStatus === "error" ? (
+          <div className={styles.historyErrorState} role="status">
+            <p>{t(copy.historyUnavailable)}</p>
+            <button
+              type="button"
+              className={styles.retryHistoryButton}
+              onClick={() => {
+                setHistoryStatus("loading");
+                setHistoryReloadKey((current) => current + 1);
+              }}
+            >
+              {t(copy.retryHistory)}
+            </button>
+          </div>
+        ) : null}
+        {historyStatus === "ready" && history.length === 0 ? (
           <p className={styles.historyEmpty}>{t(copy.noHistory)}</p>
-        ) : (
-          <ul className={styles.historyList}>
+        ) : history.length > 0 ? (
+          <ul className={styles.historyList} id="calculator-history-list">
             {history.map((item, index) => (
-              <li
-                key={index}
-                className={styles.historyItem}
-                onClick={() => handleHistoryItemClick(item)}
-              >
-                <div className={styles.historyExpression}>
-                  {item.expression}
-                </div>
-                <div className={styles.historyResult}>{item.result}</div>
-                <div className={styles.historyTime}>
-                  {new Date(item.time).toLocaleTimeString(
-                    locale === "he" ? "he-IL" : "en-IL",
-                  )}
-                </div>
+              <li key={index} className={styles.historyItem}>
+                <button
+                  type="button"
+                  className={styles.historyButton}
+                  onClick={() => handleHistoryItemClick(item)}
+                  aria-label={`${item.expression} = ${item.result}`}
+                >
+                  <span className={styles.historyExpression}>
+                    {item.expression}
+                  </span>
+                  <span className={styles.historyResult}>{item.result}</span>
+                  <time
+                    className={styles.historyTime}
+                    dateTime={item.time}
+                    dir="ltr"
+                  >
+                    {new Date(item.time).toLocaleTimeString(
+                      locale === "he" ? "he-IL" : "en-IL",
+                    )}
+                  </time>
+                </button>
               </li>
             ))}
           </ul>
-        )}
+        ) : null}
+
+        {historyMutationError ? (
+          <p className={styles.historyMutationError} role="alert">
+            {t(
+              historyMutationError === "save"
+                ? copy.historySaveFailed
+                : copy.historyClearFailed,
+            )}
+          </p>
+        ) : null}
 
         {history.length > 0 && (
           <button
+            type="button"
             className={styles.clearHistoryButton}
             onClick={handleClearHistory}
           >

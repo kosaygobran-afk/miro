@@ -1,0 +1,752 @@
+/* The preview source ends above the action footer in both catalog layouts. */
+:is(.sf-product-card, .sf-moving-rail-card-shell):has(> [data-preview-source]) {
+  --sf-card-section-padding: 1.05rem;
+  --sf-card-section-line: 1px solid var(--border-subtle);
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-product-card, .sf-moving-rail-card-shell):has(
+    > [data-preview-source]
+  ) {
+  --sf-card-section-padding: 1.15rem;
+}
+
+.sf-product-preview-source {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  border-start-start-radius: inherit;
+  border-start-end-radius: inherit;
+  transform-origin: center bottom;
+}
+
+:root .sf-product-preview-source > .sf-product-body {
+  gap: 0;
+  padding: 0;
+}
+
+.sf-product-summary {
+  flex: 1;
+  min-width: 0;
+  padding: var(--sf-card-section-padding);
+  border-block-start: var(--sf-card-section-line);
+}
+
+:root .sf-product-summary + .sf-product-price {
+  margin-block-start: auto;
+  padding-inline: var(--sf-card-section-padding);
+  border-block-start: var(--sf-card-section-line);
+}
+
+:root .sf-product-card > .sf-product-actions {
+  flex: none;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.9rem var(--sf-card-section-padding);
+  border-block-start: var(--sf-card-section-line);
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  background: var(--surface);
+}
+
+.sf-product-card > .sf-product-actions .sf-product-action {
+  flex: 1 1 7rem;
+  min-width: 0;
+  width: auto;
+}
+
+:root .sf-product-actions > .sf-product-quick-preview {
+  position: static;
+  inset: auto;
+  display: grid;
+  flex: 0 0 2.75rem;
+  width: 2.75rem;
+  height: auto;
+  min-height: 48px;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* Moving cards use one frame, rather than a link frame with floating controls. */
+.sf-moving-rail-card-shell:has(> .sf-moving-rail-card[data-preview-source]) {
+  display: flex;
+  width: clamp(11.5rem, 16.5vw, 14.5rem);
+  min-width: 0;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--border-subtle) 86%, transparent);
+  border-radius: 1.2rem;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  box-shadow: 0 10px 28px #0000000b;
+  transition:
+    border-color var(--motion-micro-duration) var(--motion-easing),
+    box-shadow var(--motion-micro-duration) var(--motion-easing);
+}
+
+:root .sf-moving-rail-card-shell > .sf-moving-rail-card[data-preview-source] {
+  flex: 1;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  border: 0;
+  border-start-start-radius: inherit !important;
+  border-start-end-radius: inherit !important;
+  border-end-start-radius: 0 !important;
+  border-end-end-radius: 0 !important;
+  background: transparent;
+  box-shadow: none;
+  transform-origin: center bottom;
+}
+
+:root .sf-moving-rail-card[data-preview-source] > .sf-moving-rail-content {
+  gap: 0;
+  padding: 0 !important;
+}
+
+.sf-moving-rail-summary {
+  flex: 1;
+  min-width: 0;
+  padding: 0.85rem 0.9rem;
+  border-block-start: var(--sf-card-section-line);
+}
+
+:root .sf-moving-rail-summary + .sf-moving-rail-price {
+  min-height: 3.5rem;
+  margin-block-start: auto;
+  padding: 0.75rem 0.9rem;
+  border-block-start: var(--sf-card-section-line);
+}
+
+.sf-moving-rail-actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0.4rem;
+  padding: 0.75rem 0.9rem;
+  border-block-start: var(--sf-card-section-line);
+  border-end-start-radius: inherit;
+  border-end-end-radius: inherit;
+  background: var(--surface);
+}
+
+.sf-moving-rail-details-link {
+  display: inline-flex;
+  flex: 1 1 5.5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.7rem;
+  background: var(--surface-muted);
+  color: var(--foreground);
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.sf-moving-rail-details-link > svg {
+  flex: none;
+  color: var(--accent-text);
+}
+
+.sf-moving-rail-details-link:hover {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.sf-moving-rail-details-link:hover > svg {
+  color: inherit;
+}
+
+.sf-moving-rail-details-link:focus-visible,
+.sf-product-actions > .sf-product-quick-preview:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-text) 46%, transparent);
+  outline-offset: 2px;
+}
+
+:root .sf-moving-rail-actions > .sf-moving-rail-cart {
+  position: static;
+  inset: auto;
+  display: flex;
+  flex: none;
+}
+
+.sf-moving-rail-actions .sf-add-cart-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+:root .sf-moving-rail-actions > .sf-moving-rail-preview-button {
+  position: static;
+  inset: auto;
+  display: grid;
+  flex: 0 0 44px;
+  width: 44px !important;
+  height: auto !important;
+  min-height: 44px;
+  margin: 0;
+  box-shadow: none;
+}
+
+/* Older layers lift on article/shell hover, including its buttons. Limit that
+   feedback to the preview source while leaving the footer stable. */
+:root .sf-product-card:has(> .sf-product-preview-source),
+:root .sf-moving-rail-card-shell > .sf-moving-rail-card[data-preview-source] {
+  transform: none !important;
+}
+
+:root
+  .sf-product-card:has(> .sf-product-preview-source):not(
+    :has(> [data-preview-source]:hover)
+  ):not([data-preview-intent]) {
+  border-color: color-mix(in srgb, var(--border-subtle) 86%, transparent);
+  box-shadow: 0 10px 30px #0000000a;
+}
+
+:root[data-appearance-version="2"]
+  .sf-product-card:has(> .sf-product-preview-source):not(
+    :has(> [data-preview-source]:hover)
+  ):not([data-preview-intent]) {
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-soft);
+}
+
+:root .sf-product-card:has(> .sf-product-preview-source) .sf-product-visual,
+:root
+  .sf-moving-rail-card-shell:has(> [data-preview-source])
+  .sf-moving-rail-image {
+  transform: none !important;
+}
+
+:root
+  .sf-product-card:has(> .sf-product-preview-source)
+  .sf-product-media::after {
+  transform: translateX(-100%);
+}
+
+.sf-product-preview-source,
+.sf-moving-rail-card[data-preview-source] {
+  transition: transform var(--motion-micro-duration) var(--motion-easing);
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :root[data-motion-enabled="true"][data-motion-micro-interactions="true"]
+    :is(
+      .sf-product-card:has(> [data-preview-source]:hover),
+      .sf-product-card[data-preview-intent],
+      .sf-moving-rail-card-shell:has(> [data-preview-source]:hover),
+      .sf-moving-rail-card-shell[data-preview-intent]
+    ) {
+    border-color: color-mix(
+      in srgb,
+      var(--accent-text) 50%,
+      var(--border-subtle)
+    );
+    box-shadow: var(--shadow-lift);
+  }
+
+  :root[data-motion-enabled="true"][data-motion-micro-interactions="true"]
+    :is(
+      .sf-product-preview-source:hover,
+      .sf-product-card[data-preview-intent] > .sf-product-preview-source,
+      .sf-moving-rail-card[data-preview-source]:hover,
+      .sf-moving-rail-card-shell[data-preview-intent]
+        > .sf-moving-rail-card[data-preview-source]
+    ) {
+    transform: translateY(-3px) !important;
+  }
+
+  :root[data-product-preview-style="soft-reveal"][data-motion-enabled="true"][data-motion-micro-interactions="true"]
+    :is(
+      .sf-product-preview-source:hover,
+      .sf-product-card[data-preview-intent] > .sf-product-preview-source,
+      .sf-moving-rail-card[data-preview-source]:hover,
+      .sf-moving-rail-card-shell[data-preview-intent]
+        > .sf-moving-rail-card[data-preview-source]
+    ) {
+    transform: translateY(-2px) !important;
+  }
+}
+
+/* A held finger/pen gets local press feedback without displacing any button. */
+:is(.sf-product-card, .sf-moving-rail-card-shell)[data-preview-pressing="true"]
+  > [data-preview-source] {
+  background-color: var(--surface-hover);
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--accent-text) 28%, transparent);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-motion-enabled="true"][data-motion-micro-interactions="true"]
+    :is(
+      .sf-product-card,
+      .sf-moving-rail-card-shell
+    )[data-preview-pressing="true"]
+    > [data-preview-source] {
+    transform: scale(0.99) !important;
+    transition-duration: 100ms;
+  }
+}
+
+.sf-moving-rail-viewport:has([data-preview-pressing="true"])
+  .sf-moving-rail-track {
+  animation-play-state: paused;
+}
+
+@media (hover: none), (pointer: coarse), (any-pointer: coarse) {
+  :is(.sf-product-preview-source, .sf-moving-rail-card[data-preview-source]) {
+    touch-action: pan-y pinch-zoom;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .sf-moving-rail-viewport[data-static]
+    .sf-moving-rail-card[data-preview-source] {
+    touch-action: pan-x pan-y pinch-zoom;
+  }
+}
+
+/* Source-action preservation supplies the actual room above its button row.
+   Keep gallery and details flexible, with popup actions outside the scroller. */
+:root
+  .sf-hover-preview[data-preserve-source-actions="true"]
+  .sf-hover-preview-inner {
+  display: flex;
+  height: min(37.5rem, var(--sf-preview-available-height, calc(100dvh - 2rem)));
+  max-height: var(--sf-preview-available-height, calc(100dvh - 2rem));
+  flex-direction: column;
+  overflow: hidden;
+}
+
+:root
+  .sf-hover-preview[data-preserve-source-actions="true"]
+  .sf-hover-preview-gallery {
+  flex: 0 1 clamp(5rem, 34dvh, 16.25rem);
+  min-height: 5rem;
+  max-height: 44%;
+  overflow: hidden;
+}
+
+:root
+  .sf-hover-preview[data-preserve-source-actions="true"]
+  .sf-hover-preview-media {
+  min-height: 0;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+:root
+  .sf-hover-preview[data-preserve-source-actions="true"]
+  .sf-hover-preview-thumbnails {
+  max-height: 100%;
+}
+
+:root
+  .sf-hover-preview[data-preserve-source-actions="true"]
+  .sf-hover-preview-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  padding: 0;
+}
+
+:root
+  .sf-hover-preview[data-preserve-source-actions="true"]
+  .sf-hover-preview-details {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 0.65rem 1.1rem 1rem;
+}
+
+:root
+  .sf-hover-preview[data-preserve-source-actions="true"]
+  .sf-hover-preview-footer {
+  flex: none;
+  flex-wrap: wrap;
+  min-height: 4.5rem;
+  margin: 0;
+  padding: 0.75rem 1.1rem;
+  border-block-start: 1px solid var(--border-subtle);
+  background: var(--surface);
+}
+
+@media (max-width: 1100px) {
+  .sf-moving-rail-card-shell:has(> [data-preview-source]) {
+    width: clamp(12.25rem, 25vw, 13.5rem);
+  }
+}
+
+/* In an unusually short viewport, use the space for readable details. The
+   original action row remains exposed, so tiny frames need no second footer. */
+:root
+  .sf-hover-preview[data-compact-source-preview="true"]
+  .sf-hover-preview-gallery {
+  display: none;
+}
+
+:root
+  .sf-hover-preview[data-minimal-source-preview="true"]
+  .sf-hover-preview-footer {
+  display: none;
+}
+
+:root
+  .sf-hover-preview[data-minimal-source-preview="true"]
+  .sf-hover-preview-details {
+  padding-block: 0.25rem;
+  padding-inline: 0.5rem 2.5rem;
+}
+
+:root
+  .sf-hover-preview[data-minimal-source-preview="true"]
+  .sf-hover-preview-close {
+  top: 2px;
+  inset-inline-end: 2px;
+  width: 28px;
+  height: 28px;
+}
+
+:root
+  .sf-hover-preview[data-minimal-source-preview="true"]
+  .sf-hover-preview-category {
+  display: none;
+}
+
+:root
+  .sf-hover-preview[data-minimal-source-preview="true"]
+  .sf-hover-preview-title {
+  font-size: 0.8rem;
+}
+
+@media (max-width: 600px) {
+  .sf-moving-rail-card-shell:has(> [data-preview-source]) {
+    width: clamp(11.25rem, 58vw, 12.25rem);
+  }
+}
+
+@media (max-width: 380px) {
+  :root
+    .sf-hover-preview[data-preserve-source-actions="true"]:not(
+      [data-minimal-source-preview="true"]
+    )
+    :is(.sf-hover-preview-details, .sf-hover-preview-footer) {
+    padding-inline: 0.85rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.sf-product-preview-source, .sf-moving-rail-card[data-preview-source]) {
+    transition: none;
+  }
+}
+
+:root[data-motion-enabled="false"],
+:root[data-motion-micro-interactions="false"] {
+  :is(.sf-product-preview-source, .sf-moving-rail-card[data-preview-source]) {
+    transition: none;
+  }
+}
+
+/* Version 2 card widgets: keep the product, picker and actions in their own
+   space. Version 1 retains its original geometry and protected appearance. */
+.sf-product-facts {
+  display: none;
+}
+
+:root[data-appearance-version="2"] {
+  .sf-product-card .sf-product-media {
+    aspect-ratio: 4 / 3;
+    min-height: 0;
+  }
+
+  .sf-product-card .sf-product-image-fit {
+    inset: 1rem 1rem 2rem;
+  }
+
+  .sf-product-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .sf-product-summary h3,
+  .sf-product-summary .sf-product-category {
+    margin: 0;
+  }
+
+  .sf-product-summary .sf-product-description {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    line-height: 1.65;
+  }
+
+  .sf-product-facts {
+    display: grid;
+    gap: 0.35rem;
+    margin-block-start: 0.25rem;
+    font-size: 0.72rem;
+    line-height: 1.5;
+  }
+
+  .sf-product-facts > div {
+    display: grid;
+    grid-template-columns: minmax(3rem, 0.35fr) minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .sf-product-facts dt {
+    color: var(--muted-foreground);
+  }
+
+  .sf-product-facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+    font-weight: 650;
+  }
+
+  .sf-product-summary + .sf-product-price {
+    gap: 0.65rem;
+    padding-block: 1rem;
+  }
+
+  .sf-product-price__amount strong {
+    font-size: clamp(1.05rem, 1.3vw, 1.35rem);
+    overflow-wrap: anywhere;
+  }
+
+  .sf-product-price__promotion:empty {
+    display: none;
+  }
+
+  .sf-product-actions > :is(.sf-save-button, .sf-product-quick-preview),
+  .sf-product-actions .sf-add-cart-button {
+    min-width: 44px;
+    min-height: 48px;
+    border-radius: 0.8rem;
+  }
+
+  .sf-product-actions > .sf-save-button {
+    flex: 0 0 2.75rem;
+    width: 2.75rem;
+    padding: 0.5rem;
+  }
+
+  .sf-product-actions:has(> .sf-add-cart-button, > .sf-cart-quantity)
+    > .sf-product-action {
+    flex-basis: 100%;
+  }
+
+  .sf-hover-preview-gallery {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    gap: 0.65rem;
+    flex: 0 1 clamp(12rem, 34dvh, 16.25rem);
+    max-height: 50%;
+    border-block-end: 1px solid var(--border-subtle);
+  }
+
+  .sf-hover-preview-gallery[data-multiple-images] {
+    grid-template-columns: 3.5rem minmax(0, 1fr);
+  }
+
+  .sf-hover-preview-thumbnails {
+    position: static;
+    inset: auto;
+    width: 100%;
+    max-width: none;
+    min-height: 0;
+    max-height: 100%;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 2px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+  }
+
+  .sf-hover-preview-thumbnail {
+    flex: 0 0 52px;
+    width: 52px;
+    height: 52px;
+    border-radius: 0.7rem;
+    border-color: var(--border-subtle);
+  }
+
+  .sf-hover-preview-thumbnail[data-active],
+  .sf-hover-preview-thumbnail:hover {
+    border-color: var(--accent-text);
+    background: var(--surface-hover);
+  }
+
+  .sf-hover-preview-thumbnail .sf-product-image-fit {
+    inset: 3px;
+    border-radius: 0.4rem;
+  }
+
+  .sf-hover-preview-thumbnail > svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .sf-hover-preview-media {
+    min-width: 0;
+    min-height: 0;
+    border: 1px solid var(--border-subtle);
+  }
+
+  .sf-hover-preview-media .sf-product-image-fit {
+    inset: 0.65rem 0.65rem 3.4rem;
+  }
+
+  .sf-hover-preview-media > .sf-product-visual {
+    width: 100%;
+    height: 100%;
+    padding: 0.65rem 0.65rem 3.4rem;
+  }
+
+  .sf-hover-preview-arrow {
+    width: 44px;
+    height: 44px;
+    inset-block: auto 0.35rem;
+    transform: none;
+    border-radius: 0.8rem;
+    background: var(--surface);
+    box-shadow: none;
+  }
+
+  .sf-hover-preview-arrow-previous {
+    left: auto;
+    right: auto;
+    inset-inline-start: 0.4rem;
+  }
+
+  .sf-hover-preview-arrow-next {
+    left: auto;
+    right: auto;
+    inset-inline-end: 0.4rem;
+  }
+
+  .sf-hover-preview-arrow:hover {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .sf-hover-preview-count {
+    inset-inline: 0;
+    inset-block-end: 1rem;
+    width: max-content;
+    margin-inline: auto;
+    translate: none;
+    font-size: 0.72rem;
+    background: var(--surface);
+    color: var(--foreground);
+  }
+
+  .sf-hover-preview:not([data-minimal-source-preview]) .sf-hover-preview-close {
+    width: 44px;
+    height: 44px;
+    top: 0.5rem;
+    inset-inline-end: 0.5rem;
+    background: var(--surface);
+  }
+
+  .sf-hover-preview-title {
+    max-width: none;
+    font-size: 1.1rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .sf-hover-preview-details {
+    padding-block-start: 0.85rem;
+  }
+
+  .sf-hover-preview-price {
+    padding: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.85rem;
+    background: var(--surface-muted);
+  }
+
+  .sf-hover-preview-specs > div {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+    gap: 0.75rem;
+    padding-block: 0.5rem;
+    overflow-wrap: anywhere;
+  }
+
+  .sf-hover-preview-specs dd {
+    margin: 0;
+    font-weight: 650;
+  }
+
+  .sf-hover-preview-footer .sf-hover-preview-link {
+    border-radius: 0.8rem;
+    font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 380px) {
+  :root[data-appearance-version="2"] {
+    .sf-hover-preview-gallery[data-multiple-images] {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) 48px;
+      gap: 0.4rem;
+    }
+
+    .sf-hover-preview-thumbnails {
+      grid-row: 2;
+      flex-direction: row;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .sf-hover-preview-thumbnail {
+      flex-basis: 44px;
+      width: 44px;
+      height: 44px;
+    }
+
+    .sf-hover-preview-gallery[data-multiple-images] .sf-hover-preview-media {
+      grid-row: 1;
+    }
+  }
+}
+
+/* A short phone needs its limited height for the image and readable details. */
+@media (max-width: 380px) and (max-height: 600px) {
+  :root[data-appearance-version="2"] {
+    .sf-hover-preview-gallery[data-multiple-images] {
+      grid-template-columns: 3rem minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+    }
+
+    .sf-hover-preview-thumbnails {
+      grid-row: auto;
+      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .sf-hover-preview-gallery[data-multiple-images] .sf-hover-preview-media {
+      grid-row: auto;
+    }
+  }
+}

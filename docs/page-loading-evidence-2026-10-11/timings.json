@@ -1,0 +1,549 @@
+{
+  "date": "2026-10-11",
+  "environment": "isolated local Next16.3.8 production server with connected Supabase, synthetic disposable CEO; warm two-repeat median; no business writes",
+  "limits": "Small sample, current data volume; includes server HTML/RSC stream completion, excludes client API completion for shell pages. Date-free analytics query ignores range parameter and uses default bounds. Different hosts/networks/dev compilation may differ.",
+  "rows": [
+    {
+      "scope": "anonymous page total",
+      "path": "/en/about",
+      "beforeMs": 221,
+      "afterMs": 8.5
+    },
+    {
+      "scope": "anonymous page total",
+      "path": "/en/contact",
+      "beforeMs": 229.5,
+      "afterMs": 9
+    },
+    {
+      "scope": "anonymous page total",
+      "path": "/en",
+      "beforeMs": 226.5,
+      "afterMs": 226
+    },
+    {
+      "scope": "anonymous page total",
+      "path": "/en/services",
+      "beforeMs": 233,
+      "afterMs": 135.5
+    },
+    {
+      "scope": "anonymous page total",
+      "path": "/he/about",
+      "beforeMs": 215.5,
+      "afterMs": 8.5
+    },
+    {
+      "scope": "anonymous page total",
+      "path": "/en/store/cameras",
+      "beforeMs": 219,
+      "afterMs": 195
+    },
+    {
+      "scope": "authenticated page/API total",
+      "path": "/en/services",
+      "beforeMs": 354.5,
+      "afterMs": 176.5,
+      "beforeStatus": 200,
+      "afterStatus": 200
+    },
+    {
+      "scope": "authenticated page/API total",
+      "path": "/en/admin/products",
+      "beforeMs": 344,
+      "afterMs": 215,
+      "beforeStatus": 200,
+      "afterStatus": 200
+    },
+    {
+      "scope": "authenticated page/API total",
+      "path": "/en/admin",
+      "beforeMs": 710.5,
+      "afterMs": 520,
+      "beforeStatus": 200,
+      "afterStatus": 200
+    },
+    {
+      "scope": "authenticated page/API total",
+      "path": "/api/management/products?limit=10",
+      "beforeMs": 467.5,
+      "afterMs": 337,
+      "beforeStatus": 200,
+      "afterStatus": 200
+    },
+    {
+      "scope": "authenticated page/API total",
+      "path": "/api/management/analytics?range=30d",
+      "beforeMs": null,
+      "afterMs": 1137.5,
+      "beforeStatus": 500,
+      "afterStatus": 200
+    }
+  ],
+  "publicBefore": [
+    {
+      "pass": 1,
+      "path": "/en/about",
+      "status": 200,
+      "firstByteMs": 311,
+      "totalMs": 316
+    },
+    {
+      "pass": 1,
+      "path": "/en/contact",
+      "status": 200,
+      "firstByteMs": 253,
+      "totalMs": 255
+    },
+    {
+      "pass": 1,
+      "path": "/en",
+      "status": 200,
+      "firstByteMs": 318,
+      "totalMs": 331
+    },
+    {
+      "pass": 1,
+      "path": "/en/services",
+      "status": 200,
+      "firstByteMs": 228,
+      "totalMs": 229
+    },
+    {
+      "pass": 1,
+      "path": "/he/about",
+      "status": 200,
+      "firstByteMs": 230,
+      "totalMs": 233
+    },
+    {
+      "pass": 1,
+      "path": "/en/store/cameras",
+      "status": 200,
+      "firstByteMs": 240,
+      "totalMs": 243
+    },
+    {
+      "pass": 2,
+      "path": "/en/about",
+      "status": 200,
+      "firstByteMs": 218,
+      "totalMs": 223
+    },
+    {
+      "pass": 2,
+      "path": "/en/contact",
+      "status": 200,
+      "firstByteMs": 223,
+      "totalMs": 225
+    },
+    {
+      "pass": 2,
+      "path": "/en",
+      "status": 200,
+      "firstByteMs": 216,
+      "totalMs": 220
+    },
+    {
+      "pass": 2,
+      "path": "/en/services",
+      "status": 200,
+      "firstByteMs": 229,
+      "totalMs": 232
+    },
+    {
+      "pass": 2,
+      "path": "/he/about",
+      "status": 200,
+      "firstByteMs": 207,
+      "totalMs": 209
+    },
+    {
+      "pass": 2,
+      "path": "/en/store/cameras",
+      "status": 200,
+      "firstByteMs": 210,
+      "totalMs": 213
+    },
+    {
+      "pass": 3,
+      "path": "/en/about",
+      "status": 200,
+      "firstByteMs": 215,
+      "totalMs": 219
+    },
+    {
+      "pass": 3,
+      "path": "/en/contact",
+      "status": 200,
+      "firstByteMs": 230,
+      "totalMs": 234
+    },
+    {
+      "pass": 3,
+      "path": "/en",
+      "status": 200,
+      "firstByteMs": 229,
+      "totalMs": 233
+    },
+    {
+      "pass": 3,
+      "path": "/en/services",
+      "status": 200,
+      "firstByteMs": 231,
+      "totalMs": 234
+    },
+    {
+      "pass": 3,
+      "path": "/he/about",
+      "status": 200,
+      "firstByteMs": 219,
+      "totalMs": 222
+    },
+    {
+      "pass": 3,
+      "path": "/en/store/cameras",
+      "status": 200,
+      "firstByteMs": 222,
+      "totalMs": 225
+    }
+  ],
+  "publicAfter": [
+    {
+      "pass": 1,
+      "path": "/en/about",
+      "status": 200,
+      "firstByteMs": 336,
+      "totalMs": 359
+    },
+    {
+      "pass": 1,
+      "path": "/en/contact",
+      "status": 200,
+      "firstByteMs": 128,
+      "totalMs": 129
+    },
+    {
+      "pass": 1,
+      "path": "/en",
+      "status": 200,
+      "firstByteMs": 291,
+      "totalMs": 294
+    },
+    {
+      "pass": 1,
+      "path": "/en/services",
+      "status": 200,
+      "firstByteMs": 11,
+      "totalMs": 111
+    },
+    {
+      "pass": 1,
+      "path": "/he/about",
+      "status": 200,
+      "firstByteMs": 11,
+      "totalMs": 14
+    },
+    {
+      "pass": 1,
+      "path": "/en/store/cameras",
+      "status": 200,
+      "firstByteMs": 14,
+      "totalMs": 205
+    },
+    {
+      "pass": 2,
+      "path": "/en/about",
+      "status": 200,
+      "firstByteMs": 7,
+      "totalMs": 8
+    },
+    {
+      "pass": 2,
+      "path": "/en/contact",
+      "status": 200,
+      "firstByteMs": 6,
+      "totalMs": 8
+    },
+    {
+      "pass": 2,
+      "path": "/en",
+      "status": 200,
+      "firstByteMs": 211,
+      "totalMs": 214
+    },
+    {
+      "pass": 2,
+      "path": "/en/services",
+      "status": 200,
+      "firstByteMs": 8,
+      "totalMs": 119
+    },
+    {
+      "pass": 2,
+      "path": "/he/about",
+      "status": 200,
+      "firstByteMs": 7,
+      "totalMs": 9
+    },
+    {
+      "pass": 2,
+      "path": "/en/store/cameras",
+      "status": 200,
+      "firstByteMs": 13,
+      "totalMs": 192
+    },
+    {
+      "pass": 3,
+      "path": "/en/about",
+      "status": 200,
+      "firstByteMs": 8,
+      "totalMs": 9
+    },
+    {
+      "pass": 3,
+      "path": "/en/contact",
+      "status": 200,
+      "firstByteMs": 8,
+      "totalMs": 10
+    },
+    {
+      "pass": 3,
+      "path": "/en",
+      "status": 200,
+      "firstByteMs": 234,
+      "totalMs": 238
+    },
+    {
+      "pass": 3,
+      "path": "/en/services",
+      "status": 200,
+      "firstByteMs": 12,
+      "totalMs": 152
+    },
+    {
+      "pass": 3,
+      "path": "/he/about",
+      "status": 200,
+      "firstByteMs": 7,
+      "totalMs": 8
+    },
+    {
+      "pass": 3,
+      "path": "/en/store/cameras",
+      "status": 200,
+      "firstByteMs": 11,
+      "totalMs": 198
+    }
+  ],
+  "authBefore": {
+    "phase": "production-before",
+    "reads": [
+      {
+        "route": "/en/services",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 598,
+        "durationMs": 600
+      },
+      {
+        "route": "/en/services",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 372,
+        "durationMs": 375
+      },
+      {
+        "route": "/en/services",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 331,
+        "durationMs": 334
+      },
+      {
+        "route": "/en/admin/products",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 342,
+        "durationMs": 411
+      },
+      {
+        "route": "/en/admin/products",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 342,
+        "durationMs": 371
+      },
+      {
+        "route": "/en/admin/products",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 313,
+        "durationMs": 317
+      },
+      {
+        "route": "/en/admin",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 345,
+        "durationMs": 743
+      },
+      {
+        "route": "/en/admin",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 331,
+        "durationMs": 720
+      },
+      {
+        "route": "/en/admin",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 327,
+        "durationMs": 701
+      },
+      {
+        "route": "/api/management/products?limit=10",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 515,
+        "durationMs": 516
+      },
+      {
+        "route": "/api/management/products?limit=10",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 462,
+        "durationMs": 462
+      },
+      {
+        "route": "/api/management/products?limit=10",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 472,
+        "durationMs": 473
+      },
+      {
+        "route": "/api/management/analytics?range=30d",
+        "index": 0,
+        "status": 500,
+        "firstByteMs": 1674,
+        "durationMs": 1674
+      }
+    ],
+    "cleanup": true,
+    "signingAlgorithm": "ES256"
+  },
+  "authAfter": {
+    "phase": "production-after",
+    "reads": [
+      {
+        "route": "/en/services",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 630,
+        "durationMs": 639
+      },
+      {
+        "route": "/en/services",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 28,
+        "durationMs": 129
+      },
+      {
+        "route": "/en/services",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 29,
+        "durationMs": 224
+      },
+      {
+        "route": "/en/admin/products",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 221,
+        "durationMs": 223
+      },
+      {
+        "route": "/en/admin/products",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 214,
+        "durationMs": 215
+      },
+      {
+        "route": "/en/admin/products",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 214,
+        "durationMs": 215
+      },
+      {
+        "route": "/en/admin",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 243,
+        "durationMs": 646
+      },
+      {
+        "route": "/en/admin",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 237,
+        "durationMs": 492
+      },
+      {
+        "route": "/en/admin",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 223,
+        "durationMs": 548
+      },
+      {
+        "route": "/api/management/products?limit=10",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 379,
+        "durationMs": 380
+      },
+      {
+        "route": "/api/management/products?limit=10",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 350,
+        "durationMs": 350
+      },
+      {
+        "route": "/api/management/products?limit=10",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 324,
+        "durationMs": 324
+      },
+      {
+        "route": "/api/management/analytics?range=30d",
+        "index": 0,
+        "status": 200,
+        "firstByteMs": 979,
+        "durationMs": 979
+      },
+      {
+        "route": "/api/management/analytics?range=30d",
+        "index": 1,
+        "status": 200,
+        "firstByteMs": 1157,
+        "durationMs": 1157
+      },
+      {
+        "route": "/api/management/analytics?range=30d",
+        "index": 2,
+        "status": 200,
+        "firstByteMs": 1117,
+        "durationMs": 1118
+      }
+    ],
+    "cleanup": true,
+    "signingAlgorithm": "ES256"
+  }
+}

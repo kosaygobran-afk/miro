@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import { z } from "zod";
 
 const compile = (source) =>
   ts.transpileModule(source, {
@@ -165,6 +166,13 @@ function loadStore({
   // reused by another harness (or another authenticated visitor).
   const imports = {
     react: { cache: requestCache },
+    zod: { z },
+    // Shared public navigation caching is covered by store-data-loading.
+    // Keep this harness scoped to one request's live catalog regressions.
+    "@/lib/public-presentation-cache": {
+      PUBLIC_STORE_NAVIGATION_TAG: "public-store-navigation",
+      cachePublicPresentation: (_tag, load) => requestCache(load),
+    },
     "@/lib/supabase/public-server": {
       createPublicServerClient: () => client("anonymous"),
     },

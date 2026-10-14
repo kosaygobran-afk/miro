@@ -1,6 +1,9 @@
 -- Commerce Foundation Tests
 -- Run against an isolated migrated database. All fixtures are rolled back.
 begin;
+-- Fixture-only table-owner projection verifies internal cost without giving
+-- authenticated customers access to procurement snapshots.
+create function pg_temp.order_cost(p_order uuid) returns numeric language sql security definer set search_path=public as $$ select unit_cost from public.order_items where order_id=p_order limit 1 $$;
 
 -- Create test users with roles
 insert into auth.users(id, raw_user_meta_data) values
@@ -184,17 +187,17 @@ begin
   -- gross = 2 * 100 = 200, net = 200 / 1.18 = 169.49, vat = 30.51
   select * into v_order from public.orders where id = v_order_id;
   if v_order.status <> 'completed' then raise exception 'Order status not completed'; end if;
-  if v_order.source <> 'management' then raise exception 'Order source not management'; end if;
+  if v_order.source <> 'pos' then raise exception 'Order source not pos'; end if;
   if abs(v_order.net_total - 169.49) > 0.01 then raise exception 'Net total mismatch'; end if;
   if abs(v_order.vat_total - 30.51) > 0.01 then raise exception 'VAT total mismatch'; end if;
   if abs(v_order.total - 200.00) > 0.01 then raise exception 'Gross total mismatch'; end if;
 
   -- Check order_items populated with snapshots
-  select * into v_items from public.order_items where order_id = v_order_id;
+  select discount_amount,net_amount,product_name_he,sku_snapshot,variant_id,vat_amount,vat_rate into v_items from public.order_items where order_id = v_order_id;
   if v_items.variant_id <> v_variant_id then raise exception 'Variant ID not snapshotted'; end if;
   if v_items.sku_snapshot is null then raise exception 'SKU snapshot missing'; end if;
   if v_items.product_name_he is null then raise exception 'Product name HE missing'; end if;
-  if v_items.unit_cost is null then raise exception 'Unit cost snapshot missing'; end if;
+  if pg_temp.order_cost(v_order_id) is null then raise exception 'Unit cost snapshot missing'; end if;
   if v_items.vat_rate is null or v_items.vat_rate <> 18.00 then raise exception 'VAT rate snapshot missing'; end if;
   if v_items.vat_amount is null then raise exception 'VAT amount missing'; end if;
   if v_items.net_amount is null then raise exception 'Net amount missing'; end if;

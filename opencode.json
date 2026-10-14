@@ -1,49 +1,130 @@
 {
   "$schema": "https://opencode.ai/config.json",
-
   "model": "nvidia/nemotron-ultra",
-
   "default_agent": "build",
-
   "formatter": true,
-
-  "compaction": {
-    "auto": true,
-    "keep": {
-      "tokens": 15000
-    },
-    "buffer": 20000
-  },
-
+  "subagent_depth": 1,
   "providers": {
     "nvidia": {
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://127.0.0.1:19119/v1"
+      },
       "models": {
         "nemotron-ultra": {
           "modelID": "nvidia/nemotron-3-ultra-550b-a55b",
-          "name": "Nemotron 3 Ultra 550B",
-
+          "name": "Nemotron 3 Ultra 550B — Maximum",
           "capabilities": {
             "tools": true,
             "input": ["text"],
             "output": ["text"]
           },
-
+          "compatibility": {
+            "reasoningField": "reasoning_content",
+            "maxTokensField": "max_tokens",
+            "supportsPromptCacheKey": false
+          },
           "limit": {
-            "context": 1048576,
+            "context": 1000000,
             "output": 32768
           },
-
           "body": {
-            "temperature": 1.0,
+            "temperature": 1,
             "top_p": 0.95,
-
+            "reasoning_effort": "high",
+            "reasoning_budget": -1,
             "chat_template_kwargs": {
               "enable_thinking": true,
+              "medium_effort": false,
               "force_nonempty_content": true
             }
+          },
+          "variants": [
+            {
+              "id": "max",
+              "body": {
+                "temperature": 1,
+                "top_p": 0.95,
+                "reasoning_effort": "high",
+                "reasoning_budget": -1,
+                "chat_template_kwargs": {
+                  "enable_thinking": true,
+                  "medium_effort": false,
+                  "force_nonempty_content": true
+                }
+              }
+            }
+          ]
+        },
+        "nvidia/nemotron-3-ultra-550b-a55b": {
+          "modelID": "nvidia/nemotron-3-ultra-550b-a55b",
+          "name": "Nemotron 3 Ultra 550B — Maximum",
+          "capabilities": {
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"]
+          },
+          "compatibility": {
+            "reasoningField": "reasoning_content",
+            "maxTokensField": "max_tokens",
+            "supportsPromptCacheKey": false
+          },
+          "limit": {
+            "context": 1000000,
+            "output": 32768
+          },
+          "body": {
+            "temperature": 1,
+            "top_p": 0.95,
+            "reasoning_effort": "high",
+            "reasoning_budget": -1,
+            "chat_template_kwargs": {
+              "enable_thinking": true,
+              "medium_effort": false,
+              "force_nonempty_content": true
+            }
+          },
+          "variants": [
+            {
+              "id": "max",
+              "body": {
+                "temperature": 1,
+                "top_p": 0.95,
+                "reasoning_effort": "high",
+                "reasoning_budget": -1,
+                "chat_template_kwargs": {
+                  "enable_thinking": true,
+                  "medium_effort": false,
+                  "force_nonempty_content": true
+                }
+              }
+            }
+          ]
+        },
+        "openai/gpt-oss-20b": {
+          "name": "GPT OSS 20B",
+          "limit": {
+            "context": 131072,
+            "output": 32768
+          },
+          "capabilities": {
+            "tools": true,
+            "input": ["text", "image"],
+            "output": ["text"]
           }
         }
       }
+    }
+  },
+  "agents": {
+    "general": {
+      "model": "nvidia/openai/gpt-oss-20b"
+    },
+    "explore": {
+      "model": "nvidia/openai/gpt-oss-20b"
+    },
+    "scout": {
+      "model": "nvidia/openai/gpt-oss-20b"
     }
   }
 }

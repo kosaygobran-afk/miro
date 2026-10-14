@@ -2,196 +2,478 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  font-family: var(--font-family);
+  min-height: 0;
+  color: var(--foreground);
+  background: var(--background);
+  font-family: inherit;
+  container-type: inline-size;
 }
 
 .displayGroup {
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
-  background: var(--bg-color);
-  border-bottom: 1px solid var(--border-color);
+  gap: 0.5rem;
+  padding: 1.25rem;
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .display {
+  width: 100%;
   min-height: 3rem;
-  font-size: 2.5rem;
+  font-family: var(--font-mono);
+  font-size: 2.25rem;
+  line-height: 1.15;
   font-weight: 600;
-  text-align: right;
+  text-align: end;
+  direction: ltr;
+  unicode-bidi: plaintext;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   outline: none;
   border: none;
   background: transparent;
-  color: var(--text-color);
+  color: var(--foreground);
+}
+
+.display:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
 }
 
 .vatNote {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--foreground-muted);
+  text-align: start;
+}
+
+.errorMessage {
+  margin: 0;
+  color: var(--danger);
+  font-size: 0.8125rem;
 }
 
 .keypad {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(3rem, 1fr));
   gap: 0.5rem;
-  padding: 1.5rem;
-  background: var(--bg-color);
+  padding: 1rem;
+  background: var(--background);
   flex: 1;
+  min-height: 0;
+  direction: ltr;
 }
 
 .button {
-  aspect-ratio: 1;
-  border: none;
-  background: var(--button-bg);
-  color: var(--button-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 3rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--foreground);
   font-size: 1.25rem;
-  font-weight: 500;
+  font-weight: 550;
   cursor: pointer;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s ease;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease;
 }
 
 .button:hover:not(:disabled) {
-  background: var(--button-bg-hover);
+  background: var(--surface-hover);
+  border-color: var(--border-control);
 }
 
-.button:active {
-  background: var(--button-bg-active);
+.button:active:not(:disabled) {
+  background: var(--primary-subtle);
 }
 
-.buttonDouble {
-  grid-column: span 2;
-  border: none;
-  background: var(--button-bg);
-  color: var(--button-text);
-  font-size: 1.25rem;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 0.5rem;
-  transition: background-color 0.2s ease;
+.button:focus-visible,
+.historyToggle:focus-visible,
+.historyButton:focus-visible,
+.clearHistoryButton:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
-.buttonDouble:hover:not(:disabled) {
-  background: var(--button-bg-hover);
+.utilityButton {
+  background: var(--surface-muted);
+  color: var(--foreground-muted);
 }
 
-.buttonDouble:active {
-  background: var(--button-bg-active);
+.operatorButton {
+  background: var(--surface-muted);
+  color: var(--primary);
+  font-size: 1.375rem;
+}
+
+.equalsButton {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 1.375rem;
+}
+
+.equalsButton:hover:not(:disabled) {
+  background: var(--primary);
+  filter: brightness(1.06);
+}
+
+.vatButton {
+  background: var(--primary-subtle);
+  color: var(--primary);
+  font-size: 0.8125rem;
+  font-weight: 650;
 }
 
 .historyPanel {
   position: relative;
-  border-top: 1px solid var(--border-color);
-  background: var(--bg-color);
-  max-height: 200px;
+  flex: 0 0 auto;
+  max-height: 3.5rem;
   overflow: hidden;
-  transition: max-height 0.3s ease;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface);
+  transition: max-height 180ms ease;
 }
 
 .historyPanelOpen {
-  max-height: 500px;
+  max-height: 24rem;
 }
 
 .historyHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
+  min-height: 3.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .historyToggle {
-  background: none;
-  border: none;
-  color: var(--text-color);
-  font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground);
   cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 0.25rem;
 }
 
 .historyToggle:hover {
-  background: var(--button-bg-hover);
+  background: var(--surface-hover);
+}
+
+.historyChevron {
+  color: var(--foreground-muted);
+  transition: transform 160ms ease;
+}
+
+.historyChevronOpen {
+  transform: rotate(180deg);
 }
 
 .historyTitle {
-  font-size: 1.125rem;
+  margin-inline-start: auto;
+  font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-color);
+  color: var(--foreground);
 }
 
 .historyList {
   list-style: none;
   margin: 0;
-  padding: 1rem;
+  padding: 0.375rem 0.75rem;
   overflow-y: auto;
-  max-height: 300px;
+  max-height: 15rem;
 }
 
 .historyItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .historyItem:last-child {
   border-bottom: none;
 }
 
+.historyButton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 0.375rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--foreground);
+  text-align: start;
+  cursor: pointer;
+}
+
+.historyButton:hover {
+  background: var(--surface-hover);
+}
+
 .historyExpression {
-  font-weight: 500;
-  flex: 1;
   min-width: 0;
   overflow: hidden;
+  color: var(--foreground-muted);
+  font-family: var(--font-mono);
   text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+  text-align: start;
 }
 
 .historyResult {
-  font-weight: 600;
-  flex: 1;
-  text-align: right;
-  margin-left: 1rem;
   min-width: 0;
   overflow: hidden;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-weight: 650;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+  text-align: end;
 }
 
 .historyTime {
-  font-size: 0.875rem;
-  color: var(--text-muted);
+  color: var(--foreground-muted);
+  font-size: 0.6875rem;
   white-space: nowrap;
 }
 
 .historyEmpty {
-  padding: 2rem;
+  padding: 1.25rem;
   text-align: center;
-  color: var(--text-muted);
-  font-style: italic;
+  color: var(--foreground-muted);
+  font-size: 0.8125rem;
 }
 
 .clearHistoryButton {
-  width: 100%;
-  padding: 0.75rem;
-  border: none;
-  background: var(--button-bg-danger);
-  color: var(--button-text);
-  font-size: 1rem;
-  font-weight: 500;
-  border-radius: 0.5rem;
+  width: calc(100% - 1.5rem);
+  min-height: 2.5rem;
+  margin: 0 0.75rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--danger-subtle);
+  color: var(--danger);
+  font-size: 0.8125rem;
+  font-weight: 600;
   cursor: pointer;
-  margin-top: 1rem;
-  transition: background-color 0.2s ease;
+  transition: background-color 140ms ease;
 }
 
 .clearHistoryButton:hover:not(:disabled) {
-  background: var(--button-bg-danger-hover);
+  background: var(--danger);
+  color: var(--danger-foreground);
 }
 
-.clearHistoryButton:active {
-  background: var(--button-bg-danger-active);
+@container (max-width: 22rem) {
+  .displayGroup {
+    padding: 0.875rem;
+  }
+
+  .keypad {
+    gap: 0.375rem;
+    padding: 0.75rem;
+  }
+
+  .historyButton {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.375rem 0.5rem;
+  }
+
+  .historyTime {
+    grid-column: 1 / -1;
+    justify-self: end;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .historyPanel,
+  .historyChevron {
+    transition: none;
+  }
+}
+
+.displayGroup {
+  gap: 0.625rem;
+  padding: 1rem 1.125rem;
+  background: var(--surface);
+}
+
+.displayHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2rem;
+}
+
+.calculatorName,
+.vatRateBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.calculatorName {
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+.calculatorName svg {
+  color: var(--primary);
+}
+
+.vatRateBadge {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid
+    color-mix(in srgb, var(--sales-channel-pos) 35%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--sales-channel-pos) 13%, var(--surface));
+  color: var(--sales-channel-pos-text);
+  font-size: 0.6875rem;
+  font-weight: 650;
+}
+
+.display {
+  min-height: 3.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  font-size: 2.125rem;
+}
+
+.keypad {
+  gap: 0.5rem;
+  padding: 0.875rem;
+}
+
+.button {
+  min-height: 3.25rem;
+  border-radius: var(--radius-sm);
+}
+
+.operatorButton {
+  border-color: color-mix(in srgb, var(--sales-channel-pos) 30%, transparent);
+  background: color-mix(in srgb, var(--sales-channel-pos) 12%, var(--surface));
+  color: var(--sales-channel-pos-text);
+}
+
+.vatButton {
+  gap: 0.375rem;
+  border-color: color-mix(in srgb, var(--sales-channel-pos) 35%, transparent);
+  background: color-mix(in srgb, var(--sales-channel-pos) 13%, var(--surface));
+  color: var(--sales-channel-pos-text);
+}
+
+.vatButton:hover:not(:disabled) {
+  border-color: var(--sales-channel-pos);
+  background: color-mix(in srgb, var(--sales-channel-pos) 21%, var(--surface));
+}
+
+.historyTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-inline-start: 0;
+}
+
+.historyTitle svg {
+  color: var(--sales-channel-pos-text);
+}
+
+.historyFeedback,
+.historyErrorState,
+.historyMutationError {
+  margin: 0.5rem 0.75rem;
+  color: var(--foreground-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.historyErrorState {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.625rem;
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-sm);
+  background: var(--danger-subtle);
+  color: var(--danger);
+}
+
+.historyErrorState p,
+.historyMutationError {
+  margin: 0;
+}
+
+.retryHistoryButton {
+  min-height: 2.5rem;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.75rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.retryHistoryButton:hover {
+  border-color: var(--sales-channel-pos);
+  background: var(--surface-hover);
+}
+
+.historyMutationError {
+  padding: 0.5rem 0.625rem;
+  border-inline-start: 3px solid var(--danger);
+  background: var(--danger-subtle);
+  color: var(--danger);
+}
+
+.historyTime {
+  direction: ltr;
+  text-align: end;
+}
+
+@container (max-width: 22rem) {
+  .displayHeading {
+    align-items: flex-start;
+  }
+
+  .calculatorName,
+  .vatRateBadge {
+    gap: 0.375rem;
+  }
+
+  .historyErrorState {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .retryHistoryButton {
+    transition: none;
+  }
 }

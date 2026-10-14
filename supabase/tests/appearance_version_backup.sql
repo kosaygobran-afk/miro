@@ -54,7 +54,9 @@ do $$ declare backup jsonb; rev timestamptz; restored_rev timestamptz; settings 
   begin perform public.update_animation_settings(jsonb_set(settings,'{appearanceVersion}','"3"'),rev); raise exception 'Unknown appearance version allowed'; exception when invalid_parameter_value then null; end;
   begin perform public.update_animation_settings(settings - 'appearanceVersion',rev); raise exception 'Missing appearance version allowed'; exception when invalid_parameter_value then null; end;
   restored_rev := public.update_animation_settings(backup->'animationSettings',rev);
-  if public.get_public_animation_settings() <> backup->'animationSettings'
+  if (public.get_public_animation_settings() - 'productPreviewStyle') <> backup->'animationSettings'
+     or public.get_public_animation_settings()->>'productPreviewStyle' <> '3d-pop-up'
+     or not exists(select 1 from public.audit_events where details->'new_value' = public.get_public_animation_settings() and user_id = auth.uid())
      or (select value from public.business_settings where key='appearance_version_1_backup') <> backup
      or (select value from public.business_settings where key='storefront_design') <> design
      or (select count(*) from public.audit_events where details->>'setting_key'='animation_settings') <> audit_count + 1

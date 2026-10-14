@@ -1,0 +1,315 @@
+.page {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  padding-block-end: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+.sectionNav {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.1rem 0.6rem;
+  scrollbar-width: thin;
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+.sectionLink {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full, 999px);
+  background: var(--surface);
+  color: var(--foreground-muted);
+  text-decoration: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sectionLink:hover,
+.sectionLink:focus-visible {
+  border-color: var(--primary);
+  color: var(--foreground);
+  outline: 2px solid transparent;
+}
+
+.card {
+  min-width: 0;
+  padding: clamp(0.9rem, 2.4vw, 1.35rem);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block-end: 1rem;
+}
+
+.cardHeader h2 {
+  margin: 0;
+  color: var(--foreground);
+  font-size: 1.05rem;
+}
+
+.cardHeader p {
+  margin: 0.35rem 0 0;
+  max-width: 72ch;
+  color: var(--foreground-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.loading {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.stack {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.fieldset {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grid2,
+.grid3,
+.grid4 {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.grid2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.grid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.grid4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.fieldInput,
+.fieldSelect,
+.fieldTextarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.65rem;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--border-control);
+  border-radius: var(--radius-sm);
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.fieldTextarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+.fieldInput:focus-visible,
+.fieldSelect:focus-visible,
+.fieldTextarea:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+.fieldInput[dir="ltr"] {
+  text-align: start;
+}
+
+.toolbar {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-block-end: 1rem;
+}
+
+.toolbarField {
+  flex: 1 1 12rem;
+  min-width: min(100%, 12rem);
+}
+
+.metricRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.75rem;
+  margin-block-end: 1rem;
+}
+
+.metric {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--background);
+}
+
+.metricLabel {
+  color: var(--foreground-muted);
+  font-size: 0.76rem;
+}
+.metricValue {
+  display: block;
+  margin-block-start: 0.35rem;
+  color: var(--foreground);
+  font-size: 1.18rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.subtle {
+  color: var(--foreground-muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+.readinessList {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding-inline-start: 1.2rem;
+  color: var(--foreground-muted);
+}
+.statusLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.inlineValue {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-variant-numeric: tabular-nums;
+}
+.detailGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+}
+.detail {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+}
+.detail dt {
+  color: var(--foreground-muted);
+  font-size: 0.76rem;
+}
+.detail dd {
+  margin: 0;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+.docPreview {
+  padding: 1rem;
+  background: #fff;
+  color: #161616;
+  border: 1px solid #d0d0d0;
+  border-radius: 0.35rem;
+}
+.docPreview h3 {
+  margin-block: 0 0.75rem;
+}
+.docPreview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.docPreview th,
+.docPreview td {
+  padding: 0.45rem;
+  border-block-end: 1px solid #ddd;
+  text-align: start;
+}
+.fileList {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.fileRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.helpText {
+  margin: 0;
+  padding: 0.75rem;
+  border-inline-start: 3px solid var(--primary);
+  background: var(--surface-muted);
+  color: var(--foreground-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+@media (max-width: 760px) {
+  .grid3,
+  .grid4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cardHeader {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 520px) {
+  .grid2,
+  .grid3,
+  .grid4,
+  .detailGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .toolbarField {
+    min-width: 100%;
+  }
+  .actionRow > button {
+    flex: 1 1 auto;
+  }
+  .sectionLink {
+    min-height: 2.75rem;
+  }
+}
+
+@media print {
+  .sectionNav,
+  .page > :not(.card),
+  .cardHeader,
+  .noPrint {
+    display: none !important;
+  }
+  .docPreview {
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+  }
+}

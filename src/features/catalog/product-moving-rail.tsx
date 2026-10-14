@@ -23,6 +23,8 @@ import {
 } from "@/lib/catalog/pricing";
 import { StickerCluster } from "@/features/catalog/product-promo-badge";
 import { ProductHoverPreview } from "@/features/catalog/product-hover-preview";
+import { usePreviewHoverDismissal } from "./use-preview-hover-dismissal";
+import { usePreviewLongPress } from "./use-preview-long-press";
 
 interface ProductMovingRailProps {
   products: Product[];
@@ -56,15 +58,35 @@ function RailProduct({
   onPreviewChange: (id: string, open: boolean) => void;
 }) {
   const [showPreview, setShowPreview] = useState(false);
-  const closePreview = useCallback(() => setShowPreview(false), []);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const sourceRef = useRef<HTMLAnchorElement | null>(null);
+  const actionsRef = useRef<HTMLDivElement | null>(null);
+  const [openedExplicitly, setOpenedExplicitly] = useState(false);
+  const { canHover, dismissHover, clearDismissal, trackPointer } =
+    usePreviewHoverDismissal(sourceRef);
+  const openExplicitly = useCallback(() => {
+    clearDismissal();
+    setOpenedExplicitly(true);
+    setShowPreview(true);
+  }, [clearDismissal]);
+  const longPress = usePreviewLongPress(sourceRef, openExplicitly);
+  const closePreview = useCallback(
+    (explicit: boolean) => {
+      dismissHover(explicit);
+      setShowPreview(false);
+    },
+    [dismissHover],
+  );
   const keepPreviewOpen = useCallback(() => setShowPreview(true), []);
   const onVisibilityChange = useCallback(
-    (open: boolean) => onPreviewChange(product.id, open),
-    [product.id, onPreviewChange],
+    (open: boolean) =>
+      onPreviewChange(
+        `${product.id}:${isDuplicate ? "copy" : "original"}`,
+        open,
+      ),
+    [product.id, isDuplicate, onPreviewChange],
   );
 
-  const [openedExplicitly, setOpenedExplicitly] = useState(false);
-  const cardRef = useRef<HTMLAnchorElement | null>(null);
   const previewButtonRef = useRef<HTMLButtonElement | null>(null);
   const copy = storeCopy[locale];
   const primaryImage = product.images[0] ?? null;
@@ -80,56 +102,89 @@ function RailProduct({
     locale === "he"
       ? (primaryImage?.altHe ?? product.name)
       : (primaryImage?.altEn ?? product.name);
+  const openOnHover = (event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType !== "mouse") return;
+    if (!event.currentTarget.contains(event.target as Node)) return;
+    if (!canHover()) return;
+    if (showPreview) return;
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches)
+      return;
+    setOpenedExplicitly(false);
+    setShowPreview(true);
+  };
 
   return (
     <div
+      ref={cardRef}
       className="sf-moving-rail-card-shell"
       data-preview-intent={showPreview || undefined}
-      onMouseEnter={() => {
-        if (isDuplicate) return;
-        setOpenedExplicitly(false);
-        setShowPreview(true);
-      }}
-      onMouseLeave={() => setShowPreview(false)}
-      onFocusCapture={() => {
-        if (!isDuplicate) {
-          setOpenedExplicitly(false);
-          setShowPreview(true);
-        }
-      }}
-      onBlurCapture={(event) => {
-        const nextTarget = event.relatedTarget;
-        const movedIntoPreview =
-          nextTarget instanceof Element &&
-          nextTarget.closest(".sf-hover-preview") !== null;
-        if (!event.currentTarget.contains(nextTarget) && !movedIntoPreview) {
-          setShowPreview(false);
-        }
-      }}
+      data-preview-pressing={longPress.isPressing || undefined}
+      onPointerMoveCapture={trackPointer}
+      onPointerOutCapture={trackPointer}
     >
-      {!isDuplicate ? (
-        <ProductHoverPreview
-          product={product}
-          locale={locale}
-          isOpen={showPreview}
-          onClose={closePreview}
-          onKeepOpen={keepPreviewOpen}
-          onVisibilityChange={onVisibilityChange}
-          triggerRef={cardRef}
-          focusOnOpen={openedExplicitly}
-          returnFocusRef={previewButtonRef}
-        />
-      ) : null}
+      <ProductHoverPreview
+        product={product}
+        locale={locale}
+        isOpen={showPreview}
+        onClose={closePreview}
+        onKeepOpen={keepPreviewOpen}
+        onVisibilityChange={onVisibilityChange}
+        triggerRef={cardRef}
+        hoverSourceRef={sourceRef}
+        actionsRef={actionsRef}
+        focusOnOpen={openedExplicitly}
+        returnFocusRef={previewButtonRef}
+      />
       <Link
-        ref={cardRef}
+        ref={sourceRef}
         href={`/${locale}/store/${product.category}/${product.slug}`}
         className="sf-moving-rail-card"
+        data-preview-source="true"
         aria-label={`${product.name}, ${formattedPrice}`}
         tabIndex={isDuplicate ? -1 : undefined}
-        prefetch={!isDuplicate}
+        prefetch={false}
         dir={locale === "he" ? "rtl" : "ltr"}
+        onPointerDown={longPress.onPointerDown}
+        onContextMenu={longPress.onContextMenu}
+        onPointerEnter={openOnHover}
+        onPointerMove={openOnHover}
+        onPointerLeave={(event) => {
+          if (event.pointerType !== "mouse") return;
+          if (!event.currentTarget.contains(event.target as Node)) return;
+          if (
+            event.relatedTarget instanceof Element &&
+            event.relatedTarget.closest(".sf-hover-preview")
+          )
+            return;
+          clearDismissal();
+          if (window.matchMedia("(hover: hover) and (pointer: fine)").matches)
+            setShowPreview(false);
+        }}
+        onFocusCapture={(event) => {
+          // Focus inside the body portal is managed by the preview itself.
+          if (!event.currentTarget.contains(event.target as Node)) return;
+          if (
+            !(event.target instanceof Element) ||
+            !event.target.matches(":focus-visible")
+          )
+            return;
+          if (!isDuplicate) {
+            setOpenedExplicitly(false);
+            setShowPreview(true);
+          }
+        }}
+        onBlurCapture={(event) => {
+          if (!event.currentTarget.contains(event.target as Node)) return;
+          const nextTarget = event.relatedTarget;
+          const movedIntoPreview =
+            nextTarget instanceof Element &&
+            nextTarget.closest(".sf-hover-preview") !== null;
+          if (!event.currentTarget.contains(nextTarget) && !movedIntoPreview) {
+            setShowPreview(false);
+          }
+        }}
       >
-        <div className="sf-moving-rail-media">
+        <div className="sf-moving-rail-media" data-product-section="image">
           <ProductMedia
             product={product}
             src={primaryImage?.url}
@@ -149,13 +204,18 @@ function RailProduct({
           </span>
         </div>
         <div className="sf-moving-rail-content">
-          <p className="sf-moving-rail-category" dir="auto">
-            {product.categoryLabel ?? product.category}
-          </p>
-          <h3 className="sf-moving-rail-title" dir="auto">
-            <OverflowLabel>{product.name}</OverflowLabel>
-          </h3>
-          <div className="sf-moving-rail-price">
+          <div
+            className="sf-moving-rail-summary"
+            data-product-section="details"
+          >
+            <p className="sf-moving-rail-category" dir="auto">
+              {product.categoryLabel ?? product.category}
+            </p>
+            <h3 className="sf-moving-rail-title" dir="auto">
+              <OverflowLabel>{product.name}</OverflowLabel>
+            </h3>
+          </div>
+          <div className="sf-moving-rail-price" data-product-section="pricing">
             <div className="sf-price-display__amount">
               <strong dir="auto">{formattedPrice}</strong>
               {effectivePrice !== null && (
@@ -186,45 +246,67 @@ function RailProduct({
           </div>
         </div>
       </Link>
-      {!isDuplicate &&
-      effectivePrice !== null &&
-      product.stockState !== "out" ? (
-        <div className="sf-moving-rail-cart">
-          <AddToCartButton
-            compact
-            locale={locale}
-            item={{
-              productId: product.id,
-              variantId:
-                (
-                  product.variants.find((v) => v.isDefault && v.stockQty > 0) ??
-                  product.variants.find((v) => v.stockQty > 0)
-                )?.id ?? null,
-              slug: product.slug,
-              category: product.category,
-              name: product.name,
-              imageUrl: primaryImage?.url ?? null,
-              unitPrice: effectivePrice,
-            }}
-          />
-        </div>
-      ) : null}
-      {!isDuplicate ? (
-        <button
-          ref={previewButtonRef}
-          type="button"
-          className="sf-moving-rail-preview-button"
-          aria-label={`${locale === "he" ? "תצוגה מקדימה" : "Quick preview"}: ${product.name}`}
-          aria-haspopup="dialog"
-          aria-expanded={showPreview}
-          onClick={() => {
-            setOpenedExplicitly(true);
-            setShowPreview(true);
-          }}
+      <div
+        ref={actionsRef}
+        className="sf-moving-rail-actions"
+        data-product-section="actions"
+        onPointerEnter={() => {
+          longPress.cancel();
+          setShowPreview(false);
+        }}
+        onFocusCapture={() => {
+          longPress.cancel();
+          setShowPreview(false);
+        }}
+      >
+        <Link
+          href={`/${locale}/store/${product.category}/${product.slug}`}
+          className="sf-moving-rail-details-link"
+          aria-label={`${copy.details}: ${product.name}`}
+          tabIndex={isDuplicate ? -1 : undefined}
+          prefetch={false}
         >
-          <Eye size={15} aria-hidden="true" />
-        </button>
-      ) : null}
+          {copy.details}
+          <ArrowUpRight size={15} aria-hidden="true" />
+        </Link>
+        {!isDuplicate &&
+        effectivePrice !== null &&
+        product.stockState !== "out" ? (
+          <div className="sf-moving-rail-cart">
+            <AddToCartButton
+              compact
+              locale={locale}
+              item={{
+                productId: product.id,
+                variantId:
+                  (
+                    product.variants.find(
+                      (v) => v.isDefault && v.stockQty > 0,
+                    ) ?? product.variants.find((v) => v.stockQty > 0)
+                  )?.id ?? null,
+                slug: product.slug,
+                category: product.category,
+                name: product.name,
+                imageUrl: primaryImage?.url ?? null,
+                unitPrice: effectivePrice,
+              }}
+            />
+          </div>
+        ) : null}
+        {!isDuplicate ? (
+          <button
+            ref={previewButtonRef}
+            type="button"
+            className="sf-moving-rail-preview-button"
+            aria-label={`${locale === "he" ? "תצוגה מקדימה" : "Quick preview"}: ${product.name}`}
+            aria-haspopup="dialog"
+            aria-expanded={showPreview}
+            onClick={openExplicitly}
+          >
+            <Eye size={15} aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }

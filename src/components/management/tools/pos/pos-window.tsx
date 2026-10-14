@@ -1,1147 +1,1269 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { v4 as uuidv4 } from "uuid";
 import {
-  computeLine,
-  formatIls,
-  type CustomerAccount,
-  type SaleLine,
-  type SaleOrder,
-} from "../../sales-types";
+  useEffect,
+  useLayoutEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import { useManagementTools } from "../management-tool-provider";
-import { posCopy as copy } from "./pos-copy";
-import { PAYMENT_METHODS, PAYMENT_METHOD_LABELS } from "@/lib/sales-channel";
-import styles from "./pos-window.module.css";
+import { toAgorot } from "@/lib/commerce/money";
+import {
+  computePosTotals,
+  comparePosQuote,
+  getPosPaymentRecovery,
+  canResumeManualPosIntent,
+  generateIdempotencyKey,
+  getEffectivePrice,
+  hasSellPrice,
+  validatePaymentTotal,
+} from "./pos-utils";
+import type { Locale } from "@/lib/i18n";
+import type {
+  PosCartLine,
+  PosPayment,
+  PosCustomer,
+  PosCatalogItem,
+  PosVariant,
+  PosGatewayCapabilities,
+  PosQuotedLine,
+  PosPaymentAttemptSnapshot,
+} from "./pos-types";
+import { PosShell } from "./pos-shell";
 
-interface PosWindowProps {
-  locale: "he" | "en";
-  userId: string;
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const KEY_PATTERN = /^[A-Za-z0-9_-]{16,120}$/;
+const DRAFT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+const PAYMENT_METHODS = new Set([
+  "cash",
+  "credit_card",
+  "bit",
+  "bank_transfer",
+  "check",
+  "other",
+]);
+interface PendingIntent {
+  id: string;
+  totalAgorot: number;
+  snapshot: string;
+}
+interface IntentStatus {
+  intent: {
+    id: string;
+    total_agorot: number;
+    order_id: string | null;
+    order_number?: string | null;
+    status: string;
+    expires_at?: string;
+  };
+  attempts: PosPaymentAttemptSnapshot[];
+  items?: PosQuotedLine[];
+}
+function emptyLine(): PosCartLine {
+  return {
+    key: generateIdempotencyKey(),
+    variantId: "",
+    quantity: 1,
+    unitPrice: 0,
+    discountPerUnit: 0,
+    product: null,
+    variant: null,
+  };
+}
+function emptyPayment(): PosPayment {
+  return {
+    id: generateIdempotencyKey(),
+    method: "cash",
+    collectionKind: "manual_recorded",
+    amount: 0,
+    installments: 1,
+    reference: "",
+  };
+}
+function validMoney(value: unknown): value is number {
+  try {
+    return typeof value === "number" && toAgorot(value) >= 0;
+  } catch {
+    return false;
+  }
+}
+function restoreLine(value: unknown): value is PosCartLine {
+  if (!value || typeof value !== "object") return false;
+  const line = value as PosCartLine;
+  return (
+    typeof line.key === "string" &&
+    UUID_PATTERN.test(line.variantId) &&
+    Number.isSafeInteger(line.quantity) &&
+    line.quantity > 0 &&
+    line.quantity <= 10000 &&
+    validMoney(line.unitPrice) &&
+    validMoney(line.discountPerUnit) &&
+    line.discountPerUnit <= line.unitPrice
+  );
+}
+function restorePayment(value: unknown): value is PosPayment {
+  if (!value || typeof value !== "object") return false;
+  const payment = value as PosPayment;
+  return (
+    typeof payment.id === "string" &&
+    KEY_PATTERN.test(payment.id) &&
+    PAYMENT_METHODS.has(payment.method) &&
+    validMoney(payment.amount) &&
+    typeof payment.reference === "string" &&
+    payment.reference.length <= 120 &&
+    (payment.cashReceived === undefined || validMoney(payment.cashReceived))
+  );
+}
+function restoreCustomer(value: unknown): PosCustomer | null {
+  if (!value || typeof value !== "object") return null;
+  const customer = value as PosCustomer;
+  if (
+    typeof customer.name !== "string" ||
+    typeof customer.email !== "string" ||
+    typeof customer.phone !== "string"
+  )
+    return null;
+  return {
+    name: customer.name.slice(0, 200),
+    email: customer.email.slice(0, 254),
+    phone: customer.phone.slice(0, 30),
+    ...(customer.accountId && UUID_PATTERN.test(customer.accountId)
+      ? { accountId: customer.accountId, id: customer.accountId }
+      : {}),
+  };
 }
 
-export function PosWindow({ locale, userId }: PosWindowProps) {
-  const he = locale === "he";
+export function PosWindow({
+  locale,
+  userId,
+}: {
+  locale: Locale;
+  userId: string;
+}) {
+  const actorRef = useRef(userId);
+  useLayoutEffect(() => {
+    actorRef.current = userId;
+  }, [userId]);
   const t = (map: Record<"he" | "en", string>) => map[locale];
-  const { saveDraft, clearDraft, closeTool } = useManagementTools();
-
-  // Form state
-  const [account, setAccount] = useState<CustomerAccount | null>(null);
-  const [customerName, setCustomerName] = useState("");
-  const [customerEmail, setCustomerEmail] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-
-  // Helper functions
-  const newLine = (key: string): SaleLine => {
-    return {
-      key,
-      variantId: "",
-      quantity: 1,
-      unitPrice: 0,
-      discountPerUnit: 0,
-      product: null,
-      variant: null,
-    };
-  };
-
-  // Items
-  const lineCounter = useRef(0);
-  const nextKey = () => `line-${++lineCounter.current}`;
-  const [lines, setLines] = useState<SaleLine[]>(() => [newLine("line-0")]);
-
-  // VAT rate (for estimates)
-  const [vatRate, setVatRate] = useState<number | null>(null);
-
-  // Payments
-  const [payments, setPayments] = useState<
-    Array<{
-      id: string;
-      method: (typeof PAYMENT_METHODS)[number];
-      amount: number;
-      installments: number;
-      reference: string;
-    }>
-  >(() => [
-    {
-      id: uuidv4(),
-      method: "cash",
-      amount: 0,
-      installments: 1,
-      reference: "",
-    },
+  const { saveDraft, clearDraft, getDraft } = useManagementTools();
+  const [lines, setLines] = useState<PosCartLine[]>(() => [emptyLine()]);
+  const [customer, setCustomer] = useState<PosCustomer | null>(null);
+  const [payments, setPayments] = useState<PosPayment[]>(() => [
+    emptyPayment(),
   ]);
-
-  // Review step
-  const [reviewOpen, setReviewOpen] = useState(false);
+  const [vatRate, setVatRate] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [saveError, setSaveError] = useState("");
-  const [successText, setSuccessText] = useState("");
-
-  // Idempotency key for the current draft
-  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(() =>
-    uuidv4(),
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [pendingIntent, setPendingIntent] = useState<PendingIntent | null>(
+    null,
   );
+  const [attemptedSnapshot, setAttemptedSnapshot] = useState<string | null>(
+    null,
+  );
+  const [idempotencyKey, setIdempotencyKey] = useState(generateIdempotencyKey);
+  const [readyUser, setReadyUser] = useState<string | null>(null);
+  const latestDraftRef = useRef<{
+    userId: string;
+    draft: Record<string, unknown>;
+  } | null>(null);
+  const [refreshToken, setRefreshToken] = useState(0);
+  const [gatewayCapabilities, setGatewayCapabilities] =
+    useState<PosGatewayCapabilities>({ hostedCard: false, bit: false });
+  const locked = Boolean(pendingIntent || attemptedSnapshot);
 
-  // Load VAT rate from API (same as sales-panel)
-  const loadVatRate = () => {
+  useEffect(() => {
     const controller = new AbortController();
-    fetch("/api/management/tax", {
+    void fetch("/api/management/tax", {
       cache: "no-store",
       signal: controller.signal,
     })
-      .then((res) => (res.ok ? res.json() : { taxRates: [] }))
+      .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
         if (controller.signal.aborted) return;
-        const rows = Array.isArray(data.taxRates) ? data.taxRates : [];
-        const current = rows.find(
+        const current = (
+          Array.isArray(data?.taxRates) ? data.taxRates : []
+        ).find(
           (row: { status?: string; is_active?: boolean }) =>
             row.status === "current" && row.is_active !== false,
         );
-        if (current && typeof current.rate === "number") {
+        if (
+          typeof current?.rate === "number" &&
+          Number.isFinite(current.rate) &&
+          current.rate >= 0 &&
+          current.rate <= 100
+        )
           setVatRate(current.rate);
-        }
       })
-      .catch(() => {
-        // VAT estimate unavailable
-      });
+      .catch(() => undefined);
+    void fetch("/api/management/commerce/integrations", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        const capabilities = (data?.runtime ?? data?.readiness)?.capabilities;
+        setGatewayCapabilities({
+          hostedCard: capabilities?.hostedCard === "enabled",
+          bit: capabilities?.bit === "enabled",
+        });
+      })
+      .catch(() => undefined);
     return () => controller.abort();
-  };
+  }, [userId]);
 
-  // Draft persistence would be handled by provider APIs
-  // We'll use callbacks from context in the actual implementation
-
-  // Save draft when idempotencyKey is set
   useEffect(() => {
-    // Save draft with idempotency key
-    saveDraft("pos", {
-      idempotencyKey,
-      account,
-      customerName,
-      customerEmail,
-      customerPhone,
-      lines,
-      payments,
-    });
+    const timer = window.setTimeout(() => {
+      const raw = getDraft("pos");
+      const draft =
+        raw && typeof raw === "object"
+          ? (raw as Record<string, unknown>)
+          : null;
+      const expired =
+        draft &&
+        typeof draft.savedAt === "number" &&
+        Date.now() - draft.savedAt > DRAFT_MAX_AGE_MS &&
+        !draft.pendingIntent &&
+        !draft.attemptedSnapshot;
+      if (expired) clearDraft("pos");
+      if (draft && !expired) {
+        setIdempotencyKey(
+          typeof draft.idempotencyKey === "string" &&
+            KEY_PATTERN.test(draft.idempotencyKey)
+            ? draft.idempotencyKey
+            : generateIdempotencyKey(),
+        );
+        setCustomer(restoreCustomer(draft.customer));
+        let restoredLines = Array.isArray(draft.lines)
+          ? draft.lines.filter(restoreLine)
+          : [];
+        let restoredPayments = Array.isArray(draft.payments)
+          ? draft.payments.filter(restorePayment).map((payment) => ({
+              ...payment,
+              collectionKind:
+                payment.collectionKind === "provider_collected"
+                  ? ("provider_collected" as const)
+                  : ("manual_recorded" as const),
+              installments: 1,
+            }))
+          : [];
+        try {
+          computePosTotals(restoredLines, restoredPayments, null);
+        } catch {
+          restoredLines = [];
+          restoredPayments = [];
+          setFormErrors({
+            items:
+              locale === "he"
+                ? "טיוטה לא תקינה נדחתה. יש לבדוק כל מכירה ממתינה."
+                : "An invalid draft was rejected. Review any pending sale.",
+          });
+        }
+        setLines(restoredLines.length ? restoredLines : [emptyLine()]);
+        setPayments(
+          restoredPayments.length ? restoredPayments : [emptyPayment()],
+        );
+        const pending = draft.pendingIntent as
+          Partial<PendingIntent> | undefined;
+        setPendingIntent(
+          pending &&
+            typeof pending.id === "string" &&
+            UUID_PATTERN.test(pending.id) &&
+            Number.isSafeInteger(pending.totalAgorot) &&
+            typeof pending.snapshot === "string"
+            ? (pending as PendingIntent)
+            : null,
+        );
+        setAttemptedSnapshot(
+          typeof draft.attemptedSnapshot === "string"
+            ? draft.attemptedSnapshot
+            : typeof pending?.snapshot === "string"
+              ? pending.snapshot
+              : null,
+        );
+      } else {
+        setIdempotencyKey(generateIdempotencyKey());
+        setCustomer(null);
+        setLines([emptyLine()]);
+        setPayments([emptyPayment()]);
+        setPendingIntent(null);
+        setAttemptedSnapshot(null);
+      }
+      setReadyUser(userId);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [userId, getDraft, clearDraft, locale]);
+
+  useLayoutEffect(() => {
+    if (readyUser !== userId) return;
+    latestDraftRef.current = {
+      userId,
+      draft: {
+        idempotencyKey,
+        customer,
+        lines,
+        payments,
+        pendingIntent,
+        attemptedSnapshot,
+        savedAt: Date.now(),
+      },
+    };
   }, [
+    readyUser,
+    userId,
     idempotencyKey,
-    account,
-    customerName,
-    customerEmail,
-    customerPhone,
+    customer,
     lines,
     payments,
+    pendingIntent,
+    attemptedSnapshot,
+  ]);
+
+  useEffect(() => {
+    if (readyUser !== userId) return;
+    const snapshot = {
+      idempotencyKey,
+      customer,
+      lines,
+      payments,
+      pendingIntent,
+      attemptedSnapshot,
+      savedAt: Date.now(),
+    };
+    const timer = window.setTimeout(() => saveDraft("pos", snapshot), 150);
+    // A deliberate close immediately after editing must not discard the last change.
+    return () => {
+      window.clearTimeout(timer);
+      // Never overwrite a synchronously persisted financial operation with an older effect closure.
+      const latest = latestDraftRef.current;
+      if (latest?.userId === userId) saveDraft("pos", latest.draft);
+    };
+  }, [
+    readyUser,
+    userId,
+    idempotencyKey,
+    customer,
+    lines,
+    payments,
+    pendingIntent,
+    attemptedSnapshot,
     saveDraft,
   ]);
 
-  // Initialize
-  useEffect(() => {
-    // Load VAT rate
-    loadVatRate();
-  }, [userId]);
-
-  // Clear form when userId changes (handled by provider)
-  useEffect(() => {
-    return () => {
-      clearDraft("pos");
-    };
-  }, [userId, clearDraft]);
-
-  const validLines = lines.filter(
-    (line) => line.variantId && line.quantity > 0,
-  );
-
-  const validateCustomer = (): boolean => {
-    if (!customerName.trim() || !customerEmail.trim()) {
-      setFormErrors((prev) => ({
-        ...prev,
-        customer: t(copy.nameEmailRequired),
-      }));
-      return false;
-    } else if (!/^\S+@\S+\.\S+$/.test(customerEmail.trim())) {
-      setFormErrors((prev) => ({ ...prev, customer: t(copy.emailInvalid) }));
-      return false;
-    }
-    setFormErrors((prev) => ({ ...prev, customer: "" }));
-    return true;
-  };
-
-  const validateItems = (): boolean => {
-    if (validLines.length === 0) {
-      setFormErrors((prev) => ({ ...prev, items: t(copy.itemRequired) }));
-      return false;
-    }
-    for (const line of validLines) {
-      if (line.quantity <= 0) {
-        setFormErrors((prev) => ({ ...prev, items: t(copy.qtyPositive) }));
-        return false;
-      }
-      if (line.discountPerUnit > line.unitPrice) {
-        setFormErrors((prev) => ({
-          ...prev,
-          items: t(copy.discountExceedsPrice),
+  const selectedLines = lines.filter((line) => Boolean(line.variantId));
+  let total = 0;
+  try {
+    total = computePosTotals(lines, payments, vatRate).total;
+  } catch {
+    /* Validation below reports invalid local amounts. */
+  }
+  const mutationAllowed = !saving && !locked && readyUser === userId;
+  const updateLine = useCallback(
+    (key: string, patch: Partial<PosCartLine>) => {
+      if (!mutationAllowed) return;
+      const updated = lines.map((line) =>
+        line.key === key ? { ...line, ...patch } : line,
+      );
+      try {
+        computePosTotals(updated, payments, vatRate);
+      } catch {
+        setFormErrors((previous) => ({
+          ...previous,
+          items:
+            locale === "he"
+              ? "הכמות או הסכום חורגים מהטווח הנתמך."
+              : "Quantity or amount exceeds the supported range.",
         }));
-        return false;
-      }
-    }
-    setFormErrors((prev) => ({ ...prev, items: "" }));
-    return true;
-  };
-
-  const validatePayments = (): boolean => {
-    const total = validLines.reduce((acc, line) => {
-      const lineTotal = line.quantity * line.unitPrice;
-      const discount = line.quantity * line.discountPerUnit;
-      return acc + lineTotal - discount;
-    }, 0);
-
-    const paymentsTotal = payments.reduce((sum, p) => sum + p.amount, 0);
-
-    if (Math.abs(paymentsTotal - total) > 0.01) {
-      setFormErrors((prev) => ({
-        ...prev,
-        payments: t(copy.paymentsMustEqualTotal),
-      }));
-      return false;
-    }
-
-    for (const payment of payments) {
-      if (payment.method === "cash" && payment.installments > 1) {
-        setFormErrors((prev) => ({
-          ...prev,
-          payments: t(copy.cashOnlyOneInstallment),
-        }));
-        return false;
-      }
-    }
-
-    setFormErrors((prev) => ({ ...prev, payments: "" }));
-    return true;
-  };
-
-  const validate = (): boolean => {
-    const customerValid = validateCustomer();
-    const itemsValid = validateItems();
-    const paymentsValid = validatePayments();
-    return customerValid && itemsValid && paymentsValid;
-  };
-
-  const updateLine = (key: string, patch: Partial<SaleLine>) => {
-    setLines((prev) =>
-      prev.map((line) => (line.key === key ? { ...line, ...patch } : line)),
-    );
-
-    // Save draft
-    saveDraft("pos", { lines, idempotencyKey });
-  };
-
-  const handleQtyChange = (key: string, quantity: number) => {
-    updateLine(key, { quantity });
-  };
-
-  const handleUnitPriceChange = (key: string, unitPrice: number) => {
-    updateLine(key, { unitPrice });
-  };
-
-  const handleDiscountChange = (key: string, discountPerUnit: number) => {
-    updateLine(key, { discountPerUnit });
-  };
-
-  const handleRemoveLine = (key: string) => {
-    setLines((prev) => {
-      if (prev.length <= 1) return prev;
-      return prev.filter((entry) => entry.key !== key);
-    });
-
-    // Save draft
-    saveDraft("pos", { lines, idempotencyKey });
-  };
-
-  const handleAddLine = () => {
-    setLines((prev) => [...prev, newLine(nextKey())]);
-
-    // Save draft
-    saveDraft("pos", { lines, idempotencyKey });
-  };
-
-  const handleAddPayment = () => {
-    setPayments((prev) => [
-      ...prev,
-      {
-        id: uuidv4(),
-        method: "cash",
-        amount: 0,
-        installments: 1,
-        reference: "",
-      },
-    ]);
-
-    // Save draft
-    saveDraft("pos", { payments, idempotencyKey });
-  };
-
-  const handleRemovePayment = (id: string) => {
-    setPayments((prev) => {
-      if (prev.length <= 1) return prev;
-      return prev.filter((p) => p.id !== id);
-    });
-
-    // Save draft
-    saveDraft("pos", { payments, idempotencyKey });
-  };
-
-  const handlePaymentMethodChange = (
-    id: string,
-    method: (typeof PAYMENT_METHODS)[number],
-  ) => {
-    setPayments((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, method } : p)),
-    );
-
-    // Save draft
-    saveDraft("pos", { payments, idempotencyKey });
-  };
-
-  const handlePaymentAmountChange = (id: string, amount: number) => {
-    setPayments((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, amount } : p)),
-    );
-
-    // Save draft
-    saveDraft("pos", { payments, idempotencyKey });
-  };
-
-  const handlePaymentInstallmentsChange = (
-    id: string,
-    installments: number,
-  ) => {
-    setPayments((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, installments } : p)),
-    );
-
-    // Save draft
-    saveDraft("pos", { payments, idempotencyKey });
-  };
-
-  const handlePaymentReferenceChange = (id: string, reference: string) => {
-    setPayments((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, reference } : p)),
-    );
-
-    // Save draft
-    saveDraft("pos", { payments, idempotencyKey });
-  };
-
-  const calculateLineTotals = (line: SaleLine) => {
-    if (!line.variantId || line.quantity <= 0) {
-      return { grossBefore: 0, lineDiscount: 0, gross: 0, vat: 0, net: 0 };
-    }
-
-    const vatToUse = vatRate ?? 0; // Use 0 if VAT rate unavailable for calculations
-    return computeLine(line, vatToUse);
-  };
-
-  const openReview = () => {
-    if (validate()) {
-      setReviewOpen(true);
-    }
-  };
-
-  const recordSale = async () => {
-    if (saving) return;
-    setSaving(true);
-    setSaveError("");
-
-    try {
-      const res = await fetch("/api/management/sales", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          customer: {
-            name: customerName.trim(),
-            email: customerEmail.trim(),
-            phone: customerPhone.trim() || null,
-            userId: account?.id ?? null,
-          },
-          items: validLines.map(
-            ({ variantId, quantity, unitPrice, discountPerUnit }) => ({
-              variantId,
-              quantity,
-              unitPrice,
-              discountPerUnit: discountPerUnit || 0,
-            }),
-          ),
-          payments: payments.map((p) => ({
-            method: p.method,
-            amount: p.amount,
-            installments: p.installments,
-            reference: p.reference,
-          })),
-          idempotencyKey,
-          source: "pos", // Indicate this is a POS sale
-        }),
-      });
-
-      const data = await res.json().catch(() => ({}) as SaleOrder);
-
-      if (!res.ok) {
-        const code = data?.code;
-        setSaveError(
-          code === "insufficient_stock"
-            ? t(copy.insufficientStock)
-            : code === "invalid_product"
-              ? t(copy.invalidProduct)
-              : typeof data?.error === "string" && data.error
-                ? data.error
-                : t(copy.recordFailed),
-        );
         return;
       }
-
-      // The POST returns { orderId }; resolve the human-facing order_number
-      let orderNumber: string | null = null;
-      try {
-        const listRes = await fetch("/api/management/sales?limit=50", {
-          cache: "no-store",
-        });
-        const listData = await listRes
-          .json()
-          .catch(() => ({}) as { orders: SaleOrder[] });
-        const found = (listData.orders ?? []).find(
-          (order: SaleOrder) => order.id === data.orderId,
-        );
-        orderNumber = found?.order_number ?? null;
-      } catch {
-        orderNumber = null;
+      setLines(updated);
+      setFormErrors((previous) => ({ ...previous, items: "" }));
+    },
+    [mutationAllowed, lines, payments, vatRate, locale],
+  );
+  const handleVariantPick = useCallback(
+    (product: PosCatalogItem, variant: PosVariant) => {
+      if (!mutationAllowed || savingRef.current) return;
+      const price = getEffectivePrice(product, variant);
+      if (
+        !hasSellPrice(product, variant) ||
+        !validMoney(price) ||
+        (product.tracking_mode !== "none" && variant.stock_qty < 1)
+      ) {
+        setFormErrors((previous) => ({
+          ...previous,
+          items:
+            locale === "he"
+              ? "הפריט אינו זמין למכירה."
+              : "This item is unavailable for sale.",
+        }));
+        return;
       }
+      setLines((previous) => {
+        const matched = previous.find((line) => line.variantId === variant.id);
+        if (
+          matched &&
+          (matched.quantity >= 10000 ||
+            (product.tracking_mode !== "none" &&
+              matched.quantity >= variant.stock_qty))
+        )
+          return previous;
+        if (matched) {
+          const updated = previous.map((line) =>
+            line.variantId === variant.id
+              ? { ...line, quantity: line.quantity + 1 }
+              : line,
+          );
+          try {
+            computePosTotals(updated, [], null);
+            return updated;
+          } catch {
+            return previous;
+          }
+        }
+        const newEntry = {
+          ...emptyLine(),
+          variantId: variant.id,
+          product,
+          variant,
+          unitPrice: price,
+        };
+        const updated = [
+          ...previous.filter((line) => Boolean(line.variantId)),
+          newEntry,
+        ];
+        try {
+          computePosTotals(updated, [], null);
+          return updated;
+        } catch {
+          return previous;
+        }
+      });
+      setFormErrors((previous) => ({ ...previous, items: "" }));
+      setSuccessMessage(null);
+    },
+    [mutationAllowed, locale],
+  );
+  const handleRemoveLine = useCallback(
+    (key: string) => {
+      if (!mutationAllowed) return;
+      setLines((previous) => {
+        const remaining = previous.filter((line) => line.key !== key);
+        return remaining.length ? remaining : [emptyLine()];
+      });
+    },
+    [mutationAllowed],
+  );
+  const handleClearCart = () => {
+    if (!mutationAllowed) return;
+    setLines([emptyLine()]);
+    setPayments([emptyPayment()]);
+    setFormErrors({});
+    setSaveError("");
+  };
+  const handleCustomerChange = (value: PosCustomer | null) => {
+    if (mutationAllowed) {
+      setCustomer(value);
+      setFormErrors((previous) => ({ ...previous, customer: "" }));
+    }
+  };
+  const handlePaymentChange = (value: PosPayment[]) => {
+    if (mutationAllowed) {
+      try {
+        computePosTotals(lines, value, vatRate);
+      } catch {
+        setFormErrors((previous) => ({
+          ...previous,
+          payments: t({
+            he: "סכומי התשלום חורגים מהטווח הנתמך.",
+            en: "Payment amounts exceed the supported range.",
+          }),
+        }));
+        return;
+      }
+      setPayments(value);
+      setFormErrors((previous) => ({ ...previous, payments: "" }));
+    }
+  };
 
-      setReviewOpen(false);
-
-      // Clear draft on success
-      clearDraft("pos");
-
-      // Generate new idempotency key for next draft
-      const newKey = uuidv4();
-      setIdempotencyKey(newKey);
-      saveDraft("pos", { idempotencyKey: newKey }); // Save the new key
-
-      // Reset form
-      setAccount(null);
-      setCustomerName("");
-      setCustomerEmail("");
-      setCustomerPhone("");
-      lineCounter.current = 0;
-      setLines([newLine("line-0")]);
-      setPayments([
-        {
-          id: uuidv4(),
-          method: "cash",
-          amount: 0,
-          installments: 1,
-          reference: "",
-        },
-      ]);
-
-      setSuccessText(
-        orderNumber
-          ? `${t(copy.saleRecorded)} · ${t(copy.orderNumberLabel)} ${orderNumber}`
-          : t(copy.saleRecorded),
+  const validate = () => {
+    const errors: Record<string, string> = {};
+    if (
+      customer &&
+      (!customer.name.trim() ||
+        customer.name.length > 200 ||
+        customer.email.length > 254 ||
+        customer.phone.length > 30 ||
+        (customer.email.trim() &&
+          !/^\S+@\S+\.\S+$/.test(customer.email.trim())))
+    )
+      errors.customer = t({
+        he: "בדקו את שם הלקוח ופרטי ההתקשרות.",
+        en: "Check customer name and contact details.",
+      });
+    if (!selectedLines.length || selectedLines.length > 100)
+      errors.items = t({
+        he: "הוסיפו בין פריט אחד ל-100 פריטי קטלוג.",
+        en: "Add between 1 and 100 catalog lines.",
+      });
+    if (
+      new Set(selectedLines.map((line) => line.variantId)).size !==
+      selectedLines.length
+    )
+      errors.items = t({
+        he: "קיימים פריטים כפולים בעגלה. עדכנו את העגלה לפני תשלום.",
+        en: "Duplicate cart lines exist. Update the cart before payment.",
+      });
+    for (const line of selectedLines) {
+      if (!restoreLine(line))
+        errors.items = t({
+          he: "יש להזין כמות שלמה ומחירים תקינים לפריטי קטלוג.",
+          en: "Catalog lines require a whole quantity and valid prices.",
+        });
+      if (
+        line.product?.tracking_mode !== "none" &&
+        line.variant &&
+        line.quantity > line.variant.stock_qty
+      )
+        errors.items = t({
+          he: "הכמות גבוהה מהמלאי הזמין. עדכנו את העגלה.",
+          en: "Quantity exceeds available stock. Update the cart.",
+        });
+    }
+    if (
+      total <= 0 ||
+      !validatePaymentTotal(payments, total) ||
+      payments.length > 6
+    )
+      errors.payments = t({
+        he: "סכומי תשלום חיוביים חייבים להשתוות לסכום המכירה בדיוק.",
+        en: "Positive payment amounts must exactly match the sale total.",
+      });
+    for (const payment of payments) {
+      if (!restorePayment(payment) || payment.installments !== 1)
+        errors.payments = t({
+          he: "בדקו את פרטי התשלום. תשלומים מרובים אינם מופעלים.",
+          en: "Check payment details. Installments are not enabled.",
+        });
+      if (
+        payment.collectionKind === "provider_collected" &&
+        !(
+          (payment.method === "credit_card" &&
+            gatewayCapabilities.hostedCard) ||
+          (payment.method === "bit" && gatewayCapabilities.bit)
+        )
+      )
+        errors.payments = t({
+          he: "גבייה דרך ספק אינה זמינה לאמצעי זה.",
+          en: "Provider collection is unavailable for this method.",
+        });
+      if (
+        payment.method === "cash" &&
+        payment.cashReceived !== undefined &&
+        payment.cashReceived < payment.amount
+      )
+        errors.payments = t({
+          he: "המזומן שהתקבל נמוך מהסכום לרישום.",
+          en: "Cash received is less than the amount to record.",
+        });
+    }
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  const draftSnapshot = (reviewedPayments: PosPayment[] = payments) => {
+    let guestName = t({ he: "לקוח מזדמן", en: "Walk-in customer" });
+    if (attemptedSnapshot) {
+      try {
+        const name = JSON.parse(attemptedSnapshot).guestName;
+        if (typeof name === "string") guestName = name;
+      } catch {
+        /* Invalid operation snapshots remain locked for reconciliation. */
+      }
+    }
+    return JSON.stringify({
+      guestName: customer ? null : guestName,
+      customer: customer
+        ? [
+            customer.name.trim(),
+            customer.email.trim(),
+            customer.phone.trim(),
+            customer.accountId ?? "",
+          ]
+        : null,
+      items: selectedLines.map((line) => [
+        line.variantId,
+        line.quantity,
+        toAgorot(line.unitPrice),
+        toAgorot(line.discountPerUnit),
+      ]),
+      payments: reviewedPayments.map((payment) => [
+        payment.id,
+        payment.method,
+        payment.collectionKind,
+        toAgorot(payment.amount),
+        payment.installments,
+        payment.reference.trim(),
+        payment.cashReceived === undefined
+          ? null
+          : toAgorot(payment.cashReceived),
+      ]),
+    });
+  };
+  const persistPending = (
+    intent: PendingIntent | null,
+    snapshot: string,
+    operationPayments: PosPayment[] = payments,
+  ) => {
+    const draft = {
+      idempotencyKey,
+      customer,
+      lines,
+      payments: operationPayments,
+      pendingIntent: intent,
+      attemptedSnapshot: snapshot,
+      savedAt: Date.now(),
+    };
+    if (actorRef.current === userId) latestDraftRef.current = { userId, draft };
+    saveDraft("pos", draft);
+  };
+  const readStatus = async (intent: PendingIntent): Promise<IntentStatus> => {
+    const response = await fetch(`/api/commerce/intents/${intent.id}`, {
+      cache: "no-store",
+    });
+    const data = await response.json().catch(() => null);
+    if (
+      !response.ok ||
+      data?.intent?.id !== intent.id ||
+      data.intent.total_agorot !== intent.totalAgorot ||
+      !Array.isArray(data.attempts)
+    )
+      throw new Error(
+        t({
+          he: "תוצאת המכירה אינה ידועה. יש לבדוק שוב לפני ניסיון נוסף.",
+          en: "Sale outcome is unknown. Check again before another attempt.",
+        }),
       );
-
-      // Trigger refresh mechanism (same as sales-panel)
-      // This would be done by refreshing a key or triggering a refetch
-      // For now, we'll rely on the draft clearing to trigger updates
-    } catch {
-      setSaveError(t(copy.connectionError));
+    return data;
+  };
+  const resumeHosted = async (intent: PendingIntent, payment: PosPayment) => {
+    const response = await fetch("/api/commerce/attempts", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        intent_id: intent.id,
+        method: payment.method,
+        amount_agorot: toAgorot(payment.amount),
+        idempotency_key: payment.id,
+        installments: 1,
+        locale,
+      }),
+    });
+    const data = await response.json().catch(() => null);
+    if (actorRef.current !== userId) return;
+    if (!response.ok)
+      throw new Error(
+        typeof data?.error === "string"
+          ? data.error
+          : t({
+              he: "פתיחת התשלום הממתין נכשלה. יש לבדוק שוב.",
+              en: "Could not resume the pending payment. Check again.",
+            }),
+      );
+    if (typeof data?.redirect_url === "string") {
+      const redirect = new URL(data.redirect_url, window.location.origin);
+      if (
+        redirect.protocol !== "https:" &&
+        redirect.origin !== window.location.origin
+      )
+        throw new Error(
+          t({
+            he: "הפניית התשלום אינה תקינה.",
+            en: "Payment redirect is invalid.",
+          }),
+        );
+      window.location.assign(redirect.href);
+      return;
+    }
+    const status = await readStatus(intent);
+    if (status.intent.order_id) {
+      complete(status);
+      return;
+    }
+    throw new Error(
+      t({
+        he: "התשלום טרם הוכרע. יש לבדוק שוב; אין לגבות מחדש.",
+        en: "Payment is not final. Check again; do not collect again.",
+      }),
+    );
+  };
+  const complete = (status: IntentStatus) => {
+    if (actorRef.current !== userId) return;
+    const orderNumber = status.intent.order_number ?? status.intent.order_id;
+    const newKey = generateIdempotencyKey();
+    clearDraft("pos");
+    setPendingIntent(null);
+    setAttemptedSnapshot(null);
+    setIdempotencyKey(newKey);
+    setLines([emptyLine()]);
+    setCustomer(null);
+    setPayments([emptyPayment()]);
+    setFormErrors({});
+    saveDraft("pos", {
+      idempotencyKey: newKey,
+      lines: [],
+      payments: [],
+      savedAt: Date.now(),
+    });
+    setRefreshToken((value) => value + 1);
+    setSuccessMessage(
+      `${t({ he: "המכירה נרשמה", en: "Sale recorded" })} · ${t({ he: "הזמנה", en: "Order" })} ${orderNumber}`,
+    );
+  };
+  const recordSale = async () => {
+    if (savingRef.current || readyUser !== userId) return;
+    if (!navigator.onLine) {
+      setSaveError(
+        t({
+          he: "אין חיבור. הטיוטה נשמרת בלבד; התחברו לפני בדיקה או רישום מכירה.",
+          en: "Offline — draft only. Reconnect before checking or recording a sale.",
+        }),
+      );
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    setSaveError("");
+    setSuccessMessage(null);
+    let active = pendingIntent;
+    try {
+      // Recovery must remain available if provider readiness, prices or local draft validation changed.
+      if (active) {
+        const recovered = await readStatus(active);
+        if (actorRef.current !== userId) return;
+        if (recovered.intent.order_id) {
+          complete(recovered);
+          return;
+        }
+        if (
+          recovered.attempts.some((attempt) =>
+            ["created", "authorized", "unknown", "exception"].includes(
+              attempt.state,
+            ),
+          )
+        )
+          throw new Error(
+            t({
+              he: "ניסיון תשלום עדיין ממתין או אינו ידוע. בדקו שוב; אין לרשום גבייה נוספת.",
+              en: "A payment is pending or unknown. Check again; do not record another collection.",
+            }),
+          );
+      }
+      if (!validate()) return;
+      let snapshot = draftSnapshot();
+      if (
+        (attemptedSnapshot && attemptedSnapshot !== snapshot) ||
+        (active && active.snapshot !== snapshot)
+      )
+        throw new Error(
+          t({
+            he: "פרטי מכירה ממתינה השתנו. יש ליישב אותה לפני מכירה חדשה.",
+            en: "Pending sale details changed. Reconcile it before starting a new sale.",
+          }),
+        );
+      if (!active) {
+        setAttemptedSnapshot(snapshot);
+        persistPending(null, snapshot);
+        const response = await fetch("/api/management/commerce/intents", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({
+            channel: "pos",
+            idempotency_key: idempotencyKey,
+            customer_snapshot: customer
+              ? {
+                  name: customer.name.trim(),
+                  email: customer.email.trim(),
+                  phone: customer.phone.trim(),
+                  ...(customer.accountId
+                    ? { customer_id: customer.accountId }
+                    : {}),
+                }
+              : {
+                  name: JSON.parse(snapshot).guestName,
+                  email: "",
+                },
+            items: selectedLines.map((line) => ({
+              variant_id: line.variantId,
+              quantity: line.quantity,
+              ...(line.discountPerUnit > 0
+                ? { discount_per_unit_agorot: toAgorot(line.discountPerUnit) }
+                : {}),
+            })),
+          }),
+        });
+        const data = await response.json().catch(() => null);
+        if (
+          !response.ok ||
+          typeof data?.intent?.id !== "string" ||
+          !Number.isSafeInteger(data.intent.total_agorot)
+        ) {
+          if (
+            ([400, 401, 403, 422].includes(response.status) && data?.error) ||
+            data?.error === "insufficient_stock"
+          ) {
+            setAttemptedSnapshot(null);
+            persistPending(null, "");
+          }
+          throw new Error(
+            typeof data?.error === "string"
+              ? data.error
+              : t({
+                  he: "יצירת המכירה לא הוכרעה. בדקו שוב עם אותם פרטים.",
+                  en: "Sale creation is unresolved. Check again with the same details.",
+                }),
+          );
+        }
+        active = {
+          id: data.intent.id,
+          totalAgorot: data.intent.total_agorot,
+          snapshot,
+        };
+        persistPending(active, snapshot);
+        if (actorRef.current !== userId) return;
+        setPendingIntent(active);
+      }
+      if (active.totalAgorot !== toAgorot(total))
+        throw new Error(
+          t({
+            he: "המחיר שאומת בשרת השתנה. בטלו מכירה שלא שולמה ובדקו את הקטלוג מחדש.",
+            en: "Server-validated pricing changed. Cancel the unpaid sale and review the refreshed catalog.",
+          }),
+        );
+      const status = await readStatus(active);
+      if (actorRef.current !== userId) return;
+      if (status.intent.order_id) {
+        complete(status);
+        return;
+      }
+      const quote = comparePosQuote(selectedLines, status.items, vatRate);
+      if (!quote.itemsMatch)
+        throw new Error(
+          t({
+            he: "מחירים או פרטי פריטים השתנו בשרת. בטלו את המכירה שלא שולמה ובדקו את המחירים המעודכנים.",
+            en: "Server item prices or details changed. Cancel the unpaid sale and review updated prices.",
+          }),
+        );
+      if (quote.vatRate === null)
+        throw new Error(
+          t({
+            he: "פירוט המס דורש בדיקת מנהל לפני רישום תשלום.",
+            en: "The tax breakdown needs management review before recording funds.",
+          }),
+        );
+      if (quote.taxNeedsReview) {
+        setVatRate(quote.vatRate);
+        throw new Error(
+          t({
+            he: "פירוט המע״מ עודכן לפי השרת. בדקו את הסיכום ואז אשרו שוב.",
+            en: "VAT breakdown updated from the server. Review the summary, then confirm again.",
+          }),
+        );
+      }
+      const manualResume = canResumeManualPosIntent(
+        status.intent.status,
+        status.intent.expires_at,
+        status.attempts,
+        payments,
+      );
+      const holdExpired =
+        typeof status.intent.expires_at === "string" &&
+        Date.parse(status.intent.expires_at) <= Date.now();
+      if (
+        ["cancelled", "expired"].includes(status.intent.status) ||
+        ((status.intent.status === "exception" || holdExpired) && !manualResume)
+      )
+        throw new Error(
+          t({
+            he: "המכירה דורשת ביטול או טיפול בסביבת התשלומים.",
+            en: "This sale needs cancellation or review in payment operations.",
+          }),
+        );
+      const unresolved = status.attempts.some((attempt) =>
+        ["created", "authorized", "unknown", "exception"].includes(
+          attempt.state,
+        ),
+      );
+      if (unresolved)
+        throw new Error(
+          t({
+            he: "ניסיון תשלום עדיין ממתין או אינו ידוע. בדקו שוב; אין לרשום גבייה נוספת.",
+            en: "A payment is pending or unknown. Check again; do not record another collection.",
+          }),
+        );
+      if (
+        status.attempts.some(
+          (attempt) =>
+            attempt.state === "captured" &&
+            !payments.some((payment) => payment.id === attempt.idempotency_key),
+        )
+      )
+        throw new Error(
+          t({
+            he: "תשלום שנרשם אינו מופיע בטיוטה. יש ליישב את המכירה לפני קבלת כסף נוסף.",
+            en: "A recorded payment is missing from this draft. Reconcile the sale before receiving more funds.",
+          }),
+        );
+      const pendingAttempt = status.attempts.find(
+        (attempt) => attempt.state === "pending",
+      );
+      if (pendingAttempt) {
+        const payment = payments.find(
+          (entry) => entry.id === pendingAttempt.idempotency_key,
+        );
+        if (
+          !payment ||
+          getPosPaymentRecovery(payment, status.attempts) !== "resume"
+        )
+          throw new Error(
+            t({
+              he: "פרטי התשלום הממתין דורשים בדיקת מנהל.",
+              en: "The pending payment needs management review.",
+            }),
+          );
+        persistPending(active, snapshot);
+        await resumeHosted(active, payment);
+        return;
+      }
+      let operationPayments = payments;
+      const retryKeys = payments
+        .filter(
+          (payment) =>
+            getPosPaymentRecovery(payment, status.attempts) === "retry",
+        )
+        .map((payment) => payment.id);
+      if (retryKeys.length) {
+        if (
+          !window.confirm(
+            t({
+              he: "הספק אישר שהתשלום נדחה או בוטל. לנסות שוב רק את הסכום שלא נגבה? תשלומים שכבר התקבלו יישמרו.",
+              en: "The provider verified a decline or void. Retry only the uncollected amount? Funds already recorded will be preserved.",
+            }),
+          )
+        )
+          return;
+        operationPayments = payments.map((payment) =>
+          retryKeys.includes(payment.id)
+            ? { ...payment, id: generateIdempotencyKey() }
+            : payment,
+        );
+        snapshot = draftSnapshot(operationPayments);
+        active = { ...active, snapshot };
+        setPayments(operationPayments);
+        setAttemptedSnapshot(snapshot);
+        setPendingIntent(active);
+        persistPending(active, snapshot, operationPayments);
+      }
+      const manualUnrecorded = operationPayments.some(
+        (payment) =>
+          payment.collectionKind === "manual_recorded" &&
+          !status.attempts.some(
+            (attempt) =>
+              attempt.idempotency_key === payment.id &&
+              attempt.state === "captured",
+          ),
+      );
+      if (
+        manualUnrecorded &&
+        !window.confirm(
+          t({
+            he: "אשרו שהסכומים החיצוניים התקבלו בפועל לפני רישומם.",
+            en: "Confirm the external funds were actually received before recording them.",
+          }),
+        )
+      )
+        return;
+      // Record external legs first; a hosted redirect must not skip later split tenders.
+      for (const payment of [...operationPayments].sort(
+        (a, b) =>
+          Number(a.collectionKind === "provider_collected") -
+          Number(b.collectionKind === "provider_collected"),
+      )) {
+        const existing = status.attempts.find(
+          (attempt) => attempt.idempotency_key === payment.id,
+        );
+        if (existing) {
+          if (
+            existing.method !== payment.method ||
+            existing.amount_agorot !== toAgorot(payment.amount) ||
+            existing.collection_kind !== payment.collectionKind
+          )
+            throw new Error(
+              t({
+                he: "פרטי תשלום שנשמרו אינם תואמים. נדרשת בדיקת מנהל.",
+                en: "Stored payment details differ. Management review is required.",
+              }),
+            );
+          if (existing.state === "captured") continue;
+          throw new Error(
+            t({
+              he: "ניסיון התשלום הקודם אינו הושלם. יש לבדוק אותו לפני ניסיון חדש.",
+              en: "The previous payment attempt did not complete. Review it before a new attempt.",
+            }),
+          );
+        }
+        const provider = payment.collectionKind === "provider_collected";
+        persistPending(active, snapshot, operationPayments);
+        const response = await fetch(
+          provider
+            ? "/api/commerce/attempts"
+            : "/api/management/commerce/tenders",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            cache: "no-store",
+            body: JSON.stringify({
+              intent_id: active.id,
+              method: payment.method,
+              amount_agorot: toAgorot(payment.amount),
+              idempotency_key: payment.id,
+              ...(provider
+                ? { installments: 1, locale }
+                : {
+                    confirmed_received: true,
+                    ...(payment.reference.trim()
+                      ? { reference: payment.reference.trim() }
+                      : {}),
+                    ...(payment.method === "cash"
+                      ? {
+                          cash_received_agorot: toAgorot(
+                            payment.cashReceived ?? payment.amount,
+                          ),
+                        }
+                      : {}),
+                  }),
+            }),
+          },
+        );
+        const data = await response.json().catch(() => null);
+        if (actorRef.current !== userId) return;
+        if (!response.ok)
+          throw new Error(
+            typeof data?.error === "string"
+              ? data.error
+              : t({
+                  he: "תוצאת התשלום אינה ידועה. בדקו שוב לפני ניסיון נוסף.",
+                  en: "Payment outcome is unknown. Check again before another attempt.",
+                }),
+          );
+        if (provider) {
+          if (typeof data?.redirect_url === "string") {
+            const redirect = new URL(data.redirect_url, window.location.origin);
+            if (
+              redirect.protocol !== "https:" &&
+              redirect.origin !== window.location.origin
+            )
+              throw new Error(
+                t({
+                  he: "הפניית התשלום אינה תקינה.",
+                  en: "Payment redirect is invalid.",
+                }),
+              );
+            window.location.assign(redirect.href);
+            return;
+          }
+          const providerStatus = await readStatus(active);
+          if (providerStatus.intent.order_id) {
+            complete(providerStatus);
+            return;
+          }
+          throw new Error(
+            t({
+              he: "ניסיון התשלום טרם הוכרע. יש לבדוק שוב.",
+              en: "The payment attempt is not final. Check again.",
+            }),
+          );
+        }
+        await readStatus(active);
+      }
+      const finalStatus = await readStatus(active);
+      if (!finalStatus.intent.order_id)
+        throw new Error(
+          t({
+            he: "התשלום נרשם אך ההזמנה טרם הושלמה. בדקו שוב.",
+            en: "Funds are recorded but the order is not finalized. Check again.",
+          }),
+        );
+      complete(finalStatus);
+    } catch (error) {
+      if (actorRef.current === userId)
+        setSaveError(
+          error instanceof Error
+            ? error.message
+            : t({
+                he: "החיבור הופסק. בדקו את המכירה הממתינה לפני ניסיון נוסף.",
+                en: "Connection interrupted. Check the pending sale before another attempt.",
+              }),
+        );
     } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
+  const cancelPending = async () => {
+    if (savingRef.current) return;
+    if (!navigator.onLine) {
+      setSaveError(
+        t({
+          he: "אין חיבור. המכירה הממתינה נשמרת; התחברו לפני בדיקה או ביטול.",
+          en: "Offline — the pending sale stays saved. Reconnect before checking or cancelling.",
+        }),
+      );
+      return;
+    }
+    if (!pendingIntent) {
+      setSaveError(
+        t({
+          he: "בדקו תחילה את המכירה הממתינה כדי לאתר אותה בשרת, ואז ניתן לבטל אם לא שולמה.",
+          en: "Check the pending sale first to find its server record, then cancel it if unpaid.",
+        }),
+      );
+      return;
+    }
+    savingRef.current = true;
+    setSaving(true);
+    setSaveError("");
+    try {
+      const status = await readStatus(pendingIntent);
+      if (actorRef.current !== userId) return;
+      if (status.intent.order_id) {
+        complete(status);
+        return;
+      }
+      if (
+        status.attempts.some((attempt) =>
+          ["created", "captured", "pending", "authorized", "unknown"].includes(
+            attempt.state,
+          ),
+        )
+      )
+        throw new Error(
+          t({
+            he: "קיימים תשלומים שנרשמו או שטרם הוכרעו. יש ליישב אותם בסביבת התשלומים.",
+            en: "Recorded or unresolved payments exist. Reconcile them in payment operations.",
+          }),
+        );
+      if (
+        !window.confirm(
+          t({
+            he: "לבטל את המכירה שטרם שולמה ולשחרר את המלאי השמור?",
+            en: "Cancel this unpaid sale and release its stock hold?",
+          }),
+        )
+      )
+        return;
+      const response = await fetch(
+        `/api/commerce/intents/${pendingIntent.id}`,
+        { method: "DELETE", cache: "no-store" },
+      );
+      const data = await response.json().catch(() => null);
+      if (actorRef.current !== userId) return;
+      if (!response.ok)
+        throw new Error(
+          typeof data?.error === "string"
+            ? data.error
+            : t({
+                he: "תוצאת הביטול אינה ידועה. בדקו שוב.",
+                en: "Cancellation outcome is unknown. Check again.",
+              }),
+        );
+      setPendingIntent(null);
+      setAttemptedSnapshot(null);
+      setIdempotencyKey(generateIdempotencyKey());
+      // An unpaid cancellation is a safe point to present the authoritative repriced quote.
+      if (Array.isArray(status.items)) {
+        setLines((previous) =>
+          previous.map((line) => {
+            const quoted = status.items?.find(
+              (item) =>
+                item.variant_id === line.variantId &&
+                item.quantity === line.quantity,
+            );
+            return quoted &&
+              Number.isSafeInteger(quoted.unit_price_agorot) &&
+              Number.isSafeInteger(quoted.discount_per_unit_agorot)
+              ? {
+                  ...line,
+                  unitPrice: quoted.unit_price_agorot / 100,
+                  discountPerUnit: quoted.discount_per_unit_agorot / 100,
+                }
+              : line;
+          }),
+        );
+        const rates = Array.from(
+          new Set(status.items.map((item) => item.vat_rate)),
+        );
+        if (rates.length === 1 && Number.isFinite(rates[0]))
+          setVatRate(rates[0]);
+      }
+      setPayments((previous) =>
+        previous.map((payment) => ({
+          ...payment,
+          id: generateIdempotencyKey(),
+        })),
+      );
+      setRefreshToken((value) => value + 1);
+      setSaveError(
+        t({
+          he: "המכירה שלא שולמה בוטלה. בדקו את המחירים והסכומים לפני מכירה חדשה.",
+          en: "Unpaid sale cancelled. Review prices and amounts before starting a new sale.",
+        }),
+      );
+    } catch (error) {
+      if (actorRef.current === userId)
+        setSaveError(
+          error instanceof Error
+            ? error.message
+            : "Cancellation outcome is unknown.",
+        );
+    } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   };
 
-  // Live totals calculations
-  const live = lines.reduce(
-    (acc, line) => {
-      acc.grossBefore += line.unitPrice * line.quantity;
-      acc.discounts += line.discountPerUnit * line.quantity;
-      acc.items += line.variantId ? line.quantity : 0;
-      return acc;
-    },
-    { grossBefore: 0, discounts: 0, items: 0 },
-  );
-  const liveTotal = Math.max(live.grossBefore - live.discounts, 0);
-
-  // Review totals
-  const reviewLines = validLines.map((line) => ({
-    line,
-    totals: calculateLineTotals(line),
-  }));
-  const reviewTotals = reviewLines.reduce(
-    (acc, entry) => ({
-      net: acc.net + entry.totals.net,
-      vat: acc.vat + entry.totals.vat,
-      discount: acc.discount + entry.totals.lineDiscount,
-      gross: acc.gross + entry.totals.gross,
-    }),
-    { net: 0, vat: 0, discount: 0, gross: 0 },
-  );
-
-  const handleClose = () => {
-    const hasDraft =
-      account !== null ||
-      customerName !== "" ||
-      customerEmail !== "" ||
-      customerPhone !== "" ||
-      validLines.length > 0 ||
-      payments.some((p) => p.amount > 0);
-
-    if (hasDraft) {
-      // Show confirmation dialog
-      if (window.confirm(t(copy.closeConfirmMessage))) {
-        // Clear draft and close
-        clearDraft("pos");
-        closeTool("pos");
-      }
-    } else {
-      // Close directly if no draft
-      closeTool("pos");
-    }
-  };
-
   return (
-    <div className={styles.container}>
-      {/* Header with close confirmation would be handled by the window component */}
-
-      <div className={styles.content}>
-        {/* Customer Section */}
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>
-            {t(copy.customerSectionTitle)}
-          </h2>
-          <div className={styles.customerSearch}>
-            {/* In real implementation, this would reuse the customer search from sales-panel */}
-            <div className={styles.field}>
-              <label
-                htmlFor="pos-customer-search"
-                className={styles.fieldLabel}
-              >
-                {t(copy.accountSearchLabel)}
-              </label>
-              <input
-                id="pos-customer-search"
-                type="search"
-                placeholder={t(copy.accountSearchPlaceholder)}
-                className={styles.input}
-                value={account ? `${account.full_name || account.email}` : ""}
-                readOnly
-              />
-              {account ? (
-                <button
-                  type="button"
-                  className={styles.buttonSecondary}
-                  onClick={() => setAccount(null)}
-                  aria-label={t(copy.accountClear)}
-                >
-                  <span aria-hidden="true">×</span>
-                </button>
-              ) : null}
-            </div>
-            {account ? (
-              <p className={styles.fieldHint}>{t(copy.accountLinkedNote)}</p>
-            ) : (
-              <p className={styles.fieldHint}>{t(copy.guestNote)}</p>
-            )}
-          </div>
-
-          <div className={styles.fieldsGrid}>
-            <div className={styles.field}>
-              <label htmlFor="pos-customer-name" className={styles.fieldLabel}>
-                {t(copy.fieldName)}
-              </label>
-              <input
-                id="pos-customer-name"
-                type="text"
-                className={styles.input}
-                value={customerName}
-                onChange={(e) => setCustomerName(e.target.value)}
-                aria-invalid={Boolean(formErrors.customer)}
-                aria-describedby={
-                  formErrors.customer ? "pos-customer-error" : undefined
-                }
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="pos-customer-email" className={styles.fieldLabel}>
-                {t(copy.fieldEmail)}
-              </label>
-              <input
-                id="pos-customer-email"
-                type="email"
-                className={styles.input}
-                value={customerEmail}
-                onChange={(e) => setCustomerEmail(e.target.value)}
-                aria-invalid={Boolean(formErrors.customer)}
-                aria-describedby={
-                  formErrors.customer ? "pos-customer-error" : undefined
-                }
-              />
-            </div>
-            <div className={styles.field}>
-              <label htmlFor="pos-customer-phone" className={styles.fieldLabel}>
-                {t(copy.fieldPhone)}
-              </label>
-              <input
-                id="pos-customer-phone"
-                type="tel"
-                className={styles.input}
-                value={customerPhone}
-                onChange={(e) => setCustomerPhone(e.target.value)}
-                aria-invalid={Boolean(formErrors.customer)}
-                aria-describedby={
-                  formErrors.customer ? "pos-customer-error" : undefined
-                }
-              />
-            </div>
-          </div>
-
-          {formErrors.customer && (
-            <p
-              id="pos-customer-error"
-              className={styles.fieldError}
-              role="alert"
-            >
-              {formErrors.customer}
-            </p>
-          )}
-        </div>
-
-        {/* Items Section */}
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>{t(copy.itemsSectionTitle)}</h2>
-          <div className={styles.itemsContainer}>
-            {lines.map((line, index) => {
-              const tracked =
-                (line.product?.tracking_mode ?? "none") !== "none";
-              return (
-                <div key={line.key} className={styles.lineItem}>
-                  <div className={`${styles.field} ${styles.grow4}`}>
-                    {line.variant && line.product ? (
-                      <>
-                        <span className={styles.selectionPill}>
-                          <span dir="auto">
-                            {he ? line.product.name_he : line.product.name_en}
-                            {line.variant.color_he || line.variant.color_en
-                              ? ` · ${he ? line.variant.color_he : line.variant.color_en}`
-                              : ""}
-                          </span>
-                          <span className={styles.mono} dir="ltr">
-                            {line.variant.sku}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updateLine(line.key, {
-                                variantId: "",
-                                product: null,
-                                variant: null,
-                                unitPrice: 0,
-                              })
-                            }
-                            disabled={saving}
-                            aria-label={t(copy.productClear)}
-                          >
-                            <span aria-hidden="true">×</span>
-                          </button>
-                        </span>
-                        <span className={styles.fieldHint}>
-                          {tracked
-                            ? `${t(copy.stockAvailable)}: ${line.variant.stock_qty}`
-                            : t(copy.stockUntracked)}
-                        </span>
-                      </>
-                    ) : (
-                      <div className={styles.productSearch}>
-                        {/* In real implementation, this would reuse the variant search from sales-panel */}
-                        <input
-                          type="search"
-                          placeholder={t(copy.productSearchPlaceholder)}
-                          className={styles.input}
-                          aria-label={t(copy.productSearchLabel)}
-                        />
-                        <button
-                          type="button"
-                          className={styles.buttonSecondary}
-                          onClick={() => {
-                            // Would open product picker dialog
-                          }}
-                          aria-label={t(copy.productSearchLabel)}
-                        >
-                          {/* Search icon */}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={`${styles.field} ${styles.grow2}`}>
-                    <label
-                      htmlFor={`pos-qty-${index}`}
-                      className={styles.fieldLabel}
-                    >
-                      {t(copy.qty)}
-                    </label>
-                    <input
-                      id={`pos-qty-${index}`}
-                      type="number"
-                      min="1"
-                      step="1"
-                      max={tracked ? line.variant?.stock_qty : undefined}
-                      className={styles.input}
-                      value={line.quantity}
-                      onChange={(e) =>
-                        handleQtyChange(
-                          line.key,
-                          parseInt(e.target.value, 10) || 1,
-                        )
-                      }
-                      disabled={saving}
-                      required
-                      aria-invalid={Boolean(formErrors.items)}
-                      aria-describedby={
-                        formErrors.items ? `pos-qty-error-${index}` : undefined
-                      }
-                    />
-                  </div>
-
-                  <div className={`${styles.field} ${styles.grow2}`}>
-                    <label
-                      htmlFor={`pos-price-${index}`}
-                      className={styles.fieldLabel}
-                    >
-                      {t(copy.unitPrice)}
-                    </label>
-                    <input
-                      id={`pos-price-${index}`}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      className={styles.input}
-                      value={line.unitPrice}
-                      onChange={(e) =>
-                        handleUnitPriceChange(
-                          line.key,
-                          parseFloat(e.target.value) || 0,
-                        )
-                      }
-                      disabled={saving}
-                      aria-invalid={Boolean(formErrors.items)}
-                      aria-describedby={
-                        formErrors.items
-                          ? `pos-price-error-${index}`
-                          : undefined
-                      }
-                    />
-
-                    {/* Show hint when price is overridden */}
-                    {line.product && line.variant && (
-                      <p className={styles.fieldHint}>
-                        {he ? "הערה: מחיר ידני" : "Note: Manual price override"}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className={`${styles.field} ${styles.grow2}`}>
-                    <label
-                      htmlFor={`pos-discount-${index}`}
-                      className={styles.fieldLabel}
-                    >
-                      {t(copy.discountPerUnit)}
-                    </label>
-                    <input
-                      id={`pos-discount-${index}`}
-                      type="number"
-                      min="0"
-                      max={line.unitPrice}
-                      step="0.01"
-                      className={styles.input}
-                      value={line.discountPerUnit}
-                      onChange={(e) =>
-                        handleDiscountChange(
-                          line.key,
-                          parseFloat(e.target.value) || 0,
-                        )
-                      }
-                      disabled={saving}
-                      aria-invalid={Boolean(formErrors.items)}
-                      aria-describedby={
-                        formErrors.items
-                          ? `pos-discount-error-${index}`
-                          : undefined
-                      }
-                    />
-                  </div>
-
-                  <div className={`${styles.field} ${styles.grow2}`}>
-                    <button
-                      type="button"
-                      className={styles.iconButton}
-                      onClick={() => handleRemoveLine(line.key)}
-                      disabled={saving || lines.length <= 1}
-                      aria-label={t(copy.removeItem)}
-                    >
-                      <span aria-hidden="true">🗑️</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-
-            {lines.length < 10 && (
-              <button
-                type="button"
-                className={styles.buttonSecondary}
-                onClick={handleAddLine}
-                disabled={saving}
-              >
-                <span aria-hidden="true">+</span>
-                {t(copy.addItem)}
-              </button>
-            )}
-
-            {formErrors.items && (
-              <p className={styles.fieldError} role="alert">
-                {formErrors.items}
-              </p>
-            )}
-          </div>
-
-          {/* Live totals */}
-          <div className={styles.summaryStrip}>
-            <div>
-              <p className={styles.summaryLabel}>{t(copy.liveGross)}</p>
-              <p className={styles.summaryValue} dir="ltr">
-                {formatIls(live.grossBefore, locale)}
-              </p>
-            </div>
-            <div>
-              <p className={styles.summaryLabel}>{t(copy.liveDiscounts)}</p>
-              <p className={styles.summaryValue} dir="ltr">
-                -{formatIls(live.discounts, locale)}
-              </p>
-            </div>
-            <div>
-              <p className={styles.summaryLabel}>{t(copy.liveItems)}</p>
-              <p className={styles.summaryValue}>{live.items}</p>
-            </div>
-            <div>
-              <p className={styles.summaryLabel}>{t(copy.liveTotal)}</p>
-              <p className={styles.summaryValue} dir="ltr">
-                {formatIls(liveTotal, locale)}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Payments Section */}
-        <div className={styles.section}>
-          <h2 className={styles.sectionTitle}>{t(copy.paymentSectionTitle)}</h2>
-          <div className={styles.paymentsContainer}>
-            {payments.map((payment, index) => (
-              <div key={payment.id} className={styles.paymentItem}>
-                <div className={styles.paymentField}>
-                  <label
-                    htmlFor={`pos-payment-method-${index}`}
-                    className={styles.fieldLabel}
-                  >
-                    {t(copy.paymentMethod)}
-                  </label>
-                  <select
-                    id={`pos-payment-method-${index}`}
-                    className={styles.select}
-                    value={payment.method}
-                    onChange={(e) =>
-                      handlePaymentMethodChange(
-                        payment.id,
-                        e.target.value as (typeof PAYMENT_METHODS)[number],
-                      )
-                    }
-                    disabled={saving}
-                  >
-                    {PAYMENT_METHODS.map((method) => (
-                      <option key={method} value={method}>
-                        {PAYMENT_METHOD_LABELS[method][locale]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className={styles.paymentField}>
-                  <label
-                    htmlFor={`pos-payment-amount-${index}`}
-                    className={styles.fieldLabel}
-                  >
-                    {t(copy.amount)}
-                  </label>
-                  <input
-                    id={`pos-payment-amount-${index}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    className={styles.input}
-                    value={payment.amount}
-                    onChange={(e) =>
-                      handlePaymentAmountChange(
-                        payment.id,
-                        parseFloat(e.target.value) || 0,
-                      )
-                    }
-                    disabled={saving}
-                  />
-                </div>
-
-                <div className={styles.paymentField}>
-                  <label
-                    htmlFor={`pos-payment-installments-${index}`}
-                    className={styles.fieldLabel}
-                  >
-                    {t(copy.installments)}
-                  </label>
-                  <input
-                    id={`pos-payment-installments-${index}`}
-                    type="number"
-                    min="1"
-                    max={payment.method === "cash" ? 1 : 36}
-                    className={styles.input}
-                    value={payment.installments}
-                    onChange={(e) =>
-                      handlePaymentInstallmentsChange(
-                        payment.id,
-                        parseInt(e.target.value, 10),
-                      )
-                    }
-                    disabled={saving}
-                  />
-
-                  {payment.method === "cash" && payment.installments > 1 && (
-                    <p className={styles.fieldError} role="alert">
-                      {t(copy.cashOnlyOneInstallment)}
-                    </p>
-                  )}
-                </div>
-
-                <div className={styles.paymentField}>
-                  <label
-                    htmlFor={`pos-payment-reference-${index}`}
-                    className={styles.fieldLabel}
-                  >
-                    {t(copy.reference)}
-                  </label>
-                  <input
-                    id={`pos-payment-reference-${index}`}
-                    type="text"
-                    maxLength={120}
-                    className={styles.input}
-                    value={payment.reference}
-                    onChange={(e) =>
-                      handlePaymentReferenceChange(payment.id, e.target.value)
-                    }
-                    disabled={saving}
-                  />
-                  <span className={styles.fieldHint}>
-                    {he ? "(עד 120 תווים)" : "(up to 120 chars)"}
-                  </span>
-                </div>
-
-                <div className={styles.paymentField}>
-                  <button
-                    type="button"
-                    className={styles.buttonSecondary}
-                    onClick={() => handleRemovePayment(payment.id)}
-                    disabled={saving || payments.length <= 1}
-                    aria-label={t(copy.removePayment)}
-                  >
-                    <span aria-hidden="true">🗑️</span>
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {payments.length < 5 && (
-              <button
-                type="button"
-                className={styles.buttonSecondary}
-                onClick={handleAddPayment}
-                disabled={saving}
-              >
-                <span aria-hidden="true">+</span>
-                {t(copy.addPayment)}
-              </button>
-            )}
-
-            {formErrors.payments && (
-              <p className={styles.fieldError} role="alert">
-                {formErrors.payments}
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* Review Section */}
-        {reviewOpen && (
-          <div className={styles.reviewSection}>
-            <h2 className={styles.sectionTitle}>{t(copy.reviewTitle)}</h2>
-            <p className={styles.sectionDescription}>
-              {t(copy.reviewDescription)}
-            </p>
-
-            <div className={styles.reviewCustomer}>
-              <strong dir="auto">{customerName}</strong>
-              <span dir="ltr">{customerEmail}</span>
-              {customerPhone ? <span dir="ltr">{customerPhone}</span> : null}
-              <span className={styles.reviewAccountBadge}>
-                {account
-                  ? t(copy.reviewAccountLinked)
-                  : t(copy.reviewAccountGuest)}
-              </span>
-            </div>
-
-            <div className={styles.reviewTableWrap}>
-              <table className={styles.reviewTable}>
-                <caption className={styles.fieldHint}>
-                  {t(copy.reviewItemsTitle)}
-                </caption>
-                <thead>
-                  <tr>
-                    <th scope="col">{t(copy.colProduct)}</th>
-                    <th scope="col">{t(copy.colSku)}</th>
-                    <th scope="col">{t(copy.colQty)}</th>
-                    <th scope="col">{t(copy.colUnitPrice)}</th>
-                    <th scope="col">{t(copy.colDiscountUnit)}</th>
-                    <th scope="col">{t(copy.colLineDiscount)}</th>
-                    <th scope="col">{t(copy.colGross)}</th>
-                    <th scope="col">{t(copy.colVat)}</th>
-                    <th scope="col">{t(copy.colNet)}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reviewLines.map(({ line, totals }) => (
-                    <tr key={line.key}>
-                      <td dir="auto">
-                        {line.product
-                          ? he
-                            ? line.product.name_he
-                            : line.product.name_en
-                          : "—"}
-                        {line.variant &&
-                        (line.variant.color_he || line.variant.color_en)
-                          ? ` · ${he ? line.variant.color_he : line.variant.color_en}`
-                          : ""}
-                      </td>
-                      <td>
-                        <span className={styles.mono} dir="ltr">
-                          {line.variant?.sku ?? "—"}
-                        </span>
-                      </td>
-                      <td>{line.quantity}</td>
-                      <td dir="ltr">{formatIls(line.unitPrice, locale)}</td>
-                      <td dir="ltr">
-                        {formatIls(line.discountPerUnit, locale)}
-                      </td>
-                      <td dir="ltr">
-                        {formatIls(totals.lineDiscount, locale)}
-                      </td>
-                      <td dir="ltr">{formatIls(totals.gross, locale)}</td>
-                      <td dir="ltr">
-                        {vatRate === null ? "—" : formatIls(totals.vat, locale)}
-                      </td>
-                      <td dir="ltr">
-                        {vatRate === null ? "—" : formatIls(totals.net, locale)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className={styles.reviewTotals}>
-              <div className={styles.reviewTotalsRow}>
-                <span>{t(copy.reviewSubtotalNet)}</span>
-                <span dir="ltr">
-                  {vatRate === null ? "—" : formatIls(reviewTotals.net, locale)}
-                </span>
-              </div>
-              <div className={styles.reviewTotalsRow}>
-                <span>{t(copy.reviewDiscount)}</span>
-                <span dir="ltr">
-                  -{formatIls(reviewTotals.discount, locale)}
-                </span>
-              </div>
-              <div className={styles.reviewTotalsRow}>
-                <span>{t(copy.reviewVat)}</span>
-                <span dir="ltr">
-                  {vatRate === null ? "—" : formatIls(reviewTotals.vat, locale)}
-                </span>
-              </div>
-              <div className={styles.reviewTotalsRow} data-strong>
-                <span>{t(copy.reviewTotal)}</span>
-                <span dir="ltr">{formatIls(reviewTotals.gross, locale)}</span>
-              </div>
-            </div>
-
-            <p className={styles.fieldHint}>
-              {vatRate === null
-                ? t(copy.vatRateUnavailable)
-                : `${t(copy.vatRateNotePrefix)} ${vatRate}% · ${t(copy.vatEstimateNote)}`}
-            </p>
-
-            {saveError ? <p className={styles.saveError}>{saveError}</p> : null}
-
-            <div className={styles.reviewActions}>
-              <button
-                type="button"
-                className={styles.buttonSecondary}
-                onClick={() => setReviewOpen(false)}
-                disabled={saving}
-              >
-                {t(copy.cancelLabel)}
-              </button>
-              <button
-                type="button"
-                className={styles.buttonPrimary}
-                onClick={recordSale}
-                disabled={saving}
-                aria-busy={saving || undefined}
-              >
-                {saving ? t(copy.recording) : t(copy.confirmRecord)}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Success Message */}
-        {successText && (
-          <div className={styles.successMessage}>
-            <p>{successText}</p>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className={styles.actionButtons}>
-          <button
-            type="button"
-            className={styles.buttonSecondary}
-            onClick={openReview}
-            disabled={saving || validLines.length === 0}
-          >
-            {t(copy.reviewButton)}
-          </button>
-          <button
-            type="button"
-            className={styles.buttonPrimary}
-            onClick={handleClose}
-            disabled={saving}
-          >
-            {t(copy.close)}
-          </button>
-        </div>
-      </div>
-    </div>
+    <PosShell
+      locale={locale}
+      cartLines={lines}
+      onCartLineChange={updateLine}
+      onCartLineRemove={handleRemoveLine}
+      onVariantPick={handleVariantPick}
+      customer={customer}
+      onCustomerChange={handleCustomerChange}
+      payments={payments}
+      onPaymentChange={handlePaymentChange}
+      onRecordSale={recordSale}
+      onClearCart={handleClearCart}
+      saving={saving}
+      successMessage={successMessage}
+      onDismissSuccess={() => setSuccessMessage(null)}
+      gatewayCapabilities={gatewayCapabilities}
+      vatRate={vatRate}
+      formErrors={formErrors}
+      saveError={saveError}
+      pendingIntentId={
+        pendingIntent?.id ?? (attemptedSnapshot ? "unresolved" : null)
+      }
+      locked={locked || readyUser !== userId}
+      onCancelPending={cancelPending}
+      refreshToken={refreshToken}
+    />
   );
 }

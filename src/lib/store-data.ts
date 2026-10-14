@@ -1,6 +1,11 @@
 import { cache } from "react";
+import { z } from "zod";
 import { createPublicServerClient } from "@/lib/supabase/public-server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import {
+  cachePublicPresentation,
+  PUBLIC_STORE_NAVIGATION_TAG,
+} from "@/lib/public-presentation-cache";
 import type {
   Product,
   ProductVariant,
@@ -23,26 +28,45 @@ export type StoreCategory = {
   imageUrl: string | null;
 };
 
-/** Small public projection for the global Store menu. */
-export async function getStoreNavigationCategories(
-  locale: "he" | "en",
-): Promise<Array<Pick<StoreCategory, "key" | "label">>> {
-  try {
-    const supabase = await createServerSupabaseClient();
-    const { data, error } = await supabase
+const navigationCategoriesSchema = z.array(
+  z.object({
+    slug: z.string(),
+    name_he: z.string(),
+    name_en: z.string(),
+  }),
+);
+
+// Only public bilingual labels are shared. The live catalog below still uses
+// request-only reads, including its category visibility, prices and stock.
+const readStoreNavigationCategories = cachePublicPresentation(
+  PUBLIC_STORE_NAVIGATION_TAG,
+  async () => {
+    const { data, error } = await createPublicServerClient()
       .from("categories")
       .select("slug, name_he, name_en")
       .eq("is_active", true)
       .order("sort_order", { ascending: true });
-    if (error) return [];
-    return (data ?? []).map((category) => ({
-      key: getCategoryKeyFromSlug(category.slug),
-      label: mapCategoryLabel(locale, category),
-    }));
-  } catch {
-    return [];
-  }
-}
+    if (error) throw error;
+    return navigationCategoriesSchema.parse(data);
+  },
+);
+
+/** Small public projection for the global Store menu. */
+export const getStoreNavigationCategories = cache(
+  async (
+    locale: "he" | "en",
+  ): Promise<Array<Pick<StoreCategory, "key" | "label">>> => {
+    try {
+      const categories = await readStoreNavigationCategories();
+      return categories.map((category) => ({
+        key: getCategoryKeyFromSlug(category.slug),
+        label: mapCategoryLabel(locale, category),
+      }));
+    } catch {
+      return [];
+    }
+  },
+);
 
 export type StoreCatalog = {
   categories: StoreCategory[];
@@ -288,6 +312,17 @@ const getRolePrices = cache(async (role: UserRole, anonymous: boolean) => {
   return new Map<string, number>(
     (data ?? []).map((price) => [price.product_id, Number(price.price)]),
   );
+});
+
+/** Start independent catalog reads while the request's viewer is resolved. */
+export const getStorePageData = cache(async (locale: "he" | "en") => {
+  // This is request-only React deduplication. Keep cookie-bound rows, live
+  // stock and role pricing outside persistent/shared caches. Handle an early
+  // preload rejection here; getStoreCatalog still reports the read failure.
+  void getCatalogRows(false).catch(() => undefined);
+  const viewer = await getStoreViewer();
+  const catalog = await getStoreCatalog(locale, viewer.role);
+  return { viewer, catalog };
 });
 
 export async function getStoreCatalog(

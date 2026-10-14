@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_STOREFRONT_DESIGN_TAG } from "@/lib/public-presentation-cache";
 import { z } from "zod";
 import {
   withManagementAuth,
@@ -56,6 +57,7 @@ export async function PUT(request: Request) {
       409,
     );
   if (error) return mapPostgresError(error);
+  revalidateTag(PUBLIC_STOREFRONT_DESIGN_TAG, { expire: 0 });
   revalidatePath("/he", "layout");
   revalidatePath("/en", "layout");
   return NextResponse.json({ design: parsed.data.design, revision: data });

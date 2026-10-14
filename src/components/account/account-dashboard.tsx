@@ -13,6 +13,7 @@ import { RemoveSavedButton } from "./remove-saved-button";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { RevealImage } from "@/components/ui/reveal-image";
 import { OverflowLabel } from "@/features/catalog/overflow-label";
+import { AnimatedNumber } from "@/components/motion/animated-number";
 import { type AuthContext } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { withLocale, type Locale } from "@/lib/i18n";
@@ -365,7 +366,7 @@ function SummaryCard({
             {locale === "he" ? "לא זמין" : "Unavailable"}
           </span>
         ) : (
-          value.toLocaleString(locale)
+          <AnimatedNumber value={value.toLocaleString(locale)} />
         )}
       </p>
     </div>

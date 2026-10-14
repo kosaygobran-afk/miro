@@ -1,0 +1,22 @@
+[
+  {
+    "name": "desktop",
+    "locale": "en",
+    "width": 1440,
+    "height": 1000,
+    "status": 200,
+    "pageErrors": 0,
+    "documentWidth": 1440,
+    "counters": 23
+  },
+  {
+    "name": "phone",
+    "locale": "he",
+    "width": 390,
+    "height": 850,
+    "status": 200,
+    "pageErrors": 0,
+    "documentWidth": 390,
+    "counters": 23
+  }
+]

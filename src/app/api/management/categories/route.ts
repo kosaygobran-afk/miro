@@ -5,7 +5,8 @@ import {
   errorResponse,
   mapPostgresError,
 } from "@/app/api/management/_shared";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_STORE_NAVIGATION_TAG } from "@/lib/public-presentation-cache";
 
 const categorySchema = z.object({
   id: z.string().uuid().optional(),
@@ -27,6 +28,7 @@ const categorySchema = z.object({
 });
 
 async function revalidateCatalog() {
+  revalidateTag(PUBLIC_STORE_NAVIGATION_TAG, { expire: 0 });
   revalidatePath("/he");
   revalidatePath("/en");
   revalidatePath("/he/store/[category]", "page");

@@ -3,7 +3,15 @@ import base from "./playwright.config";
 
 // Opt-in checks against the same production build. This does not replace real-device review.
 export default defineConfig(base, {
-  testMatch: ["motion.spec.ts", "customer-evolution.spec.ts"],
+  testMatch: [
+    "product-card-sections.spec.ts",
+    "product-card-widgets.spec.ts",
+    "motion.spec.ts",
+    "customer-evolution.spec.ts",
+    "product-preview-styles.spec.ts",
+    "product-preview-response.spec.ts",
+    "store-loading.spec.ts",
+  ],
   workers: 3,
   projects: [
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },

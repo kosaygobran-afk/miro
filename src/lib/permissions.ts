@@ -10,7 +10,15 @@ export type Capability =
   | "viewFinance"
   | "manageTax"
   | "manageSettings"
-  | "viewUsers";
+  | "viewUsers"
+  | "viewCommerce"
+  | "manageExpenses"
+  | "approveExpenses"
+  | "issueDocuments"
+  | "refundPayments"
+  | "manageIntegrations"
+  | "manageCash"
+  | "manageRecurring";
 
 const capabilityMap: Record<AppRole, Capability[]> = {
   ceo: [
@@ -24,6 +32,14 @@ const capabilityMap: Record<AppRole, Capability[]> = {
     "manageTax",
     "manageSettings",
     "viewUsers",
+    "viewCommerce",
+    "manageExpenses",
+    "approveExpenses",
+    "issueDocuments",
+    "refundPayments",
+    "manageIntegrations",
+    "manageCash",
+    "manageRecurring",
   ],
   admin: [
     "manageCatalog",
@@ -33,6 +49,10 @@ const capabilityMap: Record<AppRole, Capability[]> = {
     "viewAnalytics",
     "viewFinance",
     "viewUsers",
+    "viewCommerce",
+    "manageExpenses",
+    "issueDocuments",
+    "manageCash",
   ],
   worker: [],
   customer: [],

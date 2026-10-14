@@ -14,12 +14,24 @@ const MAX_INPUT_LENGTH = 200;
 const MAX_OPERATIONS = 500;
 const MAX_MAGNITUDE = 1e15;
 
+export type CalculatorKeyboardAction =
+  { type: "input"; value: string } | { type: "backspace" } | { type: "equals" };
+
+export function getCalculatorKeyboardAction(
+  key: string,
+): CalculatorKeyboardAction | null {
+  if (key === "Enter" || key === "=") return { type: "equals" };
+  if (key === "Backspace" || key === "Delete") return { type: "backspace" };
+  if (/^[0-9.%+\-*/()]$/.test(key)) return { type: "input", value: key };
+  return null;
+}
+
 export class CalculatorError extends Error {
   public readonly code: string;
 
   constructor(message: string, code: string) {
     super(message);
-    this.name = 'CalculatorError';
+    this.name = "CalculatorError";
     this.code = code;
   }
 }
@@ -38,7 +50,7 @@ class Parser {
     if (this.pos < this.input.length) {
       throw new CalculatorError(
         `Invalid expression: unexpected character at position ${this.pos}`,
-        'INVALID_EXPRESSION',
+        "INVALID_EXPRESSION",
       );
     }
     this.guard(value);
@@ -60,16 +72,16 @@ class Parser {
   private countOp(): void {
     this.operations++;
     if (this.operations > MAX_OPERATIONS) {
-      throw new CalculatorError('Too many operations', 'TOO_MANY_OPERATIONS');
+      throw new CalculatorError("Too many operations", "TOO_MANY_OPERATIONS");
     }
   }
 
   private guard(value: number): number {
     if (!Number.isFinite(value)) {
-      throw new CalculatorError('Result is not finite', 'NON_FINITE_RESULT');
+      throw new CalculatorError("Result is not finite", "NON_FINITE_RESULT");
     }
     if (Math.abs(value) > MAX_MAGNITUDE) {
-      throw new CalculatorError('Result too large (exceeds 1e15)', 'OVERFLOW');
+      throw new CalculatorError("Result too large (exceeds 1e15)", "OVERFLOW");
     }
     return value;
   }
@@ -79,7 +91,7 @@ class Parser {
     if (actual !== char) {
       throw new CalculatorError(
         `Expected '${char}' at position ${this.pos}`,
-        this.atEnd() ? 'INVALID_EXPRESSION' : 'INVALID_CHARACTER',
+        this.atEnd() ? "INVALID_EXPRESSION" : "INVALID_CHARACTER",
       );
     }
     this.pos++;
@@ -93,13 +105,13 @@ class Parser {
     for (;;) {
       this.skipWhitespace();
       const op = this.peek();
-      if (op !== '+' && op !== '-') break;
+      if (op !== "+" && op !== "-") break;
       this.pos++;
       this.countOp();
       const term = this.parseMultiplicative();
       // Calculator style: `acc + b%` contributes acc * b / 100
       const contribution = term.percent ? (acc * term.value) / 100 : term.value;
-      acc = op === '+' ? acc + contribution : acc - contribution;
+      acc = op === "+" ? acc + contribution : acc - contribution;
       this.guard(acc);
     }
     return acc;
@@ -115,7 +127,7 @@ class Parser {
     for (;;) {
       this.skipWhitespace();
       const op = this.peek();
-      if (op !== '*' && op !== '/') break;
+      if (op !== "*" && op !== "/") break;
       this.pos++;
       this.countOp();
       if (pendingPercent) {
@@ -124,11 +136,11 @@ class Parser {
       }
       const rhs = this.parseFactor();
       const rv = rhs.percent ? rhs.value / 100 : rhs.value;
-      if (op === '*') {
+      if (op === "*") {
         left = left * rv;
       } else {
         if (rv === 0) {
-          throw new CalculatorError('Division by zero', 'DIV_BY_ZERO');
+          throw new CalculatorError("Division by zero", "DIV_BY_ZERO");
         }
         left = left / rv;
       }
@@ -140,7 +152,7 @@ class Parser {
   private parseFactor(): Factor {
     this.skipWhitespace();
     let negative = false;
-    while (this.peek() === '-') {
+    while (this.peek() === "-") {
       negative = !negative;
       this.pos++;
       this.skipWhitespace();
@@ -150,13 +162,16 @@ class Parser {
     let percent = false;
     const char = this.peek();
 
-    if (char === '(') {
+    if (char === "(") {
       this.pos++;
       this.countOp();
       value = this.parseAdditive();
       this.skipWhitespace();
-      if (this.peek() !== ')') {
-        throw new CalculatorError('Mismatched parentheses', 'MISMATCHED_PARENS');
+      if (this.peek() !== ")") {
+        throw new CalculatorError(
+          "Mismatched parentheses",
+          "MISMATCHED_PARENS",
+        );
       }
       this.pos++;
     } else if (char !== undefined && /[\d.]/.test(char)) {
@@ -164,7 +179,7 @@ class Parser {
     } else {
       throw new CalculatorError(
         `Invalid expression: expected a number at position ${this.pos}`,
-        'INVALID_EXPRESSION',
+        "INVALID_EXPRESSION",
       );
     }
 
@@ -174,7 +189,7 @@ class Parser {
   }
 
   private parsePercentFlag(): boolean {
-    if (this.peek() !== '%') return false;
+    if (this.peek() !== "%") return false;
     this.pos++;
     this.countOp();
     return true;
@@ -183,33 +198,33 @@ class Parser {
   private parseNumber(): number {
     const start = this.pos;
     while (!this.atEnd() && /\d/.test(this.input[this.pos])) this.pos++;
-    if (this.peek() === '.') {
+    if (this.peek() === ".") {
       this.pos++;
       if (this.atEnd() || !/\d/.test(this.input[this.pos])) {
         throw new CalculatorError(
           `Invalid number at position ${start}`,
-          'INVALID_EXPRESSION',
+          "INVALID_EXPRESSION",
         );
       }
       while (!this.atEnd() && /\d/.test(this.input[this.pos])) this.pos++;
     }
     const raw = this.input.slice(start, this.pos);
     const value = Number(raw);
-    if (!Number.isFinite(value) || raw === '') {
-      throw new CalculatorError(`Invalid number: '${raw}'`, 'INVALID_EXPRESSION');
+    if (!Number.isFinite(value) || raw === "") {
+      throw new CalculatorError(
+        `Invalid number: '${raw}'`,
+        "INVALID_EXPRESSION",
+      );
     }
     if (Math.abs(value) > MAX_MAGNITUDE) {
-      throw new CalculatorError('Number too large (exceeds 1e15)', 'OVERFLOW');
+      throw new CalculatorError("Number too large (exceeds 1e15)", "OVERFLOW");
     }
     return value;
   }
 }
 
 function normalizeOperators(input: string): string {
-  return input
-    .replace(/×/g, '*')
-    .replace(/÷/g, '/')
-    .replace(/[−–—]/g, '-');
+  return input.replace(/×/g, "*").replace(/÷/g, "/").replace(/[−–—]/g, "-");
 }
 
 /**
@@ -219,16 +234,16 @@ function normalizeOperators(input: string): string {
  */
 export function evaluateExpression(input: string): number {
   if (input == null) {
-    throw new CalculatorError('Input is null or undefined', 'NULL_INPUT');
+    throw new CalculatorError("Input is null or undefined", "NULL_INPUT");
   }
   const normalized = normalizeOperators(input).trim();
   if (normalized.length === 0) {
-    throw new CalculatorError('Empty or whitespace-only input', 'EMPTY_INPUT');
+    throw new CalculatorError("Empty or whitespace-only input", "EMPTY_INPUT");
   }
   if (normalized.length > MAX_INPUT_LENGTH) {
     throw new CalculatorError(
       `Input exceeds maximum length of ${MAX_INPUT_LENGTH} characters`,
-      'INPUT_TOO_LONG',
+      "INPUT_TOO_LONG",
     );
   }
   const value = new Parser(normalized).parse();
@@ -240,7 +255,7 @@ export function evaluateExpression(input: string): number {
  * whitespace runs, and maps Unicode operators (×, ÷, −, –, —) to ASCII.
  */
 export function formatExpression(input: string): string {
-  return normalizeOperators(input).trim().replace(/\s+/g, ' ');
+  return normalizeOperators(input).trim().replace(/\s+/g, " ");
 }
 
 /**

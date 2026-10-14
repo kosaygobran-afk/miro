@@ -153,7 +153,7 @@ begin
     '{"name": "VAT Probe"}'::jsonb,
     '[{"variant_id": "cccccccc-0000-0000-0000-0000000000a1", "quantity": 1, "unit_price": 118}]'::jsonb
   );
-  select * into v_item from public.order_items where order_id = v_order_id;
+  select net_amount,vat_amount,vat_rate into v_item from public.order_items where order_id = v_order_id;
   if v_item.vat_rate <> 18.00 then
     raise exception 'record_sale snapped the wrong VAT rate: %', v_item.vat_rate;
   end if;

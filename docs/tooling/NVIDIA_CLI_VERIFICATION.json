@@ -1,0 +1,54 @@
+{
+  "date": "2026-10-07",
+  "timezone": "Asia/Jerusalem",
+  "model": "nvidia/nemotron-3-ultra-550b-a55b",
+  "alias": "nvidia/nemotron-ultra",
+  "requestSettings": {
+    "reasoning_effort": "high",
+    "reasoning_budget": -1,
+    "max_tokens": 32768,
+    "temperature": 1,
+    "top_p": 0.95,
+    "contextDeclaration": 1000000
+  },
+  "runtimes": [
+    {
+      "cli": "Kimi Code",
+      "version": "2.1.1",
+      "nativeDefaultUsed": true,
+      "successfulReadTool": true,
+      "exactCleanFinal": true,
+      "exitCode": 0,
+      "stderrEmpty": true,
+      "interactiveShellPtyPassed": true,
+      "providerTransientOverloadObserved": true,
+      "alternateModelUsed": false
+    },
+    {
+      "cli": "OpenCode",
+      "version": "2.0.24",
+      "nativeDefaultUsed": true,
+      "successfulReadTool": true,
+      "exactCleanFinal": true,
+      "exitCode": 0,
+      "stderrEmpty": true,
+      "alternateModelUsed": false,
+      "primaryAgent": "build"
+    }
+  ],
+  "bridgeTests": { "passed": 14, "failed": 0 },
+  "checks": {
+    "kimiDoctor": "passed",
+    "scopedEslint": "passed",
+    "scopedPrettier": "passed",
+    "nativeConfigSemantics": "passed",
+    "launchAgentHealth": "passed",
+    "installedBridgeMatchesReviewedSource": "passed"
+  },
+  "limitsOfEvidence": [
+    "Synthetic file reads and short answers; no customer or financial data",
+    "Full-context and maximum-length generation were not load-tested",
+    "Provider overload can still occur; bridge never replays requests",
+    "Higher output ceilings accepted by short live probes are not certified generation limits"
+  ]
+}

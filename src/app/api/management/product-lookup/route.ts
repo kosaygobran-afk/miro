@@ -8,6 +8,7 @@ import {
 
 const lookupQuerySchema = z.object({
   q: z.string().trim().max(200).optional(),
+  variant_id: z.string().uuid().optional(),
   limit: z.coerce.number().int().positive().max(50).optional().default(20),
   activeOnly: z.coerce.boolean().optional().default(true),
 });
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
     return errorResponse("Invalid query params", 400, parsed.error.flatten());
   }
 
-  const { q, limit, activeOnly } = parsed.data;
+  const { q, variant_id, limit, activeOnly } = parsed.data;
   const { admin } = auth;
 
   // Build query for product variants with minimal fields for pickers
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
         status,
         price,
         sale_price,
+        tracking_mode,
         product_prices (role, price)
       )
     `,
@@ -60,6 +62,7 @@ export async function GET(request: Request) {
   if (activeOnly) {
     query = query.eq("products.status", "active");
   }
+  if (variant_id) query = query.eq("id", variant_id);
 
   if (q) {
     const term = q.replace(/[%_]/g, "");

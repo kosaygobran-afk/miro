@@ -1,5 +1,37 @@
 # MIRO animation, loading and appearance system
 
+## Fast display counters — 2026-10-11
+
+`AnimatedNumber` animates designated statistics on mount, route revisits and value updates, including browser reloads. It takes twice the saved Content Reveal duration, capped at 400ms (320ms at the standard 160ms setting). Master motion, Content Reveal and reduced motion govern it; a disabled feature or reduced motion immediately displays the exact value. Counting never delays page data, navigation or loading settlement.
+
+The effect updates only its own `aria-hidden` display. A single screen-reader text span contains the exact final value throughout; do not announce animation frames or animate input/textarea values. Final width is reserved to keep labels steady. RAF work is canceled when the value/route/preference changes or the component unmounts.
+
+`src/lib/number-counting.ts` accepts a single ordinary decimal metric, retaining its exact final currency/percent/sign/grouping/direction format. Dates, ratios, identifiers, leading-zero codes and composite values remain literal. The client island is shared by management MetricCard/InsightCard, account summary counts, catalog filter/result totals and report summary counts/amounts. Payment forms, product prices and operational table rows retain their authoritative display. Do not invent marketing statistics to demonstrate this effect.
+
+Coverage: `tests/unit/number-counting.test.mjs` exercises formatting, cleanup, value updates, motion gates and stable accessible values; `tests/number-counting.spec.ts` verifies real catalog load/reload, changing results and reduced motion. Engineering owns the feature; QA retains bilingual screen-reader and physical-device acceptance. See `docs/PAGE_LOADING.md` for the separate data-loading contract.
+
+## Consistent card response — 2026-10-10
+
+Ordinary popup pointer/blur departure must never latch explicit hover dismissal. `ProductHoverPreview` reports close intent at the start of exit, so a new source hover can cancel that exit; returning directly from the popup to its source keeps the interaction open. Escape/close-button dismissal still suppresses automatic reopening beneath a stationary pointer. `use-preview-hover-dismissal.ts` captures real pointer coordinates through the source/portal React tree, guards only when the pointer remains over the source, and releases the guard on physical departure even when the portal owns the events. Its temporary document listener is removed on release or unmount.
+
+Explicit dismissal also suppresses stationary hover across neighboring sources: the expanded popup can cover another card. Only a real, changed `pointermove` releases this shared suppression; compatibility mouse events round fractional coordinates and cannot prove fresh intent. Source `mousemove` then enables the newly exposed card without requiring another leave/re-enter. Portal-origin moves never create source intent. Escape during an already-started ordinary exit preserves explicit focus return without restarting the exit animation.
+
+Shared suppression observes document movement, including outside every source, so leaving and returning to the exact dismissal pixel responds on the first try. Its single temporary listener cleans up on release or owner unmount. Moving on an already-open source preserves explicit-opening mode and its Escape focus return; only fresh intent resets that mode.
+
+Visible loop copies in `ProductMovingRail` support pointer previews, while their source segment remains `aria-hidden` with non-tabbable links and no duplicate touch controls. Their body-portaled dialogs remain accessible. Original/copy visibility keys are separate so one closing instance cannot resume the rail while another is still open. Keep the rail paused throughout popup visibility and exit.
+
+`tests/product-preview-response.spec.ts` covers repeated hover cycles in both locales, source/portal return, fresh hover during exit, explicit dismissal/re-entry and visible loop-copy hit-testing. Loop-copy tests need at least three featured products; `PRODUCT_PREVIEW_RAIL_PATH` can select an isolated synthetic fixture route without editing the live catalog. The suite is included in the cross-browser configuration.
+
+## Hover-preview loading recovery — 2026-10-10
+
+`StoreLiveRefresh` checks the existing public `store_catalog_version` row on mount, every 15 seconds and on focus/visibility recovery. The initial read establishes a baseline; a newer version requests a debounced route refresh. Realtime UPDATEs use the same version comparison, including changes received while hidden. Subscription success and unchanged polls must not disturb a hovered popup. Scheduled promotion boundaries and private role-price changes do not all emit that public signal, so an unchanged catalog reconciles after two minutes once no popup/hover intent is active. This avoids permanently stale pricing without a full-page render every 15 seconds. Reads settle within ten seconds, do not overlap, and ignore disposed results. Keep these reads limited to the public version signal; never expose private product or staff rows through Realtime.
+
+Visible preview images/thumbnails use eager loading; an eager product image that never settles falls back to the existing original illustration after eight seconds. Timers follow the image source and are canceled on load, failure, source change and unmount. Lazy catalog images retain normal loading. `next.config.ts` disables the development status badge with `devIndicators: false`, while Next build/runtime errors remain visible. Use a production build to assess real loading performance; development still compiles routes on demand.
+
+React portal events still propagate through the card/rail component tree. Source handlers must ignore events whose target is outside the source DOM subtree and must preserve pointer travel into `.sf-hover-preview`. The preview manages its own pointer/focus events through its callbacks. A new mouse hover clears explicit-opening mode so it cannot move keyboard focus into the popup. Preserve this separation when changing preview behavior; portal close/unmount events must not clear source dismissal guards or restart intent.
+
+`tests/store-loading.spec.ts` covers stable previews during unchanged catalog checks, a single refresh after a newer version, postponed idle reconciliation and stalled-image fallback/Escape recovery. The existing preview-style suite also checks bottom-edge hover intent, dismissal/reopening without focus theft and touch-rail focus recovery.
+
 Implemented 2026-10-02. This document describes the actual controls and code. The public website supports Hebrew and English, dark/medium/light themes, keyboard navigation, reduced motion and 320px phones. Public and protected management interfaces share motion behavior; their palettes remain separate.
 
 ## CEO operating guide
@@ -470,3 +502,70 @@ The final production matrix passed **80/80**, without retries or flakes: 20 moti
 
 - `docs/animation-system-evidence-2026-10-02/cross-browser-checks.json`: final four-profile production motion/appearance cases, without private auth data.
 - `docs/animation-system-evidence-2026-10-02/account-checks.json`: sanitized account layout/interaction results; no actual test identity or product IDs.
+
+## Product preview styles — 2026-10-09
+
+CEO Settings → Animation → Style and timing now includes **Product preview style**:
+
+- **Soft Reveal** is the Version2 default: a gentle fade and 6px lift with a uniform 0.985 starting scale, no tilt or overshoot, and a restrained source-card lift.
+- **3D Pop Up** preserves the original source-card press, proportional 3D expansion and tilt keyframes. Select it and Save and apply to return to the previous effect. Existing dialog/content timings and Store design hover delay are preserved for both styles.
+
+The choice is `productPreviewStyle` (`soft-reveal` / `3d-pop-up`) in the validated animation contract and limited public RPC. Migration `20261009010000_product_preview_styles.sql` preserves authorization, PT409 conflicts, atomic audit and the immutable Version1 row. The historical backup is decoded with 3D Pop Up; its stored contents are never rewritten. A restored Version1 draft includes that explicit choice.
+
+Keep the legacy keyframes and intent styles when editing Soft Reveal. New image geometry is gated to Version2. Image frames in product cards, moving rails and previews bound natural aspect ratios and round the bitmap itself. Portal geometry is measured before its first paint. Explicit close cannot be canceled by late pointer/focus events, returning focus does not activate the preview button, and hover reopening requires leaving the source card. Touch devices use the explicit preview button rather than synthesized mouse hover. Reduced motion and the master/dialog switches override both styles; no presentation preference may bypass them.
+
+Verification: `tests/product-preview-styles.spec.ts`, `tests/unit/animation-settings.test.mjs`, `supabase/tests/animation_settings.sql`, `supabase/tests/appearance_version_backup.sql`, and `scripts/verify-animation-settings.mjs` (disposable actor, valid business saves mocked).
+
+Final verification for this change: 17 Chromium/desktop-WebKit/iPhone-WebKit cases passed, with the desktop-only hover case skipped on the touch profile; 15 settings integration groups and six settings unit tests passed. Firefox launch is blocked locally by a missing-profile-folder runtime error. Physical-device and screen-reader sign-off remains separate.
+
+### Consistent preview anatomy and motion follow-up — 2026-10-09
+
+Version2 previews now share a 480×600px frame constrained to 16px viewport gutters. A fixed-height centered image stage and horizontal thumbnails keep single/multiple-image products aligned. Full supplied description, brand, model, warranty and specification rows scroll in a keyboard-focusable region; actions stay in the footer. Do not reintroduce whole-card scrolling, variable gallery columns or content-driven popup heights. Missing catalog information is not synthesized.
+
+Soft Reveal now starts at 8px / uniform 0.975 scale. `productPreviewTiming` in `src/lib/motion.ts` derives entrance at 1.5× saved dialog timing and exit at 1.25× saved content timing (300/200ms by default). CSS uses those computed tokens and the portal uses the same exit duration. Legacy 3D Pop Up retains its saved timing and keyframes. Reduced motion and disabled motion still win. Tests compare three real products and stress long details at 320×480 in both locales.
+
+### Responsive whole-card 3D hover — 2026-10-10
+
+**3D Pop Up · Smooth** (`3d-pop-up-smooth`) is the owner's selected current style. The original **3D Pop Up** (`3d-pop-up`) remains selectable and Version1 restores keep that original style. Smooth defaults to a 200ms entrance, 140ms exit and up to 120ms hover intent; timing follows `productPreviewTiming` / `productPreviewHoverDelay` with responsive bounds. The whole card lifts uniformly (160ms, 1.008 scale), while the image has no independent transform. The preview scales uniformly from 0.96 with a gentle 2° tilt and no bounce. Never derive different X/Y scales for Smooth.
+
+ProductCard mouse handlers belong on the article, covering text, price and actions as well as the image. Preserve touch gating and the explicit-dismissal/focus-return safeguards. Smooth remains controlled by master/dialog/micro switches and reduced motion. Migration `20261010010000_smooth_whole_card_preview.sql` extends validation and audits the owner's active style selection without modifying the immutable backup. CEO saves still require revision and active-role authorization.
+
+Production Safari QA must use HTTPS: the application's production CSP upgrades insecure resources, which can prevent hydration on a plain HTTP local origin. Do not remove that CSP directive to make a local motion check pass. Temporary QA certificates/configuration belong outside tracked project files and must be cleaned up.
+
+Saved client preferences are based on the serialized server setting values, not their object identity. Equivalent RSC refresh payloads must not discard a locally saved choice or master-off state. Different server settings still update the active base.
+
+Final whole-card verification: 35 production HTTPS Chromium/desktop-WebKit/iPhone-WebKit cases passed; four desktop-hover cases intentionally skipped on the touch profile. All three styles, both locales, equal preview geometry, natural image fit, keyboard/reduced-motion/master-off and long content at 320×480 passed. Settings integration passed 15 groups and six settings unit tests passed. Firefox retains the documented local profile launch blocker; physical-device/screen-reader approval remains separate.
+
+### Sectioned preview sources and touch hold — 2026-10-11
+
+The owner's section-specific request supersedes the whole-card hover contract above. Public grid and moving-rail cards have image, details, pricing and actions sections (`data-product-section`) with subtle theme-token dividers. Only the upper `data-preview-source` wrapper owns hover, keyboard focus and touch/pen hold. The sibling bottom actions stay visible and independently clickable, including an explicit quick-preview button; hovering or focusing that row dismisses source intent immediately. Keep footer hit-testing clear during both opening and closing frames. Portal return intent uses `hoverSourceRef`, rather than the whole trigger frame.
+
+Desktop hover placement measures `actionsRef`, constrains the popup height above its buttons and also bounds the scaled first frame. Gallery/details flex within that room, with internal details scrolling and stable popup actions. Explicit button/hold previews retain full viewport-bounded geometry. The late additive layer `src/styles/product-card-sections.css` owns this anatomy and source-only feedback without changing saved style settings or the Version1 backup.
+
+When little room remains above a scrolled source, prefer a disjoint side frame, then the larger space below the footer. Those fallbacks grow in place so the animation cannot cross the original buttons. A compact frame hides the gallery below 240px available height; below 160px it uses a small close control and scrolling details with the original action row as the available actions. Do not force gallery/footer minimum heights into a tiny clipped dialog. Newly scrollable Version1 details must also be keyboard reachable.
+
+Touch/pen holds use `use-preview-long-press.ts`: 500ms with immediate local press feedback, no prevention on pointerdown, 10px movement tolerance and source-boundary checks. Movement, scroll, pointer cancellation, a second contact, blur/backgrounding and unmount cancel pending timers. Native taps remain links; a completed hold guards only its native release click (including a portal-retargeted click), then a new press clears the guard. Keyboard activations are never suppressed. Preserve coarse-pointer callout/selection suppression only on eligible sources, native pan/pinch, reduced motion and the explicit accessible button. Do not add touch hover synthesis or move buttons back inside the eligible wrapper.
+
+Hover handlers accept only actual mouse `PointerEvent`s, including on hybrid touch/mouse hardware. Shared stationary dismissal must release during document capture before React source PointerMove evaluates intent. A fired hold's guard owns its release/cancel listeners independently of source intent, so footer entry cannot remove its eventual expiry; scoped context menus are also captured while holding.
+
+Safari may blur focused details with a null related target before clicking a popup button that does not take mouse focus. Track actual pointer activation inside the portal and preserve its hit-testing through that blur, until release/cancel; keyboard and outside departures still dismiss normally. Do not let an ordinary blur close the portal before its Close/gallery/action click arrives.
+
+Verification adds `tests/product-card-sections.spec.ts` alongside preview-response/style/loading regressions. Native Chromium CDP touch proves the 499/500ms boundary, release suppression, ordinary tap/footer navigation and cancellation on phones/tablets. Desktop Chromium/WebKit verify real footer hit-testing; native hardware and screen-reader acceptance remain separate QA actions.
+
+Completed production verification: 93 applicable cases passed with zero failures/flakes across Chromium, desktop WebKit and iPhone WebKit; 48 profile/geometry cases skipped (native CDP-only sequences, desktop hover on touch and unavailable exposed-neighbor geometry). The now-visible rail preview button additionally passed desktop Chromium/WebKit keyboard/focus checks after removing its obsolete touch-only skip, for 95 applicable cases. Native CDP pen also passed the real 499/500ms boundary. All three actual popup animations preserve footer clearance at start/mid/end; compact 320×240 details scrolling and Close work in both desktop engines, including Safari's null-blur behavior. Layout QA passed all 24 locale/theme/320–1440px combinations. Temporary loop fixture and HTTPS QA setup were removed; no production deployment or database presentation-setting change was made.
+
+### Source-width expansion follow-up — 2026-10-10
+
+The owner's Netflix-like widening request supersedes Smooth's fixed 0.96 scale and short 120ms intent described above. `calculatePosition` measures the source width, center and top against the actual mounted portal before paint. Smooth uses `--sf-preview-source-scale` uniformly on both axes and source X/Y translation with a top-center origin. The entrance grows from that source-aligned box to the stable final frame; the exit returns toward it. Preserve viewport clamps and never stretch X/Y independently. Original 3D Pop Up keyframes are unchanged.
+
+Smooth intent is now bounded to 160–280ms (normal saved 200ms retained), entrance to 260–380ms at 1.6× saved dialog duration (default 320ms), and exit to 180–240ms at 1.25× saved content duration (default 200ms). The monotonic easing decelerates into the final width without overshoot. Explicit button activation still skips hover intent, reduced motion/master-off still override all animation, and settings/removal use shared timing helpers. Browser tests pause the actual animation at its start/midpoint/end to compare the source box and confirm progressive uniform growth.
+
+Keep the opening surface opaque while it widens so underlying product text does not bleed through. Final verification: 35 production Chromium/desktop-WebKit/iPhone-WebKit cases passed (four intentional desktop-hover skips on touch); after the opacity correction, six Chromium/WebKit source-alignment/growth/readability cases passed again. Lint/typecheck/build and six settings unit tests passed. No new database mutation or tracking. QA retains manual physical-device/screen-reader acceptance; release owner deploys the frontend.
+
+### Product card widgets and responsive gallery — 2026-10-14
+
+Version 2 previews use a separate 52px side thumbnail picker, with 44px horizontal thumbnails at widths up to 380px. Short narrow phones (height up to 600px) keep the picker beside the image so gallery chrome cannot collapse the main image. This supersedes the earlier horizontal-overlay thumbnail contract; gallery/details/footer remain independently bounded and the complete supplied details remain scrollable. New geometry/palette overrides stay scoped to Version 2.
+
+Main images and thumbnails use `ProductMedia` with natural contained proportions and a failed-image illustration fallback. Gallery arrows and Close have 44px targets; the centered counter must not collide with either arrow in Hebrew or English. Use logical arrow placement and preserve hover/focus contrast in all themes. ArrowLeft/ArrowRight follow the locale; Home/End select the first/last image. Selection scrolls only the thumbnail picker, never the document. Native taps, source-only hover/hold, footer clearance, explicit dismissal and reduced-motion controls retain their existing contracts.
+
+`tests/product-card-widgets.spec.ts` covers both locales, all three themes and 320/390/1440px layouts, image-stage visibility, independent picker geometry, arrow/counter separation, keyboard selection, wraparound and focus recovery. It uses current public products by default; `PRODUCT_WIDGETS_PATH` can select a disposable local multi-image fixture, and `PRODUCT_WIDGETS_SCREENSHOTS` selects an external screenshot directory. Never publish the fixture or mutate catalog/settings for layout verification. Main-image fit assertions must scope to `.sf-hover-preview-media`, since thumbnails also use the shared media wrapper.

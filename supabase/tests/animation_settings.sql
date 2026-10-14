@@ -13,7 +13,7 @@ insert into public.business_settings(key,value) values('motion_private_fixture',
 set local role anon;
 do $$ declare config jsonb; begin
   config := public.get_public_animation_settings();
-  if (select count(*) from jsonb_object_keys(config)) <> 7
+  if (select count(*) from jsonb_object_keys(config)) <> 8
      or (select count(*) from jsonb_object_keys(config->'features')) <> 13
      or (select count(*) from jsonb_object_keys(config->'durations')) <> 11
      or config::text like '%never_public%' or config ? 'revision'
@@ -46,6 +46,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000901'
 do $$ declare config jsonb; rev timestamptz; next_rev timestamptz; audit_count integer; feature text; begin
   select value,updated_at into config,rev from public.business_settings where key='animation_settings';
   select count(*) into audit_count from public.audit_events where details->>'setting_key'='animation_settings';
+  config := jsonb_set(config,'{productPreviewStyle}','"3d-pop-up-smooth"');
   config := jsonb_set(config,'{enabled}','false');
   for feature in select jsonb_object_keys(config->'features') loop
     config := jsonb_set(config,array['features',feature],'false');
@@ -59,6 +60,7 @@ do $$ declare config jsonb; rev timestamptz; next_rev timestamptz; audit_count i
   begin perform public.update_animation_settings(config,rev); raise exception 'Stale revision accepted'; exception when sqlstate 'PT409' then null; end;
   begin perform public.update_animation_settings(config,null); raise exception 'Missing revision accepted'; exception when sqlstate 'PT409' then null; end;
   begin perform public.set_business_setting('animation_settings',config); raise exception 'Generic setter bypasses revision'; exception when invalid_parameter_value then null; end;
+  begin perform public.update_animation_settings(jsonb_set(config,'{productPreviewStyle}','"unknown"'),next_rev); raise exception 'Unknown preview style accepted'; exception when invalid_parameter_value then null; end;
   begin perform public.update_animation_settings(config || '{"private_note":"never_public"}',next_rev); raise exception 'Unknown root property accepted'; exception when invalid_parameter_value then null; end;
   begin perform public.update_animation_settings(jsonb_set(config,'{features}',(config->'features') || '{"private_note":"never_public"}'),next_rev); raise exception 'Unknown feature accepted'; exception when invalid_parameter_value then null; end;
   begin perform public.update_animation_settings(config #- '{features,menus}',next_rev); raise exception 'Missing feature accepted'; exception when invalid_parameter_value then null; end;

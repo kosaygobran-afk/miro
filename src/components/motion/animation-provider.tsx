@@ -26,10 +26,12 @@ export function AnimationProvider({
   children: React.ReactNode;
 }) {
   const [saved, setSaved] = useState<{
-    base: AnimationSettings;
+    base: string;
     value: AnimationSettings;
   } | null>(null);
-  const current = saved?.base === settings ? saved.value : settings;
+  // Equivalent server payload objects must not discard a saved preference.
+  const settingsKey = JSON.stringify(settings);
+  const current = saved?.base === settingsKey ? saved.value : settings;
   const reduced = useReducedMotion();
 
   useLayoutEffect(() => {
@@ -58,12 +60,15 @@ export function AnimationProvider({
         : null;
     const onLocalChange = (event: Event) => {
       const next = parseAnimationSettings((event as CustomEvent).detail);
-      setSaved({ base: settings, value: next });
+      setSaved({ base: settingsKey, value: next });
       channel?.postMessage(next);
     };
     if (channel)
       channel.onmessage = (event) =>
-        setSaved({ base: settings, value: parseAnimationSettings(event.data) });
+        setSaved({
+          base: settingsKey,
+          value: parseAnimationSettings(event.data),
+        });
     window.addEventListener("miro-animation-settings-change", onLocalChange);
     document.documentElement.dataset.motionReady = "true";
     return () => {
@@ -74,7 +79,7 @@ export function AnimationProvider({
       channel?.close();
       delete document.documentElement.dataset.motionReady;
     };
-  }, [settings]);
+  }, [settingsKey]);
 
   return (
     <AnimationContext.Provider value={current}>

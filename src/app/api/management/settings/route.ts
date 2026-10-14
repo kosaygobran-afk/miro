@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { z } from "zod";
 import {
   withManagementAuth,
@@ -6,6 +7,7 @@ import {
   mapPostgresError,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { PUBLIC_CONTACT_CONFIG_TAG } from "@/lib/public-presentation-cache";
 
 const settingSchema = z
   .object({
@@ -240,5 +242,8 @@ export async function POST(request: Request) {
     );
   }
 
+  if (parsed.data.key === "public_contact") {
+    revalidateTag(PUBLIC_CONTACT_CONFIG_TAG, { expire: 0 });
+  }
   return NextResponse.json({ ok: true });
 }

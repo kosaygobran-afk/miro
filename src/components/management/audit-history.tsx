@@ -66,6 +66,7 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
     "product_image_deleted",
     "stock_movement",
     "sale_recorded",
+    "pos_sale_recorded",
     "variant_set_default",
     "variant_created",
     "variant_updated",
@@ -77,6 +78,8 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
     "ceo_added",
     "ceo_self_deleted",
     "request_update",
+    "calculator_calculation_recorded",
+    "calculator_history_cleared",
   ] as const;
 
   const actionLabels: Record<string, string> = he
@@ -97,6 +100,7 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         product_image_deleted: "נמחקה תמונת מוצר",
         stock_movement: "תנועת מלאי",
         sale_recorded: "נרשמה מכירה",
+        pos_sale_recorded: "נרשמה מכירת קופה",
         variant_set_default: "נקבע וריאנט ברירת מחדל",
         variant_created: "נוצר וריאנט",
         variant_updated: "עודכן וריאנט",
@@ -108,6 +112,8 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         ceo_added: "נוסף מנכ״ל",
         ceo_self_deleted: "מנכ״ל מחק את עצמו",
         request_update: "עודכן שירות",
+        calculator_calculation_recorded: "חישוב מחשבון נרשם",
+        calculator_history_cleared: "היסטוריית מחשבון נוקתה",
       }
     : {
         product_created: "Product Created",
@@ -126,6 +132,7 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         product_image_deleted: "Product Image Deleted",
         stock_movement: "Stock Movement",
         sale_recorded: "Sale Recorded",
+        pos_sale_recorded: "POS Sale Recorded",
         variant_set_default: "Default Variant Set",
         variant_created: "Variant Created",
         variant_updated: "Variant Updated",
@@ -137,6 +144,8 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         ceo_added: "CEO Added",
         ceo_self_deleted: "CEO Self Deleted",
         request_update: "Request Updated",
+        calculator_calculation_recorded: "Calculator Calculation Recorded",
+        calculator_history_cleared: "Calculator History Cleared",
       };
 
   const load = useCallback(

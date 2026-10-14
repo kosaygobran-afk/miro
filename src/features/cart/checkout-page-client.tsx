@@ -38,12 +38,52 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const eligibilityKey = JSON.stringify(
+    items.map((item) => [item.productId, item.variantId, item.quantity]),
+  );
+  const [onlineSelection, setOnlineSelection] = useState<{
+    key: string;
+    items: { variant_id: string; quantity: number }[];
+  } | null>(null);
+  const onlineItems =
+    onlineSelection?.key === eligibilityKey ? onlineSelection.items : null;
+  const paymentKey = useRef<string | null>(null);
   const startedAt = useRef<number | null>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     startedAt.current = Date.now();
   }, []);
+
+  useEffect(() => {
+    if (!hydrated || !items.length) return;
+    const controller = new AbortController();
+    void fetch("/api/commerce/eligibility", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        items: items.map((item) => ({
+          product_id: item.productId,
+          variant_id: item.variantId,
+          quantity: item.quantity,
+        })),
+      }),
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        const result = await response.json();
+        if (!controller.signal.aborted)
+          setOnlineSelection(
+            response.ok && result.eligible === true
+              ? { key: eligibilityKey, items: result.items }
+              : null,
+          );
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setOnlineSelection(null);
+      });
+    return () => controller.abort();
+  }, [hydrated, items, eligibilityKey]);
 
   function setField(name: keyof CheckoutFields, value: string) {
     setFields((current) => ({ ...current, [name]: value }));
@@ -74,6 +114,35 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
     setSubmitting(true);
     setError(null);
     try {
+      if (onlineItems) {
+        paymentKey.current ??= crypto.randomUUID();
+        const response = await fetch("/api/commerce/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            locale,
+            idempotency_key: paymentKey.current,
+            items: onlineItems,
+            customer_snapshot: {
+              name: fields.name.trim(),
+              email: fields.email.trim(),
+              phone: fields.phone.trim(),
+              address: [fields.address, fields.city, fields.postalCode]
+                .filter(Boolean)
+                .join(", "),
+            },
+          }),
+        });
+        const result = await response.json();
+        if (!response.ok || typeof result.next_url !== "string")
+          throw new Error(
+            locale === "he"
+              ? "לא ניתן להכין תשלום. בדקו את המצב לפני ניסיון נוסף."
+              : "Payment could not be prepared. Check its status before trying again.",
+          );
+        window.location.assign(result.next_url);
+        return;
+      }
       const response = await fetch("/api/enquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -173,6 +242,13 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
           <div>
             <h1>{copy.checkoutTitle}</h1>
             <p>{copy.checkoutIntro}</p>
+            {onlineItems ? (
+              <p>
+                {locale === "he"
+                  ? "המוצרים מתאימים לתשלום מקוון. הסכום והמלאי ייבדקו שוב לפני חיוב."
+                  : "These items support online payment. Price and stock are checked again before collection."}
+              </p>
+            ) : null}
           </div>
         </header>
 
@@ -298,7 +374,13 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
               className="miro-button miro-button-primary sf-checkout-submit"
               disabled={submitting}
             >
-              {submitting ? copy.submitting : copy.submit}
+              {submitting
+                ? copy.submitting
+                : onlineItems
+                  ? locale === "he"
+                    ? "המשך לתשלום מאובטח"
+                    : "Continue to secure payment"
+                  : copy.submit}
             </button>
             <p className="sf-checkout-payment-note">
               <LockKeyhole size={16} aria-hidden="true" />

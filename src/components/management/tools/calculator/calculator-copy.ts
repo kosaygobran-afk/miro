@@ -11,8 +11,8 @@ export const calculatorCopy = {
   drag: { he: "גרירת חלון המחשבון", en: "Drag calculator window" },
 
   // Keypad buttons
-  backspace: { he: "הצגת שמאלה", en: "Backspace" },
-  clear: { he: "נקוי", en: "Clear" },
+  backspace: { he: "מחיקה", en: "Backspace" },
+  clear: { he: "ניקוי", en: "Clear" },
   percent: { he: "%", en: "%" },
   divide: { he: "חילוק", en: "Divide" },
   multiply: { he: "כפל", en: "Multiply" },
@@ -23,8 +23,10 @@ export const calculatorCopy = {
   sign: { he: "שינוי סימן", en: "Sign" },
 
   // VAT buttons
-  vatAdd: { he: "+מע\"מ", en: "+VAT" },
-  vatSubtract: { he: "-מע\"מ", en: "-VAT" },
+  vatAdd: { he: '+מע"מ', en: "+VAT" },
+  vatSubtract: { he: '-מע"מ', en: "-VAT" },
+  vatRateLabel: { he: 'מע"מ', en: "VAT" },
+  vatUnavailable: { he: 'שיעור המע"מ אינו זמין', en: "VAT rate unavailable" },
 
   // History
   history: { he: "היסטוריה", en: "History" },
@@ -34,6 +36,20 @@ export const calculatorCopy = {
     en: "Are you sure you want to clear all history?",
   },
   noHistory: { he: "אין היסטוריה להצגה", en: "No history to display" },
+  historyLoading: { he: "טוען היסטוריה…", en: "Loading history…" },
+  historyUnavailable: {
+    he: "ההיסטוריה אינה זמינה כרגע",
+    en: "History is unavailable right now",
+  },
+  retryHistory: { he: "ניסיון חוזר", en: "Retry" },
+  historySaveFailed: {
+    he: "התוצאה נשמרה במסך, אך לא ניתן לשמור אותה בהיסטוריה",
+    en: "The result is available, but it could not be saved to history",
+  },
+  historyClearFailed: {
+    he: "לא ניתן לנקות את ההיסטוריה. הנתונים נשארו ללא שינוי",
+    en: "History could not be cleared. Existing entries were kept",
+  },
 
   // Error messages
   errorEmptyInput: { he: "קלט ריק", en: "Empty input" },

@@ -286,6 +286,7 @@ export function HeaderClient({
                 <Link
                   key={key}
                   href={withLocale(locale, `store/${key}`)}
+                  prefetch={false}
                   onClick={closeNavigation}
                 >
                   {label}

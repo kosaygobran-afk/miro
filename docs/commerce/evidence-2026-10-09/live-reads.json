@@ -1,0 +1,107 @@
+{
+  "reads": [
+    {
+      "route": "pos/catalog?limit=30",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "accounts?limit=10",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "tax",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "customers?limit=20&activeOnly=true",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "sales?limit=10",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/settings",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/integrations",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/expenses",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/documents",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/drafts",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/cash",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/recurring",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/intents",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/payments",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "commerce/report",
+      "status": 200,
+      "passed": true
+    },
+    {
+      "route": "accounts/{missingOrderId}",
+      "status": 404,
+      "passed": true
+    }
+  ],
+  "anonymous": [
+    {
+      "route": "pos/catalog",
+      "status": 403,
+      "passed": true
+    },
+    {
+      "route": "accounts",
+      "status": 403,
+      "passed": true
+    },
+    {
+      "route": "commerce/expenses",
+      "status": 401,
+      "passed": true
+    },
+    {
+      "route": "commerce/report",
+      "status": 401,
+      "passed": true
+    }
+  ],
+  "cleanup": true
+}

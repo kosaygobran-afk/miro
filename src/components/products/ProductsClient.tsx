@@ -6,6 +6,7 @@ import { ProductGrid } from "@/components/products/ProductGrid";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
 import { trackProductSearch } from "@/components/analytics/track";
+import { AnimatedNumber } from "@/components/motion/animated-number";
 
 type CatalogCategory = { key: string; label: string };
 
@@ -168,7 +169,7 @@ export function ProductsClient({
             }}
           >
             {copy.all}
-            <span>{products.length}</span>
+            <AnimatedNumber value={products.length} />
           </button>
           {categories.map((item) => (
             <button
@@ -181,14 +182,17 @@ export function ProductsClient({
               }}
             >
               {item.label}
-              <span>{categoryCounts.get(item.key) ?? 0}</span>
+              <AnimatedNumber value={categoryCounts.get(item.key) ?? 0} />
             </button>
           ))}
         </div>
       )}
       <div className="sf-catalog-summary">
         <p role="status" aria-live="polite" aria-atomic="true">
-          <strong>{filtered.length}</strong> {copy.results}
+          <strong>
+            <AnimatedNumber value={filtered.length} />
+          </strong>{" "}
+          {copy.results}
         </p>
         {isFiltered && (
           <button type="button" onClick={resetFilters}>

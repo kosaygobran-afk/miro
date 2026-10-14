@@ -237,20 +237,6 @@ export default async function AdminOverviewPage({
     if (event.user_id) profileIds.add(event.user_id);
 
   const profileNames = new Map<string, string>();
-  if (profileIds.size > 0) {
-    const { data: profiles, error: profilesError } = await admin
-      .from("profiles")
-      .select("id, full_name")
-      .in("id", [...profileIds]);
-    if (profilesError) {
-      // Name resolution is a nicety, not a panel failure; degrade gracefully.
-      console.warn("Overview profile lookup failed:", profilesError.message);
-    }
-    for (const profile of profiles ?? []) {
-      if (profile.full_name) profileNames.set(profile.id, profile.full_name);
-    }
-  }
-
   const productEntityIds = new Set(
     auditRows
       .filter((e) => e.entity_type === "product" && e.entity_id)
@@ -270,7 +256,48 @@ export default async function AdminOverviewPage({
     string,
     { he: string | null; en: string | null }
   >();
+
+  const operationsUnavailable = Boolean(
+    inventoryAggResult.error ||
+    recentSalesResult.error ||
+    movementsResult.error,
+  );
+  // Most recent sale movements: bounded to the same seven-day cohort as
+  // before. Resolve their labels alongside the other independent lookups.
+  const soldByVariant = new Map<string, number>();
+  if (!operationsUnavailable) {
+    for (const movement of movementRows) {
+      if (!movement.variant_id || !movement.delta) continue;
+      soldByVariant.set(
+        movement.variant_id,
+        (soldByVariant.get(movement.variant_id) ?? 0) +
+          Math.abs(movement.delta),
+      );
+    }
+  }
+  const topVariantIds = [...soldByVariant.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, TOP_MOVER_LIMIT)
+    .map(([variantId]) => variantId);
+  let topMovers: TopMover[] = [];
+
   await Promise.all([
+    profileIds.size > 0
+      ? admin
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", [...profileIds])
+          .then(({ data, error }) => {
+            // Name resolution is a nicety, not a panel failure.
+            if (error) {
+              console.warn("Overview profile lookup failed:", error.message);
+            }
+            for (const profile of data ?? []) {
+              if (profile.full_name)
+                profileNames.set(profile.id, profile.full_name);
+            }
+          })
+      : Promise.resolve(),
     productEntityIds.size > 0
       ? admin
           .from("products")
@@ -301,13 +328,41 @@ export default async function AdminOverviewPage({
             }
           })
       : Promise.resolve(),
+    topVariantIds.length > 0
+      ? admin
+          .from("product_variants")
+          .select(
+            "id, products!product_variants_product_id_fkey(id, name_he, name_en)",
+          )
+          .in("id", topVariantIds)
+          .then(({ data: variantRows, error }) => {
+            if (error) {
+              console.warn("Overview top-mover lookup failed:", error.message);
+              return;
+            }
+            topMovers = topVariantIds
+              .map((variantId) => {
+                const variant = (variantRows ?? []).find(
+                  (v) => v.id === variantId,
+                );
+                const product = variant
+                  ? Array.isArray(variant.products)
+                    ? variant.products[0]
+                    : variant.products
+                  : null;
+                return {
+                  id: variantId,
+                  nameHe: product?.name_he ?? null,
+                  nameEn: product?.name_en ?? null,
+                  unitsSold: soldByVariant.get(variantId) ?? 0,
+                };
+              })
+              .filter((mover) => mover.nameHe || mover.nameEn);
+          })
+      : Promise.resolve(),
   ]);
 
-  if (
-    inventoryAggResult.error ||
-    recentSalesResult.error ||
-    movementsResult.error
-  ) {
+  if (operationsUnavailable) {
     operations = emptyPanel();
   } else {
     let inventoryUnits = 0;
@@ -318,52 +373,6 @@ export default async function AdminOverviewPage({
       const cost = v.cost_override ?? product?.purchase_cost ?? 0;
       inventoryUnits += qty;
       inventoryValue += qty * cost;
-    }
-
-    // Top movers: most recent sale movements (no dashboard RPC exists for
-    // movers) — aggregate units sold per variant, resolve product labels.
-    const soldByVariant = new Map<string, number>();
-    for (const movement of movementRows) {
-      if (!movement.variant_id || !movement.delta) continue;
-      soldByVariant.set(
-        movement.variant_id,
-        (soldByVariant.get(movement.variant_id) ?? 0) +
-          Math.abs(movement.delta),
-      );
-    }
-    const topVariantIds = [...soldByVariant.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, TOP_MOVER_LIMIT)
-      .map(([variantId]) => variantId);
-
-    let topMovers: TopMover[] = [];
-    if (topVariantIds.length > 0) {
-      const { data: variantRows, error: variantError } = await admin
-        .from("product_variants")
-        .select(
-          "id, products!product_variants_product_id_fkey(id, name_he, name_en)",
-        )
-        .in("id", topVariantIds);
-      if (!variantError) {
-        topMovers = topVariantIds
-          .map((variantId) => {
-            const variant = (variantRows ?? []).find((v) => v.id === variantId);
-            const product = variant
-              ? Array.isArray(variant.products)
-                ? variant.products[0]
-                : variant.products
-              : null;
-            return {
-              id: variantId,
-              nameHe: product?.name_he ?? null,
-              nameEn: product?.name_en ?? null,
-              unitsSold: soldByVariant.get(variantId) ?? 0,
-            };
-          })
-          .filter((mover) => mover.nameHe || mover.nameEn);
-      } else {
-        console.warn("Overview top-mover lookup failed:", variantError.message);
-      }
     }
 
     const recentSales: RecentSale[] = salesRows.map((sale) => ({

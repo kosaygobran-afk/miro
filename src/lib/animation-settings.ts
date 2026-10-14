@@ -248,6 +248,9 @@ export const animationSettingsSchema = z
       .strict(),
     themeStyle: z.enum(["radial", "fade"]),
     pageStyle: z.enum(["lift", "fade"]),
+    productPreviewStyle: z
+      .enum(["soft-reveal", "3d-pop-up", "3d-pop-up-smooth"])
+      .default("3d-pop-up-smooth"),
     easing: z.enum(["standard", "snappy", "soft"]),
   })
   .strict();
@@ -289,6 +292,7 @@ export const DEFAULT_ANIMATION_SETTINGS: AnimationSettings = {
   },
   themeStyle: "radial",
   pageStyle: "lift",
+  productPreviewStyle: "3d-pop-up-smooth",
   easing: "standard",
 };
 

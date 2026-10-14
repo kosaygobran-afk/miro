@@ -130,15 +130,21 @@ export function AccountMenu({
           <form
             action={`/api/auth/logout?locale=${locale}`}
             method="POST"
-            onClick={() => {
-              // Clear all management tools draft session keys when signing out
+            onSubmit={() => {
+              // Block delayed saves while the logout request is navigating.
               if (typeof window !== "undefined") {
-                const prefix = "miro.management.tools.draft.";
-                for (let i = 0; i < sessionStorage.length; i++) {
-                  const key = sessionStorage.key(i);
-                  if (key && key.startsWith(prefix)) {
+                document.documentElement.dataset.managementSigningOut = "true";
+                try {
+                  const keys = Object.keys(sessionStorage).filter(
+                    (key) =>
+                      key.startsWith("miro.management.tools.draft.") ||
+                      key.startsWith("miro.payment.keys."),
+                  );
+                  for (const key of keys) {
                     sessionStorage.removeItem(key);
                   }
+                } catch {
+                  // Storage can be disabled; logout must still proceed.
                 }
               }
             }}

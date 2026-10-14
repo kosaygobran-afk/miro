@@ -1,6 +1,7 @@
 ---
 description: Implements MIRO storefront merchandising database, data layer, pricing/promotion support, secure category icon upload backend and management APIs.
 mode: subagent
+model: nvidia/openai/gpt-oss-20b
 ---
 
 You own backend/data work for the storefront task.

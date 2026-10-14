@@ -1,0 +1,7 @@
+Noto Sans Hebrew static fonts
+
+Source: https://github.com/notofonts/hebrew/releases/tag/NotoSansHebrew-v2.004
+Release archive: https://github.com/notofonts/hebrew/releases/download/NotoSansHebrew-v2.004/NotoSansHebrew-v2.004.zip
+Files included: NotoSansHebrew-Regular.ttf and NotoSansHebrew-Bold.ttf
+License: SIL Open Font License 1.1; see OFL.txt from the same release archive.
+Runtime use: server-side PDF preview rendering only.

@@ -70,6 +70,7 @@ export function ProductSubNav({
             <Link
               key={category.key}
               href={category.href}
+              prefetch={false}
               aria-current={ariaCurrent}
               className="sf-department"
             >

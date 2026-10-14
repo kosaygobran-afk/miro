@@ -73,6 +73,7 @@ Runtime source of truth: `src/app/globals.css`. Files under `src/styles/` **are*
 ### Overlay contract
 
 - **Portal mounting**: Management dialogs/drawers render into body-level portal (via `OverlayStackProvider`) to escape ancestor stacking contexts.
+- **Floating tool context**: In `ManagementShell`, `OverlayStackProvider` must wrap `ManagementToolProvider`, which renders floating tools beside its page children. Both must share the same overlay stack; placing the stack inside the tool provider crashes the POS review dialog even while closed. Verify with `ADMIN_BASE_URL=http://127.0.0.1:<port> node scripts/verify-management-tools.mjs` against a local production server; the script uses disposable admin authentication and synthetic tool data/mutations.
 - **Topmost ownership**: Only topmost overlay handles Escape/Tab trapping; coordinated via `OverlayStack` context.
 - **Scroll locking**: Reference-counted; original `body.style.overflow` restored only when final overlay closes.
 - **Focus management**: Restores to connected opener element; sensible fallback (panel) if opener removed.

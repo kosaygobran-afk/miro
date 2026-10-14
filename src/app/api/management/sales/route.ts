@@ -8,15 +8,43 @@ import {
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { channelDbValues, PAYMENT_METHODS } from "@/lib/sales-channel";
+import { sanitizePosSaleBody } from "@/lib/pos-sale";
+import {
+  commerceFailure,
+  commerceJson,
+  readCommerceJson,
+} from "@/lib/commerce/http";
+import { MAX_AGOROT, sumAgorot, toAgorot } from "@/lib/commerce/money";
+
+const moneySchema = z
+  .number()
+  .min(0)
+  .max(MAX_AGOROT / 100)
+  .refine((value) => {
+    try {
+      toAgorot(value);
+      return true;
+    } catch {
+      return false;
+    }
+  }, "Money requires at most two decimal places");
 
 const saleItemSchema = z
   .object({
     variantId: z.string().uuid(),
-    quantity: z.number().int().positive(),
-    unitPrice: z.number().nonnegative(),
-    discountPerUnit: z.number().nonnegative().optional(),
-    discount_per_unit: z.number().nonnegative().optional(),
+    quantity: z.number().int().positive().max(10_000),
+    unitPrice: moneySchema,
+    discountPerUnit: moneySchema.optional(),
+    discount_per_unit: moneySchema.optional(),
   })
+  .strict()
+  .refine(
+    (item) =>
+      item.discountPerUnit === undefined ||
+      item.discount_per_unit === undefined ||
+      item.discountPerUnit === item.discount_per_unit,
+    "Discount fields disagree",
+  )
   .transform(({ discount_per_unit, discountPerUnit, ...rest }) => ({
     ...rest,
     discountPerUnit: discountPerUnit ?? discount_per_unit ?? 0,
@@ -25,29 +53,33 @@ const saleItemSchema = z
     message: "discountPerUnit must be between 0 and unitPrice",
   });
 
+const paymentSchema = z
+  .object({
+    method: z.enum(PAYMENT_METHODS),
+    amount: moneySchema.refine((value) => value > 0),
+    installments: z.number().int().min(1).max(36).default(1),
+    reference: z.string().max(120).optional().nullable(),
+  })
+  .strict()
+  .refine(
+    (payment) => payment.method !== "cash" || payment.installments === 1,
+    "Cash cannot use installments",
+  );
+
 const saleSchema = z
   .object({
     customer: z
       .object({
-        name: z.string().min(1).max(255),
-        email: z.string().email(),
-        phone: z.string().optional().nullable(),
+        name: z.string().trim().min(1).max(255),
+        email: z.string().trim().email().max(254).optional().nullable(),
+        phone: z.string().trim().max(30).optional().nullable(),
         userId: z.string().uuid().optional().nullable(),
       })
       .strict(),
-    items: z.array(saleItemSchema).min(1),
-    payments: z
-      .array(
-        z
-          .object({
-            method: z.enum(PAYMENT_METHODS),
-            amount: z.number().nonnegative().max(999999999.99),
-            installments: z.number().int().min(1).max(36).default(1),
-            reference: z.string().max(120).optional().nullable(),
-          })
-          .strict(),
-      )
-      .min(1),
+    items: z.array(saleItemSchema).min(1).max(100),
+    // Payments optional for backward compatibility; if omitted, a single cash payment for the full amount is created.
+    // The business source is server-owned and always resolves to POS for this endpoint.
+    payments: z.array(paymentSchema).min(1).max(100).optional(),
     idempotencyKey: z.string().min(8).max(64),
   })
   .strict();
@@ -56,7 +88,7 @@ const listParamsSchema = z.object({
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   limit: z.coerce.number().int().positive().max(500).default(50),
-  offset: z.coerce.number().int().nonnegative().default(0),
+  offset: z.coerce.number().int().nonnegative().max(1_000_000).default(0),
 });
 
 export async function GET(request: Request) {
@@ -119,13 +151,14 @@ export async function GET(request: Request) {
   if (from) countQuery = countQuery.gte("created_at", from);
   if (to) countQuery = countQuery.lte("created_at", to);
 
-  const [{ data: orders, error: ordersError }, { count }] = await Promise.all([
-    orderQuery.range(offset, offset + limit - 1),
-    countQuery,
-  ]);
+  const [{ data: orders, error: ordersError }, { count, error: countError }] =
+    await Promise.all([
+      orderQuery.range(offset, offset + limit - 1),
+      countQuery,
+    ]);
 
-  if (ordersError) {
-    return errorResponse(ordersError.message);
+  if (ordersError || countError) {
+    return commerceFailure(ordersError ?? countError, "pos_sales_history");
   }
 
   // recorded_by has no FK into public.profiles (it references auth.users), so
@@ -147,7 +180,8 @@ export async function GET(request: Request) {
       .from("profiles")
       .select("id, display_name, full_name")
       .in("id", recorderIds);
-    if (profilesError) return errorResponse(profilesError.message);
+    if (profilesError)
+      return commerceFailure(profilesError, "pos_sales_history_profiles");
     for (const profile of (profiles ?? []) as unknown as {
       id: string;
       display_name: string | null;
@@ -158,7 +192,7 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({
+  return commerceJson({
     orders: orderRows.map((row) => ({
       ...row,
       recordedBy: row.recorded_by
@@ -193,18 +227,62 @@ export async function POST(request: Request) {
     );
   }
 
-  const body = await request.json().catch(() => null);
-  const parsed = saleSchema.safeParse(body);
+  let body: unknown;
+  try {
+    body = await readCommerceJson(request);
+  } catch (error) {
+    return commerceFailure(error, "record_pos_sale_input");
+  }
+  const sanitizedBody = sanitizePosSaleBody(body);
+  const parsed = saleSchema.safeParse(sanitizedBody);
   if (!parsed.success) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
+  const { customer, items, payments, idempotencyKey } = parsed.data;
+
+  let orderTotalAgorot: number;
+  try {
+    orderTotalAgorot = sumAgorot(
+      items.map(
+        (item) =>
+          (toAgorot(item.unitPrice) - toAgorot(item.discountPerUnit)) *
+          item.quantity,
+      ),
+    );
+    if (
+      payments &&
+      sumAgorot(payments.map((p) => toAgorot(p.amount))) !== orderTotalAgorot
+    )
+      return commerceJson(
+        {
+          error: "Payment total does not match order total",
+          code: "payment_mismatch",
+        },
+        400,
+      );
+  } catch {
+    return commerceJson(
+      { error: "Invalid sale total", code: "invalid_sale_data" },
+      400,
+    );
+  }
+
+  // If payments not provided, create a single cash payment for the full amount (backward compatibility)
+  const finalPayments = payments ?? [
+    {
+      method: "cash" as const,
+      amount: orderTotalAgorot / 100,
+      installments: 1,
+      reference: null,
+    },
+  ];
+
   const client = await createServerSupabaseClient();
-  const { customer, items, idempotencyKey } = parsed.data;
-  const { data: orderId, error } = await client.rpc("record_pos_sale", {
+  const { data: saleResult, error } = await client.rpc("record_pos_sale", {
     p_customer: {
       name: customer.name,
-      email: customer.email,
+      email: customer.email ?? null,
       phone: customer.phone ?? null,
       customer_id: customer.userId ?? null,
     },
@@ -221,7 +299,7 @@ export async function POST(request: Request) {
         discount_per_unit: item.discountPerUnit,
       }),
     ),
-    p_payments: parsed.data.payments.map((payment) => ({
+    p_payments: finalPayments.map((payment) => ({
       method: payment.method,
       amount: payment.amount,
       installments: payment.installments,
@@ -231,6 +309,15 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    if (error.code === "PT409")
+      return commerceJson(
+        {
+          error:
+            "Sale details changed or conflict with a previous request. Review before retrying.",
+          code: "sale_conflict",
+        },
+        409,
+      );
     if (error.code === "22023") {
       const msg = error.message || "";
       if (msg.includes("Insufficient stock")) {
@@ -273,12 +360,31 @@ export async function POST(request: Request) {
     if (error.code === "42501") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    console.error("record_pos_sale failed:", error.code, error.message);
-    return NextResponse.json(
-      { error: "Failed to record sale" },
-      { status: 500 },
+    return commerceFailure(error, "record_pos_sale");
+  }
+
+  const parsedResult = z
+    .object({
+      order_id: z.string().uuid(),
+      order_number: z.string().min(1),
+      source: z.literal("pos"),
+      status: z.string().min(1),
+    })
+    .safeParse(saleResult);
+
+  if (!parsedResult.success) {
+    return commerceJson(
+      {
+        error: "Sale result requires reconciliation",
+        code: "invalid_sale_result",
+      },
+      503,
     );
   }
 
-  return NextResponse.json({ orderId });
+  return commerceJson({
+    orderId: parsedResult.data.order_id,
+    order_number: parsedResult.data.order_number,
+    source: parsedResult.data.source,
+  });
 }

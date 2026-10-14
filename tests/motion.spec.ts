@@ -24,7 +24,7 @@ declare global {
 }
 
 async function gotoReady(page: Page, path: string) {
-  await page.goto(path);
+  await page.goto(path, { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute(
     "data-motion-ready",
     "true",

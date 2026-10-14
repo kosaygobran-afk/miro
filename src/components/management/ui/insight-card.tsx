@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "@/components/motion/motion-link";
 import { ArrowUpRight } from "lucide-react";
+import { AnimatedMetricValue } from "@/components/motion/animated-number";
 
 export function InsightCard({
   title,
@@ -28,7 +29,7 @@ export function InsightCard({
         <h3>{title}</h3>
       </div>
       <div className="insight-card-value" dir="auto">
-        {value}
+        <AnimatedMetricValue value={value} />
       </div>
       <p>{description}</p>
       {detail ? <div className="insight-card-detail">{detail}</div> : null}
