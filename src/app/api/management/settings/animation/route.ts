@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_ANIMATION_SETTINGS_TAG } from "@/lib/public-presentation-cache";
 import { z } from "zod";
 import {
   errorResponse,
@@ -71,6 +72,7 @@ export async function PUT(request: Request) {
       409,
     );
   if (error) return mapPostgresError(error);
+  revalidateTag(PUBLIC_ANIMATION_SETTINGS_TAG, { expire: 0 });
   revalidatePath("/he", "layout");
   revalidatePath("/en", "layout");
   return NextResponse.json({

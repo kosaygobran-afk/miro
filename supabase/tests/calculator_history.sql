@@ -215,10 +215,11 @@ declare
   v_count integer;
 begin
   -- Admin B tries to get history - should not see Admin A's record
-  v_history := public.get_calculator_history(100);
+  select coalesce(jsonb_agg(h.value), '[]'::jsonb) into v_history
+  from public.get_calculator_history(100) as h(value);
   select count(*) into v_count from jsonb_array_elements(v_history) as h(value);
   if v_count <> 0 then
-    raise exception 'Admin B could see Admin A\'s history';
+    raise exception 'Admin B could see Admin A''s history';
   end if;
 end $$;
 
@@ -240,14 +241,17 @@ begin
       'retention-test-' || i
     );
   end loop;
+end $$;
 
-  -- Check that we have approximately 100 records (should be 100 due to retention policy)
+-- Direct table reads stay privileged; authenticated callers use the RPC.
+set local role service_role;
+do $$
+declare
+  v_count integer;
+begin
   select count(*) into v_count from public.calculator_history where user_id = '00000000-0000-0000-0000-000000000252'::uuid;
-  if v_count > 100 then
-    raise exception 'Retention cap not working: ' || v_count || ' records kept (max 100 expected)';
-  end if;
-  if v_count < 90 then  // Allow some flexibility
-    raise exception 'Too many records deleted: ' || v_count || ' records kept';
+  if v_count <> 100 then
+    raise exception 'Retention cap not working: % records kept (100 expected)', v_count;
   end if;
 end $$;
 
@@ -261,18 +265,18 @@ declare
   v_history_id1 uuid;
   v_history_id2 uuid;
   v_history jsonb;
+  v_count integer;
   v_first_expression text;
   v_second_expression text;
 begin
-  -- Insert two records with a delay to ensure different timestamps
+  -- Start independently of the retention fixtures.
+  perform public.clear_calculator_history();
+
   v_history_id1 := public.record_calculator_history(
     'first calculation',
     100,
     'first-context'
   );
-
-  -- Small delay to ensure different timestamps
-  perform pg_sleep(0.1);
 
   v_history_id2 := public.record_calculator_history(
     'second calculation',
@@ -280,13 +284,20 @@ begin
     'second-context'
   );
 
-  -- Get history
-  v_history := public.get_calculator_history(10);
+  -- now() is transaction-stable; sleeping cannot distinguish these fixtures.
+  -- The privileged test owner assigns explicit times, then reads as the actor.
+  reset role;
+  update public.calculator_history set created_at = '2026-10-06 10:00:00+00' where id = v_history_id1;
+  update public.calculator_history set created_at = '2026-10-06 10:00:01+00' where id = v_history_id2;
+  set local role authenticated;
+
+  select coalesce(jsonb_agg(h.value), '[]'::jsonb) into v_history
+  from public.get_calculator_history(10) as h(value);
 
   -- Check we got 2 records
   select count(*) into v_count from jsonb_array_elements(v_history) as h(value);
   if v_count <> 2 then
-    raise exception 'Expected 2 history records, got ' || v_count;
+    raise exception 'Expected 2 history records, got %', v_count;
   end if;
 
   -- Check that the most recent record is first (descending order)
@@ -294,11 +305,11 @@ begin
   v_second_expression := (v_history->1) #>> '{expression}';
 
   if v_first_expression <> 'second calculation' then
-    raise exception 'Most recent record should be first, got "' || v_first_expression || '"';
+    raise exception 'Most recent record should be first, got "%"', v_first_expression;
   end if;
 
   if v_second_expression <> 'first calculation' then
-    raise exception 'Second most recent record should be second, got "' || v_second_expression || '"';
+    raise exception 'Second most recent record should be second, got "%"', v_second_expression;
   end if;
 end $$;
 
@@ -313,17 +324,19 @@ declare
   v_count integer;
 begin
   -- Test limit < 1 (should be clamped to 1)
-  v_history := public.get_calculator_history(0);
+  select coalesce(jsonb_agg(h.value), '[]'::jsonb) into v_history
+  from public.get_calculator_history(0) as h(value);
   select count(*) into v_count from jsonb_array_elements(v_history) as h(value);
   if v_count <> 1 then
-    raise exception 'Limit 0 should be clamped to 1, got ' || v_count;
+    raise exception 'Limit 0 should be clamped to 1, got %', v_count;
   end if;
 
   -- Test limit > 50 (should be clamped to 50)
-  v_history := public.get_calculator_history(100);
+  select coalesce(jsonb_agg(h.value), '[]'::jsonb) into v_history
+  from public.get_calculator_history(100) as h(value);
   select count(*) into v_count from jsonb_array_elements(v_history) as h(value);
   if v_count > 50 then
-    raise exception 'Limit 100 should be clamped to 50, got ' || v_count;
+    raise exception 'Limit 100 should be clamped to 50, got %', v_count;
   end if;
 end $$;
 

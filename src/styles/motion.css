@@ -429,3 +429,125 @@ html:has(.mgmt-shell) .motion-navigation-progress {
   :is(.animate-spin, [class$="__spinner"]) {
   animation: none !important;
 }
+
+/* Soft Reveal leaves the saved 3D keyframes intact for the legacy preset. */
+:root[data-product-preview-style="soft-reveal"] .sf-hover-preview {
+  animation-name: sf-preview-soft-enter;
+  animation-duration: var(--motion-preview-enter-duration);
+  animation-timing-function: cubic-bezier(0.22, 0.68, 0, 1);
+}
+:root[data-product-preview-style="soft-reveal"]
+  .sf-hover-preview[data-state="closing"] {
+  animation-name: sf-preview-soft-exit;
+  animation-duration: var(--motion-preview-exit-duration);
+  animation-timing-function: ease-out;
+}
+@keyframes sf-preview-soft-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes sf-preview-soft-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(3px) scale(0.99);
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :root[data-product-preview-style="soft-reveal"][data-motion-micro-interactions="true"]
+    :is(
+      .sf-product-card:hover,
+      .sf-product-card[data-preview-intent],
+      .sf-moving-rail-card-shell:hover .sf-moving-rail-card,
+      .sf-moving-rail-card-shell[data-preview-intent] .sf-moving-rail-card
+    ) {
+    transform: translateY(-2px);
+    transition-duration: var(--motion-dialog-duration);
+    box-shadow: var(--shadow-lift);
+  }
+  :root[data-product-preview-style="soft-reveal"][data-motion-micro-interactions="true"]
+    :is(
+      .sf-product-card:hover .sf-product-visual,
+      .sf-product-card[data-preview-intent] .sf-product-visual,
+      .sf-moving-rail-card-shell:hover .sf-moving-rail-image,
+      .sf-moving-rail-card-shell[data-preview-intent] .sf-moving-rail-image
+    ) {
+    transform: none;
+  }
+}
+
+/* Responsive whole-card 3D: uniform scale protects image and text proportions. */
+:root[data-product-preview-style="3d-pop-up-smooth"] .sf-hover-preview {
+  animation-name: sf-preview-3d-smooth-enter;
+  animation-duration: var(--motion-preview-enter-duration);
+  animation-timing-function: cubic-bezier(0.22, 0.61, 0.36, 1);
+  transform-origin: 50% 0;
+}
+:root[data-product-preview-style="3d-pop-up-smooth"]
+  .sf-hover-preview[data-state="closing"] {
+  animation-name: sf-preview-3d-smooth-exit;
+  animation-duration: var(--motion-preview-exit-duration);
+  animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+}
+@keyframes sf-preview-3d-smooth-enter {
+  from {
+    opacity: 1;
+    transform: translate(
+        var(--sf-preview-source-offset-x, 0px),
+        var(--sf-preview-source-offset-y, 0px)
+      )
+      scale(var(--sf-preview-source-scale, 0.72));
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+}
+@keyframes sf-preview-3d-smooth-exit {
+  from {
+    opacity: 1;
+    transform: translate(0, 0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(
+        var(--sf-preview-source-offset-x, 0px),
+        var(--sf-preview-source-offset-y, 0px)
+      )
+      scale(var(--sf-preview-source-scale, 0.72));
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  :root[data-product-preview-style="3d-pop-up-smooth"][data-motion-micro-interactions="true"]
+    :is(
+      .sf-product-card:hover,
+      .sf-product-card[data-preview-intent],
+      .sf-moving-rail-card-shell:hover .sf-moving-rail-card,
+      .sf-moving-rail-card-shell[data-preview-intent] .sf-moving-rail-card
+    ) {
+    transform: translateY(-3px) scale(1.008);
+    transition:
+      transform 160ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      border-color 160ms ease-out,
+      box-shadow 160ms ease-out;
+    box-shadow: var(--shadow-lift);
+  }
+  :root[data-product-preview-style="3d-pop-up-smooth"][data-motion-micro-interactions="true"]
+    :is(
+      .sf-product-card:hover .sf-product-visual,
+      .sf-product-card[data-preview-intent] .sf-product-visual,
+      .sf-moving-rail-card-shell:hover .sf-moving-rail-image,
+      .sf-moving-rail-card-shell[data-preview-intent] .sf-moving-rail-image
+    ) {
+    transform: none;
+  }
+}

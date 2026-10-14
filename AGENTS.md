@@ -8,6 +8,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Native NVIDIA CLI runtime — 2026-10-07
+
+- The owner requested Nemotron 3 Ultra 550B A55B at maximum supported settings in both Kimi Code and OpenCode. Local native defaults now use `nvidia/nemotron-ultra`; OpenCode keeps `build` and GPT-OSS 20B workers. This supersedes previous model-default notes for those tools, without changing Codex model routing.
+- Read `docs/tooling/NVIDIA_CLI.md` before changing the native CLI providers or launchers. Their NVIDIA endpoint uses a loopback compatibility LaunchAgent because Kimi Code 2.1.1 always emits an unsupported cache field. Preserve the fixed upstream, private credentials/logs, streaming/cancellation, actual model identity and failure status. Never make an Ultra verification pass by substituting another model.
+- Maximum supported effort is `high`, with unrestricted reasoning budget and the documented 32,768-token output ceiling. The configured million-token context is catalog metadata, not evidence of a full-window load test. Run the bridge regressions and real synthetic read-tool/final-answer checks after runtime changes; preserve unrelated dirty website work.
+
 # Legal Reminders
 
 At each milestone, briefly report newly relevant legal/privacy/accessibility issues and outstanding launch blockers, with an owner/action.
@@ -21,7 +27,24 @@ After every meaningful project change, update `docs/PROJECT_STATUS.md` with:
 - commands run and whether they passed
 - remaining blockers or owner actions
 
+## OpenCode Subagent Orchestration
+
+- Keep `build` as the default primary agent unless the owner explicitly changes it in OpenCode.
+- Use GPT-OSS 20B for subagents. Delegate only when parallel investigation or independent work is useful.
+- Keep at most six subagents active at once. OpenCode has no configured hard concurrency cap, so the primary agent must enforce this limit.
+- For more than six independent tasks, start up to six and keep the rest queued. When a subagent finishes, review its result and ownership, then immediately assign the next queued task to that freed slot. Never exceed six active subagents.
+- Keep file ownership disjoint, and have the primary agent coordinate integration and final verification. Subagents must not launch nested subagents.
+
 When a change affects how future agents should work, also update the relevant docs in `docs/` or this `AGENTS.md` file.
+
+## Owner-requested Israeli commerce handoff — 2026-10-06
+
+- `docs/LUNA_COMMERCE_PROMPT.md` and `docs/commerce/` contain the owner's new implementation scope: real card/bit checkout, expenses, reports, independent invoicing with editable business identity, Israeli integrations and responsive fullscreen POS. These are requirements and a researched plan, not implemented/payment-certified features.
+- For this task the owner explicitly selected **Codex with Luna and subagents**. The OpenCode model-routing rules above continue to apply to OpenCode; do not change `opencode.json` or global models for this Codex task. Use the actual Codex concurrency limit, disjoint ownership, no nested children and primary integration/verification.
+- Preserve the enquiry/quote-only path for unapproved price/stock or disabled online payments. Existing POS payment-method labels record tender; they do not charge a gateway. Future async payments must verify server-side status and prevent duplicate charge/order/stock effects. Unknown financial writes require reconciliation before retry.
+- The requested invoice engine is internal, not a mandatory external invoice SaaS. Issued identity/content/artifacts must remain immutable, with protected numbering, signing/allocation integrations and retention. Official issuance and live payment activation remain gated by documented business/accountant/provider readiness; no fake signatures, allocation numbers or payment success.
+- The phrase “ללא אובליגו” requires an explicit provider-approved definition; do not infer it from ordinary installments, recurring billing or authorization holds. Fullscreen must consider native browser support and shared overlay portals, with an edge-to-edge mobile fallback.
+- Track every requirement C01–C18 in the implementation status/evidence. Read relevant installed Next.js guides and skills before editing, preserve dirty work and historical evidence, and update `docs/PROJECT_STATUS.md` after meaningful changes.
 
 # Premium storefront enhancement — 2026-09-20
 
@@ -209,3 +232,15 @@ Important notes for future agents:
 
 - Account history/saved previews are the latest ten source entries, not lifetime totals. `getSavedProductsWithCanonicalData` returns `null` on failure and an array on success; preserve independent errors and scoped role pricing. Product links use the normalized `category` key, not raw database category slugs. Forms keep independent statuses/drafts and never automatically retry uncertain writes.
 - Navigation completion requires routed elements to exist and all `data-route-loading` markers to settle. A URL can commit before its streaming fallback mounts. Keep the indicator effect dependent on its enabled state/duration rather than settings object identity; equivalent server payloads and unrelated settings must not cancel an active trip. Cross-engine checks live in `playwright.cross-browser.config.ts`.
+
+## Sectioned product cards and touch hold — 2026-10-11
+
+- Public grid/rail cards have image, details, pricing and bottom actions sections with subtle theme-token dividers. Only the upper `data-preview-source` wrapper owns preview hover/hold; keep buttons outside it, visible and independently clickable. Desktop popup placement/animation must preserve original footer hit-testing. Explicit button/hold previews use viewport-bounded dialogs. See `docs/ANIMATION_SYSTEM.md` for compact-space fallbacks and anatomy.
+- Touch/pen opens after 500ms with local pressed feedback; normal taps and native scroll/pinch remain intact. Preserve gesture cancellation, scoped release/context-menu guards and keyboard alternatives. Actual mouse PointerEvents own hover; shared stationary dismissal releases in document capture before React intent runs. A fired hold tracks release independently of source cancellation.
+- Keep `tests/product-card-sections.spec.ts` plus response/style/loading regressions. Native CDP verifies touch/pen timing and release behavior; paused real animation frames verify footer clearance. Physical-device/screen-reader approval remains a QA action. Do not change catalog/settings/commerce to validate presentation.
+
+## Version 0.1.1 release handoff — 2026-10-14
+
+- The owner authorized the accumulated commerce/POS, performance, motion/card and native-tooling source release as `0.1.1`, following remote `0.1.0`, with merge into `main`. Package version is now `0.1.1`; release scope, verification and owners are in `docs/releases/0.1.1.md` and `docs/PROJECT_STATUS.md`.
+- Preserve the locally retained `archive/local-main-before-0.1.1` history without pushing it: it contains an added-then-deleted debug-session ZIP. The release includes the resulting source tree based on remote main, without that private debug history. Environment exports and generated Python caches remain ignored; scan staged blobs and newly reachable history before publishing.
+- Git merge and hosting readiness are separate checks. Commerce merchant activation, real signed sandbox proof, official fiscal issuance and manual accessibility/business/privacy approval retain the documented gates; releasing the source does not certify or enable them.

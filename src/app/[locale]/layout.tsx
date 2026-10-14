@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { Heebo } from "next/font/google";
 import { notFound } from "next/navigation";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import { headers } from "next/headers";
+import { SiteTelemetry } from "@/components/layout/site-telemetry";
 import "../globals.css";
 import "@/styles/premium.css";
 import "@/styles/experience.css";
@@ -25,6 +26,7 @@ import { getPublicAnimationSettings } from "@/lib/animation-settings-server";
 import { motionAttributes, motionStyle } from "@/lib/motion";
 import "@/styles/workspace.css";
 import "@/styles/motion.css";
+import "@/styles/product-card-sections.css";
 import {
   getDirection,
   getMessages,
@@ -83,6 +85,7 @@ export default async function LocaleLayout({
   }
 
   const locale: Locale = rawLocale;
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const [storeDesign, animationSettings] = await Promise.all([
     getPublicStorefrontDesign(),
     getPublicAnimationSettings(),
@@ -98,7 +101,7 @@ export default async function LocaleLayout({
       style={motionStyle(animationSettings)}
     >
       <body>
-        <ThemeBootstrap />
+        <ThemeBootstrap nonce={nonce} />
         <AnimationProvider settings={animationSettings}>
           <Suspense fallback={null}>
             <NavigationProgress />
@@ -119,7 +122,7 @@ export default async function LocaleLayout({
               <SiteChrome>
                 <Footer locale={locale} />
               </SiteChrome>
-              {process.env.VERCEL ? <SpeedInsights /> : null}
+              {process.env.VERCEL ? <SiteTelemetry /> : null}
             </CartProvider>
           </StoreDesignProvider>
         </AnimationProvider>

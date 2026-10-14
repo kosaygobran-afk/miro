@@ -111,6 +111,7 @@ try {
     "enabled",
     "features",
     "pageStyle",
+    "productPreviewStyle",
     "themeStyle",
   ]);
   pass("live public RPC exposes only the animation presentation contract");
@@ -286,6 +287,9 @@ try {
   await section
     .getByLabel("Motion easing", { exact: true })
     .selectOption("snappy");
+  await section
+    .getByLabel("Product preview style", { exact: true })
+    .selectOption("3d-pop-up");
   mode = "delay";
   await page.evaluate(() => {
     const save = [
@@ -299,6 +303,12 @@ try {
   ).toBeVisible();
   assert.equal(mutationCount, 1, "duplicate save must make one request");
   assert.equal(lastPayload.settings.enabled, false);
+  assert.equal(lastPayload.settings.productPreviewStyle, "3d-pop-up");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-product-preview-style",
+    "3d-pop-up",
+  );
+
   assert.ok(
     Object.values(lastPayload.settings.features).every(
       (value) => value === false,

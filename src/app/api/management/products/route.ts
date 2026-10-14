@@ -226,17 +226,20 @@ export async function GET(request: Request) {
   const to = from + limit - 1;
   query = query.range(from, to);
 
-  const { data: products, error: productsError, count } = await query;
+  const [
+    { data: products, error: productsError, count },
+    { data: categories, error: categoriesError },
+  ] = await Promise.all([
+    query,
+    admin
+      .from("categories")
+      .select("id, slug, name_he, name_en, sort_order, is_active")
+      .order("sort_order"),
+  ]);
 
   if (productsError) {
     return mapPostgresError(productsError);
   }
-
-  // Fetch categories for dropdowns
-  const { data: categories, error: categoriesError } = await admin
-    .from("categories")
-    .select("id, slug, name_he, name_en, sort_order, is_active")
-    .order("sort_order");
 
   if (categoriesError) {
     return mapPostgresError(categoriesError);

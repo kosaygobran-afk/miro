@@ -108,8 +108,8 @@ export function ManagementShell({
 
   return (
     <WorkspaceProvider locale={locale} role={role}>
-      <ManagementToolProvider userId={userId} locale={locale}>
-        <OverlayStackProvider>
+      <OverlayStackProvider>
+        <ManagementToolProvider userId={userId} locale={locale}>
           <div
             className="mgmt-shell"
             data-sidebar={collapsed ? "collapsed" : "expanded"}
@@ -208,8 +208,8 @@ export function ManagementShell({
               <AdminNav locale={locale} role={role} onNavigate={closeDrawer} />
             </Drawer>
           </div>
-        </OverlayStackProvider>
-      </ManagementToolProvider>
+        </ManagementToolProvider>
+      </OverlayStackProvider>
     </WorkspaceProvider>
   );
 }

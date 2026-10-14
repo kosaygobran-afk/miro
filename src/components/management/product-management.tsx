@@ -8,7 +8,7 @@ import { CollectionSummary } from "./ui/collection-summary";
 
 import { ScrollRegion } from "./ui/scroll-region";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { RevealImage as Image } from "@/components/ui/reveal-image";
 import Link from "@/components/motion/motion-link";
 import {
@@ -167,71 +167,54 @@ export function ProductManagement({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const loadController = useRef<AbortController | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const pendingDeleteProduct = products.find(
     (product) => product.id === pendingDeleteId,
   );
 
   const loadData = useCallback(async () => {
-    setError("");
+    loadController.current?.abort();
+    const controller = new AbortController();
+    loadController.current = controller;
     try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        fetch("/api/management/products?limit=100&sort=sort_order&order=asc", {
+      const response = await fetch(
+        "/api/management/products?limit=100&sort=sort_order&order=asc",
+        {
           cache: "no-store",
-        }),
-        fetch("/api/management/categories", { cache: "no-store" }),
-      ]);
+          signal: controller.signal,
+        },
+      );
 
-      if (!productsRes.ok || !categoriesRes.ok)
+      if (!response.ok) throw new Error("Failed to load data");
+
+      const { products: productsData, categories: categoriesData } =
+        await response.json();
+      if (!Array.isArray(productsData) || !Array.isArray(categoriesData))
         throw new Error("Failed to load data");
+      if (controller.signal.aborted) return;
 
-      const { products: productsData } = await productsRes.json();
-      const { categories: categoriesData } = await categoriesRes.json();
-
+      setError("");
       setProducts(productsData);
       setCategories(categoriesData);
     } catch {
-      setError(he ? "לא ניתן לטעון נתונים" : "Failed to load data");
+      if (!controller.signal.aborted)
+        setError(he ? "לא ניתן לטעון נתונים" : "Failed to load data");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) setLoading(false);
     }
   }, [he]);
 
   useEffect(() => {
-    let ignore = false;
-    async function init() {
-      try {
-        const [productsRes, categoriesRes] = await Promise.all([
-          fetch(
-            "/api/management/products?limit=100&sort=sort_order&order=asc",
-            { cache: "no-store" },
-          ),
-          fetch("/api/management/categories", { cache: "no-store" }),
-        ]);
-        if (!productsRes.ok || !categoriesRes.ok) {
-          throw new Error("Failed to load data");
-        }
-        if (!ignore) {
-          const { products: productsData } = await productsRes.json();
-          const { categories: categoriesData } = await categoriesRes.json();
-          setProducts(productsData);
-          setCategories(categoriesData);
-        }
-      } catch {
-        if (!ignore) {
-          setError(he ? "לא ניתן לטעון נתונים" : "Failed to load data");
-        }
-      } finally {
-        if (!ignore) {
-          setLoading(false);
-        }
-      }
-    }
-    void init();
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void loadData();
+    });
     return () => {
-      ignore = true;
+      active = false;
+      loadController.current?.abort();
     };
-  }, [he]);
+  }, [loadData]);
 
   async function handleStatusChange(
     productId: string,

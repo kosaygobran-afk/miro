@@ -2,6 +2,50 @@
 -- Run against an isolated migrated database. All fixtures are rolled back.
 begin;
 
+create function pg_temp.record_pos_sale_id(
+  p_customer jsonb,
+  p_items jsonb,
+  p_payments jsonb,
+  p_idempotency_key text
+) returns uuid
+language plpgsql
+as $$
+declare
+  v_result jsonb;
+begin
+  v_result := public.record_pos_sale(
+    p_customer, p_items, p_payments, p_idempotency_key
+  );
+  if jsonb_typeof(v_result) is distinct from 'object'
+     or nullif(v_result->>'order_number', '') is null then
+    raise exception 'record_pos_sale returned an invalid result';
+  end if;
+  return (v_result->>'order_id')::uuid;
+end;
+$$;
+
+create function pg_temp.create_website_test_order(
+  p_order_number text,
+  p_customer_id uuid,
+  p_recorded_by uuid
+) returns uuid
+language sql
+security definer
+set search_path = ''
+as $$
+  insert into public.orders (
+    order_number, status, currency, customer_name, customer_email, customer_phone,
+    user_id, recorded_by, source, subtotal, vat_total, total, net_total,
+    shipping_cost, notes, created_at, updated_at
+  ) values (
+    p_order_number, 'completed', 'ILS', 'Website Customer', 'website@example.com',
+    '050-9876543', p_customer_id, p_recorded_by, 'website', 84.75, 15.25,
+    100.00, 84.75, 0, null, timezone('utc'::text, now()),
+    timezone('utc'::text, now())
+  )
+  returning id;
+$$;
+
 -- ============================================================
 -- Fixtures
 -- ============================================================
@@ -34,9 +78,9 @@ where id in ('22222222-2222-2222-2222-222222222222', '33333333-3333-3333-3333-33
 -- Create test variants for testing (inserted before RLS role switch)
 insert into public.product_variants(id, product_id, sku, barcode, is_default, is_active, stock_qty)
 values
-('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'SKU-TEST-001', 'BC-TEST-001', false, true, 5),
-('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', 'SKU-TEST-002', 'BC-TEST-002', false, true, 5),
-('44444444-4444-4444-4444-444444444444', '22222222-2222-2222-2222-222222222222', 'SKU-DEFAULT-A', 'BC-DEFAULT-A', true, true, 10);
+('22222222-2222-2222-2222-222222222222', '22222222-2222-2222-2222-222222222222', 'SKU-TEST-001', 'BC-TEST-001', false, true, 100),
+('33333333-3333-3333-3333-333333333333', '22222222-2222-2222-2222-222222222222', 'SKU-TEST-002', 'BC-TEST-002', false, true, 100),
+('44444444-4444-4444-4444-444444444444', '22222222-2222-2222-2222-222222222222', 'SKU-DEFAULT-A', 'BC-DEFAULT-A', true, true, 100);
 
 -- ============================================================
 -- 1. Authorized POS sale via record_pos_sale creates order (source='pos') + items + order_payments rows + stock decrease + audit pos_sale_recorded
@@ -57,7 +101,7 @@ begin
   v_stock_before := (select stock_qty from public.product_variants where id = v_variant_id);
 
   -- Record POS sale: 2 items at 100 each, no discount, payment cash
-  v_order_id := public.record_pos_sale(
+  v_order_id := pg_temp.record_pos_sale_id(
     '{"name": "Test Customer", "email": "test@example.com", "phone": "050-1234567"}'::jsonb,
     '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 2, "unit_price": 100.00, "discount_per_unit": 0}]'::jsonb,
     '[{"method": "cash", "amount": 200.00}]'::jsonb,
@@ -76,7 +120,7 @@ begin
   if abs(v_order.total - 200.00) > 0.01 then raise exception 'Gross total mismatch'; end if;
 
   -- Check order_items populated
-  select * into v_items from public.order_items where order_id = v_order_id;
+  select quantity,total_price,unit_price,variant_id into v_items from public.order_items where order_id = v_order_id;
   if v_items.variant_id <> v_variant_id then raise exception 'Variant ID not snapshotted'; end if;
   if v_items.quantity <> 2 then raise exception 'Quantity mismatch'; end if;
   if v_items.unit_price <> 100.00 then raise exception 'Unit price mismatch'; end if;
@@ -167,7 +211,7 @@ begin
   v_stock_before := (select stock_qty from public.product_variants where id = v_variant_id);
 
   -- First sale with idempotency key
-  v_order_id := public.record_pos_sale(
+  v_order_id := pg_temp.record_pos_sale_id(
     '{"name": "Test Customer", "email": "test@example.com"}'::jsonb,
     '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 1, "unit_price": 100.00}]'::jsonb,
     '[{"method": "cash", "amount": 100.00}]'::jsonb,
@@ -177,7 +221,7 @@ begin
   if v_order_id is null then raise exception 'Order ID not returned'; end if;
 
   -- Second sale with same idempotency key
-  v_order_id2 := public.record_pos_sale(
+  v_order_id2 := pg_temp.record_pos_sale_id(
     '{"name": "Test Customer", "email": "test@example.com"}'::jsonb,
     '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 1, "unit_price": 100.00}]'::jsonb,
     '[{"method": "cash", "amount": 100.00}]'::jsonb,
@@ -307,6 +351,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000203'
 do $$
 declare
   v_order_id uuid;
+  v_order record;
   v_variant_id uuid := '22222222-2222-2222-2222-222222222222';
   v_stock_before integer;
   v_stock_after integer;
@@ -315,7 +360,7 @@ begin
   v_stock_before := (select stock_qty from public.product_variants where id = v_variant_id);
 
   -- Record POS sale with split payment: 2 items at 100 each, 50% cash, 50% credit card
-  v_order_id := public.record_pos_sale(
+  v_order_id := pg_temp.record_pos_sale_id(
     '{"name": "Test Customer", "email": "test@example.com"}'::jsonb,
     '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 2, "unit_price": 100.00, "discount_per_unit": 0}]'::jsonb,
     '[{"method": "cash", "amount": 100.00}, {"method": "credit_card", "amount": 100.00}]'::jsonb,
@@ -339,7 +384,7 @@ begin
 
   -- Check we have exactly 2 payment rows
   select count(*) into v_payment_count from public.order_payments where order_id = v_order_id;
-  if v_payment_count <> 2 then raise exception 'Expected 2 payment rows, got ' || v_payment_count; end if;
+  if v_payment_count <> 2 then raise exception 'Expected 2 payment rows, got %', v_payment_count; end if;
 
   -- Check payment methods and amounts
   if not exists (select 1 from public.order_payments where order_id = v_order_id and payment_method = 'cash' and amount = 100.00) then
@@ -361,7 +406,11 @@ do $$ begin
     perform public.record_pos_sale(
       '{"name": "Test Customer", "email": "test@example.com"}'::jsonb,
       '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 1, "unit_price": 100.00}]'::jsonb,
-      '[{"method": "cash", "amount": 100.00, "external_reference": "' || repeat('x', 121) || '"}]'::jsonb,
+      jsonb_build_array(jsonb_build_object(
+        'method', 'cash',
+        'amount', 100.00,
+        'external_reference', repeat('x', 121)
+      )),
       null
     );
     raise exception 'External reference >120 allowed';
@@ -395,6 +444,7 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000203'
 do $$
 declare
   v_order_id uuid;
+  v_order record;
   v_variant_id uuid := '22222222-2222-2222-2222-222222222222';
   v_stock_before integer;
   v_stock_after integer;
@@ -402,10 +452,10 @@ begin
   v_stock_before := (select stock_qty from public.product_variants where id = v_variant_id);
 
   -- Record POS sale with discount: 1 item at 100, 10 discount_per_unit, payment cash
-  v_order_id := public.record_pos_sale(
+  v_order_id := pg_temp.record_pos_sale_id(
     '{"name": "Test Customer", "email": "test@example.com"}'::jsonb,
     '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 1, "unit_price": 100.00, "discount_per_unit": 10.00}]'::jsonb,
-    '[{"method": "cash", "amount": 90.00}]'::jsonb,  // 100 - 10 = 90
+    '[{"method": "cash", "amount": 90.00}]'::jsonb, -- 100 - 10 = 90
     null
   );
 
@@ -444,7 +494,7 @@ begin
   v_stock_before := (select stock_qty from public.product_variants where id = v_variant_id);
 
   -- First sale with idempotency key
-  v_order_id := public.record_pos_sale(
+  v_order_id := pg_temp.record_pos_sale_id(
     '{"name": "Test Customer", "email": "test@example.com"}'::jsonb,
     '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 1, "unit_price": 100.00}]'::jsonb,
     '[{"method": "cash", "amount": 100.00}]'::jsonb,
@@ -459,9 +509,9 @@ begin
   select count(*) into v_items_count from public.order_items where order_id = v_order_id;
 
   -- Second sale with same idempotency key
-  v_order_id2 := public.record_pos_sale(
-    '{"name": "Test Customer 2", "email": "test2@example.com"}'::jsonb,
-    '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 2, "unit_price": 50.00}]'::jsonb,  // Different item/amount
+  v_order_id2 := pg_temp.record_pos_sale_id(
+    '{"name": "Test Customer", "email": "test@example.com"}'::jsonb,
+    '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 1, "unit_price": 100.00}]'::jsonb, -- Exact retry
     '[{"method": "cash", "amount": 100.00}]'::jsonb,
     'idempotent-key-456'
   );
@@ -500,50 +550,31 @@ declare
   v_website_count integer;
 begin
   -- Create a POS order
-  v_pos_order_id := public.record_pos_sale(
+  v_pos_order_id := pg_temp.record_pos_sale_id(
     '{"name": "POS Customer", "email": "pos@example.com"}'::jsonb,
     '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 1, "unit_price": 100.00}]'::jsonb,
     '[{"method": "cash", "amount": 100.00}]'::jsonb,
     null
   );
 
-  -- Create a website order (source website) by inserting directly into orders with website source
-  -- We'll need to backdate it to look like a website order
-  insert into public.orders (
-    order_number, status, currency, customer_name, customer_email, customer_phone,
-    user_id, recorded_by, source, subtotal, vat_total, total, net_total, shipping_cost, notes,
-    created_at, updated_at
-  ) values (
-    'WEB-ORDER-001', 'completed', 'ILS',
-    'Website Customer', 'website@example.com', '050-9876543',
-    '00000000-0000-0000-0000-000000000200',  // Customer user_id
-    '00000000-0000-0000-0000-000000000203',  // CEO recorded_by
-    'website',  // website source
-    84.75,      // subtotal (net)
-    15.25,      // vat
-    100.00,     // total
-    84.75,      // net
-    0,          // shipping
-    null,       // notes
-    timezone('utc'::text, now()),
-    timezone('utc'::text, now())
-  ) returning id into v_website_order_id;
+  v_website_order_id := pg_temp.create_website_test_order(
+    'WEB-ORDER-001',
+    '00000000-0000-0000-0000-000000000200',
+    '00000000-0000-0000-0000-000000000203'
+  );
 
   -- Test management_pos_accounts - should return only POS order, not website
   v_result := public.management_pos_accounts(
     timezone('utc'::text, now()) - interval '1 day',
     timezone('utc'::text, now()) + interval '1 day',
-    null, null, null, null, 100, 0
+    null, null, null, 'POS Customer', 100, 0
   );
 
   -- Check that we got exactly one order (the POS one)
-  v_pos_count := (v_result->'orders')::jsonb #>> '{0,order_id}') is not null)::int +
-                 (case when (v_result->'orders')::jsonb #>> '{0,order_id}' is null then 0 else 1 end);
-  -- Actually, let's count properly
   select jsonb_array_length(v_result->'orders') into v_pos_count;
 
   if v_pos_count <> 1 then
-    raise exception 'Expected 1 POS order, got ' || v_pos_count;
+    raise exception 'Expected 1 POS order, got %', v_pos_count;
   end if;
 
   -- Check that the order we got is the POS order, not the website order
@@ -552,7 +583,7 @@ begin
   end if;
 
   -- Explicitly check that website order is not in results
-  if (v_result->'orders')::jsonb #> '{0,order_id}' = v_website_order_id::text then
+  if (v_result->'orders')::jsonb #>> '{0,order_id}' = v_website_order_id::text then
     raise exception 'Website order incorrectly included in results';
   end if;
 end $$;
@@ -570,9 +601,9 @@ declare
   v_filtered_count integer;
 begin
   -- Create a POS order
-  v_order_id := public.record_pos_sale(
+  v_order_id := pg_temp.record_pos_sale_id(
     '{"name": "Filter Test Customer", "email": "filter@example.com"}'::jsonb,
-    '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 2, "unit_price": 50.00}]'::jsonb,
+    '[{"variant_id": "22222222-2222-2222-2222-222222222222", "quantity": 2, "unit_price": 100.00, "discount_per_unit": 50.00}]'::jsonb,
     '[{"method": "credit_card", "amount": 100.00}]'::jsonb,
     null
   );
@@ -581,22 +612,22 @@ begin
   v_result := public.management_pos_accounts(
     timezone('utc'::text, now()) - interval '1 day',
     timezone('utc'::text, now()) + interval '1 day',
-    'credit_card', null, null, null, 100, 0
+    'credit_card', null, null, 'Filter Test', 100, 0
   );
   select jsonb_array_length(v_result->'orders') into v_filtered_count;
   if v_filtered_count <> 1 then
-    raise exception 'Expected 1 order with credit_card filter, got ' || v_filtered_count;
+    raise exception 'Expected 1 order with credit_card filter, got %', v_filtered_count;
   end if;
 
   -- Test that it excludes other methods
   v_result := public.management_pos_accounts(
     timezone('utc'::text, now()) - interval '1 day',
     timezone('utc'::text, now()) + interval '1 day',
-    'cash', null, null, null, 100, 0
+    'cash', null, null, 'Filter Test', 100, 0
   );
   select jsonb_array_length(v_result->'orders') into v_filtered_count;
   if v_filtered_count <> 0 then
-    raise exception 'Expected 0 orders with cash filter (we have credit_card), got ' || v_filtered_count;
+    raise exception 'Expected 0 orders with cash filter (we have credit_card), got %', v_filtered_count;
   end if;
 
   -- Test search filter
@@ -607,7 +638,7 @@ begin
   );
   select jsonb_array_length(v_result->'orders') into v_filtered_count;
   if v_filtered_count <> 1 then
-    raise exception 'Expected 1 order with search filter, got ' || v_filtered_count;
+    raise exception 'Expected 1 order with search filter, got %', v_filtered_count;
   end if;
 
   -- Test summary math

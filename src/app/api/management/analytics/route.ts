@@ -172,6 +172,7 @@ export async function GET(request: Request) {
   const { admin } = auth;
 
   let uniqueViewersCapped = false;
+  let dailySeries: ReturnType<typeof aggregateDailyEvents>;
   let perProduct: {
     productId: string;
     slug: string | null;
@@ -199,104 +200,108 @@ export async function GET(request: Request) {
         name_en: string | null;
       } | null
     >();
-    if (productIds.length > 0) {
-      const { data: productRows, error: productError } = await admin
-        .from("products")
-        .select(
-          "id, category_id, categories:category_id (slug, name_he, name_en)",
-        )
-        .in("id", productIds);
-      if (productError) throw productError;
-      for (const row of (productRows ?? []) as unknown as {
-        id: string;
-        category_id: string | null;
-        categories: {
-          slug: string | null;
-          name_he: string | null;
-          name_en: string | null;
-        } | null;
-      }[]) {
-        categoryByProduct.set(
-          row.id,
-          row.categories && row.category_id
-            ? { id: row.category_id, ...row.categories }
-            : null,
-        );
-      }
+    // Categories, exact per-product metrics and daily aggregates do not
+    // depend on each other. Keep their scopes/caps while fetching together.
+    const [productResult, productMetrics, dailyResult] = await Promise.all([
+      productIds.length > 0
+        ? admin
+            .from("products")
+            .select(
+              "id, category_id, categories:category_id (slug, name_he, name_en)",
+            )
+            .in("id", productIds)
+        : Promise.resolve({ data: [], error: null }),
+      Promise.all(
+        topProducts.map(async (entry) => {
+          const productId = entry.product_id;
+          const [clicksResult, enquiriesResult, sessionsResult] =
+            await Promise.all([
+              admin
+                .from("analytics_events")
+                .select("id", { count: "exact", head: true })
+                .eq("product_id", productId)
+                .in("event_type", clickTypes)
+                .gte("created_at", fromValue)
+                .lte("created_at", toValue),
+              admin
+                .from("service_requests")
+                .select("id", { count: "exact", head: true })
+                .eq("product_id", productId)
+                .gte("created_at", fromValue)
+                .lte("created_at", toValue),
+              admin
+                .from("analytics_events")
+                .select("session_id")
+                .eq("product_id", productId)
+                .eq("event_type", "product_view")
+                .not("session_id", "is", null)
+                .gte("created_at", fromValue)
+                .lte("created_at", toValue)
+                .limit(UNIQUE_VIEWER_ROW_CAP),
+            ]);
+          if (clicksResult.error) throw clicksResult.error;
+          if (enquiriesResult.error) throw enquiriesResult.error;
+          if (sessionsResult.error) throw sessionsResult.error;
+
+          const sessions = (sessionsResult.data ?? []) as unknown as {
+            session_id: string | null;
+          }[];
+          if (sessions.length >= UNIQUE_VIEWER_ROW_CAP)
+            uniqueViewersCapped = true;
+          const uniqueViewers = new Set(
+            sessions.map((row) => row.session_id).filter(Boolean),
+          ).size;
+          const views = toNumber(entry.views);
+          const contactClicks = clicksResult.count ?? 0;
+          const enquiries = enquiriesResult.count ?? 0;
+
+          return {
+            productId,
+            slug: entry.slug,
+            name: { he: entry.name_he, en: entry.name_en },
+            views,
+            uniqueViewers,
+            contactClicks,
+            enquiries,
+            conversion: views > 0 ? enquiries / views : 0,
+          };
+        }),
+      ),
+      // Daily series stays on the pre-aggregated UTC view, without a raw
+      // event scan or any change to the reporting window.
+      admin
+        .from("v_product_daily_metrics")
+        .select("day, event_type, events, unique_sessions, unique_users")
+        .gte("day", fromValue.split("T")[0])
+        .lte("day", toValue.split("T")[0])
+        .order("day", { ascending: true }),
+    ]);
+    if (productResult.error) throw productResult.error;
+    if (dailyResult.error) throw dailyResult.error;
+    for (const row of (productResult.data ?? []) as unknown as {
+      id: string;
+      category_id: string | null;
+      categories: {
+        slug: string | null;
+        name_he: string | null;
+        name_en: string | null;
+      } | null;
+    }[]) {
+      categoryByProduct.set(
+        row.id,
+        row.categories && row.category_id
+          ? { id: row.category_id, ...row.categories }
+          : null,
+      );
     }
-
-    perProduct = await Promise.all(
-      topProducts.map(async (entry) => {
-        const productId = entry.product_id;
-        const [clicksResult, enquiriesResult, sessionsResult] =
-          await Promise.all([
-            admin
-              .from("analytics_events")
-              .select("id", { count: "exact", head: true })
-              .eq("product_id", productId)
-              .in("event_type", clickTypes)
-              .gte("created_at", from)
-              .lte("created_at", to),
-            admin
-              .from("service_requests")
-              .select("id", { count: "exact", head: true })
-              .eq("product_id", productId)
-              .gte("created_at", from)
-              .lte("created_at", to),
-            admin
-              .from("analytics_events")
-              .select("session_id")
-              .eq("product_id", productId)
-              .eq("event_type", "product_view")
-              .not("session_id", "is", null)
-              .gte("created_at", from)
-              .lte("created_at", to)
-              .limit(UNIQUE_VIEWER_ROW_CAP),
-          ]);
-        if (clicksResult.error) throw clicksResult.error;
-        if (enquiriesResult.error) throw enquiriesResult.error;
-        if (sessionsResult.error) throw sessionsResult.error;
-
-        const sessions = (sessionsResult.data ?? []) as unknown as {
-          session_id: string | null;
-        }[];
-        if (sessions.length >= UNIQUE_VIEWER_ROW_CAP)
-          uniqueViewersCapped = true;
-        const uniqueViewers = new Set(
-          sessions.map((row) => row.session_id).filter(Boolean),
-        ).size;
-        const views = toNumber(entry.views);
-        const contactClicks = clicksResult.count ?? 0;
-        const enquiries = enquiriesResult.count ?? 0;
-
-        return {
-          productId,
-          slug: entry.slug,
-          name: { he: entry.name_he, en: entry.name_en },
-          category: categoryByProduct.get(productId) ?? null,
-          views,
-          uniqueViewers,
-          contactClicks,
-          enquiries,
-          conversion: views > 0 ? enquiries / views : 0,
-        };
-      }),
-    );
+    perProduct = productMetrics.map((metric) => ({
+      ...metric,
+      category: categoryByProduct.get(metric.productId) ?? null,
+    }));
+    dailySeries = aggregateDailyEvents(dailyResult.data ?? []);
   } catch (err) {
     return mapPostgresError(err as { code?: string; message?: string });
   }
-
-  // Daily series: keeps reading the pre-aggregated v_product_daily_metrics
-  // view (bounded by the date window; no raw-event scan).
-  const { data: dailyData, error: dailyError } = await admin
-    .from("v_product_daily_metrics")
-    .select("day, event_type, events, unique_sessions, unique_users")
-    .gte("day", fromValue.split("T")[0])
-    .lte("day", toValue.split("T")[0])
-    .order("day", { ascending: true });
-  if (dailyError) return mapPostgresError(dailyError);
-
-  const dailySeries = aggregateDailyEvents(dailyData ?? []);
 
   const uniqueSessions = toNumber(totals.unique_sessions);
   const enquiriesSubmitted = toNumber(totals.service_requests);

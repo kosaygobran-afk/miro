@@ -195,3 +195,36 @@ test("configuration outage fallback returns isolated defaults without mutating s
     assert.equal(DEFAULT_ANIMATION_SETTINGS.features.themeReveal, true);
   }
 });
+
+test("preview styles preserve saved motion controls and decode historical backups", () => {
+  const value = draft();
+  value.enabled = false;
+  value.durations.dialog = 280;
+  delete value.productPreviewStyle;
+  const upgraded = animationSettingsSchema.parse(value);
+  assert.equal(upgraded.productPreviewStyle, "3d-pop-up-smooth");
+  assert.equal(upgraded.enabled, false);
+  assert.equal(upgraded.durations.dialog, 280);
+  for (const style of ["soft-reveal", "3d-pop-up", "3d-pop-up-smooth"]) {
+    assert.equal(
+      animationSettingsSchema.parse({ ...value, productPreviewStyle: style })
+        .productPreviewStyle,
+      style,
+    );
+  }
+  assert.equal(
+    animationSettingsSchema.safeParse({
+      ...value,
+      productPreviewStyle: "unknown",
+    }).success,
+    false,
+  );
+  const historical = structuredClone(presets.VERSION_ONE_APPEARANCE);
+  delete historical.animationSettings.productPreviewStyle;
+  assert.equal(
+    presets.appearancePresetSchema.parse(historical).animationSettings
+      .productPreviewStyle,
+    "3d-pop-up",
+  );
+  assert.equal(historical.animationSettings.productPreviewStyle, undefined);
+});

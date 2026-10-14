@@ -378,6 +378,41 @@ export function AnimationSettings({
             </p>
             <div className={styles.durationGrid}>
               <label className={styles.field}>
+                {he ? "סגנון תצוגה מקדימה של מוצר" : "Product preview style"}
+                <select
+                  className="mgmt-input"
+                  value={draft.productPreviewStyle}
+                  aria-label={
+                    he ? "סגנון תצוגה מקדימה של מוצר" : "Product preview style"
+                  }
+                  aria-describedby="product-preview-style-note"
+                  onChange={(event) =>
+                    change((value) => ({
+                      ...value,
+                      productPreviewStyle: event.target
+                        .value as AnimationSettingsValue["productPreviewStyle"],
+                    }))
+                  }
+                >
+                  <option value="3d-pop-up-smooth">
+                    {he
+                      ? "קפיצה חלקה בתלת־ממד — 3D Pop Up · Smooth"
+                      : "3D Pop Up · Smooth"}
+                  </option>
+                  <option value="soft-reveal">
+                    {he ? "חשיפה רכה — Soft Reveal" : "Soft Reveal"}
+                  </option>
+                  <option value="3d-pop-up">
+                    {he ? "קפיצה בתלת־ממד — 3D Pop Up" : "3D Pop Up"}
+                  </option>
+                </select>
+                <span id="product-preview-style-note" className={styles.note}>
+                  {he
+                    ? "חשיפה רכה מציגה את המוצר בעדינות, ללא קפיצה. 3D Pop Up · Smooth מפעיל הרמה עדינה של כל הכרטיס, השהיית ריחוף מכוונת והתרחבות הדרגתית מרוחב הכרטיס. 3D Pop Up שומר על האפקט המקורי. משך המעבר נקבע בזמן החלוניות; השהיית הריחוף נשארת בעיצוב החנות. נדרשת שמירה והחלה."
+                    : "Soft Reveal gently fades the preview in without a bounce. 3D Pop Up · Smooth gently lifts the whole card, uses a deliberate hover pause and smoothly expands from the card’s actual width. 3D Pop Up preserves the original effect. Timing follows the saved controls; Store design hover delay applies fully to the original and Soft Reveal styles. Save and apply to activate."}
+                </span>
+              </label>
+              <label className={styles.field}>
                 {he ? "מעבר ערכת נושא" : "Theme transition"}
                 <select
                   className="mgmt-input"

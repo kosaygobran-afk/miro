@@ -4,6 +4,7 @@ Requires PostgreSQL server binaries on PATH or Homebrew PostgreSQL 17.
 Never connects to the linked Supabase project.
 """
 import pathlib
+import runpy
 import shutil
 import socket
 import subprocess
@@ -39,12 +40,15 @@ with tempfile.TemporaryDirectory(prefix="miro-db-tests-") as directory:
           create schema auth;
           create table auth.users(id uuid primary key, email text, email_confirmed_at timestamptz, raw_user_meta_data jsonb default '{}'::jsonb);
           create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+          create function auth.role() returns text language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claim.role',true),''), nullif(current_setting('role',true),'none')) $$;
           grant usage on schema auth, public to anon, authenticated, service_role;
           grant execute on function auth.uid() to anon, authenticated, service_role;
+          grant execute on function auth.role() to anon, authenticated, service_role;
         """)
         for migration in sorted((root / "supabase/migrations").glob("*.sql")):
             run(sql + ["-f", str(migration)])
             print("PASS migration", migration.name)
+        runpy.run_path(str(root / "supabase/tests/pos_concurrency.py"))["verify_pos_concurrency"](sql, run)
         for test in sorted((root / "supabase/tests").glob("*.sql")):
             run(sql + ["-f", str(test)])
             print("PASS test", test.name)

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { AnimatedMetricValue } from "@/components/motion/animated-number";
 
 export type MetricCardTone =
   "default" | "accent" | "success" | "warning" | "danger";
@@ -68,7 +69,9 @@ export function MetricCard({
         ) : (
           <>
             <span className="mgmt-metric-card__label">{label}</span>
-            <div className="mgmt-metric-card__value">{value}</div>
+            <div className="mgmt-metric-card__value">
+              <AnimatedMetricValue value={value} />
+            </div>
             {delta ? (
               <div
                 className={`mgmt-metric-card__delta mgmt-metric-card__delta--${deltaTone}`}

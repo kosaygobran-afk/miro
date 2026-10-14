@@ -37,6 +37,7 @@ import {
 import { MediaGallery } from "./media-gallery";
 import { RolePricesSection } from "./role-prices-section";
 import { VariantsSection } from "./variants-section";
+import { SalesChannelControl } from "./sales-channel-control";
 import {
   OUT_OF_STOCK_POLICIES,
   STATUS_OPTIONS,
@@ -1328,6 +1329,7 @@ export function ProductEditor({
               description={sectionDescriptions.publishing[locale]}
             >
               <div className={styles.fieldGrid}>
+                <SalesChannelControl productId={product.id} locale={locale} />
                 <FormField
                   id="product-status"
                   label={fieldLabels.status[locale]}

@@ -11,8 +11,9 @@ import { getTranslations } from "next-intl/server";
 import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { pageMetadata } from "@/lib/seo";
-import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import { getStoreCatalog, getStorePageData } from "@/lib/store-data";
 import { withLocale, isLocale } from "@/lib/i18n";
 import { ProductViewTracker } from "@/components/analytics/ProductViewTracker";
 import { ProductDetailInteractive } from "@/components/products/ProductDetailInteractive";
@@ -126,14 +127,13 @@ function getStockBadge(
 export default async function ProductDetailPage({
   params,
 }: ProductDetailPageProps) {
-  const [{ locale: rawLocale, category: rawCategory, slug }, viewer] =
-    await Promise.all([params, getStoreViewer()]);
+  const { locale: rawLocale, category: rawCategory, slug } = await params;
   const locale = isLocale(rawLocale) ? rawLocale : "he";
   const category = normalizeCategory(rawCategory);
   const copy = storeCopy[locale] as StoreCopy;
   const Arrow = locale === "he" ? ArrowRight : ArrowLeft;
-  const [catalog, contactConfig] = await Promise.all([
-    getStoreCatalog(locale, viewer.role),
+  const [{ catalog }, contactConfig] = await Promise.all([
+    getStorePageData(locale),
     getPublicContactConfig(),
   ]);
   const product = catalog.products.find(
@@ -197,6 +197,7 @@ export default async function ProductDetailPage({
   return (
     <>
       <script
+        nonce={(await headers()).get("x-nonce") ?? undefined}
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),

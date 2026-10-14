@@ -12,7 +12,12 @@ export const appearancePresetSchema = z
     nameHe: z.string().min(1).max(120),
     capturedOn: z.string().date(),
     sourceRevision: z.string().datetime({ offset: true }).nullable(),
-    animationSettings: animationSettingsSchema,
+    animationSettings: animationSettingsSchema.extend({
+      // Decode historical backups without changing their immutable stored content.
+      productPreviewStyle: z
+        .enum(["soft-reveal", "3d-pop-up", "3d-pop-up-smooth"])
+        .default("3d-pop-up"),
+    }),
     themeTokens: z
       .object({ dark: tokens, medium: tokens, light: tokens })
       .strict(),
@@ -36,6 +41,7 @@ export const VERSION_ONE_APPEARANCE: AppearancePreset = {
   sourceRevision: null,
   animationSettings: {
     appearanceVersion: "1",
+    productPreviewStyle: "3d-pop-up",
     enabled: true,
     features: {
       themeReveal: true,

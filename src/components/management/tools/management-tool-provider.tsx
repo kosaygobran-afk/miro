@@ -26,11 +26,19 @@ export const TOOL_STORAGE_KEY_PREFIX = "miro.management.tools.";
 export const TOOL_BASE_Z_INDEX = 80; // layer: page content < topbar overlays < floating tools (80+) < modals (>=120)
 
 function defaultToolState(id: ManagementToolId): ManagementToolState {
+  const defaultSize =
+    id === "pos"
+      ? { width: 72 * 16, height: 42 * 16 }
+      : { width: 26 * 16, height: 42 * 16 };
+
   return {
     id,
     open: false,
     minimized: false,
     position: { x: null, y: null },
+    size: defaultSize,
+    mode: "floating",
+    restoreBounds: null,
     zIndex: TOOL_BASE_Z_INDEX,
   };
 }
@@ -48,18 +56,32 @@ function loadForUser(
   const states = defaultStates();
   if (typeof window === "undefined") return states;
   try {
-    const stored = window.localStorage.getItem(TOOL_STORAGE_KEY_PREFIX + userId);
+    const stored = window.localStorage.getItem(
+      TOOL_STORAGE_KEY_PREFIX + userId,
+    );
     if (!stored) return states;
     const parsed: unknown = JSON.parse(stored);
     if (typeof parsed !== "object" || parsed === null) return states;
     const record = parsed as Record<string, unknown>;
     for (const id of MANAGEMENT_TOOLS) {
+      const defaultSize =
+        id === "pos"
+          ? { width: 72 * 16, height: 42 * 16 }
+          : { width: 26 * 16, height: 42 * 16 };
       const raw = record[id];
       if (typeof raw !== "object" || raw === null) continue;
       const entry = raw as Record<string, unknown>;
       const position =
         typeof entry.position === "object" && entry.position !== null
           ? (entry.position as Record<string, unknown>)
+          : undefined;
+      const size =
+        typeof entry.size === "object" && entry.size !== null
+          ? (entry.size as Record<string, unknown>)
+          : undefined;
+      const restoreBounds =
+        typeof entry.restoreBounds === "object" && entry.restoreBounds !== null
+          ? (entry.restoreBounds as Record<string, unknown>)
           : undefined;
       states[id] = {
         id,
@@ -69,6 +91,30 @@ function loadForUser(
           x: typeof position?.x === "number" ? position.x : null,
           y: typeof position?.y === "number" ? position.y : null,
         },
+        size: {
+          width:
+            typeof size?.width === "number" ? size.width : defaultSize.width,
+          height:
+            typeof size?.height === "number" ? size.height : defaultSize.height,
+        },
+        mode:
+          entry.mode === "floating" || entry.mode === "maximized"
+            ? entry.mode
+            : "floating",
+        restoreBounds: restoreBounds
+          ? {
+              x: typeof restoreBounds.x === "number" ? restoreBounds.x : 0,
+              y: typeof restoreBounds.y === "number" ? restoreBounds.y : 0,
+              width:
+                typeof restoreBounds.width === "number"
+                  ? restoreBounds.width
+                  : defaultSize.width,
+              height:
+                typeof restoreBounds.height === "number"
+                  ? restoreBounds.height
+                  : defaultSize.height,
+            }
+          : null,
         zIndex:
           typeof entry.zIndex === "number"
             ? Math.max(entry.zIndex, TOOL_BASE_Z_INDEX)
@@ -108,8 +154,10 @@ export function ManagementToolProvider({
   // the server-rendered output (all tools closed) identical to the first
   // client render and avoids hydration mismatches.
   useEffect(() => {
-    hydratedForRef.current = null;
     const frame = requestAnimationFrame(() => {
+      // A user action (including a payment return) can open a tool before
+      // this frame. Do not overwrite that action with the saved layout.
+      if (hydratedForRef.current === userId) return;
       hydratedForRef.current = userId;
       setToolStates(loadForUser(userId));
     });
@@ -143,13 +191,17 @@ export function ManagementToolProvider({
         | Partial<ManagementToolState>
         | ((state: ManagementToolState) => Partial<ManagementToolState>),
     ) => {
+      const initial =
+        hydratedForRef.current === userId ? null : loadForUser(userId);
+      hydratedForRef.current = userId;
       setToolStates((prev) => {
+        const current = initial ?? prev;
         const patch =
-          typeof update === "function" ? update(prev[id]) : update;
-        return { ...prev, [id]: { ...prev[id], ...patch } };
+          typeof update === "function" ? update(current[id]) : update;
+        return { ...current, [id]: { ...current[id], ...patch } };
       });
     },
-    [],
+    [userId],
   );
 
   const openTool = useCallback(
@@ -209,6 +261,26 @@ export function ManagementToolProvider({
     [updateToolState],
   );
 
+  const setSize = useCallback(
+    (id: ManagementToolId, size: { width: number; height: number }) =>
+      updateToolState(id, { size }),
+    [updateToolState],
+  );
+
+  const setMode = useCallback(
+    (id: ManagementToolId, mode: "floating" | "maximized") =>
+      updateToolState(id, { mode }),
+    [updateToolState],
+  );
+
+  const setRestoreBounds = useCallback(
+    (
+      id: ManagementToolId,
+      bounds: { x: number; y: number; width: number; height: number } | null,
+    ) => updateToolState(id, { restoreBounds: bounds }),
+    [updateToolState],
+  );
+
   const getToolState = useCallback(
     (id: ManagementToolId) => toolStates[id],
     [toolStates],
@@ -238,6 +310,8 @@ export function ManagementToolProvider({
   const saveDraft = useCallback(
     (id: ManagementToolId, draft: unknown) => {
       if (typeof window === "undefined") return;
+      if (document.documentElement.dataset.managementSigningOut === "true")
+        return;
       try {
         const key = `${TOOL_STORAGE_KEY_PREFIX}draft.${userId}.${id}`;
         window.sessionStorage.setItem(key, JSON.stringify(draft));
@@ -270,6 +344,9 @@ export function ManagementToolProvider({
       restoreTool,
       bringToFront,
       setPosition,
+      setSize,
+      setMode,
+      setRestoreBounds,
       getToolState,
       getLabels,
       getDraft,
@@ -284,6 +361,9 @@ export function ManagementToolProvider({
       restoreTool,
       bringToFront,
       setPosition,
+      setSize,
+      setMode,
+      setRestoreBounds,
       getToolState,
       getLabels,
       getDraft,
@@ -295,7 +375,11 @@ export function ManagementToolProvider({
   return (
     <ManagementToolsContext.Provider value={contextValue}>
       {children}
-      <FloatingToolWindows locale={locale} getLabels={getLabels} userId={userId} />
+      <FloatingToolWindows
+        locale={locale}
+        getLabels={getLabels}
+        userId={userId}
+      />
     </ManagementToolsContext.Provider>
   );
 }

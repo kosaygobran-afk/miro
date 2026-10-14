@@ -25,6 +25,8 @@ import {
   shouldHideFromPublic,
 } from "@/lib/catalog/pricing";
 import { ProductHoverPreview } from "@/features/catalog/product-hover-preview";
+import { usePreviewHoverDismissal } from "./use-preview-hover-dismissal";
+import { usePreviewLongPress } from "./use-preview-long-press";
 import { StickerCluster } from "@/features/catalog/product-promo-badge";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 
@@ -56,9 +58,25 @@ export function ProductCard({
   const [saveError, setSaveError] = useState<string | null>(null);
   const [showHoverPreview, setShowHoverPreview] = useState(false);
   const [previewOpenedExplicitly, setPreviewOpenedExplicitly] = useState(false);
-  const closePreview = useCallback(() => setShowHoverPreview(false), []);
-  const keepPreviewOpen = useCallback(() => setShowHoverPreview(true), []);
   const cardRef = useRef<HTMLElement | null>(null);
+  const sourceRef = useRef<HTMLDivElement | null>(null);
+  const actionsRef = useRef<HTMLDivElement | null>(null);
+  const { canHover, dismissHover, clearDismissal, trackPointer } =
+    usePreviewHoverDismissal(sourceRef);
+  const openExplicitly = useCallback(() => {
+    clearDismissal();
+    setPreviewOpenedExplicitly(true);
+    setShowHoverPreview(true);
+  }, [clearDismissal]);
+  const longPress = usePreviewLongPress(sourceRef, openExplicitly);
+  const closePreview = useCallback(
+    (explicit: boolean) => {
+      dismissHover(explicit);
+      setShowHoverPreview(false);
+    },
+    [dismissHover],
+  );
+  const keepPreviewOpen = useCallback(() => setShowHoverPreview(true), []);
   const previewButtonRef = useRef<HTMLButtonElement | null>(null);
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
   const primaryImage = getPrimaryImage(product);
@@ -164,6 +182,17 @@ export function ProductCard({
       : (primaryImage?.altEn ?? product.name);
 
   const productUrl = `/${locale}/store/${product.category}/${product.slug}`;
+  const openOnHover = (event: React.PointerEvent<HTMLElement>) => {
+    if (event.pointerType !== "mouse") return;
+    // Portals bubble through the card, but are not fresh source-card intent.
+    if (!event.currentTarget.contains(event.target as Node)) return;
+    if (!canHover()) return;
+    if (showHoverPreview) return;
+    if (window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      setPreviewOpenedExplicitly(false);
+      setShowHoverPreview(true);
+    }
+  };
 
   return (
     <article
@@ -173,6 +202,9 @@ export function ProductCard({
       data-product-price={product.priceIls ?? undefined}
       data-product-stock-state={product.stockState}
       data-preview-intent={showHoverPreview || undefined}
+      data-preview-pressing={longPress.isPressing || undefined}
+      onPointerMoveCapture={trackPointer}
+      onPointerOutCapture={trackPointer}
     >
       {/* Hover Preview - portaled to body */}
       <ProductHoverPreview
@@ -182,15 +214,38 @@ export function ProductCard({
         onClose={closePreview}
         onKeepOpen={keepPreviewOpen}
         triggerRef={cardRef}
+        hoverSourceRef={sourceRef}
+        actionsRef={actionsRef}
         focusOnOpen={previewOpenedExplicitly}
         returnFocusRef={previewButtonRef}
       />
 
       <div
-        className="sf-product-media-shell"
-        onMouseEnter={() => setShowHoverPreview(true)}
-        onMouseLeave={() => setShowHoverPreview(false)}
-        onFocusCapture={() => {
+        ref={sourceRef}
+        className="sf-product-preview-source"
+        data-preview-source="true"
+        onPointerDown={longPress.onPointerDown}
+        onContextMenu={longPress.onContextMenu}
+        onPointerEnter={openOnHover}
+        onPointerMove={openOnHover}
+        onPointerLeave={(event) => {
+          if (event.pointerType !== "mouse") return;
+          if (
+            event.relatedTarget instanceof Element &&
+            event.relatedTarget.closest(".sf-hover-preview")
+          )
+            return;
+          clearDismissal();
+          if (window.matchMedia("(hover: hover) and (pointer: fine)").matches)
+            setShowHoverPreview(false);
+        }}
+        onFocusCapture={(event) => {
+          // Native touch focus must not turn an ordinary tap into a preview.
+          if (
+            !(event.target instanceof Element) ||
+            !event.target.matches(":focus-visible")
+          )
+            return;
           setPreviewOpenedExplicitly(false);
           setShowHoverPreview(true);
         }}
@@ -204,44 +259,190 @@ export function ProductCard({
           }
         }}
       >
+        <div className="sf-product-media-shell" data-product-section="image">
+          <Link
+            href={productUrl}
+            prefetch={false}
+            className="sf-product-media"
+            aria-label={`${copy.details}: ${product.name}`}
+          >
+            {product.promoBadges && product.promoBadges.length > 0 && (
+              <StickerCluster
+                badges={product.promoBadges}
+                locale={locale}
+                maxVisible={2}
+              />
+            )}
+
+            {product.badge && (
+              <span className="sf-product-badge">{product.badge}</span>
+            )}
+
+            <ProductMedia
+              product={product}
+              src={primaryImage?.url}
+              alt={altText}
+              sizes="(max-width: 600px) 100vw, (max-width: 1100px) 50vw, 25vw"
+              className="sf-product-visual"
+            />
+
+            {(!primaryImage ||
+              product.images[0]?.url.match(
+                /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
+              )) && (
+              <span className="sf-product-illustration-caption">
+                {copy.illustration}
+              </span>
+            )}
+
+            <span className="sf-product-expand">
+              <ArrowUpRight size={17} aria-hidden="true" />
+            </span>
+          </Link>
+        </div>
+
+        <div className="sf-product-body">
+          <div className="sf-product-summary" data-product-section="details">
+            <p className="sf-product-category">
+              {product.categoryLabel ?? product.category}
+            </p>
+            <h3 dir="auto">
+              <Link
+                href={productUrl}
+                prefetch={false}
+                className="sf-product-title-link"
+                aria-label={`${copy.details}: ${product.name}`}
+              >
+                <OverflowLabel>{product.name}</OverflowLabel>
+              </Link>
+            </h3>
+            <p className="sf-product-description" dir="auto">
+              {product.shortDescription || product.description}
+            </p>
+            {(product.brand || product.modelNumber) && (
+              <dl className="sf-product-facts">
+                {product.brand && (
+                  <div>
+                    <dt>{locale === "he" ? "מותג" : "Brand"}</dt>
+                    <dd dir="auto">{product.brand}</dd>
+                  </div>
+                )}
+                {product.modelNumber && (
+                  <div>
+                    <dt>{locale === "he" ? "דגם" : "Model"}</dt>
+                    <dd dir="auto">{product.modelNumber}</dd>
+                  </div>
+                )}
+              </dl>
+            )}
+          </div>
+
+          {/* Price with promotional display */}
+          <div className="sf-product-price" data-product-section="pricing">
+            <div className="sf-product-price__amount">
+              <strong dir="auto">{formattedPrice}</strong>
+              {effectivePrice !== null && (
+                <small dir="auto">
+                  {locale === "he" ? "כולל מע״מ" : "incl. VAT"}
+                </small>
+              )}
+              {effectivePrice !== null && (
+                <small dir="auto">
+                  {formatPrice(
+                    priceBeforeVat(effectivePrice),
+                    locale,
+                    copy.priceUnpublished,
+                  )}{" "}
+                  {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
+                </small>
+              )}
+            </div>
+            <StockIndicator
+              quantity={product.stockQty}
+              locale={locale}
+              unconfirmed={product.availabilityUnconfirmed}
+            />
+            <div className="sf-product-price__promotion">
+              {discountPercent !== null && formattedCompareAtPrice && (
+                <>
+                  <span className="sf-product-compare-at" dir="auto">
+                    {formattedCompareAtPrice}
+                  </span>
+                  <span
+                    className="sf-product-discount"
+                    aria-label={`${discountPercent}% off`}
+                  >
+                    -{discountPercent}%
+                  </span>
+                </>
+              )}
+              {effectivePrice === null && <span>{copy.demoPrice}</span>}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        ref={actionsRef}
+        className="sf-product-actions"
+        data-product-section="actions"
+        onPointerEnter={() => {
+          longPress.cancel();
+          setShowHoverPreview(false);
+        }}
+        onFocusCapture={() => {
+          longPress.cancel();
+          setShowHoverPreview(false);
+        }}
+      >
+        {/* Details button - now a semantic Link */}
         <Link
           href={productUrl}
-          className="sf-product-media"
+          prefetch={false}
+          className="sf-product-action"
           aria-label={`${copy.details}: ${product.name}`}
         >
-          {product.promoBadges && product.promoBadges.length > 0 && (
-            <StickerCluster
-              badges={product.promoBadges}
-              locale={locale}
-              maxVisible={2}
-            />
-          )}
-
-          {product.badge && (
-            <span className="sf-product-badge">{product.badge}</span>
-          )}
-
-          <ProductMedia
-            product={product}
-            src={primaryImage?.url}
-            alt={altText}
-            sizes="(max-width: 600px) 100vw, (max-width: 1100px) 50vw, 25vw"
-            className="sf-product-visual"
-          />
-
-          {(!primaryImage ||
-            product.images[0]?.url.match(
-              /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
-            )) && (
-            <span className="sf-product-illustration-caption">
-              {copy.illustration}
-            </span>
-          )}
-
-          <span className="sf-product-expand">
-            <ArrowUpRight size={17} aria-hidden="true" />
-          </span>
+          {actionLabel ?? copy.details}
+          <Arrow size={16} aria-hidden="true" />
         </Link>
+
+        {effectivePrice !== null && product.stockState !== "out" ? (
+          <AddToCartButton
+            compact
+            locale={locale}
+            item={{
+              productId: product.id,
+              variantId:
+                (
+                  product.variants.find(
+                    (variant) => variant.isDefault && variant.stockQty > 0,
+                  ) ?? product.variants.find((variant) => variant.stockQty > 0)
+                )?.id ?? null,
+              slug: product.slug,
+              category: product.category,
+              name: product.name,
+              imageUrl: primaryImage?.url ?? null,
+              unitPrice: effectivePrice,
+            }}
+          />
+        ) : null}
+
+        {/* Save/Favorite - independently interactive */}
+        <button
+          type="button"
+          className="miro-button miro-button-secondary sf-save-button"
+          onClick={handleSave}
+          aria-label={saved ? copy.removeFromSaved : copy.saveForLater}
+          aria-pressed={saved}
+          disabled={isSaving}
+        >
+          {isSaving ? (
+            <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+          ) : saved ? (
+            <Heart size={18} className="text-accent-text" />
+          ) : (
+            <HeartOff size={18} />
+          )}
+        </button>
 
         <button
           ref={previewButtonRef}
@@ -250,134 +451,16 @@ export function ProductCard({
           aria-label={`${locale === "he" ? "תצוגה מקדימה" : "Quick preview"}: ${product.name}`}
           aria-haspopup="dialog"
           aria-expanded={showHoverPreview}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setPreviewOpenedExplicitly(true);
-            setShowHoverPreview(true);
-          }}
+          onClick={openExplicitly}
         >
           <Eye size={16} aria-hidden="true" />
         </button>
-      </div>
 
-      <div className="sf-product-body">
-        <p className="sf-product-category">
-          {product.categoryLabel ?? product.category}
-        </p>
-        <h3 dir="auto">
-          <Link
-            href={productUrl}
-            className="sf-product-title-link"
-            aria-label={`${copy.details}: ${product.name}`}
-          >
-            <OverflowLabel>{product.name}</OverflowLabel>
-          </Link>
-        </h3>
-        <p className="sf-product-description" dir="auto">
-          {product.description}
-        </p>
-
-        {/* Price with promotional display */}
-        <div className="sf-product-price">
-          <div className="sf-product-price__amount">
-            <strong dir="auto">{formattedPrice}</strong>
-            {effectivePrice !== null && (
-              <small dir="auto">
-                {locale === "he" ? "כולל מע״מ" : "incl. VAT"}
-              </small>
-            )}
-            {effectivePrice !== null && (
-              <small dir="auto">
-                {formatPrice(
-                  priceBeforeVat(effectivePrice),
-                  locale,
-                  copy.priceUnpublished,
-                )}{" "}
-                {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
-              </small>
-            )}
-          </div>
-          <StockIndicator
-            quantity={product.stockQty}
-            locale={locale}
-            unconfirmed={product.availabilityUnconfirmed}
-          />
-          <div className="sf-product-price__promotion">
-            {discountPercent !== null && formattedCompareAtPrice && (
-              <>
-                <span className="sf-product-compare-at" dir="auto">
-                  {formattedCompareAtPrice}
-                </span>
-                <span
-                  className="sf-product-discount"
-                  aria-label={`${discountPercent}% off`}
-                >
-                  -{discountPercent}%
-                </span>
-              </>
-            )}
-            {effectivePrice === null && <span>{copy.demoPrice}</span>}
-          </div>
-        </div>
-
-        <div className="sf-product-actions">
-          {/* Details button - now a semantic Link */}
-          <Link
-            href={productUrl}
-            className="sf-product-action"
-            aria-label={`${copy.details}: ${product.name}`}
-          >
-            {actionLabel ?? copy.details}
-            <Arrow size={16} aria-hidden="true" />
-          </Link>
-
-          {effectivePrice !== null && product.stockState !== "out" ? (
-            <AddToCartButton
-              compact
-              locale={locale}
-              item={{
-                productId: product.id,
-                variantId:
-                  (
-                    product.variants.find(
-                      (variant) => variant.isDefault && variant.stockQty > 0,
-                    ) ??
-                    product.variants.find((variant) => variant.stockQty > 0)
-                  )?.id ?? null,
-                slug: product.slug,
-                category: product.category,
-                name: product.name,
-                imageUrl: primaryImage?.url ?? null,
-                unitPrice: effectivePrice,
-              }}
-            />
-          ) : null}
-
-          {/* Save/Favorite - independently interactive */}
-          <button
-            type="button"
-            className="miro-button miro-button-secondary sf-save-button"
-            onClick={handleSave}
-            aria-label={saved ? copy.removeFromSaved : copy.saveForLater}
-            aria-pressed={saved}
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-            ) : saved ? (
-              <Heart size={18} className="text-accent-text" />
-            ) : (
-              <HeartOff size={18} />
-            )}
-          </button>
-
-          {saveError && (
-            <span className="sf-save-error" role="alert" aria-live="polite">
-              {saveError}
-            </span>
-          )}
-        </div>
+        {saveError && (
+          <span className="sf-save-error" role="alert" aria-live="polite">
+            {saveError}
+          </span>
+        )}
       </div>
     </article>
   );

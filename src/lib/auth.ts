@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { withLocale, type Locale } from "@/lib/i18n";
@@ -32,18 +33,9 @@ function isAccountStatus(
   return value === "active" || value === "suspended" || value === "blocked";
 }
 
-export async function getAuthContext(
-  supabase?: SupabaseClient,
+async function readAuthContext(
+  client: SupabaseClient,
 ): Promise<AuthContext | null> {
-  if (
-    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
-    !(
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    )
-  )
-    return null;
-  const client = supabase ?? (await createServerSupabaseClient());
   const {
     data: { user },
   } = await client.auth.getUser();
@@ -88,6 +80,27 @@ export async function getAuthContext(
         }
       : null,
   };
+}
+
+// Layouts and pages share one verified actor per render; no identity or role
+// is cached across requests. Supplied mutation clients always verify afresh.
+const getRequestAuthContext = cache(async () =>
+  readAuthContext(await createServerSupabaseClient()),
+);
+
+export async function getAuthContext(
+  supabase?: SupabaseClient,
+): Promise<AuthContext | null> {
+  if (
+    !process.env.NEXT_PUBLIC_SUPABASE_URL ||
+    !(
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    )
+  )
+    return null;
+
+  return supabase ? readAuthContext(supabase) : getRequestAuthContext();
 }
 
 export async function requireAuth(locale: Locale) {

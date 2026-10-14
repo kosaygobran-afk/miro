@@ -1,0 +1,42 @@
+{
+  "version": "0.1.1",
+  "date": "2026-10-14",
+  "source_branch": "0.1.1",
+  "target_branch": "main",
+  "checks": {
+    "lint": "passed",
+    "typecheck": "passed",
+    "build": {
+      "status": "passed",
+      "routes": 146
+    },
+    "formatting": "passed",
+    "unit_tests": {
+      "passed": 221,
+      "failed": 0
+    },
+    "isolated_postgresql": {
+      "migrations": 51,
+      "sql_suites": 22,
+      "concurrency_groups": 4,
+      "status": "passed"
+    },
+    "production_chromium": {
+      "passed": 38,
+      "failed": 0,
+      "retries": 0
+    }
+  },
+  "privacy": {
+    "source_text_files_scanned": 701,
+    "credential_findings": 0,
+    "environment_exports_excluded": true,
+    "python_caches_excluded": true,
+    "unpublished_debug_history_preserved_locally_only": true
+  },
+  "limits": [
+    "No live financial transaction, fiscal issuance, or linked migration",
+    "Physical-device/screen-reader and business/legal/provider/accountant launch gates remain",
+    "Exact remote Git and hosting results are recorded on the release pull request"
+  ]
+}

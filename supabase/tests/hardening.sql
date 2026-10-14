@@ -130,7 +130,7 @@ begin
     '{"name": "Discounted"}'::jsonb,
     '[{"variant_id": "cccccccc-0000-0000-0000-000000000001", "quantity": 3, "unit_price": 100, "discount_per_unit": 10}]'::jsonb
   );
-  select * into v_item from public.order_items where order_id = v_order_id;
+  select discount_amount,net_amount,total_price into v_item from public.order_items where order_id = v_order_id;
   if v_item.discount_amount <> 30.00 then raise exception 'Line discount wrong: %', v_item.discount_amount; end if;
   if v_item.total_price <> 270.00 then raise exception 'Line gross wrong: %', v_item.total_price; end if;
   if abs(v_item.net_amount - 228.81) > 0.01 then raise exception 'Line net wrong'; end if;

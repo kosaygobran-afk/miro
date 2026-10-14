@@ -9,7 +9,7 @@ import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
-import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import { getStoreCatalog, getStorePageData } from "@/lib/store-data";
 import { CategoryViewTracker } from "@/components/analytics/CategoryViewTracker";
 
 interface CategoryPageProps {
@@ -48,8 +48,7 @@ export default async function CategoryPage({
     await Promise.all([params, searchParams]);
   const locale = rawLocale === "en" ? "en" : "he";
   const category = normalizeCategory(rawCategory);
-  const viewer = await getStoreViewer();
-  const catalog = await getStoreCatalog(locale, viewer.role);
+  const { viewer, catalog } = await getStorePageData(locale);
   const selected = catalog.categories.find((item) => item.key === category);
   if (!selected) notFound();
   const products = catalog.products.filter(

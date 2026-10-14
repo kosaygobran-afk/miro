@@ -48,3 +48,7 @@ supabase/.temp/
 
 # Vercel CLI environment export (contains local credentials)
 /preview
+
+# Python verification runtime artifacts
+__pycache__/
+*.py[cod]

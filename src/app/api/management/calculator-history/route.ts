@@ -42,9 +42,10 @@ export async function GET(request: Request) {
   }
 
   const { limit } = parsed.data;
-  const { admin } = auth;
+  // History is scoped by auth.uid(); a privileged client has no user session.
+  const client = await createServerSupabaseClient();
 
-  const { data, error } = await admin
+  const { data, error } = await client
     .rpc("get_calculator_history", { p_limit: limit })
     .returns<
       {

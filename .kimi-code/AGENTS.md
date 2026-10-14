@@ -8,7 +8,7 @@ This environment uses a deliberate lead-agent / worker-agent architecture.
 
 The PRIMARY model is the **LEAD ARCHITECT, SUPERVISOR, INTEGRATOR, and FINAL REVIEWER**.
 
-For the current configuration, the primary model is **Kimi K3**.
+For the current configuration, the primary model is **NVIDIA Nemotron 3 Ultra 550B A55B**, with full supported high reasoning.
 
 The primary agent owns:
 
@@ -34,7 +34,7 @@ The primary agent remains responsible for the result even when most implementati
 
 The configured secondary model is the default **WORKER MODEL**.
 
-For the current configuration, the worker model is **Nemotron 3 Super**.
+For the current configuration, the worker model is **GPT-OSS 20B**.
 
 Subagents are implementation and investigation specialists.
 
@@ -66,29 +66,29 @@ A worker reporting that something is complete does **not** mean that the overall
 
 The intended hierarchy is:
 
-KIMI K3 understands.
+PRIMARY AGENT understands.
 
-KIMI K3 investigates.
+PRIMARY AGENT investigates.
 
-KIMI K3 architects.
+PRIMARY AGENT architects.
 
-KIMI K3 plans.
+PRIMARY AGENT plans.
 
-KIMI K3 decomposes.
+PRIMARY AGENT decomposes.
 
-KIMI K3 delegates.
+PRIMARY AGENT delegates.
 
-NEMOTRON workers investigate and implement.
+GPT-OSS workers investigate and implement.
 
-KIMI K3 integrates.
+PRIMARY AGENT integrates.
 
-KIMI K3 reviews.
+PRIMARY AGENT reviews.
 
-NEMOTRON workers correct identified problems.
+GPT-OSS workers correct identified problems.
 
-KIMI K3 verifies again.
+PRIMARY AGENT verifies again.
 
-KIMI K3 makes the final decision.
+PRIMARY AGENT makes the final decision.
 
 ---
 
@@ -180,7 +180,7 @@ Do not make architectural claims that are not supported by the repository.
 
 # 4. Planning
 
-For substantial work, Kimi K3 should form the implementation plan before large-scale editing.
+For substantial work, the primary agent should form the implementation plan before large-scale editing.
 
 Determine:
 
@@ -344,7 +344,7 @@ Subagents are workers.
 
 They are not the final authority.
 
-After workers return, the primary Kimi K3 agent MUST personally inspect and reason about the integrated result.
+After workers return, the primary agent MUST personally inspect and reason about the integrated result.
 
 At minimum, when relevant:
 
@@ -564,7 +564,7 @@ Worker activity is not progress unless it contributes to the requested outcome.
 
 Only the PRIMARY agent may declare the overall task complete.
 
-Before completion, Kimi K3 must confirm, when applicable:
+Before completion, the primary agent must confirm, when applicable:
 
 * requested behavior is implemented;
 * the root cause was addressed;
@@ -593,7 +593,7 @@ For substantial work, the final response should summarize:
 
 1. what was found;
 2. the root cause or architectural issue;
-3. the approach chosen by Kimi K3;
+3. the approach chosen by the primary agent;
 4. what work was delegated;
 5. what was implemented;
 6. what Kimi personally reviewed;
@@ -625,4 +625,4 @@ For substantial work, prefer thoughtful delegation and independent verification.
 
 Regardless of how many workers participate:
 
-**Kimi K3 remains the architect, supervisor, integrator, reviewer, and final technical authority.**
+**The primary agent remains the architect, supervisor, integrator, reviewer, and final technical authority.**

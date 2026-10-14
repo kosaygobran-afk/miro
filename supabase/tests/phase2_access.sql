@@ -74,7 +74,12 @@ do $$ begin
 end $$;
 reset role;
 do $$ begin
- if (select count(*) from public.audit_events) <> 3 then raise exception 'Audit count mismatch'; end if;
+ if (select count(*) from public.audit_events where user_id in (
+   '00000000-0000-0000-0000-000000000001',
+   '00000000-0000-0000-0000-000000000002',
+   '00000000-0000-0000-0000-000000000003',
+   '00000000-0000-0000-0000-000000000004',
+   '00000000-0000-0000-0000-000000000005')) <> 3 then raise exception 'Audit count mismatch'; end if;
 end $$;
 set local role anon;
 do $$ begin

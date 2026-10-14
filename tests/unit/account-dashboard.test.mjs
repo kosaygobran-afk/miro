@@ -109,6 +109,9 @@ function loadDashboard({ fail = [], saved = [] } = {}) {
     "./remove-saved-button": { RemoveSavedButton: () => null },
     "@/components/auth/logout-button": { LogoutButton: () => null },
     "@/components/ui/reveal-image": { RevealImage: () => null },
+    "@/components/motion/animated-number": {
+      AnimatedNumber: ({ value }) => createElement("span", null, value),
+    },
     "@/features/catalog/overflow-label": {
       OverflowLabel: ({ children }) => createElement("span", null, children),
     },

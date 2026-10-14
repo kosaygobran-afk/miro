@@ -28,8 +28,22 @@ const {
   formatExpression,
   applyVatRate,
   removeVatRate,
-  roundMoney
+  roundMoney,
 } = calculator;
+
+test("calculator keyboard maps numeric, operator, delete, and equals keys", () => {
+  assert.equal(calculator.getCalculatorKeyboardAction("7")?.type, "input");
+  assert.equal(calculator.getCalculatorKeyboardAction("7")?.value, "7");
+  assert.equal(calculator.getCalculatorKeyboardAction("(")?.value, "(");
+  assert.equal(
+    calculator.getCalculatorKeyboardAction("Backspace")?.type,
+    "backspace",
+  );
+  assert.equal(calculator.getCalculatorKeyboardAction("=")?.type, "equals");
+  assert.equal(calculator.getCalculatorKeyboardAction("Enter")?.type, "equals");
+  assert.equal(calculator.getCalculatorKeyboardAction("Escape"), null);
+  assert.equal(calculator.getCalculatorKeyboardAction("ArrowLeft"), null);
+});
 
 test("evaluateExpression handles basic addition and subtraction", () => {
   assert.equal(evaluateExpression("2 + 3"), 5);
@@ -76,19 +90,19 @@ test("evaluateExpression handles calculator-style percent", () => {
   // a + b% means a + (a * b / 100)
   assert.equal(evaluateExpression("100 + 20%"), 120); // 100 + (100 * 20 / 100) = 100 + 20 = 120
   assert.equal(evaluateExpression("50 + 10%"), 55); // 50 + (50 * 10 / 100) = 50 + 5 = 55
-  
+
   // a - b% means a - (a * b / 100)
   assert.equal(evaluateExpression("100 - 20%"), 80); // 100 - (100 * 20 / 100) = 100 - 20 = 80
   assert.equal(evaluateExpression("50 - 10%"), 45); // 50 - (50 * 10 / 100) = 50 - 5 = 45
-  
+
   // Standalone b% means b / 100
   assert.equal(evaluateExpression("20%"), 0.2); // 20 / 100 = 0.2
   assert.equal(evaluateExpression("50%"), 0.5); // 50 / 100 = 0.5
-  
+
   // Percent after multiplication/division (normal operation)
   assert.equal(evaluateExpression("200 * 10%"), 20); // 200 * (10 / 100) = 200 * 0.1 = 20
   assert.equal(evaluateExpression("50 / 50%"), 100); // 50 / (50 / 100) = 50 / 0.5 = 100
-  
+
   // Mixed expressions
   assert.equal(evaluateExpression("100 + 50 * 10%"), 105); // 100 + (50 * 0.1) = 100 + 5 = 105
   assert.equal(evaluateExpression("200 - 100 * 5%"), 195); // 5% consumed by * → 100 * 0.05 = 5; 200 - 5 = 195
@@ -110,11 +124,11 @@ test("evaluateExpression applies VatRate correctly", () => {
   // Test with 18% rate
   assert.equal(applyVatRate(1000, 18), 1180);
   assert.equal(removeVatRate(1180, 18), 1000);
-  
+
   // Test with 17% rate (proves no hardcoding)
   assert.equal(applyVatRate(1000, 17), 1170);
   assert.equal(removeVatRate(1170, 17), 1000);
-  
+
   // Round trip test
   const amount = 123.45;
   const rate = 18;
@@ -193,7 +207,10 @@ test("evaluateExpression rejects too many tokens", () => {
 
 test("evaluateExpression rejects eval-style payloads", () => {
   // These should be rejected as invalid characters
-  assert.throws(() => evaluateExpression("1;process.exit()"), /CalculatorError/);
+  assert.throws(
+    () => evaluateExpression("1;process.exit()"),
+    /CalculatorError/,
+  );
   assert.throws(() => evaluateExpression("1,n"), /CalculatorError/);
   assert.throws(() => evaluateExpression("2 + alert('x')"), /CalculatorError/);
 });

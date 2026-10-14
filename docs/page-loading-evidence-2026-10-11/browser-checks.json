@@ -1,0 +1,1121 @@
+{
+  "date": "2026-10-11",
+  "environment": "Isolated Next16.3.8 production HTTPS server; connected public catalog; Chromium, desktop WebKit and iPhone13-profile WebKit; one worker",
+  "stats": {
+    "startTime": "2026-10-11T20:02:09.043Z",
+    "duration": 232235.79499999998,
+    "expected": 128,
+    "skipped": 1,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "limits": [
+    "Firefox retains the documented local launch blocker and was not run.",
+    "iPhone-profile WebKit does not support mouse-wheel input; those cases verify document-scroll geometry programmatically. Native touch and bilingual screen-reader acceptance remain QA actions.",
+    "Desktop hover skips the touch profile; no business, financial, catalog or settings writes."
+  ],
+  "checks": [
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 1280px",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 768px",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 390px",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual he button at 390px",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "rapid theme changes settle on the last selection and every mode persists",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "browsers without View Transitions still switch and persist themes",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "reduced motion switches immediately and keeps navigation feedback functional",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "all saved feature switches apply live and disabling motion preserves interactions",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "navigation beam responds immediately and waits for dynamic loading to finish",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "navigation cancellation, failure, same-route links and browser history settle",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "stalled navigation cancels its beam and leaves the current page usable",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "rapidly superseded navigation settles when the final destination is the current page",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "hash-only browser history does not start a page navigation beam",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "slow category navigation exposes a structured route skeleton and settles",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "GET search receives immediate navigation feedback for its query",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 1280px",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 768px",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 390px",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual he button at 390px",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "rapid theme changes settle on the last selection and every mode persists",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "browsers without View Transitions still switch and persist themes",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "reduced motion switches immediately and keeps navigation feedback functional",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "all saved feature switches apply live and disabling motion preserves interactions",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "navigation beam responds immediately and waits for dynamic loading to finish",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "navigation cancellation, failure, same-route links and browser history settle",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "stalled navigation cancels its beam and leaves the current page usable",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "rapidly superseded navigation settles when the final destination is the current page",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "hash-only browser history does not start a page navigation beam",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "slow category navigation exposes a structured route skeleton and settles",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "GET search receives immediate navigation feedback for its query",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 1280px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 768px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual en button at 390px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "theme reveal follows the actual he button at 390px",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "rapid theme changes settle on the last selection and every mode persists",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "browsers without View Transitions still switch and persist themes",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "reduced motion switches immediately and keeps navigation feedback functional",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "all saved feature switches apply live and disabling motion preserves interactions",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "navigation beam responds immediately and waits for dynamic loading to finish",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "navigation cancellation, failure, same-route links and browser history settle",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "stalled navigation cancels its beam and leaves the current page usable",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "rapidly superseded navigation settles when the final destination is the current page",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "hash-only browser history does not start a page navigation beam",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "slow category navigation exposes a structured route skeleton and settles",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "motion.spec.ts",
+      "title": "GET search receives immediate navigation feedback for its query",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "catalog counts animate quickly on load and reload with a stable accessible value",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "loaded count updates preserve live-region text and settings disable counting immediately",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "offscreen counter text stays clipped at phone widths: en",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "offscreen counter text stays clipped at phone widths: he",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "reduced motion renders exact counts immediately",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "catalog counts animate quickly on load and reload with a stable accessible value",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "loaded count updates preserve live-region text and settings disable counting immediately",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "offscreen counter text stays clipped at phone widths: en",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "offscreen counter text stays clipped at phone widths: he",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "reduced motion renders exact counts immediately",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "catalog counts animate quickly on load and reload with a stable accessible value",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "loaded count updates preserve live-region text and settings disable counting immediately",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "offscreen counter text stays clipped at phone widths: en",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "offscreen counter text stays clipped at phone widths: he",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "number-counting.spec.ts",
+      "title": "reduced motion renders exact counts immediately",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "catalog links avoid speculative reads while product navigation still settles",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "unchanged catalog checks keep the hovered preview and avoid page renders",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "a stalled preview image settles to an illustration and Escape still works",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "catalog links avoid speculative reads while product navigation still settles",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "unchanged catalog checks keep the hovered preview and avoid page renders",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "a stalled preview image settles to an illustration and Escape still works",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "catalog links avoid speculative reads while product navigation still settles",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "unchanged catalog checks keep the hovered preview and avoid page renders",
+      "project": "webkit-iphone",
+      "status": "skipped",
+      "outcomes": ["skipped"],
+      "annotations": [
+        {
+          "type": "skip",
+          "description": "Desktop hover requires a fine pointer",
+          "location": {
+            "file": "/Users/kusaygurban/miro-website/tests/store-loading.spec.ts",
+            "line": 70,
+            "column": 8
+          }
+        }
+      ]
+    },
+    {
+      "file": "store-loading.spec.ts",
+      "title": "a stalled preview image settles to an illustration and Escape still works",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/dark",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/dark/320",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/dark/390",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/medium",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/medium/320",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/medium/390",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/light",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/light/320",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/light/390",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "3D preview and gallery controls remain above product images: he",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/dark",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/dark/320",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/dark/390",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/medium",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/medium/320",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/medium/390",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/light",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/light/320",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/light/390",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "3D preview and gallery controls remain above product images: en",
+      "project": "chromium",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/dark",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/dark/320",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/dark/390",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/medium",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/medium/320",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/medium/390",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/light",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/light/320",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/light/390",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "3D preview and gallery controls remain above product images: he",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/dark",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/dark/320",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/dark/390",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/medium",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/medium/320",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/medium/390",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/light",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/light/320",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/light/390",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "3D preview and gallery controls remain above product images: en",
+      "project": "webkit",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/dark",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/dark/320",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/dark/390",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/medium",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/medium/320",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/medium/390",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: he/light",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/light/320",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: he/light/390",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "3D preview and gallery controls remain above product images: he",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/dark",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/dark/320",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/dark/390",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/medium",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/medium/320",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/medium/390",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "desktop overlays stay above imagery: en/light",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/light/320",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "mobile glass navigation uses only page scrolling: en/light/390",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": [
+        {
+          "type": "scroll coverage",
+          "description": "Mobile WebKit verifies document scroll geometry; native touch scrolling requires physical-device QA."
+        }
+      ]
+    },
+    {
+      "file": "store-overlays.spec.ts",
+      "title": "3D preview and gallery controls remain above product images: en",
+      "project": "webkit-iphone",
+      "status": "expected",
+      "outcomes": ["passed"],
+      "annotations": []
+    }
+  ]
+}
