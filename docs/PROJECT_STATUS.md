@@ -17,6 +17,13 @@ Version 0.1.1 release validation — completed locally:
 - Final source scan checked 701 text files without credential-pattern or exact-local-secret findings. The initial staged scan checked 270 files (about 3.5 MB), with no credential/private/generated-artifact findings. A final scan/whitespace check runs again after adding this evidence and the pull request link. The ignored environment exports/cache files and deleted private debug archive are excluded.
 - Source is ready for the owner-authorized push and merge. The release pull request records the exact head, hosting checks and final merge/remote ancestry verification; those results are kept with immutable Git IDs rather than guessed before the commit exists. No new business mutation, linked migration, provider activation or manual compliance approval occurred during release packaging.
 
+Version 0.1.1 remote release and preview verification:
+
+- Release commit `6c0ae158d957f3b660df31cda80e5795bba670eb` was pushed to `origin/0.1.1`; remote SHA equality and a clean working tree were verified. Opened [PR #8](https://github.com/kosaygobran-afk/miro/pull/8) targeting `main`, with the full scope/checks/owners. GitHub reports mergeable/CLEAN; Vercel and Vercel Preview Comments report success for that head.
+- Vercel CLI independently confirms deployment `dpl_7g5neSJdJ22wp5vFqK1UqHvGcFma` is **Ready**, target Preview, URL `https://miro-6aqko6v0k-kosaygobran-afks-projects.vercel.app`. This is hosting evidence for that immutable release commit; the documentation follow-up and eventual merge have their own heads/checks. Final head, merged-state, remote-main ancestry/tree equality and Production hosting checks are recorded in PR #8's description after verification.
+- The GitHub connector's PR-create permission was unavailable (integration 403); the existing repository-scoped Git credential helper authenticated the normal GitHub CLI successfully. No credential values were printed, persisted in source or newly granted. The deleted debug ZIP is absent from the newly pushed history; the local archive branch is retained and unpushed.
+- All application/SQL/browser checks remain attached to the tested `0.1.1` source; this follow-up only records release evidence. Legal/privacy/accessibility/payment/fiscal owners and gates remain as listed above and in the release notes.
+
 ## Product card widgets and gallery refinement — 2026-10-14
 
 - Refined Version 2 public grid-card image spacing, summary rhythm, brand/model facts, price layout and minimum action sizes. Cards prefer the supplied short description; the shared grid/rail preview retains the full supplied description and specifications. Existing quote-only pricing, stock behavior and source/footer interaction boundaries remain intact.
