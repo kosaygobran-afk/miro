@@ -1,6 +1,14 @@
 # Project Status
 
-Last updated: 2026-10-14 (0.1.1 release preparation and verification)
+Last updated: 2026-10-14 (inventory cancellation guard and local server shutdown)
+
+## Inventory effect cancellation — 2026-10-14
+
+- Investigated the owner's development AbortError at replenishment effect cleanup. The replenishment microtask could call the shared inventory loader after cleanup had aborted its signal; unlike the filtered loader, this path lacked a preflight cancellation check. Added shared checks before every page fetch and after body parsing, preventing already-cancelled requests and discarding stale page results while retaining in-flight cancellation and real error handling. Strict Mode remains enabled. The original authenticated browser overlay was not reproduced in this session; browser extensions/instrumentation may also expose caught fetch aborts.
+- Added four behavioral regressions for cancellation before the deferred fetch starts, cancellation during body loading, normal filtered pagination and genuine API errors. `node --test tests/unit/inventory-cancellation.test.mjs` passed 4/4; `npm run lint`, `npm run typecheck` and `git diff --check` passed. No business data, settings or financial writes were used.
+- At the owner's restart request, stopped the repository's Next dev parent/server processes and verified port 3000 is free. No other website development listener was present; macOS services, editor/tool listeners and the native NVIDIA compatibility bridge remain running. Owner can restart with `npm run dev` and confirm the authenticated inventory screen.
+- No new legal/privacy/accessibility issue introduced. Existing launch blockers remain with business/legal (identity/catalog/media approval), privacy (retention/copy), QA (manual bilingual device/screen-reader acceptance), provider/accountant (live payments and official fiscal readiness) and integration (outbound delivery).
+- Publication: owner authorized committing/pushing this fix to the latest release branch and merging into `main`. Verified `0.1.1` is the latest numbered branch and its original release is already merged; fast-forwarded it to the existing remote-main merge before adding this follow-up. The follow-up pull request records the immutable fix head, checks and final merge status. No archived local history is included.
 
 ## Version 0.1.1 release preparation — 2026-10-14
 
