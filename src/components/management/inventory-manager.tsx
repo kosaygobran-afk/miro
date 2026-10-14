@@ -153,6 +153,9 @@ async function fetchInventoryPages({
   let offset = 0;
 
   while (true) {
+    // Effect cleanup can run before the deferred fetch starts (including Strict Mode).
+    // Never hand fetch an already-aborted signal or continue a cancelled page scan.
+    if (signal?.aborted) return [];
     const params = new URLSearchParams({
       limit: String(inventoryPageSize),
       offset: String(offset),
@@ -165,6 +168,7 @@ async function fetchInventoryPages({
       { cache: "no-store", signal },
     );
     const data = (await response.json()) as InventoryResponse;
+    if (signal?.aborted) return [];
     if (!response.ok) {
       throw new Error(data.error || "Failed to load inventory");
     }
