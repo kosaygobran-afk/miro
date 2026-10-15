@@ -881,6 +881,24 @@
   }
 }
 
+/* RTL: toasts are anchored to the inline-end edge (left in RTL), so they must
+   slide in from that physical side instead of across the whole screen. */
+[dir="rtl"] .inventory-manager__toast,
+[dir="rtl"] .settings-panel__toast {
+  animation-name: toast-enter-rtl;
+}
+
+@keyframes toast-enter-rtl {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 .inventory-manager__toast--success {
   background: color-mix(in srgb, var(--success-text) 12%, transparent);
   color: var(--success-text);

@@ -972,13 +972,18 @@
 [dir="rtl"] .mgmt-shell .users-management__actions .users-management__select {
   background-position: left 0.75rem center;
 }
-.mgmt-shell .users-management__table-wrapper,
-.mgmt-shell .customers-manager__table-wrapper {
-  display: block;
-}
-.mgmt-shell .users-management__card-list,
-.mgmt-shell .customers-manager__card-list {
-  display: none;
+/* Desktop keeps the presentation table; below 768px the components' own
+   mobile card views (workspace.css) take over again, matching the sales,
+   inventory and overview managers. Breakpoint mirrors max-width: 767px. */
+@media (min-width: 768px) {
+  .mgmt-shell .users-management__table-wrapper,
+  .mgmt-shell .customers-manager__table-wrapper {
+    display: block;
+  }
+  .mgmt-shell .users-management__card-list,
+  .mgmt-shell .customers-manager__card-list {
+    display: none;
+  }
 }
 .mgmt-shell :is(.mgmt-page-header, .inventory-manager__header) {
   padding-block-end: 0.5rem;
