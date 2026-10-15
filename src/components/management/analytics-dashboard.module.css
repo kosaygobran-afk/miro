@@ -180,6 +180,11 @@
 .rankingFill {
   background: linear-gradient(90deg, var(--report-cyan), var(--report-violet));
 }
+/* RTL: the fill grows from the inline-start (right) edge, so mirror the ramp
+   to keep the leading tone at the leading edge. */
+:global([dir="rtl"]) .rankingFill {
+  background: linear-gradient(270deg, var(--report-cyan), var(--report-violet));
+}
 .rankingTrack {
   block-size: 0.4rem;
 }
