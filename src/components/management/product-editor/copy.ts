@@ -279,6 +279,40 @@ export const mediaCopy = {
     he: "התמונה נשמרה ותופיע מיד ברשימת המוצרים ובחנות.",
     en: "Image saved. It now appears in the product list and storefront.",
   },
+  // Background removal processing statuses
+  processingUploading: { he: "מעלה תמונה...", en: "Uploading image..." },
+  processingTransparency: {
+    he: "בודק שקיפות...",
+    en: "Checking transparency...",
+  },
+  processingRemovingBg: { he: "מסיר רקע...", en: "Removing background..." },
+  processingOptimizing: { he: "מייעל תמונה...", en: "Optimizing image..." },
+  processingSaving: { he: "שומר תמונה...", en: "Saving image..." },
+  processingBgRemoved: { he: "הרקע הוסר", en: "Background removed" },
+  processingAlreadyTransparent: {
+    he: "כבר שקוף — אין צורך בשינויים",
+    en: "Already transparent — no changes needed",
+  },
+  processingFailed: {
+    he: "עיבוד נכשל — יש אפשרות לנסות שוב",
+    en: "Processing failed — retry available",
+  },
+  restoreOriginal: { he: "שחזר מקור", en: "Restore original" },
+  restoreOriginalTitle: {
+    he: "שחזור תמונה מקורית",
+    en: "Restore original image",
+  },
+  restoreOriginalDescription: {
+    he: "התמונה המעובדת תוחלף בתמונה המקורית. סדר המיון, טקסט חלופי ומטאדאטה אחרים יישמרו.",
+    en: "The processed image will be replaced with the original. Sort order, alt text, and other metadata will be preserved.",
+  },
+  restoreButton: { he: "שחזר", en: "Restore" },
+  beforeLabel: { he: "לפני", en: "Before" },
+  afterLabel: { he: "אחרי", en: "After" },
+  skippedTransparent: {
+    he: "נטען כשהוא שקוף — בוצע דילוג על הסרת רקע בינה מלאכותית",
+    en: "Loaded as transparent — AI background removal skipped",
+  },
 } as const satisfies Record<string, LocalizedText>;
 
 export const variantCopy = {

@@ -412,6 +412,28 @@
   font-size: 0.75rem;
 }
 
+.uploadStatusSkipped {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+.uploadStatusCompleted {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--success-text);
+}
+
+.uploadStatusText {
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+  margin-inline-start: 0.5rem;
+}
+
 /* URL upload */
 .urlPreview {
   margin-block-start: 0.5rem;

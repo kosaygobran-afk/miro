@@ -1,0 +1,5 @@
+fastapi>=0.110.0
+uvicorn[standard]>=0.30.0
+rembg>=2.0.85
+Pillow>=12.0.0
+numpy>=2.0.0
