@@ -119,6 +119,11 @@ export function AccountMenu({
               {roleLabel(role, locale)}
             </span>
           </div>
+          <p className="mgmt-account__current-area">
+            {locale === "he"
+              ? "נמצא כעת: סביבת הניהול"
+              : "Current area: Management console"}
+          </p>
           <a
             href={withLocale(locale)}
             className="mgmt-account__item"

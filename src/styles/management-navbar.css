@@ -1,0 +1,211 @@
+/* Contents stay mounted across layouts, preserving tools/dialog drafts. */
+.mgmt-topbar__controls {
+  display: contents;
+}
+.mgmt-topbar__controls-toggle {
+  display: none;
+}
+:root[data-appearance-version="2"] {
+  .mgmt-topbar {
+    block-size: calc(var(--navbar-content-height) + 1px);
+    min-block-size: calc(var(--navbar-content-height) + 1px);
+    flex-wrap: nowrap;
+    padding-block: 0.4rem;
+    gap: 0.75rem;
+    overflow: visible;
+  }
+  .mgmt-topbar__start {
+    flex: 1;
+    min-inline-size: 0;
+    align-items: center;
+    gap: 0.625rem;
+  }
+  .mgmt-topbar__text {
+    min-inline-size: 0;
+  }
+  .mgmt-topbar__breadcrumb-list {
+    margin: 0;
+    line-height: 1.25;
+    font-size: 0.65rem;
+  }
+  .mgmt-topbar__title {
+    margin: 0;
+    line-height: 1.25;
+    font-size: 0.95rem;
+  }
+  .mgmt-topbar__subtitle {
+    margin: 0.15rem 0 0;
+    line-height: 1.3;
+    font-size: 0.7rem;
+  }
+  .mgmt-topbar__end {
+    position: relative;
+    flex: 0 0 auto;
+    inline-size: auto;
+    flex-wrap: nowrap;
+    gap: 0.5rem;
+    margin: 0;
+  }
+  .mgmt-topbar__controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-inline-size: 0;
+  }
+  .mgmt-topbar__controls-toggle {
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    flex: 0 0 44px;
+    border: 1px solid var(--border-control);
+    border-radius: 0.75rem;
+    background: var(--surface);
+    color: var(--foreground);
+    cursor: pointer;
+  }
+  .mgmt-topbar__controls-toggle:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+  .mgmt-topbar__theme-selector {
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0.2rem;
+  }
+  .mgmt-topbar__theme-btn {
+    inline-size: 34px;
+    block-size: 36px;
+    padding: 0.4rem;
+  }
+  .mgmt-account {
+    margin: 0;
+  }
+  .mgmt-account__trigger {
+    max-inline-size: 12rem;
+  }
+  .mgmt-account__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mgmt-account__popover {
+    inline-size: min(280px, calc(100vw - 24px));
+    max-inline-size: calc(100vw - 24px);
+  }
+  .mgmt-account__current-area {
+    margin: 0;
+    padding: 0.65rem 1rem;
+    color: var(--muted-foreground);
+    font-size: 0.8rem;
+    border-block-end: 1px solid var(--border-subtle);
+  }
+}
+@media (min-width: 1200px) and (max-width: 1599px) {
+  :root[data-appearance-version="2"] {
+    .mgmt-topbar__controls {
+      gap: 0.35rem;
+    }
+    .mgmt-workspace-search {
+      inline-size: 44px;
+      min-inline-size: 44px;
+      padding: 0;
+      justify-content: center;
+    }
+    .mgmt-workspace-search > :is(span, kbd),
+    .mgmt-topbar__storefront-text,
+    .mgmt-account__name {
+      display: none;
+    }
+    .mgmt-topbar__storefront-link {
+      inline-size: 44px;
+      padding: 0;
+      justify-content: center;
+    }
+    .mgmt-topbar__subtitle {
+      max-inline-size: 24rem;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+  }
+}
+@media (max-width: 1199px) {
+  :root[data-appearance-version="2"] {
+    .mgmt-topbar__controls-toggle {
+      display: grid;
+    }
+    .mgmt-topbar__controls {
+      display: none;
+      position: absolute;
+      inset-block-start: calc(100% + 0.75rem);
+      inset-inline-end: 0;
+      inline-size: min(31rem, calc(100vw - 24px));
+      max-inline-size: calc(100vw - 24px);
+      padding: 1rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      border: 1px solid var(--border-control);
+      border-radius: 1rem;
+      background: var(--surface);
+      box-shadow: var(--shadow-lift);
+      z-index: 55;
+    }
+    .mgmt-topbar__controls[data-open="true"] {
+      display: flex;
+    }
+    .mgmt-topbar__controls
+      :is(
+        .mgmt-workspace-search,
+        .mgmt-icon-action,
+        .mgmt-topbar__storefront-link,
+        .mgmt-topbar__lang-btn,
+        .mgmt-role-badge
+      ) {
+      display: inline-flex;
+    }
+    .mgmt-topbar__controls .mgmt-workspace-search {
+      flex: 1 1 100%;
+      min-inline-size: 0;
+    }
+    .mgmt-topbar__controls .mgmt-topbar__storefront-text {
+      display: inline;
+    }
+    .mgmt-topbar__text {
+      max-inline-size: 100%;
+    }
+    .mgmt-account__name {
+      max-inline-size: 7rem;
+    }
+  }
+}
+@media (max-width: 767px) {
+  :root[data-appearance-version="2"] {
+    .mgmt-topbar {
+      padding-inline: 0.75rem;
+      gap: 0.5rem;
+    }
+    .mgmt-topbar__breadcrumb,
+    .mgmt-topbar__subtitle,
+    .mgmt-account__name,
+    .mgmt-account__chevron {
+      display: none;
+    }
+    .mgmt-account__trigger {
+      inline-size: 44px;
+      min-inline-size: 44px;
+      padding: 0.25rem;
+      justify-content: center;
+    }
+    .mgmt-topbar__end {
+      gap: 0.375rem;
+    }
+    .mgmt-topbar__heading {
+      min-inline-size: 0;
+    }
+    .mgmt-topbar__title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}

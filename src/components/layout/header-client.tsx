@@ -155,33 +155,40 @@ export function HeaderClient({
     };
   }, [open]);
 
-  // Measure header height for sticky coordination
-  useEffect(() => {
-    const element = headerRef.current;
-    if (!element) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        // Use borderBoxSize.blockSize if available (Chrome 84+), fallback to contentRect.height
-        const height =
-          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-        document.documentElement.style.setProperty(
-          "--header-sticky-offset",
-          `${height}px`,
-        );
-      }
-    });
-
-    resizeObserver.observe(element, { box: "border-box" });
-    // Set initial height using border-box
-    document.documentElement.style.setProperty(
-      "--header-sticky-offset",
-      `${element.getBoundingClientRect().height}px`,
-    );
-
+  // Height coordinates sticky content; viewport bottom coordinates the beam.
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      const bounds = header.getBoundingClientRect();
+      document.documentElement.style.setProperty(
+        "--header-sticky-offset",
+        `${bounds.height}px`,
+      );
+      document.documentElement.style.setProperty(
+        "--navigation-header-edge",
+        `${Math.max(0, bounds.bottom)}px`,
+      );
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+    measure();
+    const observer = new ResizeObserver(schedule);
+    observer.observe(header);
+    if (header.previousElementSibling)
+      observer.observe(header.previousElementSibling);
+    window.addEventListener("resize", schedule);
+    window.addEventListener("scroll", schedule, { passive: true });
     return () => {
-      resizeObserver.unobserve(element);
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+      window.removeEventListener("resize", schedule);
+      window.removeEventListener("scroll", schedule);
       document.documentElement.style.removeProperty("--header-sticky-offset");
+      document.documentElement.style.removeProperty("--navigation-header-edge");
     };
   }, []);
 

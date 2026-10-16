@@ -1,10 +1,13 @@
 "use client";
 
 import Link from "@/components/motion/motion-link";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
   ArrowRight,
+  CornerDownLeft,
+  CornerDownRight,
   Camera,
   Cable,
   KeyRound,
@@ -50,7 +53,14 @@ export function ProductSubNav({
   const pathname = usePathname();
   const currentCategory = getCategoryKeyFromPath(pathname);
   const isRtl = isLocale(locale) ? locale === "he" : false;
-  const Arrow = isRtl ? ArrowLeft : ArrowRight;
+  const enhanced = useAnimationSettings().appearanceVersion === "2";
+  const Arrow = enhanced
+    ? isRtl
+      ? CornerDownLeft
+      : CornerDownRight
+    : isRtl
+      ? ArrowLeft
+      : ArrowRight;
 
   return (
     <nav className="sf-departments" aria-label={ariaLabel}>

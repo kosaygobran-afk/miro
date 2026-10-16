@@ -198,7 +198,14 @@ for (const locale of ["he", "en"] as const) {
         const compact = await account.boundingBox();
         expect(compact!.x).toBeGreaterThanOrEqual(15);
         expect(compact!.x + compact!.width).toBeLessThanOrEqual(width - 15);
-        await account.locator(".premium-account-secondary-action").click();
+        // Storefront is the current area, so there is no redundant return link.
+        await expect(
+          account.locator(".premium-account-secondary-action"),
+        ).toHaveCount(0);
+        await expect(
+          account.locator(".premium-account-current-area"),
+        ).toContainText(locale === "he" ? "החנות" : "Storefront");
+        await page.keyboard.press("Escape");
         await expect(account).toHaveCount(0);
         await expect(page).toHaveURL(new RegExp(`/${locale}$`));
       });

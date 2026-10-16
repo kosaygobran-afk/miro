@@ -62,7 +62,7 @@
 .motion-navigation-progress {
   position: fixed;
   inset-inline: 0;
-  top: var(--header-sticky-offset, 0px);
+  top: var(--navigation-header-edge, var(--header-sticky-offset, 0px));
   height: var(--motion-beam-height);
   z-index: 1500;
   pointer-events: none;

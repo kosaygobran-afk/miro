@@ -27,6 +27,7 @@ import { motionAttributes, motionStyle } from "@/lib/motion";
 import "@/styles/workspace.css";
 import "@/styles/motion.css";
 import "@/styles/product-card-sections.css";
+import "@/styles/navigation-refinements.css";
 import {
   getDirection,
   getMessages,

@@ -167,6 +167,26 @@ export function AccountMenu({
         ? labels.workerArea
         : labels.myAccount;
 
+  const area =
+    pathname?.match(/^\/(?:he|en)\/(admin|worker|account)(?:\/|$)/)?.[1] ??
+    "storefront";
+  const currentArea =
+    area === "admin"
+      ? labels.adminConsole
+      : area === "worker"
+        ? labels.workerArea
+        : area === "account"
+          ? labels.myAccount
+          : locale === "he"
+            ? "החנות"
+            : "Storefront";
+  const destinationArea =
+    role === "admin" || role === "ceo"
+      ? "admin"
+      : role === "worker"
+        ? "worker"
+        : "account";
+
   const RoleButtonIcon =
     role === "admin" || role === "ceo" ? LayoutDashboard : UserRound;
 
@@ -212,7 +232,11 @@ export function AccountMenu({
             {labels.roleBadge.replace("{role}", roleLabel(role, locale))}
           </span>
         )}
-        <ChevronDown size={13} aria-hidden="true" />
+        <ChevronDown
+          className="premium-account-chevron"
+          size={13}
+          aria-hidden="true"
+        />
       </button>
       {open &&
         createPortal(
@@ -261,29 +285,37 @@ export function AccountMenu({
                 )}
               </div>
             </div>
-            <Link
-              href={roleDestination}
-              className="premium-account-primary-action"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onNavigate?.();
-              }}
-            >
-              <RoleButtonIcon size={18} aria-hidden="true" />
-              <span>{roleButtonLabel}</span>
-            </Link>
-            <Link
-              href={withLocale(locale)}
-              className="premium-account-secondary-action"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                onNavigate?.();
-              }}
-            >
-              {labels.switchToStorefront}
-            </Link>
+            <p className="premium-account-current-area">
+              {locale === "he" ? "נמצא כעת ב־" : "Current area: "}
+              <strong>{currentArea}</strong>
+            </p>
+            {area !== destinationArea ? (
+              <Link
+                href={roleDestination}
+                className="premium-account-primary-action premium-account-destination-action"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  onNavigate?.();
+                }}
+              >
+                <RoleButtonIcon size={18} aria-hidden="true" />
+                <span>{roleButtonLabel}</span>
+              </Link>
+            ) : null}
+            {area !== "storefront" ? (
+              <Link
+                href={withLocale(locale)}
+                className="premium-account-secondary-action"
+                role="menuitem"
+                onClick={() => {
+                  setOpen(false);
+                  onNavigate?.();
+                }}
+              >
+                {labels.switchToStorefront}
+              </Link>
+            ) : null}
             <button
               type="button"
               className="premium-account-logout"

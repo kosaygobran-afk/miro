@@ -3,11 +3,34 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { setTimeout as delay } from "node:timers/promises";
 
 export const ULTRA_MODEL = "nvidia/nemotron-3-ultra-550b-a55b";
 export const ULTRA_OUTPUT_LIMIT = 32768;
 const UPSTREAM = "https://integrate.api.nvidia.com";
 const MAX_REQUEST_BYTES = 32 * 1024 * 1024;
+export const MAX_UPSTREAM_ATTEMPTS = 20;
+const TRANSIENT_STATUSES = new Set([429, 502, 503, 504]);
+
+export function retryDelayMs(
+  response,
+  attempt,
+  random = Math.random,
+  now = Date.now,
+) {
+  const header = response.headers.get("retry-after");
+  if (header !== null && header.trim() !== "") {
+    const seconds = Number(header);
+    const date = Date.parse(header);
+    if (Number.isFinite(seconds) && seconds >= 0)
+      return Math.min(3_600_000, seconds * 1000);
+    if (/^[A-Za-z]{3},/.test(header) && Number.isFinite(date))
+      return Math.min(3_600_000, Math.max(0, date - now()));
+  }
+  return (
+    Math.min(30_000, 500 * 2 ** (attempt - 1)) + Math.floor(random() * 250)
+  );
+}
 
 // Kimi Code 2.1.1 always sends this OpenAI-only field. NVIDIA rejects it.
 // Apply provider compatibility before the first request, without replay/fallback.
@@ -115,7 +138,20 @@ export async function* normalizeUltraSse(source) {
   if (remaining) yield remaining;
 }
 
-export function createBridge({ fetchImpl = fetch, log = console.log } = {}) {
+export function createBridge({
+  fetchImpl = fetch,
+  log = console.log,
+  maxAttempts = MAX_UPSTREAM_ATTEMPTS,
+  sleep = (ms, signal) => delay(ms, undefined, { signal }),
+  random = Math.random,
+  now = Date.now,
+} = {}) {
+  if (
+    !Number.isInteger(maxAttempts) ||
+    maxAttempts < 1 ||
+    maxAttempts > MAX_UPSTREAM_ATTEMPTS
+  )
+    throw new Error("Invalid upstream attempt limit");
   return http.createServer(async (req, res) => {
     const reply = (status, message) => {
       res.writeHead(status, { "Content-Type": "application/json" });
@@ -124,7 +160,11 @@ export function createBridge({ fetchImpl = fetch, log = console.log } = {}) {
     if (req.method === "GET" && req.url === "/health") {
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
-        JSON.stringify({ service: "miro-nvidia-cli-bridge", version: 1 }),
+        JSON.stringify({
+          service: "miro-nvidia-cli-bridge",
+          version: 2,
+          maxAttempts,
+        }),
       );
       return;
     }
@@ -171,7 +211,7 @@ export function createBridge({ fetchImpl = fetch, log = console.log } = {}) {
         }
         body = normalizeNvidiaRequest(input);
       }
-      const upstream = await fetchImpl(UPSTREAM + req.url, {
+      const options = {
         method: req.method,
         headers: {
           Authorization: req.headers.authorization,
@@ -180,20 +220,37 @@ export function createBridge({ fetchImpl = fetch, log = console.log } = {}) {
         },
         ...(body ? { body: JSON.stringify(body) } : {}),
         signal: controller.signal,
-      });
-      // Operational metadata only: never log credentials, prompts or responses.
-      log(
-        JSON.stringify({
-          time: new Date().toISOString(),
-          model: body?.model,
-          max_tokens: body?.max_tokens,
-          reasoning_effort: body?.reasoning_effort,
-          reasoning_budget: body?.reasoning_budget,
-          thinking: body?.chat_template_kwargs?.enable_thinking,
-          tool_count: body?.tools?.length ?? 0,
-          status: upstream.status,
-        }),
-      );
+      };
+      // A client with its own retry budget can explicitly own retries. Never
+      // multiply its 20 attempts by another 20 attempts in this bridge.
+      const attempts =
+        req.headers["x-miro-retry-owner"] === "client" ? 1 : maxAttempts;
+      let upstream;
+      for (let attempt = 1; attempt <= attempts; attempt++) {
+        controller.signal.throwIfAborted();
+        // Thrown network errors have an unknown upstream outcome: do not replay.
+        upstream = await fetchImpl(UPSTREAM + req.url, options);
+        // Operational metadata only: never log credentials, prompts or responses.
+        log(
+          JSON.stringify({
+            time: new Date().toISOString(),
+            model: body?.model,
+            max_tokens: body?.max_tokens,
+            reasoning_effort: body?.reasoning_effort,
+            reasoning_budget: body?.reasoning_budget,
+            thinking: body?.chat_template_kwargs?.enable_thinking,
+            tool_count: body?.tools?.length ?? 0,
+            status: upstream.status,
+            attempt,
+            maxAttempts: attempts,
+          }),
+        );
+        if (!TRANSIENT_STATUSES.has(upstream.status) || attempt === attempts)
+          break;
+        const wait = retryDelayMs(upstream, attempt, random, now);
+        await upstream.body?.cancel();
+        await sleep(wait, controller.signal);
+      }
       const responseHeaders = {
         "Content-Type":
           upstream.headers.get("content-type") ?? "application/json",
