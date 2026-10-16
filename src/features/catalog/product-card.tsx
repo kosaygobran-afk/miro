@@ -401,7 +401,9 @@ export function ProductCard({
           className="sf-product-action"
           aria-label={`${copy.details}: ${product.name}`}
         >
-          {actionLabel ?? copy.details}
+          <span className="sf-product-action-label">
+            {actionLabel ?? copy.details}
+          </span>
           <Arrow size={16} aria-hidden="true" />
         </Link>
 

@@ -20,8 +20,9 @@
   .premium-header-actions {
     gap: 0.5rem;
   }
+  /* :where() keeps this generic sizing below the explicit visibility rules. */
   .premium-header-actions
-    :is(
+    :where(
       .premium-icon-button,
       .premium-account-trigger.compact,
       .premium-account-action

@@ -1,5 +1,16 @@
 # Design System
 
+## Laptop width, card and header contract — 2026-10-17
+
+This entry restores the accurate component contract after the overnight density pass was reverted; it supersedes any density/shrink guidance the removed `public-density.css` experiments introduced. Keep the established 112rem frame and standard component sizes — density wins must come from real content, never from shrinking controls.
+
+- **Laptop is the contract width.** The owner reviews at 1440px full width. Do not reduce control heights, paddings or type sizes to fit more per row. Reverting the uncommitted density pass is the reference behavior; `src/styles/public-density.css` and its test were deleted on purpose.
+- **Hamburger stays mobile-only via `:where()`.** In `src/styles/navigation-refinements.css`, the `.premium-header-actions :where(...)` sizing rule must not use `:is()`: the `.premium-account-trigger.compact` selector would raise specificity to (0,5,0) and defeat `.premium-mobile-toggle { display: none }` above 1199px (and reveal guest `.premium-account-action` ≤1399px). New cascade additions should use `:where()` for cover-scoping and never beat explicit visibility rules.
+- **v2 product-card footer contract** (`product-card-sections.css`, gated by Version 2): descriptions reserve no row when empty (`:empty { display: none }`, `min-height: 0`); the details action renders one line with ellipsis through `.sf-product-action-label` (`product-card.tsx` wraps the label), keeps symmetric `0.55rem` padding, `min-height: 48px`, and omits the trailing in-button arrow (icons elsewhere still carry affordance; Version 1 keeps its original row). Centered sticky price chips and the existing section dividers are unchanged.
+- **Symmetric spacing.** Note/callout paddings are uniform on all sides (`.experience-note` = `1rem`), cards keep `1rem`/`1.5rem` responsive padding, and borders stay on one side telegraphically (`border-inline-start` on notes) rather than balanced frames — do not reintroduce top-only or asymmetric directional paddings.
+- **Icon direction is locale-aware.** Arrows in header/footer/gallery context follow `html[dir="rtl"]` mirroring; management `ArrowUpRight` stays direction-neutral. Verify RTL icons after any navigation or card change (HC desktop captures exist per locale/theme).
+- **Verification for this contract:** product-card sections, store loading, navigation and overlay suites (66 cases), lint, typecheck and build passed on 2026-10-17; laptop-width bilingual captures for both themes are the visual record. Re-check nav exclusivity at 1199/1201px whenever header rules change.
+
 ## Motion and Version 2 appearance — 2026-10-02
 
 This entry supersedes older palette and metric-card geometry descriptions for active Version 2. Version 1 remains restorable from CEO Settings; retain all original layers and the immutable token snapshot.

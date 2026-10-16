@@ -1,6 +1,22 @@
 # Project Status
 
-Last updated: 2026-10-16 (missing documented source reconstructed and verified)
+Last updated: 2026-10-17 (laptop density revert, hamburger specificity fix and card polish verified)
+
+## Laptop density revert, hamburger specificity and card polish — 2026-10-17
+
+- Owner reported the design "got worse" after the overnight density pass (shrunk components, lost symmetric spacing, stray controls at laptop full width). The entire uncommitted density pass was reverted back to the reconstructed storefront/navigation baseline (commit `fd10585`): `git checkout` of 12 files and deletion of `src/styles/public-density.css` plus `tests/public-component-density.spec.ts`. Rule restored in `docs/DESIGN_SYSTEM.md`: laptop (1440px) is the owner's primary review width; do not shrink component sizes or densify by reducing controls.
+
+- Real regression found and fixed: the guest-facing mobile hamburger rendered at every width next to the desktop nav. Root cause is a CSS-specificity leak in `src/styles/navigation-refinements.css`: `.premium-header-actions :is(.premium-icon-button, .premium-account-trigger.compact, .premium-account-action)` promoted the two-class selector to (0,5,0), so its `display: inline-flex` defeated the lower `display: none` for `.premium-mobile-toggle` and also revealed `.premium-account-action` to guests ≤1399px. Changed `:is(` → `:where(` (covers, never elevates). Verified computed styles at 1100/1140/1199px (toggle visible, nav hidden) and 1201/1300/1440/1536px (toggle hidden, nav inline), and the mobile glass panel at 1100px.
+
+- Card footer polish (enhancement, not a regression — markup checks identical against 0.1.1): empty `sf-product-description` no longer reserves a copy row inside v2 card summaries (`min-height: 0` + `:empty { display: none }` in `product-card-sections.css`), grid row heights dropped from a uniform ~650px to ~601–609px per row; the action label is wrapped in `sf-product-action-label` (`product-card.tsx`) with `nowrap`/ellipsis so it stays on one line; the trailing in-button arrow is hidden in v2 (Version 1 keeps its original row); action rows use symmetric `0.55rem` padding and `min-height: 48px`. `.experience-note` padding made symmetric (`1rem` all sides).
+
+- Two unrelated pre-existing uncommitted fixes preserved untouched: `src/app/[locale]/(protected)/admin/accounts/page.tsx` (removes the duplicate POS Accounts `PageHeader` above `AccountsDashboard`'s own `ReportingHeader`) and `tests/customer-evolution.spec.ts` (stale product URL replaced with dynamic product discovery).
+
+- Contact page address/hours `p.experience-note` render bare owner-entered values (from `business_settings` contact config, no hard-coded fallback copy). Recording a content decision, not changing owner copy: whether to prefix localized "Address:"/"Hours:" labels is for the owner to supply approved wording.
+
+- Verification: `npx playwright test tests/product-card-sections.spec.ts tests/store-loading.spec.ts tests/navigation-bar.spec.ts tests/store-overlays.spec.ts` — 66/66 passed; `npm run lint` passed; `npm run typecheck` passed; `npm run build` passed (dev server stopped for the build, restarted after), final `GET /en` 200. Final record screenshots (EN/HE × light/dark × home/store/services/contact at 1440px) were captured outside Git under the OS temporary `shots/final` directory. The temporary 0.1.1 comparison worktree (`origin/0.1.1`, port 3101) was removed after side-by-side verification.
+
+- Remaining owner/QA actions unchanged: manual bilingual accessibility and physical-device approval, business/approved catalog and content review, commerce/legal/privacy gates. The owner authorized committing this session's work together with the two preserved fixes locally as focused commits; pushing remains a separate owner action. `tests/customer-evolution.spec.ts` was rerun after the decision and passed 5/5, including the dynamic product-discovery path.
 
 ## Missing documented changes — 2026-10-16 (source reconstruction completed)
 

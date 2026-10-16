@@ -926,7 +926,7 @@ html[dir="rtl"] .experience-hero-media::after {
   color: var(--muted-foreground);
 }
 .experience-note {
-  padding: 1rem 1.25rem;
+  padding: 1rem;
   border-inline-start: 2px solid var(--primary);
   background: var(--surface-muted);
   border-radius: 0.4rem;
