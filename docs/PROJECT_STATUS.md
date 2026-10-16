@@ -2379,6 +2379,7 @@ Version 0.1.0 pull request and Preview configuration:
 - This documentation follow-up triggers a fresh Git-connected Preview build using those public settings. Preview can browse the public database projection; protected management data needs an explicitly configured private server key and is not certified on this public-only preview. The previously recorded local/live CEO/admin checks used the proper existing private environment. Do not copy private Production keys into broad preview scopes automatically.
 - Remaining launch owners unchanged. Preview deployment state and final remote-main merge verification are recorded in PR #7's review/conversation. The release branch is retained after merge.
 
+<<<<<<< HEAD
 ## Native NVIDIA CLI reliability and K3 diagnosis - 2026-10-16
 
 - Owner requested maximum supported performance and 15-20 attempts, clarified Kimi K3 in OpenCode and Kimi Code, and confirmed NVIDIA is the only provider available. Live K3 inference returns HTTP 410 Gone with provider retirement timestamp `2026-10-15T08:00:00Z`. Kimi K2.6 is listed but actual inference returns account-level 404 in both CLIs; its experimental local aliases were removed. OpenCode's cached catalog is not proof of provider access.
@@ -2389,3 +2390,34 @@ Version 0.1.0 pull request and Preview configuration:
 - Owner actions: K3 requires a supported provider/deployment; with NVIDIA only it cannot be reactivated locally. Existing sessions must select Ultra or restart/reload. Engineering reruns the starter after an unexpected Windows bridge exit (Startup is login persistence, not crash supervision). Privacy owner approves real business/customer material sent to NVIDIA. Existing business/legal/catalog, accountant/provider activation and manual bilingual accessibility approvals remain launch gates; no website accessibility or commerce behavior changed.
 
 - Final checks: scoped Prettier check and `git diff --check` passed. Windows repository starter, installed-copy restart, Startup VBS execution and health (`version: 2`, `maxAttempts: 20`) passed. No website build/test rerun was needed for native developer-tooling-only changes.
+=======
+## CEO interface layout and responsivity audit — 2026-10-15
+
+Owner request: check design, layout and responsivity across every CEO/admin component, page and case (overlap/override, sticky behavior, missing padding, RTL), fix what is wrong, and verify — without committing or pushing.
+
+What changed (3 fixes, CSS-only):
+
+- `src/styles/console.css`: the users/customers manager overrides that forced `display: block` on the desktop table wrappers and hid the mobile card lists were unconditional, so on phones the Users and Customers pages rendered a 74rem/70rem min-width table instead of the purpose-built mobile card views. Scoping those four declarations to `@media (min-width: 768px)` (the exact inverse of workspace.css's `max-width: 767px`) restores the components' own mobile card layouts while keeping the desktop presentation contract byte-identical. This also restores consistency with Sales, Inventory and Overview, which always kept their mobile cards.
+- `src/styles/workspace.css`: `.inventory-manager__toast` and `.settings-panel__toast` are anchored with `inset-inline-end` (left edge in RTL) but their `toast-enter` keyframe slid in from the physical right, so in Hebrew the toast flew in from mid-screen. Added a `toast-enter-rtl` keyframe (`translateX(-100%)`) selected under `[dir="rtl"]`; duration/easing/reduced-motion behavior are unchanged.
+- `src/components/management/analytics-dashboard.module.css`: ranking fill bars size by `inlineSize` percentage (grow from inline-start), but the cyan→violet gradient kept its physical direction in RTL, mirroring the color ramp against the fill direction. Added a `:global([dir="rtl"])` mirrored gradient.
+
+Why it changed — audit findings:
+
+- Full static audit covered the shell (sidebar/topbar/nav/drawer/dialog/overlay stack), overview/analytics/finance, all CSS layer files (management, console, business-console, console-evolution, insights-refinement, workspace), every management CSS module, UI primitives (data-table, scroll-region, toolbar, page-header, icon-action, overflow-text, date-range, detail-panel), commerce/accounts/sales, requests, categories/services/suppliers, users/customers/audit, product editor, store design/merchandising, and the floating tools (POS, calculator, floating windows).
+- Verified sound and deliberately left unchanged: sticky offset measurement (`--mgmt-topbar-height`/`--mgmt-stickybar-height` via ResizeObserver), portal-based tooltips/dialogs (no scroll-container clipping), floating-window drag/resize clamping and RTL handles, container-query responsiveness in POS/calculator, the owner-requested centered table symmetry in scroll regions, wide tables always inside overflow-x scroll regions, logical-property discipline (zero physical left/right rules in live component CSS).
+- Known-inert left in place: `.mgmt-table__head--sticky` cannot stick vertically inside `overflow-x: auto` scroll regions (a sticky ancestor scrollport never scrolls vertically), but it is harmless and restructuring scroll containers for it would be risky. Dead CSS blocks (`product-management__action` `::after` tooltips, `suppliers-manager__toggle-slider`, `customers-manager__drawer`) were left untouched as non-visible cleanup.
+
+Commands run and status:
+
+- `npm run typecheck` — passed.
+- `npm run lint` — passed with zero warnings.
+- `npm run build` — passed (146 pages/routes generated; existing sitemap cookie/static-render diagnostic unchanged).
+- Prettier: `npx prettier --check` on the three edited files flags them, but the same files also fail at `HEAD` and `npm run format:check` reports 570 pre-existing non-conformant files repo-wide (including tsconfig.json). This is a pre-existing repo-wide condition, not introduced by this change; `format:write` was deliberately not run to avoid a massive unrelated diff. Edits follow each file's existing hand-formatting style.
+- No commit or push was made, per owner instruction. No unit/e2e test, database row, permission or runtime behavior was changed.
+
+Remaining blockers / owner actions:
+
+- **QA/accessibility owner:** manually verify the restored Users/Customers mobile card views on a real narrow phone (320–390px) in both locales, and the RTL toast entry on the Hebrew Inventory and Settings screens (appearance is brief; a forced re-save/refresh triggers it).
+- **Engineering owner:** decide whether to restore repo-wide Prettier conformance (570 files) in a dedicated formatting-only change; current `format:check` gate cannot pass on `main` as-is.
+- Legal/privacy: no data collection, retention, permission or commercial claim changed; existing launch approvals remain with their established owners. Accessibility owner retains the outstanding manual bilingual screen-reader/zoom/device review.
+>>>>>>> origin/main
