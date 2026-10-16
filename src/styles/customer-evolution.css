@@ -432,6 +432,41 @@
   border-radius: var(--customer-radius);
   background: var(--surface);
 }
+/* Owner-reviewed 2026-10-17: the numbered service boxes stay compact —
+   smaller tile, tighter internal rhythm and a fixed calm padding instead
+   of the shared panel clamp that inflated each box at laptop width. */
+:root[data-appearance-version="2"] .experience-category-card {
+  gap: 0.95rem;
+  padding: 1.25rem;
+}
+:root[data-appearance-version="2"] .experience-category-grid {
+  gap: 0.8rem;
+}
+:root[data-appearance-version="2"] .experience-category-card .experience-icon {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.75rem;
+}
+:root[data-appearance-version="2"]
+  .experience-category-card
+  .experience-icon
+  svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+:root[data-appearance-version="2"] .experience-category-card h3 {
+  font-size: 1.02rem;
+}
+:root[data-appearance-version="2"] .experience-category-card p {
+  margin-top: 0.35rem;
+  font-size: 0.82rem;
+  line-height: 1.65;
+}
+:root[data-appearance-version="2"]
+  .experience-category-card
+  .experience-card-link {
+  font-size: 0.73rem;
+}
 :root[data-appearance-version="2"] .experience-process {
   gap: 1rem;
   border: 0;

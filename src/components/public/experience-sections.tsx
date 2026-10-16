@@ -176,7 +176,7 @@ export function ServiceCategoryGrid({
                 <Icon aria-hidden="true" />
               </span>
               <span className="experience-card-index" aria-hidden="true">
-                0{index + 1}
+                {String(index + 1).padStart(2, "0")}
               </span>
             </div>
             <div>

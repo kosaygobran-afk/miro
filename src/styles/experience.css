@@ -289,6 +289,10 @@ html[dir="rtl"] .experience-hero-media::after {
   line-height: 1.8;
   color: var(--muted-foreground);
 }
+/* Entries without owner copy leave no dead space instead of an empty row. */
+.experience-category-card > p:empty {
+  display: none;
+}
 .experience-card-link {
   display: flex;
   justify-content: space-between;
