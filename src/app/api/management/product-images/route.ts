@@ -8,10 +8,19 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import {
   PRODUCT_MEDIA_BUCKET,
+  IMAGE_MIME_BY_TYPE,
+  buildStorageObjectName,
+  sanitizeSvg,
   isAcceptedImageReference,
   parseOwnedStorageObjectName,
 } from "@/lib/image-safety";
 import { revalidatePath } from "next/cache";
+import {
+  processProductImage,
+  validateProductImage,
+  type BackgroundRemovalInfo,
+} from "@/lib/product-image-processing";
+import { downloadProductImage } from "@/lib/remote-product-image";
 
 // image_url accepts an external http(s) URL or an owned storage object name
 // (products/<uuid>/<file>) in the product-media bucket (migration
@@ -24,6 +33,7 @@ const imageSchema = z.object({
   alt_he: z.string().max(300).nullish(),
   alt_en: z.string().max(300).nullish(),
   sort_order: z.number().int().default(0),
+  remove_background: z.boolean().default(true),
 });
 
 // PATCH goes through upsert_product_image_meta: alt texts, sort_order and the
@@ -44,179 +54,6 @@ async function revalidateCatalog() {
   revalidatePath("/en");
   revalidatePath("/he/store/[category]", "page");
   revalidatePath("/en/store/[category]", "page");
-}
-
-// Helper: download image bytes from a public HTTPS URL with SSRF protection
-async function downloadImageFromUrl(url: string): Promise<Buffer> {
-  const parsed = new URL(url);
-
-  // Require HTTPS for remote imports
-  if (parsed.protocol !== "https:") {
-    throw new Error("Only HTTPS URLs are supported for remote imports");
-  }
-
-  // Reject credentials embedded in URLs
-  if (parsed.username || parsed.password) {
-    throw new Error("URL credentials are not allowed");
-  }
-
-  // Reject localhost, loopback, link-local, private, reserved addresses
-  const hostname = parsed.hostname.toLowerCase();
-
-  // Block localhost and loopback
-  if (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1" ||
-    hostname.endsWith(".localhost")
-  ) {
-    throw new Error("Localhost addresses are not allowed");
-  }
-
-  // Block link-local addresses
-  if (hostname.startsWith("169.254.") || hostname.startsWith("fe80.")) {
-    throw new Error("Link-local addresses are not allowed");
-  }
-
-  // Block private IPv4 ranges
-  if (
-    hostname.startsWith("10.") ||
-    hostname.startsWith("172.16.") ||
-    hostname.startsWith("172.17.") ||
-    hostname.startsWith("172.18.") ||
-    hostname.startsWith("172.19.") ||
-    hostname.startsWith("172.20.") ||
-    hostname.startsWith("172.21.") ||
-    hostname.startsWith("172.22.") ||
-    hostname.startsWith("172.23.") ||
-    hostname.startsWith("172.24.") ||
-    hostname.startsWith("172.25.") ||
-    hostname.startsWith("172.26.") ||
-    hostname.startsWith("172.27.") ||
-    hostname.startsWith("172.28.") ||
-    hostname.startsWith("172.29.") ||
-    hostname.startsWith("172.30.") ||
-    hostname.startsWith("172.31.") ||
-    hostname.startsWith("192.168.")
-  ) {
-    throw new Error("Private network addresses are not allowed");
-  }
-
-  // Block reserved/multicast ranges
-  if (
-    hostname.startsWith("224.") ||
-    hostname.startsWith("239.") ||
-    hostname.startsWith("0.") ||
-    hostname.startsWith("240.")
-  ) {
-    throw new Error("Reserved network addresses are not allowed");
-  }
-
-  const response = await fetch(url, {
-    redirect: "manual", // Handle redirects manually for SSRF protection
-  });
-
-  if (response.status >= 300 && response.status < 400) {
-    const redirectUrl = response.headers.get("location");
-    if (!redirectUrl) {
-      throw new Error("Invalid redirect");
-    }
-    // Validate redirect destination
-    const redirectParsed = new URL(redirectUrl, url);
-    if (redirectParsed.protocol !== "https:") {
-      throw new Error("Redirect to non-HTTPS URL not allowed");
-    }
-    // Fetch the redirect target with same protections
-    return downloadImageFromUrl(redirectUrl);
-  }
-
-  if (!response.ok) {
-    throw new Error(`Failed to download image: ${response.status}`);
-  }
-
-  const contentType = response.headers.get("content-type") || "";
-  if (!contentType.startsWith("image/")) {
-    throw new Error("Remote URL does not point to an image");
-  }
-
-  const contentLength = response.headers.get("content-length");
-  if (contentLength && parseInt(contentLength, 10) > 5 * 1024 * 1024) {
-    throw new Error("Image exceeds 5 MB limit");
-  }
-
-  const arrayBuffer = await response.arrayBuffer();
-  return Buffer.from(arrayBuffer);
-}
-
-// Helper: call the Python background-removal worker
-async function callBackgroundRemovalWorker(inputBytes: Buffer): Promise<{
-  skipped: boolean;
-  reason: string | null;
-  imageBase64: string;
-  mode: string;
-}> {
-  const workerUrl = process.env.BACKGROUND_REMOVAL_WORKER_URL;
-  if (!workerUrl) {
-    // Worker not configured - return original without processing
-    return {
-      skipped: false,
-      reason: "worker_not_configured",
-      imageBase64: inputBytes.toString("base64"),
-      mode: "original",
-    };
-  }
-
-  const formData = new FormData();
-  // Detect file extension from magic bytes
-  let fileExtension = "png";
-  if (
-    inputBytes.length >= 3 &&
-    inputBytes[0] === 0xff &&
-    inputBytes[1] === 0xd8 &&
-    inputBytes[2] === 0xff
-  ) {
-    fileExtension = "jpeg";
-  } else if (
-    inputBytes.length >= 8 &&
-    inputBytes[0] === 0x89 &&
-    inputBytes[1] === 0x50 &&
-    inputBytes[2] === 0x4e &&
-    inputBytes[3] === 0x47 &&
-    inputBytes[4] === 0x0d &&
-    inputBytes[5] === 0x0a &&
-    inputBytes[6] === 0x1a &&
-    inputBytes[7] === 0x0a
-  ) {
-    fileExtension = "png";
-  } else if (
-    inputBytes.length >= 12 &&
-    inputBytes.subarray(0, 4).toString("ascii") === "RIFF" &&
-    inputBytes.subarray(8, 12).toString("ascii") === "WEBP"
-  ) {
-    fileExtension = "webp";
-  }
-
-  formData.append(
-    "file",
-    new Blob([Buffer.from(inputBytes as unknown as Buffer)], {
-      type: `image/${fileExtension}`,
-    }),
-    `image.${fileExtension}`,
-  );
-
-  const response = await fetch(`${workerUrl}/remove-background`, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    throw new Error(
-      `Background removal worker failed: ${response.status} - ${errorBody}`,
-    );
-  }
-
-  return response.json();
 }
 
 export async function GET(request: Request) {
@@ -274,85 +111,58 @@ export async function POST(request: Request) {
     return errorResponse("Product not found", 404);
   }
 
-  // Check if this is an external URL that needs background removal
-  const parsedUrl = new URL(image_url);
-  const isExternalUrl =
-    parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:";
-  const isOwnedStorage = parseOwnedStorageObjectName(
+  const ownedObject = parseOwnedStorageObjectName(
     image_url,
     process.env.NEXT_PUBLIC_SUPABASE_URL,
   );
-
   let finalImageUrl = image_url;
-  let backgroundRemovalInfo: { skipped: boolean; reason: string | null } = {
+  let uploadedObject: string | null = null;
+  let backgroundRemovalInfo: BackgroundRemovalInfo = {
+    status: "original",
     skipped: true,
-    reason: "existing url reference - no processing",
+    reason: "existing_reference",
   };
 
-  if (isExternalUrl && !isOwnedStorage) {
-    // This is a new external URL import - download, process, and store
+  if (ownedObject) {
+    const { data } = admin.storage
+      .from(PRODUCT_MEDIA_BUCKET)
+      .getPublicUrl(ownedObject);
+    finalImageUrl = data.publicUrl;
+  } else {
+    let imported;
     try {
-      const imageBuffer = await downloadImageFromUrl(image_url);
-
-      // Call background removal worker
-      const processingResult = await callBackgroundRemovalWorker(imageBuffer);
-
-      backgroundRemovalInfo = {
-        skipped: processingResult.skipped,
-        reason: processingResult.reason,
-      };
-
-      if (processingResult.skipped) {
-        // Image already transparent - import unchanged to owned storage
-        // Store original bytes in owned storage
-        const objectName = `products/${product_id}/${crypto.randomUUID()}.png`;
-        const { error: uploadError } = await admin.storage
-          .from(PRODUCT_MEDIA_BUCKET)
-          .upload(objectName, imageBuffer, {
-            contentType: "image/png",
-            upsert: false,
-          });
-        if (uploadError) {
-          console.error("product-media upload failed:", uploadError.message);
-          return errorResponse("Upload failed", 500);
-        }
-        const { data: publicUrlData } = admin.storage
-          .from(PRODUCT_MEDIA_BUCKET)
-          .getPublicUrl(objectName);
-        finalImageUrl = publicUrlData.publicUrl;
-      } else {
-        // Processed image - decode base64 and store
-        const processedBuffer = Buffer.from(
-          processingResult.imageBase64,
-          "base64",
-        );
-        const objectName = `products/${product_id}/${crypto.randomUUID()}.png`;
-        const { error: uploadError } = await admin.storage
-          .from(PRODUCT_MEDIA_BUCKET)
-          .upload(objectName, processedBuffer, {
-            contentType: "image/png",
-            upsert: false,
-          });
-        if (uploadError) {
-          console.error("product-media upload failed:", uploadError.message);
-          return errorResponse("Upload failed", 500);
-        }
-        const { data: publicUrlData } = admin.storage
-          .from(PRODUCT_MEDIA_BUCKET)
-          .getPublicUrl(objectName);
-        finalImageUrl = publicUrlData.publicUrl;
-      }
-    } catch (downloadError) {
-      console.error("URL import failed:", downloadError);
+      const bytes = await downloadProductImage(image_url);
+      const type = await validateProductImage(bytes);
+      imported = await processProductImage(
+        bytes,
+        type,
+        parsed.data.remove_background,
+      );
+    } catch {
       return errorResponse(
-        downloadError instanceof Error
-          ? downloadError.message
-          : "Failed to import image from URL",
+        "Could not import image. Use a public HTTPS URL for a valid still image (5 MB, 16 megapixels maximum).",
         400,
       );
     }
+    backgroundRemovalInfo = imported.backgroundRemoval;
+    const objectName = buildStorageObjectName(product_id, imported.type);
+    const bytes =
+      imported.type === "svg"
+        ? Buffer.from(sanitizeSvg(new TextDecoder().decode(imported.bytes)))
+        : imported.bytes;
+    const { error } = await admin.storage
+      .from(PRODUCT_MEDIA_BUCKET)
+      .upload(objectName, bytes, {
+        contentType: IMAGE_MIME_BY_TYPE[imported.type],
+        upsert: false,
+      });
+    if (error) return errorResponse("Upload failed", 500);
+    uploadedObject = objectName;
+    const { data } = admin.storage
+      .from(PRODUCT_MEDIA_BUCKET)
+      .getPublicUrl(objectName);
+    finalImageUrl = data.publicUrl;
   }
-  // If it's an owned storage object, use it as-is (existing record reference)
 
   const { data: image, error: imageError } = await admin
     .from("product_images")
@@ -367,18 +177,11 @@ export async function POST(request: Request) {
     .single();
 
   if (imageError) {
-    // Clean up uploaded storage object if database insert fails
-    if (isExternalUrl && !isOwnedStorage && finalImageUrl !== image_url) {
-      const objectName = parseOwnedStorageObjectName(
-        finalImageUrl,
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
-      );
-      if (objectName) {
-        await admin.storage
-          .from(PRODUCT_MEDIA_BUCKET)
-          .remove([objectName])
-          .catch(() => undefined);
-      }
+    if (uploadedObject) {
+      await admin.storage
+        .from(PRODUCT_MEDIA_BUCKET)
+        .remove([uploadedObject])
+        .catch(() => undefined);
     }
     return mapPostgresError(imageError);
   }

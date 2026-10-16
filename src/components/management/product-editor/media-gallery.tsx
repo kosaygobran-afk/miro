@@ -24,6 +24,7 @@ import {
 } from "../ui";
 import { editorCopy, mediaCopy } from "./copy";
 import type { Locale, ProductImage } from "./types";
+import type { BackgroundRemovalInfo } from "@/lib/product-image-processing";
 import styles from "./product-editor.module.css";
 
 type UploadItem = {
@@ -32,18 +33,13 @@ type UploadItem = {
   progress: number;
   error: string | null;
   status:
+    | "queued"
     | "uploading"
-    | "checking"
-    | "removing"
-    | "optimizing"
-    | "saving"
-    | "completed"
-    | "skipped"
+    | "processing"
+    | "processed"
+    | "transparent"
+    | "original"
     | "failed";
-  processingResult?: {
-    skipped: boolean;
-    reason: string | null;
-  };
 };
 
 type UrlUploadState = {
@@ -62,23 +58,33 @@ function uploadFile(
   sortOrder: number,
   isPrimary: boolean,
   onProgress: (ratio: number) => void,
-): Promise<{ skipped: boolean; reason: string | null }> {
+  uncertainMessage: string,
+  removeBackground: boolean,
+): Promise<BackgroundRemovalInfo> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", "/api/management/product-images/upload");
     xhr.responseType = "json";
+    xhr.timeout = 90000;
     xhr.upload.onprogress = (event) => {
       if (event.lengthComputable && event.total > 0) {
         onProgress(event.loaded / event.total);
       }
     };
+    xhr.upload.onload = () => onProgress(1);
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) {
         const body = xhr.response as {
-          background_removal?: { skipped?: boolean; reason?: string | null };
+          image?: { id?: string };
+          background_removal?: BackgroundRemovalInfo;
         } | null;
+        if (!body?.image?.id) {
+          reject(new Error(uncertainMessage));
+          return;
+        }
         resolve({
-          skipped: body?.background_removal?.skipped ?? false,
+          status: body?.background_removal?.status ?? "original",
+          skipped: body?.background_removal?.skipped ?? true,
           reason: body?.background_removal?.reason ?? null,
         });
         return;
@@ -86,12 +92,15 @@ function uploadFile(
       const body = xhr.response as { error?: string } | null;
       reject(new Error(body?.error ?? "Upload failed"));
     };
-    xhr.onerror = () => reject(new Error("Upload failed"));
+    xhr.onerror = () => reject(new Error(uncertainMessage));
+    xhr.ontimeout = () => reject(new Error(uncertainMessage));
+    xhr.onabort = () => reject(new Error(uncertainMessage));
 
     const form = new FormData();
     form.append("file", file);
     form.append("product_id", productId);
     form.append("sort_order", String(sortOrder));
+    form.append("remove_background", String(removeBackground));
     if (isPrimary) form.append("is_primary", "true");
     xhr.send(form);
   });
@@ -112,6 +121,9 @@ export function MediaGallery({
   const [images, setImages] = useState<ProductImage[] | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [processingNotice, setProcessingNotice] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [removeBackground, setRemoveBackground] = useState(true);
   const [savedNotice, setSavedNotice] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -197,7 +209,7 @@ export function MediaGallery({
     if (!trimmed) return mediaCopy.urlInvalid[locale];
     try {
       const url = new URL(trimmed);
-      if (url.protocol !== "http:" && url.protocol !== "https:") {
+      if (url.protocol !== "https:" || url.username || url.password) {
         return mediaCopy.urlInvalid[locale];
       }
       return null;
@@ -210,18 +222,16 @@ export function MediaGallery({
     status: UploadItem["status"],
     locale: Locale,
   ): string {
-    const he = locale === "he";
-    const labels: Record<UploadItem["status"], string> = {
-      uploading: he ? "מעלה…" : "Uploading",
-      checking: he ? "בודק שקיפות…" : "Checking transparency",
-      removing: he ? "מסיר רקע…" : "Removing background",
-      optimizing: he ? "מייעל…" : "Optimizing",
-      saving: he ? "שומר…" : "Saving",
-      completed: he ? "הושלם" : "Completed",
-      skipped: he ? "שקוף" : "Skipped",
-      failed: he ? "נכשל" : "Failed",
+    const labels = {
+      queued: mediaCopy.processingQueued,
+      uploading: mediaCopy.processingUploading,
+      processing: mediaCopy.processingSaving,
+      processed: mediaCopy.processingBgRemoved,
+      transparent: mediaCopy.processingAlreadyTransparent,
+      original: mediaCopy.processingOriginal,
+      failed: mediaCopy.uploadFailed,
     };
-    return labels[status];
+    return labels[status][locale];
   }
 
   async function addImageByUrl() {
@@ -245,6 +255,7 @@ export function MediaGallery({
           alt_he: urlUpload.altHe || null,
           alt_en: urlUpload.altEn || null,
           sort_order: nextSort,
+          remove_background: removeBackground,
         }),
       });
 
@@ -257,7 +268,7 @@ export function MediaGallery({
 
       const data = (await response.json()) as {
         image?: ProductImage;
-        background_removal?: { skipped?: boolean; reason?: string | null };
+        background_removal?: BackgroundRemovalInfo;
       };
 
       // Show brief processing completion indicator
@@ -268,12 +279,9 @@ export function MediaGallery({
       await loadImages();
       announceSaved();
 
-      // Show processing result notice
-      if (data.background_removal?.skipped) {
-        setNotice(`${mediaCopy.processingAlreadyTransparent[locale]}`);
-      } else {
-        setNotice(`${mediaCopy.processingBgRemoved[locale]}`);
-      }
+      setProcessingNotice(
+        getStatusLabel(data.background_removal?.status ?? "original", locale),
+      );
     } catch (err) {
       setUrlUpload((prev) => ({
         ...prev,
@@ -320,7 +328,10 @@ export function MediaGallery({
   }, [loadImages]);
 
   async function handleFilesSelected(fileList: FileList | null) {
-    if (!fileList || fileList.length === 0 || images === null) return;
+    if (!fileList || fileList.length === 0 || images === null || uploading)
+      return;
+    setUploading(true);
+    setProcessingNotice("");
     setNotice("");
     const files = Array.from(fileList);
     const nextSort =
@@ -330,23 +341,21 @@ export function MediaGallery({
       name: file.name,
       progress: 0,
       error: null,
-      status: "uploading",
+      status: "queued",
     }));
     let uploadedCount = 0;
     setUploads((prev) => [...prev, ...batch]);
-
-    const statusSequence: UploadItem["status"][] = [
-      "checking",
-      "removing",
-      "optimizing",
-      "saving",
-    ];
 
     for (let i = 0; i < files.length; i += 1) {
       const file = files[i];
       const item = batch[i];
       try {
-        // Upload with progress tracking
+        setUploads((prev) =>
+          prev.map((u) =>
+            u.key === item.key ? { ...u, status: "uploading" } : u,
+          ),
+        );
+        // Transfer progress is measurable; processing stages are a single server operation.
         const processingResult = await uploadFile(
           file,
           productId,
@@ -355,19 +364,19 @@ export function MediaGallery({
           (ratio) => {
             setUploads((prev) =>
               prev.map((u) =>
-                u.key === item.key ? { ...u, progress: ratio } : u,
+                u.key === item.key
+                  ? {
+                      ...u,
+                      progress: ratio,
+                      status: ratio >= 1 ? "processing" : "uploading",
+                    }
+                  : u,
               ),
             );
           },
+          mediaCopy.uploadUncertain[locale],
+          removeBackground,
         );
-
-        // Simulate processing stages after upload completes
-        for (const status of statusSequence) {
-          setUploads((prev) =>
-            prev.map((u) => (u.key === item.key ? { ...u, status } : u)),
-          );
-          await new Promise((resolve) => setTimeout(resolve, 300));
-        }
 
         uploadedCount += 1;
         setUploads((prev) =>
@@ -375,8 +384,7 @@ export function MediaGallery({
             u.key === item.key
               ? {
                   ...u,
-                  status: processingResult.skipped ? "skipped" : "completed",
-                  processingResult,
+                  status: processingResult.status,
                 }
               : u,
           ),
@@ -401,6 +409,7 @@ export function MediaGallery({
     if (fileInputRef.current) fileInputRef.current.value = "";
     await loadImages();
     if (uploadedCount > 0) announceSaved();
+    setUploading(false);
   }
 
   async function patchImage(
@@ -599,6 +608,11 @@ export function MediaGallery({
           {notice}
         </Notice>
       ) : null}
+      {processingNotice ? (
+        <div className={styles.statusNote} role="status">
+          {processingNotice}
+        </div>
+      ) : null}
       {savedNotice ? (
         <div className={styles.mediaSaved} role="status" aria-live="polite">
           <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
@@ -611,8 +625,9 @@ export function MediaGallery({
           ref={fileInputRef}
           id={fileInputId}
           type="file"
-          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          accept="image/png,image/jpeg,image/webp,image/avif,image/svg+xml"
           multiple
+          disabled={uploading}
           className={styles.fileInput}
           onChange={(e) => void handleFilesSelected(e.target.files)}
         />
@@ -627,6 +642,7 @@ export function MediaGallery({
           type="button"
           className="miro-button miro-button-secondary inline-flex items-center gap-2 cursor-pointer"
           onClick={openUrlUpload}
+          disabled={uploading}
         >
           <Link2 className="h-4 w-4" aria-hidden="true" />
           {mediaCopy.addByUrlLabel[locale]}
@@ -635,6 +651,15 @@ export function MediaGallery({
           {mediaCopy.uploadHint[locale]}
         </p>
       </div>
+      <label className={styles.backgroundChoice}>
+        <input
+          type="checkbox"
+          checked={removeBackground}
+          disabled={uploading || urlUpload.loading}
+          onChange={(event) => setRemoveBackground(event.target.checked)}
+        />
+        {mediaCopy.removeBackgroundOption[locale]}
+      </label>
 
       {uploads.length > 0 ? (
         <ul className={styles.uploadList}>
@@ -650,15 +675,12 @@ export function MediaGallery({
                 <span className={styles.uploadError} role="alert">
                   {mediaCopy.uploadFailed[locale]}: {upload.error ?? ""}
                 </span>
-              ) : upload.status === "skipped" ? (
-                <span className={styles.uploadStatusSkipped} role="status">
-                  <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                  {mediaCopy.processingAlreadyTransparent[locale]}
-                </span>
-              ) : upload.status === "completed" ? (
+              ) : ["processed", "transparent", "original"].includes(
+                  upload.status,
+                ) ? (
                 <span className={styles.uploadStatusCompleted} role="status">
                   <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-                  {mediaCopy.processingBgRemoved[locale]}
+                  {getStatusLabel(upload.status, locale)}
                 </span>
               ) : (
                 <>
@@ -667,7 +689,11 @@ export function MediaGallery({
                     role="progressbar"
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-valuenow={Math.round(upload.progress * 100)}
+                    aria-valuenow={
+                      upload.status === "uploading"
+                        ? Math.round(upload.progress * 100)
+                        : undefined
+                    }
                     aria-label={`${getStatusLabel(upload.status, locale)} ${upload.name}`}
                   >
                     <span
@@ -726,7 +752,11 @@ export function MediaGallery({
                   />
                 </div>
                 <div className={styles.tileBody}>
-                  <p className={`${styles.statusNote} truncate`} dir="auto">
+                  <p
+                    className={`${styles.statusNote} truncate`}
+                    dir="auto"
+                    aria-hidden="true"
+                  >
                     {altText || "—"}
                   </p>
                   <div className={styles.tileActions}>
@@ -910,7 +940,7 @@ export function MediaGallery({
               />
             )}
           </FormField>
-          {urlUpload.url.trim() && !urlUpload.previewError && (
+          {validateUrl(urlUpload.url) === null && !urlUpload.previewError && (
             <div className={styles.urlPreview}>
               <Image
                 src={urlUpload.url}
@@ -919,6 +949,7 @@ export function MediaGallery({
                 height={150}
                 className={styles.previewImage}
                 unoptimized
+                referrerPolicy="no-referrer"
                 onLoad={handleUrlLoad}
                 onError={handleUrlError}
               />
