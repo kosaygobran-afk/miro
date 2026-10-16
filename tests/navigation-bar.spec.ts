@@ -34,7 +34,11 @@ for (const locale of ["en", "he"] as const) {
       const arrow = page.locator(".sf-department-arrow").first();
       await expect(arrow).toHaveClass(
         new RegExp(
-          `lucide-${version === "2" ? "corner-down-" : "arrow-"}${locale === "he" ? "left" : "right"}`,
+          `lucide-${
+            version === "2"
+              ? `corner-down-${locale === "he" ? "right" : "left"}`
+              : `arrow-${locale === "he" ? "left" : "right"}`
+          }`,
         ),
       );
       const chevron = page.locator(

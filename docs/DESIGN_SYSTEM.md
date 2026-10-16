@@ -11,6 +11,9 @@ This entry restores the accurate component contract after the overnight density 
 - **Icon direction is locale-aware.** Arrows in header/footer/gallery context follow `html[dir="rtl"]` mirroring; management `ArrowUpRight` stays direction-neutral. Verify RTL icons after any navigation or card change (HC desktop captures exist per locale/theme).
 - **Verification for this contract:** product-card sections, store loading, navigation and overlay suites (66 cases), lint, typecheck and build passed on 2026-10-17; laptop-width bilingual captures for both themes are the visual record. Re-check nav exclusivity at 1199/1201px whenever header rules change.
 
+- **Category chip boxes fit their designed internals.** Version 2 department boxes render a 40px icon board inside a 40px grid track with an 18px arrow column and 8px gaps — a board must never outgrow its track (the earlier 44px board inside a 32px track laid the label under the tile with zero visible padding, in both reading directions). Labels wrap whole-word with balance; boxes grow in height and never overlap.
+- **Category arrows follow the owner-reversed contract (2026-10-17):** Version 2 corner arrows point down-left in LTR and down-right in RTL (mirrored glyphs, one package in every language). Version 1 keeps forward `ArrowRight`/`ArrowLeft` per direction. The nav-bar regression suite pins all three appearance toggles.
+
 ## Motion and Version 2 appearance — 2026-10-02
 
 This entry supersedes older palette and metric-card geometry descriptions for active Version 2. Version 1 remains restorable from CEO Settings; retain all original layers and the immutable token snapshot.

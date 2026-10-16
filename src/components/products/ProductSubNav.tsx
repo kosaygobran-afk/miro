@@ -56,8 +56,8 @@ export function ProductSubNav({
   const enhanced = useAnimationSettings().appearanceVersion === "2";
   const Arrow = enhanced
     ? isRtl
-      ? CornerDownLeft
-      : CornerDownRight
+      ? CornerDownRight
+      : CornerDownLeft
     : isRtl
       ? ArrowLeft
       : ArrowRight;

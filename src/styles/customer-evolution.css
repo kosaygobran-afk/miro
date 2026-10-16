@@ -217,10 +217,10 @@
   transition-timing-function: var(--motion-easing);
 }
 :root[data-appearance-version="2"] .sf-department-icon {
-  flex: 0 0 44px;
-  width: 44px;
-  height: 44px;
-  padding: 0.65rem;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0.5rem;
   border: 1px solid
     color-mix(in srgb, var(--accent-text) 28%, var(--border-subtle));
   border-radius: 0.85rem;
