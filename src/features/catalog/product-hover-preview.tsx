@@ -155,25 +155,40 @@ export function ProductHoverPreview({
     return () => onVisibilityChange?.(false);
   }, [phase, onVisibilityChange]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const strip = thumbnailsRef.current;
-    const selected = strip?.querySelector<HTMLElement>("[data-active]");
-    if (!strip || !selected) return;
-    const frame = strip.getBoundingClientRect();
-    const item = selected.getBoundingClientRect();
-    // Scroll only the image picker, never the document or source card.
-    strip.scrollBy({
-      left:
-        item.left < frame.left
-          ? item.left - frame.left
-          : Math.max(0, item.right - frame.right),
-      top:
-        item.top < frame.top
-          ? item.top - frame.top
-          : Math.max(0, item.bottom - frame.bottom),
-      behavior: "instant",
-    });
-  }, [activeImageIndex, phase]);
+    if (!strip) return;
+    const revealSelected = () => {
+      const selected = strip.querySelector<HTMLElement>("[data-active]");
+      if (!selected || !strip.offsetWidth || !strip.offsetHeight) return;
+      const frame = strip.getBoundingClientRect();
+      const item = selected.getBoundingClientRect();
+      const scaleX = frame.width / strip.offsetWidth;
+      const scaleY = frame.height / strip.offsetHeight;
+      if (!scaleX || !scaleY) return;
+      // Client bounds exclude the native scrollbar, including its RTL gutter.
+      // Convert screen coordinates back to CSS pixels during popup animations.
+      const left = frame.left + strip.clientLeft * scaleX;
+      const top = frame.top + strip.clientTop * scaleY;
+      const right = left + strip.clientWidth * scaleX;
+      const bottom = top + strip.clientHeight * scaleY;
+      strip.scrollBy({
+        left:
+          (item.left < left
+            ? item.left - left
+            : Math.max(0, item.right - right)) / scaleX,
+        top:
+          (item.top < top
+            ? item.top - top
+            : Math.max(0, item.bottom - bottom)) / scaleY,
+        behavior: "instant",
+      });
+    };
+    revealSelected();
+    const observer = new ResizeObserver(revealSelected);
+    observer.observe(strip);
+    return () => observer.disconnect();
+  }, [activeImageIndex, phase, product.images]);
 
   const updatePhase = useCallback((next: PreviewPhase) => {
     phaseRef.current = next;

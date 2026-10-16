@@ -1,6 +1,16 @@
 # Project Status
 
-Last updated: 2026-10-16 (review and hardening of recent image processing and console changes)
+Last updated: 2026-10-16 (missing documented source reconstructed and verified)
+
+## Missing documented changes — 2026-10-16 (source reconstruction completed)
+
+- Owner identified missing card-arrow centering/scrollbar behavior after synchronization, then requested all missing documented work. All remote branches, worktrees and recoverable Git commits were audited. Several October 15–16 Windows handoff claims have no corresponding source in this checkout; documentation alone is not delivery evidence.
+- The implementation/evidence checklist is `docs/DOCUMENTED_CHANGE_RECONCILIATION.md` (D01–D13). Restored separate centered preview image/arrows/counter cells, a Close row, native scrollbar clearance, and scaled client-bounded thumbnail selection with resize recovery. Added actual-header-edge loading-bar placement, shared public/management navbar heights, a responsive mounted Tools/display panel, truthful account context, narrow-phone spacing and contained directional category arrows. Version 1 retains its original geometry/icons; dialog state, overlay-first Escape, focus, gestures and reduced motion remain covered.
+- Added navbar/progress suites, expanded widget regressions and a protected real-auth/disposable-actor harness. Read installed Next.js guides and relevant verification/React skills. Lint, typecheck, build (146 routes), scoped Prettier and whitespace checks passed; **244/244 Node tests**. Broad Chromium/desktop-WebKit/iPhone-WebKit QA passed **390** cases with **50 intentional engine/pointer skips**; one WebKit footer test raced streamed navigation. Added routed-detail/settled-marker readiness and its focused rerun passed; the full section rerun passed **26 cases with 25 intentional profile/pointer skips**. Additional Version 1 switching checks passed **6/6**. Protected navbar checks passed **88/88 in each of Chromium and WebKit**, including heights, nested dialogs/focus, resize and axe, with all actors deleted. Historical Windows/Firefox totals below are retained as reports, not reused as current evidence. This host's Firefox runtime still fails before application startup.
+- Reconstructed native bounded retry source and private Windows starter; **20/20 bridge regressions**. Real Kimi/GPT-OSS tool/exact-final proof passed. OpenCode/GPT-OSS read passed but exact final failed (extra text); Ultra probes did not complete and were cancelled/timed out. This corrects the interim message claiming the OpenCode final was exact. No Ultra/model substitution, global runtime/model-routing change or Windows execution is claimed. Native engineering owns live Ultra/OpenCode verification and Windows installation; privacy approval is required before real customer material is sent to NVIDIA.
+- Restored the documented project Supabase CLI dependency/lock to **2.121.0** and verified its executable. No linked migration, environment pull, credential rotation or global CLI change. Development audit lists five existing high-severity ESLint-chain entries; production audit has zero. Engineering owns a compatible upstream fix; npm's suggested downgrade to Next ESLint 14 was not applied.
+- No existing business/catalog/settings/payment/stock record was changed. The browser harness uses synthetic catalog responses and disposable auth actors. Screenshots/evidence stay outside Git. No new visitor collection or commercial claim introduced. QA owns physical-device/screen-reader acceptance; business/legal owns identity/catalog/media approval, privacy owns hosting/retention, provider/accountant owns payment/fiscal activation, integration owns outbound delivery. Hosted background-removal worker/token activation remains the deployment owner's action; source merge does not deploy it.
+- Final localhost check: the actual existing port-3000 development server passed the 390px English widget test through all three themes, and `/en` returns HTTP 200. Only this review's production/HTTPS/isolated-native listeners were stopped; temporary TLS files and credential-bearing candidate configurations were removed. The original development listener/native service and private archive history remain preserved. GitHub PR creation was already rejected with integration HTTP 403 during this review; the owner-authorized publication uses a normal branch push and local non-fast-forward merge into main. Source/hosting verification remains attached to the resulting Git heads.
 
 ## Review of latest image/console changes — 2026-10-16 (completed)
 
@@ -35,6 +45,8 @@ The following is the original implementation report, retained as historical evid
 - No database schema changes required. Existing product-images workflows preserved.
 
 ## Navigation spacing, account context and category arrows — 2026-10-16
+
+Historical handoff: the October 15–16 navigation, widget and local-connection entries below are retained as originally reported. The current source reconstruction, checks and machine-specific limits are recorded at the top and in `DOCUMENTED_CHANGE_RECONCILIATION.md`; their old QA totals are not current checkout evidence.
 
 - Refined Version 2 public navbar controls into consistent framed cells, separated the account icon from its old chevron, aligned three-theme controls and gave icons internal breathing room. Compact phones retain every action; below 360px the existing brand symbol carries the accessible home link while the text mark is hidden. Management toolbar/segmented-control gaps and icon treatment use the same spacing discipline while retaining the console palette and shared navbar heights.
 - The public account menu now identifies its actual current area separately from destination actions. Storefront visitors no longer see a yellow management action resembling active location or a redundant Switch to storefront entry. Account/staff areas retain a real return-to-storefront action; links to an already-current role area are omitted. The management account popover explicitly identifies its console context. Session fixtures verify presentation only; authorization remains server-side.
@@ -2397,8 +2409,9 @@ Version 0.1.0 pull request and Preview configuration:
 - This documentation follow-up triggers a fresh Git-connected Preview build using those public settings. Preview can browse the public database projection; protected management data needs an explicitly configured private server key and is not certified on this public-only preview. The previously recorded local/live CEO/admin checks used the proper existing private environment. Do not copy private Production keys into broad preview scopes automatically.
 - Remaining launch owners unchanged. Preview deployment state and final remote-main merge verification are recorded in PR #7's review/conversation. The release branch is retained after merge.
 
-<<<<<<< HEAD
 ## Native NVIDIA CLI reliability and K3 diagnosis - 2026-10-16
+
+Historical Windows report: source was absent after synchronization. The reconstruction and current limited live-probe results above supersede its installation/verification claims for this checkout.
 
 - Owner requested maximum supported performance and 15-20 attempts, clarified Kimi K3 in OpenCode and Kimi Code, and confirmed NVIDIA is the only provider available. Live K3 inference returns HTTP 410 Gone with provider retirement timestamp `2026-10-15T08:00:00Z`. Kimi K2.6 is listed but actual inference returns account-level 404 in both CLIs; its experimental local aliases were removed. OpenCode's cached catalog is not proof of provider access.
 - Repaired this Windows runtime: installed the repository compatibility bridge under private local app data, started it hidden, registered a per-user Startup launcher and configured the previously empty/comment-only Kimi config with the existing saved NVIDIA credential privately. Preserved timestamped Kimi config backup and existing website changes. Default remains real Nemotron Ultra at high effort, unlimited reasoning budget, thinking enabled and documented 32,768 output cap; GPT-OSS 20B remains the worker. No K3 alias was silently mapped to another model.
@@ -2408,7 +2421,7 @@ Version 0.1.0 pull request and Preview configuration:
 - Owner actions: K3 requires a supported provider/deployment; with NVIDIA only it cannot be reactivated locally. Existing sessions must select Ultra or restart/reload. Engineering reruns the starter after an unexpected Windows bridge exit (Startup is login persistence, not crash supervision). Privacy owner approves real business/customer material sent to NVIDIA. Existing business/legal/catalog, accountant/provider activation and manual bilingual accessibility approvals remain launch gates; no website accessibility or commerce behavior changed.
 
 - Final checks: scoped Prettier check and `git diff --check` passed. Windows repository starter, installed-copy restart, Startup VBS execution and health (`version: 2`, `maxAttempts: 20`) passed. No website build/test rerun was needed for native developer-tooling-only changes.
-=======
+
 ## CEO interface layout and responsivity audit — 2026-10-15
 
 Owner request: check design, layout and responsivity across every CEO/admin component, page and case (overlap/override, sticky behavior, missing padding, RTL), fix what is wrong, and verify — without committing or pushing.
@@ -2438,4 +2451,3 @@ Remaining blockers / owner actions:
 - **QA/accessibility owner:** manually verify the restored Users/Customers mobile card views on a real narrow phone (320–390px) in both locales, and the RTL toast entry on the Hebrew Inventory and Settings screens (appearance is brief; a forced re-save/refresh triggers it).
 - **Engineering owner:** decide whether to restore repo-wide Prettier conformance (570 files) in a dedicated formatting-only change; current `format:check` gate cannot pass on `main` as-is.
 - Legal/privacy: no data collection, retention, permission or commercial claim changed; existing launch approvals remain with their established owners. Accessibility owner retains the outstanding manual bilingual screen-reader/zoom/device review.
->>>>>>> origin/main

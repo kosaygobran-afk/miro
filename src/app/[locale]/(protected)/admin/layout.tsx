@@ -6,6 +6,7 @@ import "@/styles/console.css";
 import "@/styles/business-console.css";
 import "@/styles/console-evolution.css";
 import "@/styles/insights-refinement.css";
+import "@/styles/management-navbar.css";
 
 /**
  * Management console layout. Resolves the actor role/status on the server

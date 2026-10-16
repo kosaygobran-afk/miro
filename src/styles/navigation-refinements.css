@@ -1,0 +1,194 @@
+/* Shared dimensions include navbar content only; the announcement stays separate. */
+:root {
+  --navbar-content-height: 84px;
+}
+@media (max-width: 1199px) {
+  :root {
+    --navbar-content-height: 76px;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --navbar-content-height: 70px;
+  }
+}
+
+:root[data-appearance-version="2"] {
+  .premium-header-inner {
+    min-block-size: var(--navbar-content-height);
+  }
+  .premium-header-actions {
+    gap: 0.5rem;
+  }
+  .premium-header-actions
+    :is(
+      .premium-icon-button,
+      .premium-account-trigger.compact,
+      .premium-account-action
+    ) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    inline-size: 40px;
+    block-size: 40px;
+    min-inline-size: 40px;
+    padding: 0.5rem;
+    gap: 0;
+    border: 1px solid var(--border-control);
+    border-radius: 0.75rem;
+    background: var(--surface);
+    color: var(--foreground);
+  }
+  .premium-header-actions .premium-mobile-toggle {
+    display: none;
+  }
+  .premium-theme-selector {
+    display: inline-flex;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 0.2rem;
+    padding: 0.2rem;
+    border: 1px solid var(--border-control);
+    border-radius: 0.8rem;
+    background: var(--surface);
+  }
+  .premium-theme-selector > button {
+    display: grid;
+    place-items: center;
+    inline-size: 30px;
+    block-size: 32px;
+    padding: 0.3rem;
+    border-radius: 0.5rem;
+  }
+  .premium-account-trigger.compact .premium-account-chevron {
+    display: none;
+  }
+  .premium-account-current-area {
+    margin: 0;
+    padding: 0.65rem 1rem;
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+    border-block-end: 1px solid var(--border-subtle);
+  }
+  .premium-account-current-area strong {
+    color: var(--foreground);
+  }
+  .premium-account-destination-action {
+    margin: 0.5rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.65rem;
+    background: var(--surface);
+    color: var(--foreground);
+    box-shadow: none;
+  }
+  .premium-account-destination-action:hover {
+    background: var(--surface-hover);
+  }
+  .sf-department {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) 20px;
+    gap: 0.5rem;
+    min-inline-size: 0;
+    align-items: center;
+  }
+  .sf-department > :is(.sf-department-icon, .sf-department-image) {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .sf-department > span {
+    grid-column: 2;
+    grid-row: 1;
+    min-inline-size: 0;
+  }
+  .sf-department > .sf-department-arrow {
+    grid-column: 3;
+    grid-row: 1;
+    inline-size: 18px;
+    block-size: 18px;
+    justify-self: center;
+    transform: none;
+  }
+  .sf-department:hover > .sf-department-arrow {
+    transform: none;
+  }
+}
+@media (max-width: 1199px) {
+  :root[data-appearance-version="2"]
+    .premium-header-actions
+    .premium-mobile-toggle {
+    display: inline-flex;
+  }
+  :root[data-appearance-version="2"] .sf-department-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 767px) {
+  :root[data-appearance-version="2"] {
+    .premium-header-inner {
+      gap: 0.5rem;
+    }
+    .premium-header-actions {
+      gap: 0.3rem;
+    }
+    .sf-department {
+      grid-template-columns: minmax(0, 1fr) 20px;
+      padding: 0.65rem;
+    }
+    .sf-department > span {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+    .sf-department > .sf-department-arrow {
+      grid-column: 2;
+      grid-row: 1;
+    }
+  }
+}
+@media (max-width: 480px) {
+  :root[data-appearance-version="2"] {
+    .premium-header-actions {
+      gap: 0.15rem;
+    }
+    .premium-header-actions
+      :is(
+        .premium-icon-button,
+        .premium-account-trigger.compact,
+        .premium-account-action
+      ) {
+      inline-size: 30px;
+      min-inline-size: 30px;
+      block-size: 36px;
+      padding: 0.35rem;
+    }
+    .premium-theme-selector {
+      gap: 1px;
+      padding: 3px;
+    }
+    .premium-theme-selector > button {
+      inline-size: 24px;
+      block-size: 28px;
+      padding: 3px;
+    }
+    .premium-brand {
+      gap: 0.25rem;
+    }
+    .premium-brand-symbol {
+      inline-size: 28px;
+    }
+    .premium-brand-name {
+      font-size: 1.35rem;
+    }
+    .premium-brand-caption {
+      display: none;
+    }
+    .sf-department-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}
+@media (max-width: 359px) {
+  :root[data-appearance-version="2"] .premium-logo-link .premium-brand-type {
+    display: none;
+  }
+}

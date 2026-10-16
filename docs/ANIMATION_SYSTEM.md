@@ -569,3 +569,21 @@ Version 2 previews use a separate 52px side thumbnail picker, with 44px horizont
 Main images and thumbnails use `ProductMedia` with natural contained proportions and a failed-image illustration fallback. Gallery arrows and Close have 44px targets; the centered counter must not collide with either arrow in Hebrew or English. Use logical arrow placement and preserve hover/focus contrast in all themes. ArrowLeft/ArrowRight follow the locale; Home/End select the first/last image. Selection scrolls only the thumbnail picker, never the document. Native taps, source-only hover/hold, footer clearance, explicit dismissal and reduced-motion controls retain their existing contracts.
 
 `tests/product-card-widgets.spec.ts` covers both locales, all three themes and 320/390/1440px layouts, image-stage visibility, independent picker geometry, arrow/counter separation, keyboard selection, wraparound and focus recovery. It uses current public products by default; `PRODUCT_WIDGETS_PATH` can select a disposable local multi-image fixture, and `PRODUCT_WIDGETS_SCREENSHOTS` selects an external screenshot directory. Never publish the fixture or mutate catalog/settings for layout verification. Main-image fit assertions must scope to `.sf-hover-preview-media`, since thumbnails also use the shared media wrapper.
+
+### Reconstructed preview controls and picker clearance — 2026-10-16
+
+The October 15 status entry described changes absent from the source tree. The
+current reconstruction puts the Version 2 image, vertically centered 44px arrows
+and counter in independent grid cells. Close has its own in-flow row with focus
+clearance; the minimal-height hover fallback keeps its compact original control.
+Side pickers reserve thumbnail padding and native scrollbar width; horizontal
+pickers reserve scrollbar height and remove the unused vertical gutter. Selection
+uses client bounds (including RTL scrollbar placement), converts animated screen
+coordinates to CSS pixels, and observes picker resizing without scrolling the
+page. The observer disconnects when the popup changes/unmounts.
+
+`tests/product-card-widgets.spec.ts` now verifies seven widths, both locales and
+three themes, actual Close clicks, image/arrow/counter separation, scrollbar fit,
+keyboard wraparound and selection recovery while resizing an open preview. The
+new 16-case Chromium matrix passed; current cross-engine evidence is recorded in
+`docs/DOCUMENTED_CHANGE_RECONCILIATION.md`, separately from historical Windows QA.

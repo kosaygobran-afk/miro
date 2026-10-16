@@ -208,6 +208,11 @@ for (const kind of ["grid", "rail"] as const) {
       // Actual activation also verifies that the portal cannot steal the click.
       await link.click();
       await expect(page).toHaveURL(destination);
+      // A streamed route can commit its URL before the detail page mounts.
+      await expect(
+        page.locator(".sf-product-detail #product-title"),
+      ).toBeVisible();
+      await expect(page.locator('[data-route-loading="true"]')).toHaveCount(0);
     }
   });
 }

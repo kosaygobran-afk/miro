@@ -7,10 +7,12 @@ import {
   normalizeNvidiaRequest,
   normalizeUltraSse,
   ULTRA_MODEL,
+  retryDelayMs,
+  MAX_UPSTREAM_ATTEMPTS,
 } from "../../scripts/nvidia-cli-bridge.mjs";
 
-async function startTestBridge(t, fetchImpl) {
-  const server = createBridge({ fetchImpl, log: () => {} });
+async function startTestBridge(t, fetchImpl, options = {}) {
+  const server = createBridge({ fetchImpl, log: () => {}, ...options });
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   t.after(
@@ -146,7 +148,7 @@ test("bridge rejects unauthenticated/arbitrary routes and streams without loggin
   assert.ok(!logs.join("").includes("synthetic-test-secret"));
 });
 
-test("bridge preserves NVIDIA errors and retry guidance without replay", async (t) => {
+test("client-owned retries preserve NVIDIA errors and guidance without replay", async (t) => {
   const calls = [];
   const upstreamError = JSON.stringify({
     error: { message: "Synthetic provider rate limit", code: "rate_limited" },
@@ -163,10 +165,13 @@ test("bridge preserves NVIDIA errors and retry guidance without replay", async (
       },
     });
   });
-  const response = await fetch(
-    url + "/v1/chat/completions",
-    chatRequest(JSON.stringify({ model: ULTRA_MODEL, stream: true })),
-  );
+  const response = await fetch(url + "/v1/chat/completions", {
+    ...chatRequest(JSON.stringify({ model: ULTRA_MODEL, stream: true })),
+    headers: {
+      authorization: "Bearer synthetic-test-secret",
+      "x-miro-retry-owner": "client",
+    },
+  });
   assert.equal(response.status, 429);
   assert.equal(response.headers.get("retry-after"), "23");
   assert.equal(response.headers.get("request-id"), "synthetic-nvidia-request");
@@ -404,3 +409,188 @@ for (const model of ["openai/gpt-oss-20b", ULTRA_MODEL]) {
     },
   );
 }
+
+test("transient HTTP failures retry only up to the configured cap, preserving model and body", async (t) => {
+  for (const status of [429, 502, 503, 504]) {
+    let calls = 0;
+    const bodies = [];
+    const waits = [];
+    const url = await startTestBridge(
+      t,
+      async (_url, init) => {
+        calls++;
+        bodies.push(init.body);
+        return new Response(
+          JSON.stringify({ error: { message: "transient" } }),
+          { status },
+        );
+      },
+      {
+        maxAttempts: 3,
+        sleep: async (ms) => {
+          waits.push(ms);
+        },
+        random: () => 0,
+      },
+    );
+    const result = await fetch(
+      url + "/v1/chat/completions",
+      chatRequest(JSON.stringify({ model: ULTRA_MODEL, stream: true })),
+    );
+    assert.equal(result.status, status);
+    assert.equal(calls, 3);
+    assert.deepEqual(waits, [500, 1000]);
+    assert.equal(new Set(bodies).size, 1);
+    assert.equal(JSON.parse(bodies[0]).model, ULTRA_MODEL);
+  }
+});
+
+test("a transient response followed by success returns the actual successful stream once", async (t) => {
+  let calls = 0;
+  const url = await startTestBridge(
+    t,
+    async () =>
+      ++calls === 1
+        ? new Response("busy", { status: 503 })
+        : new Response("data: [DONE]\n\n", {
+            headers: { "content-type": "text/event-stream" },
+          }),
+    { sleep: async () => {} },
+  );
+  const response = await fetch(
+    url + "/v1/chat/completions",
+    chatRequest(JSON.stringify({ model: ULTRA_MODEL, stream: true })),
+  );
+  assert.equal(response.status, 200);
+  assert.equal(await response.text(), "data: [DONE]\n\n");
+  assert.equal(calls, 2);
+});
+
+test("permanent failures and network exceptions are never replayed", async (t) => {
+  for (const status of [400, 401, 403, 404, 410, 422, 500]) {
+    let calls = 0;
+    const url = await startTestBridge(t, async () => {
+      calls++;
+      return new Response("failure", { status });
+    });
+    assert.equal(
+      (
+        await fetch(
+          url + "/v1/chat/completions",
+          chatRequest(JSON.stringify({ model: ULTRA_MODEL })),
+        )
+      ).status,
+      status,
+    );
+    assert.equal(calls, 1);
+  }
+  let calls = 0;
+  const url = await startTestBridge(t, async () => {
+    calls++;
+    throw new Error("unknown outcome");
+  });
+  assert.equal(
+    (
+      await fetch(
+        url + "/v1/chat/completions",
+        chatRequest(JSON.stringify({ model: ULTRA_MODEL })),
+      )
+    ).status,
+    502,
+  );
+  assert.equal(calls, 1);
+});
+
+test("provider cooldown supports seconds/dates and invalid values use capped backoff", () => {
+  assert.equal(
+    retryDelayMs(new Response("", { headers: { "retry-after": "2" } }), 1),
+    2000,
+  );
+  assert.equal(
+    retryDelayMs(
+      new Response("", {
+        headers: { "retry-after": "Thu, 01 Jan 1970 00:00:10 GMT" },
+      }),
+      1,
+      () => 0,
+      () => 5000,
+    ),
+    5000,
+  );
+  assert.equal(
+    retryDelayMs(
+      new Response("", { headers: { "retry-after": "nonsense" } }),
+      20,
+      () => 0,
+    ),
+    30000,
+  );
+  assert.equal(
+    retryDelayMs(
+      new Response("", { headers: { "retry-after": "-1" } }),
+      1,
+      () => 0,
+    ),
+    500,
+  );
+  assert.equal(MAX_UPSTREAM_ATTEMPTS, 20);
+  assert.throws(() => createBridge({ maxAttempts: 21 }));
+});
+
+test("cancellation during cooldown stops before a second upstream attempt", async (t) => {
+  let calls = 0;
+  let started;
+  const sleeping = new Promise((resolve) => {
+    started = resolve;
+  });
+  const url = await startTestBridge(
+    t,
+    async () => {
+      calls++;
+      return new Response("busy", { status: 429 });
+    },
+    {
+      sleep: async (_ms, signal) => {
+        started();
+        await new Promise((resolve, reject) =>
+          signal.addEventListener(
+            "abort",
+            () => reject(new Error("cancelled")),
+            { once: true },
+          ),
+        );
+      },
+    },
+  );
+  const controller = new AbortController();
+  const pending = fetch(
+    url + "/v1/chat/completions",
+    chatRequest(JSON.stringify({ model: ULTRA_MODEL }), controller.signal),
+  );
+  await sleeping;
+  controller.abort();
+  await assert.rejects(pending);
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(calls, 1);
+});
+
+test("the default bridge caps one upstream request at twenty attempts", async (t) => {
+  let calls = 0;
+  const url = await startTestBridge(
+    t,
+    async () => {
+      calls++;
+      return new Response("busy", { status: 503 });
+    },
+    { sleep: async () => {} },
+  );
+  const response = await fetch(
+    url + "/v1/chat/completions",
+    chatRequest(JSON.stringify({ model: ULTRA_MODEL })),
+  );
+  assert.equal(response.status, 503);
+  assert.equal(calls, 20);
+  const health = await (await fetch(url + "/health")).json();
+  assert.equal(health.version, 2);
+  assert.equal(health.maxAttempts, 20);
+});
