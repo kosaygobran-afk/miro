@@ -1,290 +1,520 @@
-/**
- * Unit tests for the background removal transparency detector.
- * Verifies the transparency detection logic that runs BEFORE any AI inference.
- */
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { runInNewContext } from "node:vm";
+import { test } from "node:test";
+import ts from "typescript";
+import sharp from "sharp";
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-
-vi.mock("rembg", () => ({
-  remove: vi.fn(async (input) => input),
-  new_session: vi.fn(() => ({})),
-}));
-
-import { remove, new_session } from "rembg";
-
-/**
- * Transparency detection logic matching the Python worker implementation
- */
-function detectTransparency(inputBytes, options = {}) {
-  const { transparencyRatioThreshold = 0.3 } = options;
-
-  const img = loadTestImage(inputBytes);
-  if (!img) {
-    return {
-      hasTransparency: false,
-      transparencyRatio: 0,
-      skipReason: "invalid image",
-      mode: "error",
-    };
-  }
-
-  let hasAlpha = false;
-  let transparentPixelCount = 0;
-  let totalPixels = 0;
-  let veryTransparentCount = 0;
-
-  if (img.mode === "RGBA" || img.mode === "LA") {
-    hasAlpha = true;
-    totalPixels = img.width * img.height;
-    for (let i = 0; i < img.alphaData.length; i++) {
-      if (img.alphaData[i] < 255) transparentPixelCount++;
-      if (img.alphaData[i] < 128) veryTransparentCount++;
-    }
-  } else if (img.mode === "RGB") {
-    hasAlpha = false;
-    totalPixels = img.width * img.height;
-  } else if (img.mode === "P") {
-    hasAlpha = true;
-    totalPixels = img.width * img.height;
-    for (let i = 0; i < img.alphaData.length; i++) {
-      if (img.alphaData[i] < 255) transparentPixelCount++;
-      if (img.alphaData[i] < 128) veryTransparentCount++;
-    }
-  } else {
-    hasAlpha = false;
-    totalPixels = img.width * img.height;
-  }
-
-  if (totalPixels === 0) {
-    return {
-      hasTransparency: false,
-      transparencyRatio: 0,
-      skipReason: "no dimensions",
-      mode: img.mode,
-    };
-  }
-
-  const transparencyRatio = transparentPixelCount / totalPixels;
-  const veryTransparentRatio = veryTransparentCount / totalPixels;
-
-  if (!hasAlpha) {
-    return {
-      hasTransparency: false,
-      transparencyRatio: 0,
-      skipReason: null,
-      mode: img.mode,
-    };
-  }
-
-  if (transparentPixelCount === 0) {
-    return {
-      hasTransparency: false,
-      transparencyRatio: 0,
-      skipReason: null,
-      mode: img.mode,
-    };
-  }
-
-  if (transparencyRatio < 0.02) {
-    return {
-      hasTransparency: false,
-      transparencyRatio,
-      skipReason: null,
-      mode: img.mode,
-    };
-  }
-
-  if (
-    transparencyRatio > transparencyRatioThreshold &&
-    veryTransparentRatio > 0.1
-  ) {
-    return {
-      hasTransparency: true,
-      transparencyRatio,
-      skipReason: "image already has genuine transparency",
-      mode: img.mode,
-    };
-  }
-
-  return {
-    hasTransparency: false,
-    transparencyRatio,
-    skipReason: null,
-    mode: img.mode,
-  };
+const nativeRequire = createRequire(import.meta.url);
+async function loadSource(path, mocks = {}, globals = {}) {
+  const source = await readFile(
+    new URL(`../../${path}`, import.meta.url),
+    "utf8",
+  );
+  const exports = {};
+  runInNewContext(
+    ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+        esModuleInterop: true,
+      },
+    }).outputText,
+    {
+      exports,
+      Buffer,
+      URL,
+      TextDecoder,
+      AbortSignal,
+      FormData,
+      Blob,
+      File,
+      Request,
+      Response,
+      crypto: globalThis.crypto,
+      console: { warn() {} },
+      process: { env: {} },
+      require: (name) =>
+        name === "server-only" ? {} : (mocks[name] ?? nativeRequire(name)),
+      ...globals,
+    },
+  );
+  return exports;
 }
-
-/**
- * Test image loader - parses test fixture bytes
- * Format: PNG signature (8 bytes) + modeByte + patternByte
- * modeByte: 0x00=RGB, 0x01=RGBA, 0x02=P, 0x03=L
- * patternByte: 0-255 encoding transparency ratio 0.0-1.0
- */
-function loadTestImage(bytes) {
-  if (!bytes || bytes.length < 10) return null;
-
-  const isPNG =
-    bytes[0] === 0x89 &&
-    bytes[1] === 0x50 &&
-    bytes[2] === 0x4e &&
-    bytes[3] === 0x47;
-
-  if (!isPNG) return null;
-
-  const modeByte = bytes[bytes.length - 2];
-  const patternByte = bytes[bytes.length - 1];
-  const width = 100;
-  const height = 100;
-  const totalPixels = width * height;
-
-  let mode = "RGB";
-  let alphaData = null;
-
-  if (modeByte === 0x01) mode = "RGBA";
-  if (modeByte === 0x02) mode = "P";
-  if (modeByte === 0x03) mode = "L";
-
-  if (mode === "RGBA" || mode === "P") {
-    alphaData = new Uint8Array(totalPixels);
-    const transparentCount = Math.floor((patternByte / 255) * totalPixels);
-    for (let i = 0; i < totalPixels; i++) {
-      alphaData[i] = i < transparentCount ? 0 : 255;
-    }
-  }
-
-  return { mode, width, height, alphaData };
+const safety = await loadSource("src/lib/image-safety.ts");
+// A real two-frame WebP fixture; metadata must detect animation.
+const animatedWebp = Buffer.from(
+  "UklGRpQAAABXRUJQVlA4WAoAAAACAAAAAwAAAwAAQU5JTQYAAAAAAAAAAABBTk1GMAAAAAAAAAAAAAMAAAMAAGQAAAJWUDggGAAAADABAJ0BKgQABAABQCYlpAADcAD+/PQAAEFOTUYwAAAAAAAAAAAAAwAAAwAAZAAAAFZQOCAYAAAANAEAnQEqBAAEAAAAJiWkAANwAP79NmgA",
+  "base64",
+);
+const sourceBytes = await sharp({
+  create: { width: 20, height: 20, channels: 3, background: "white" },
+})
+  .jpeg()
+  .toBuffer();
+const alphaPixels = Buffer.alloc(20 * 20 * 4, 255);
+alphaPixels.fill(0, 0, 20 * 10 * 4);
+const cutout = await sharp(alphaPixels, {
+  raw: { width: 20, height: 20, channels: 4 },
+})
+  .png()
+  .toBuffer();
+async function processor(
+  fetch = () => {
+    throw Error("Unexpected request");
+  },
+  env = {},
+) {
+  return loadSource(
+    "src/lib/product-image-processing.ts",
+    { "./image-safety": safety },
+    { fetch, process: { env } },
+  );
 }
+const configured = {
+  BACKGROUND_REMOVAL_WORKER_URL: "https://worker.example/private/",
+  BACKGROUND_REMOVAL_WORKER_TOKEN: "synthetic-token",
+};
 
-function createTestPNG(mode, transparencyRatio) {
-  const bytes = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
-  const modeByte = mode === "RGBA" ? 0x01 : mode === "P" ? 0x02 : 0x00;
-  const patternByte = Math.floor(transparencyRatio * 255);
-  bytes.push(modeByte, patternByte);
-  return new Uint8Array(bytes);
-}
-
-describe("Transparency Detector", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  it("Classifies opaque JPG (RGB mode, no alpha) as requiring AI", () => {
-    const bytes = createTestPNG("RGB", 0);
-    const result = detectTransparency(bytes);
-
-    expect(result.hasTransparency).toBe(false);
-    expect(result.skipReason).toBeNull();
-    expect(result.mode).toBe("RGB");
-  });
-
-  it("Classifies opaque PNG (RGB mode) as requiring AI", () => {
-    const bytes = createTestPNG("RGB", 0);
-    const result = detectTransparency(bytes);
-
-    expect(result.hasTransparency).toBe(false);
-    expect(result.skipReason).toBeNull();
-  });
-
-  it("Classifies fully opaque RGBA as requiring AI", () => {
-    const bytes = createTestPNG("RGBA", 0);
-    const result = detectTransparency(bytes);
-
-    expect(result.hasTransparency).toBe(false);
-    expect(result.transparencyRatio).toBe(0);
-    expect(result.skipReason).toBeNull();
-  });
-
-  it("Skips Rembg for genuine transparent PNG", () => {
-    const bytes = createTestPNG("RGBA", 0.75);
-    const result = detectTransparency(bytes);
-
-    expect(result.hasTransparency).toBe(true);
-    expect(result.transparencyRatio).toBeGreaterThan(0.3);
-    expect(result.skipReason).toContain("genuine transparency");
-  });
-
-  it("Skips Rembg for genuine transparent WebP (RGBA-equivalent)", () => {
-    const bytes = createTestPNG("RGBA", 0.8);
-    const result = detectTransparency(bytes);
-
-    expect(result.hasTransparency).toBe(true);
-    expect(result.skipReason).toContain("genuine transparency");
-  });
-
-  it("Detects palette-based PNG transparency correctly", () => {
-    const bytes = createTestPNG("P", 0.6);
-    const result = detectTransparency(bytes);
-
-    expect(result.hasTransparency).toBe(true);
-    expect(result.skipReason).toContain("genuine transparency");
-  });
-
-  it("Handles tiny accidental alpha artifacts conservatively", () => {
-    const bytes = createTestPNG("RGBA", 0.01);
-    const result = detectTransparency(bytes);
-
-    expect(result.hasTransparency).toBe(false);
-    expect(result.skipReason).toBeNull();
-  });
-
-  it("Rejects invalid image", () => {
-    const result = detectTransparency(
-      new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]),
-    );
-
-    expect(result.hasTransparency).toBe(false);
-    expect(result.mode).toBe("error");
-  });
-
-  it("Rejects empty input", () => {
-    const result = detectTransparency(new Uint8Array([]));
-
-    expect(result.hasTransparency).toBe(false);
-    expect(result.mode).toBe("error");
-  });
+test("actual Python snake_case contract produces a validated PNG cutout", async () => {
+  let calls = 0;
+  const { processProductImage } = await processor(async (url, init) => {
+    calls++;
+    assert.equal(url.href, "https://worker.example/private/remove-background");
+    assert.equal(init.headers.Authorization, "Bearer synthetic-token");
+    assert.equal(init.redirect, "error");
+    assert.equal(init.body.get("file").type, "image/jpeg");
+    assert.ok(init.signal instanceof AbortSignal);
+    return Response.json({
+      skipped: false,
+      reason: null,
+      image_base64: cutout.toString("base64"),
+      mode: "processed",
+    });
+  }, configured);
+  const result = await processProductImage(sourceBytes, "jpeg");
+  assert.equal(result.backgroundRemoval.status, "processed");
+  assert.equal(result.type, "png");
+  assert.ok(result.bytes.equals(cutout));
+  assert.equal(calls, 1);
 });
 
-describe("Rembg Invocation Guard", () => {
-  it("Never calls Rembg.remove on already-transparent images", async () => {
-    const transparentBytes = createTestPNG("RGBA", 0.8);
-    const detectionResult = detectTransparency(transparentBytes);
+test("disabled worker and SVG preserve original bytes and report original, never success", async () => {
+  const { processProductImage } = await processor();
+  const original = await processProductImage(sourceBytes, "jpeg");
+  assert.strictEqual(original.bytes, sourceBytes);
+  assert.equal(original.type, "jpeg");
+  assert.equal(original.backgroundRemoval.status, "original");
+  const enabled = await processor(undefined, configured);
+  assert.equal(
+    (
+      await enabled.processProductImage(
+        Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+        "svg",
+      )
+    ).backgroundRemoval.reason,
+    "svg",
+  );
+});
 
-    let rembgCalled = false;
+test("transparent WebP skip keeps original WebP bytes and MIME", async () => {
+  const webp = await sharp(cutout).webp().toBuffer();
+  const { processProductImage } = await processor(
+    async () =>
+      Response.json({
+        skipped: true,
+        reason: "already transparent",
+        image_base64: webp.toString("base64"),
+        mode: "RGBA",
+      }),
+    configured,
+  );
+  const result = await processProductImage(webp, "webp");
+  assert.strictEqual(result.bytes, webp);
+  assert.equal(result.type, "webp");
+  assert.equal(result.backgroundRemoval.status, "transparent");
+});
 
-    if (!detectionResult.hasTransparency) {
-      await remove(transparentBytes);
-      rembgCalled = true;
+test("worker errors, malformed responses and invalid cutouts safely preserve originals", async () => {
+  const opaque = await sharp(sourceBytes).png().toBuffer();
+  const empty = await sharp({
+    create: {
+      width: 2,
+      height: 2,
+      channels: 4,
+      background: { r: 0, g: 0, b: 0, alpha: 0 },
+    },
+  })
+    .png()
+    .toBuffer();
+  for (const body of [
+    null,
+    { skipped: false },
+    ...[sourceBytes, opaque, empty, Buffer.from("corrupt")].map((bytes) => ({
+      skipped: false,
+      reason: null,
+      image_base64: bytes.toString("base64"),
+      mode: "processed",
+    })),
+  ]) {
+    const { processProductImage } = await processor(
+      async () =>
+        body === null
+          ? new Response("private error", { status: 500 })
+          : Response.json(body),
+      configured,
+    );
+    const result = await processProductImage(sourceBytes, "jpeg");
+    assert.strictEqual(result.bytes, sourceBytes);
+    assert.equal(result.backgroundRemoval.reason, "processing_unavailable");
+  }
+});
+
+test("streamed worker response size cap works without Content-Length", async () => {
+  let cancelled = false;
+  const { processProductImage } = await processor(
+    async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new Uint8Array(8 * 1024 * 1024));
+          },
+          cancel() {
+            cancelled = true;
+          },
+        }),
+      ),
+    configured,
+  );
+  assert.equal(
+    (await processProductImage(sourceBytes, "jpeg")).backgroundRemoval.status,
+    "original",
+  );
+  assert.ok(cancelled);
+});
+
+test("real image validation rejects corrupt, active SVG, oversized and animated input", async () => {
+  const { validateProductImage } = await processor();
+  assert.equal(await validateProductImage(sourceBytes), "jpeg");
+  assert.equal(await validateProductImage(cutout), "png");
+  assert.equal(
+    await validateProductImage(
+      Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+    ),
+    "svg",
+  );
+  for (const bytes of [
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.from("<svg><script>alert(1)</script></svg>"),
+    Buffer.alloc(5 * 1024 * 1024 + 1),
+    animatedWebp,
+  ]) {
+    await assert.rejects(validateProductImage(bytes));
+  }
+});
+
+test("remote importer rejects private, mapped, reserved and mixed DNS answers before connecting", async () => {
+  const { isPublicImageAddress } = await loadSource(
+    "src/lib/remote-product-image.ts",
+    { "./image-safety": safety },
+  );
+  for (const ip of [
+    "127.0.0.2",
+    "10.0.0.1",
+    "172.31.0.1",
+    "192.168.0.1",
+    "169.254.169.254",
+    "100.64.1.1",
+    "198.18.0.1",
+    "240.0.0.1",
+    "::1",
+    "::ffff:127.0.0.1",
+    "fc00::1",
+    "fe80::1",
+    "2001:db8::1",
+    "2002:7f00:1::",
+  ])
+    assert.equal(isPublicImageAddress(ip), false, ip);
+  for (const ip of ["8.8.8.8", "1.1.1.1", "2606:4700:4700::1111"])
+    assert.equal(isPublicImageAddress(ip), true, ip);
+  let connected = false;
+  const { downloadProductImage } = await loadSource(
+    "src/lib/remote-product-image.ts",
+    {
+      "./image-safety": safety,
+      "node:dns/promises": {
+        lookup: async () => [
+          { address: "8.8.8.8", family: 4 },
+          { address: "10.0.0.1", family: 4 },
+        ],
+      },
+      "node:https": {
+        request() {
+          connected = true;
+        },
+      },
+    },
+  );
+  for (const url of [
+    "https://example.com/image",
+    "http://example.com/image",
+    "https://user:secret@example.com/image",
+    "https://example.com:8443/image",
+  ])
+    await assert.rejects(downloadProductImage(url));
+  assert.equal(connected, false);
+});
+
+async function imageRoute(
+  upload,
+  { insertFails = false, authorized = true, found = true } = {},
+) {
+  const calls = { uploaded: [], removed: [], inserted: [], downloads: 0 };
+  const processing = await processor();
+  const storage = {
+    upload: async (name, bytes, options) => {
+      calls.uploaded.push({ name, bytes, options });
+      return { error: null };
+    },
+    remove: async (names) => {
+      calls.removed.push(...names);
+      return { error: null };
+    },
+    getPublicUrl: (name) => ({
+      data: {
+        publicUrl: `https://owned.example/storage/v1/object/public/product-media/${name}`,
+      },
+    }),
+  };
+  const admin = {
+    storage: { from: () => storage },
+    from: (table) => {
+      let value;
+      const query = {
+        select: () => query,
+        eq: () => query,
+        maybeSingle: async () => ({
+          data: found ? { id: "product" } : null,
+          error: null,
+        }),
+        insert: (input) => {
+          value = input;
+          calls.inserted.push({ table, value });
+          return query;
+        },
+        single: async () => ({
+          data: insertFails ? null : { ...value, id: "image-id" },
+          error: insertFails ? { code: "23503" } : null,
+        }),
+      };
+      return query;
+    },
+  };
+  const route = await loadSource(
+    `src/app/api/management/product-images/${upload ? "upload/" : ""}route.ts`,
+    {
+      "next/server": { NextResponse: Response },
+      "next/cache": { revalidatePath() {} },
+      "@/app/api/management/_shared": {
+        withManagementAuth: async (_request, capability) => {
+          assert.equal(capability, "manageCatalog");
+          return authorized
+            ? { ok: true, admin, actor: { user: { id: "actor-id" } } }
+            : {
+                ok: false,
+                response: Response.json(
+                  { error: "Forbidden" },
+                  { status: 403 },
+                ),
+              };
+        },
+        errorResponse: (error, status) => Response.json({ error }, { status }),
+        mapPostgresError: () =>
+          Response.json({ error: "Database error" }, { status: 400 }),
+      },
+      "@/lib/supabase/server": {},
+      "@/lib/image-safety": safety,
+      "@/lib/product-image-processing": processing,
+      "@/lib/remote-product-image": {
+        downloadProductImage: async () => {
+          calls.downloads++;
+          return sourceBytes;
+        },
+      },
+    },
+    { process: { env: { NEXT_PUBLIC_SUPABASE_URL: "https://owned.example" } } },
+  );
+  return { ...route, calls };
+}
+const productId = "11111111-1111-4111-8111-111111111111";
+function uploadRequest(bytes = sourceBytes, name = "photo.jpg") {
+  const form = new FormData();
+  form.set("file", new File([bytes], name));
+  form.set("product_id", productId);
+  form.set("alt_en", "Camera");
+  return new Request(
+    "https://miro.example/api/management/product-images/upload",
+    { method: "POST", body: form },
+  );
+}
+function urlRequest(url) {
+  return new Request("https://miro.example/api/management/product-images", {
+    method: "POST",
+    body: JSON.stringify({ product_id: productId, image_url: url }),
+  });
+}
+
+test("upload route stores exact original with correct MIME and returns truthful status", async () => {
+  const route = await imageRoute(true);
+  const response = await route.POST(uploadRequest());
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).background_removal.status, "original");
+  assert.ok(route.calls.uploaded[0].bytes.equals(sourceBytes));
+  assert.equal(route.calls.uploaded[0].options.contentType, "image/jpeg");
+  assert.match(route.calls.uploaded[0].name, /\.jpeg$/);
+  assert.equal(route.calls.inserted[0].value.alt_en, "Camera");
+});
+
+test("upload/URL imports clean up only their newly uploaded object on insert failure", async () => {
+  for (const upload of [true, false]) {
+    const route = await imageRoute(upload, { insertFails: true });
+    const response = await route.POST(
+      upload
+        ? uploadRequest()
+        : urlRequest("https://external.example/camera.jpg"),
+    );
+    assert.equal(response.status, 400);
+    assert.deepEqual(route.calls.removed, [route.calls.uploaded[0].name]);
+  }
+});
+
+test("owned relative object reference is normalized without parsing it as an absolute URL", async () => {
+  const route = await imageRoute(false);
+  const reference = `products/${productId}/existing.webp`;
+  const response = await route.POST(urlRequest(reference));
+  assert.equal(response.status, 200);
+  assert.equal(route.calls.downloads, 0);
+  assert.equal(route.calls.uploaded.length, 0);
+  assert.equal(
+    (await response.json()).image.image_url,
+    `https://owned.example/storage/v1/object/public/product-media/${reference}`,
+  );
+});
+
+test("authentication, missing products and unsafe uploads stop before storage", async () => {
+  for (const upload of [true, false]) {
+    const denied = await imageRoute(upload, { authorized: false });
+    assert.equal(
+      (
+        await denied.POST(
+          upload
+            ? uploadRequest()
+            : urlRequest("https://external.example/a.jpg"),
+        )
+      ).status,
+      403,
+    );
+    assert.equal(denied.calls.uploaded.length, 0);
+    const missing = await imageRoute(upload, { found: false });
+    assert.equal(
+      (
+        await missing.POST(
+          upload
+            ? uploadRequest()
+            : urlRequest("https://external.example/a.jpg"),
+        )
+      ).status,
+      404,
+    );
+    assert.equal(missing.calls.downloads, 0);
+    assert.equal(missing.calls.uploaded.length, 0);
+  }
+  const route = await imageRoute(true);
+  assert.equal(
+    (await route.POST(uploadRequest(sourceBytes, "camera.png"))).status,
+    400,
+  );
+  assert.equal(
+    (
+      await route.POST(
+        uploadRequest(Buffer.from("<svg><script/></svg>"), "active.svg"),
+      )
+    ).status,
+    400,
+  );
+  assert.equal(route.calls.uploaded.length, 0);
+});
+
+test("remote downloader pins public DNS, resolves relative redirects and caps chunked bytes", async () => {
+  const { EventEmitter } = await import("node:events");
+  const { PassThrough } = await import("node:stream");
+  for (const scenario of ["redirect", "oversize", "loop", "malformed"]) {
+    const paths = [];
+    const { downloadProductImage } = await loadSource(
+      "src/lib/remote-product-image.ts",
+      {
+        "./image-safety": safety,
+        "node:dns/promises": {
+          lookup: async () => [{ address: "8.8.8.8", family: 4 }],
+        },
+        "node:https": {
+          request(url, options, callback) {
+            paths.push(url.pathname);
+            options.lookup(url.hostname, {}, (error, address, family) => {
+              assert.equal(error, null);
+              assert.equal(address, "8.8.8.8");
+              assert.equal(family, 4);
+            });
+            const req = new EventEmitter();
+            req.end = () => {
+              const response = new PassThrough();
+              response.statusCode =
+                scenario === "loop" ||
+                scenario === "malformed" ||
+                (scenario === "redirect" && paths.length === 1)
+                  ? 302
+                  : 200;
+              response.headers =
+                response.statusCode === 302
+                  ? {
+                      location:
+                        scenario === "malformed" ? "https://[" : "/final.jpg",
+                    }
+                  : { "content-type": "image/jpeg" };
+              callback(response);
+              if (!response.destroyed)
+                response.end(
+                  scenario === "oversize"
+                    ? Buffer.alloc(5 * 1024 * 1024 + 1)
+                    : sourceBytes,
+                );
+            };
+            return req;
+          },
+        },
+      },
+    );
+    if (scenario === "redirect") {
+      assert.ok(
+        (
+          await downloadProductImage("https://external.example/start.jpg")
+        ).equals(sourceBytes),
+      );
+      assert.deepEqual(paths, ["/start.jpg", "/final.jpg"]);
+    } else {
+      await assert.rejects(
+        downloadProductImage("https://external.example/start.jpg"),
+      );
+      if (scenario === "loop") assert.equal(paths.length, 4);
     }
+  }
+});
 
-    expect(detectionResult.hasTransparency).toBe(true);
-    expect(rembgCalled).toBe(false);
-    expect(remove).not.toHaveBeenCalled();
-  });
-
-  it("Calls Rembg.remove on opaque images", async () => {
-    const opaqueBytes = createTestPNG("RGB", 0);
-    const detectionResult = detectTransparency(opaqueBytes);
-
-    let rembgCalled = false;
-
-    if (!detectionResult.hasTransparency) {
-      await remove(opaqueBytes);
-      rembgCalled = true;
-    }
-
-    expect(detectionResult.hasTransparency).toBe(false);
-    expect(rembgCalled).toBe(true);
-    expect(remove).toHaveBeenCalled();
-  });
-
-  it("Creates session for model initialization", () => {
-    const session = new_session("isnet-general-use");
-
-    expect(session).toBeDefined();
-    expect(new_session).toHaveBeenCalledWith("isnet-general-use");
-  });
+test("explicit keep-original choice bypasses a configured worker", async () => {
+  const { processProductImage } = await processor(undefined, configured);
+  const result = await processProductImage(sourceBytes, "jpeg", false);
+  assert.strictEqual(result.bytes, sourceBytes);
+  assert.equal(result.backgroundRemoval.status, "original");
+  assert.equal(result.backgroundRemoval.reason, "user_requested_original");
 });

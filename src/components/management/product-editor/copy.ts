@@ -222,8 +222,8 @@ export const mediaCopy = {
   uploadLabel: { he: "העלאת תמונות", en: "Upload images" },
   addByUrlLabel: { he: "הוסף מכתובת", en: "Add by URL" },
   uploadHint: {
-    he: "PNG, JPG, WebP או SVG עד 5MB לקובץ. ניתן לבחור מספר קבצים.",
-    en: "PNG, JPG, WebP or SVG up to 5 MB per file. Multiple files allowed.",
+    he: "PNG, JPG, WebP, AVIF או SVG עד 5MB ו־16 מגה־פיקסל לתמונה ללא אנימציה.",
+    en: "PNG, JPG, WebP, AVIF or SVG. Still images, up to 5 MB and 16 megapixels.",
   },
   empty: { he: "אין תמונות עדיין", en: "No images yet" },
   emptyDescription: {
@@ -260,12 +260,12 @@ export const mediaCopy = {
     en: "https://example.com/image.jpg",
   },
   urlHint: {
-    he: "הכתובת חייבת להיות HTTP או HTTPS.",
-    en: "URL must be HTTP or HTTPS.",
+    he: "נדרשת כתובת HTTPS ציבורית ללא פרטי התחברות.",
+    en: "Use a public HTTPS image URL without embedded credentials.",
   },
   urlInvalid: {
-    he: "כתובת לא תקינה. נדרש HTTP או HTTPS.",
-    en: "Invalid URL. HTTP or HTTPS required.",
+    he: "כתובת לא תקינה. נדרשת כתובת HTTPS ללא פרטי התחברות.",
+    en: "Invalid URL. HTTPS without embedded credentials is required.",
   },
   urlFetchFailed: {
     he: "לא ניתן לטעון תצוגה מקדימה מהכתובת.",
@@ -279,39 +279,25 @@ export const mediaCopy = {
     he: "התמונה נשמרה ותופיע מיד ברשימת המוצרים ובחנות.",
     en: "Image saved. It now appears in the product list and storefront.",
   },
-  // Background removal processing statuses
-  processingUploading: { he: "מעלה תמונה...", en: "Uploading image..." },
-  processingTransparency: {
-    he: "בודק שקיפות...",
-    en: "Checking transparency...",
+  processingQueued: { he: "ממתין להעלאה", en: "Queued" },
+  removeBackgroundOption: {
+    he: "הסרת רקע אוטומטית כשזמינה (ניתן לבטל כדי לשמור מקור)",
+    en: "Remove background when available (turn off to keep the original)",
   },
-  processingRemovingBg: { he: "מסיר רקע...", en: "Removing background..." },
-  processingOptimizing: { he: "מייעל תמונה...", en: "Optimizing image..." },
-  processingSaving: { he: "שומר תמונה...", en: "Saving image..." },
+  processingUploading: { he: "מעלה תמונה…", en: "Uploading image…" },
+  processingSaving: { he: "מעבד ושומר…", en: "Processing and saving…" },
   processingBgRemoved: { he: "הרקע הוסר", en: "Background removed" },
   processingAlreadyTransparent: {
-    he: "כבר שקוף — אין צורך בשינויים",
-    en: "Already transparent — no changes needed",
+    he: "כבר שקוף — נשמר המקור",
+    en: "Already transparent — original saved",
   },
-  processingFailed: {
-    he: "עיבוד נכשל — יש אפשרות לנסות שוב",
-    en: "Processing failed — retry available",
+  processingOriginal: {
+    he: "המקור נשמר ללא הסרת רקע",
+    en: "Original saved without background removal",
   },
-  restoreOriginal: { he: "שחזר מקור", en: "Restore original" },
-  restoreOriginalTitle: {
-    he: "שחזור תמונה מקורית",
-    en: "Restore original image",
-  },
-  restoreOriginalDescription: {
-    he: "התמונה המעובדת תוחלף בתמונה המקורית. סדר המיון, טקסט חלופי ומטאדאטה אחרים יישמרו.",
-    en: "The processed image will be replaced with the original. Sort order, alt text, and other metadata will be preserved.",
-  },
-  restoreButton: { he: "שחזר", en: "Restore" },
-  beforeLabel: { he: "לפני", en: "Before" },
-  afterLabel: { he: "אחרי", en: "After" },
-  skippedTransparent: {
-    he: "נטען כשהוא שקוף — בוצע דילוג על הסרת רקע בינה מלאכותית",
-    en: "Loaded as transparent — AI background removal skipped",
+  uploadUncertain: {
+    he: "לא ניתן לאשר את ההעלאה. יש לרענן את הגלריה לפני ניסיון נוסף.",
+    en: "Upload could not be confirmed. Refresh the gallery before trying again.",
   },
 } as const satisfies Record<string, LocalizedText>;
 
