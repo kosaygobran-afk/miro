@@ -52,7 +52,7 @@ for (const { path, width } of [
   { path: "/en/services", width: 1280 },
   { path: "/en/login", width: 390 },
   { path: "/he", width: 320 },
-  { path: "/he/store/cameras/miro-4k-pro", width: 390 },
+  { path: "/he/store/:product", width: 390 },
 ]) {
   test(`enhanced Light stays readable and fits ${path} at ${width}px`, async ({
     page,
@@ -60,7 +60,18 @@ for (const { path, width } of [
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.addInitScript(() => localStorage.setItem("miro-theme", "light"));
-    await page.goto(path);
+    if (path === "/he/store/:product") {
+      // Owner-editable catalog entries can replace the original seed model.
+      await page.goto("/he");
+      const product = page.locator(".sf-product-title-link").first();
+      await expect(product).toBeVisible();
+      const href = await product.getAttribute("href");
+      expect(href).toMatch(/^\/he\/store\/[^/]+\/[^/]+$/);
+      await page.goto(href!);
+      await expect(page.locator(".sf-product-detail-layout")).toBeVisible();
+    } else {
+      await page.goto(path);
+    }
     await expect(page.locator("html")).toHaveAttribute(
       "data-motion-ready",
       "true",
