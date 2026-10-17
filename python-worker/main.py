@@ -5,6 +5,7 @@ import hmac
 import io
 import logging
 import os
+from pathlib import Path
 import threading
 import warnings
 
@@ -12,7 +13,16 @@ from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from PIL import Image, ImageOps, UnidentifiedImageError
 import uvicorn
 
+from platform_compat import install_runtime_stubs
+
+install_runtime_stubs()
+
 MODEL_NAME = "isnet-general-use"
+# Vercel has a read-only deployment bundle and a small temporary disk. Ship the
+# checksum-verified fixed weights at build time instead of downloading per cold start.
+BUNDLED_MODELS = Path(__file__).resolve().parent / "models"
+if (BUNDLED_MODELS / f"{MODEL_NAME}.onnx").is_file():
+    os.environ["U2NET_HOME"] = str(BUNDLED_MODELS)
 MAX_BYTES = 5 * 1024 * 1024
 MAX_PIXELS = 16_000_000
 Image.MAX_IMAGE_PIXELS = MAX_PIXELS
@@ -133,7 +143,8 @@ def remove_background_endpoint(file: UploadFile = File(...), authorization: str 
             "image_base64": base64.b64encode(output).decode("ascii"),
             "mode": detection["mode"] if skipped else "processed",
         }
-    except (ValueError, UnidentifiedImageError, OSError, Image.DecompressionBombError, Image.DecompressionBombWarning):
+    except (ValueError, UnidentifiedImageError, OSError, Image.DecompressionBombError, Image.DecompressionBombWarning) as error:
+        logger.exception("Image processing rejected (%s)", type(error).__name__)
         raise HTTPException(status_code=400, detail="Invalid image or unusable cutout") from None
     except Exception:
         logger.error("Background removal failed")
