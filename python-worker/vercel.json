@@ -1,13 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "fastapi",
-  "functions": {
-    "main.py": {
-      "maxDuration": 60,
-      "excludeFiles": "{test_*.py,__pycache__/**,.venv/**,Dockerfile,requirements-test.txt}"
-    }
-  },
-  "installCommand": "uv pip install --python .vercel/python/.venv/bin/python -r requirements.txt",
-  "buildCommand": "",
-  "outputDirectory": null
+  "buildCommand": ".vercel/python/.venv/bin/python prepare_model.py"
 }
