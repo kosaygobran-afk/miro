@@ -31,7 +31,7 @@ export async function GET() {
         image_url,
         category_id,
         is_featured,
-        categories (
+        categories!products_category_id_fkey (
           slug,
           name_he,
           name_en

@@ -87,7 +87,7 @@ export async function GET(request: Request) {
       sale_price,
       tracking_mode,
       image_url,
-      categories!inner (id, slug, name_he, name_en, is_active),
+      categories!products_category_id_fkey!inner (id, slug, name_he, name_en, is_active),
       product_variants!inner (
         id,
         sku,
@@ -174,6 +174,7 @@ export async function GET(request: Request) {
     .from("categories")
     .select("id, slug, name_he, name_en, sort_order, is_active")
     .eq("is_active", true)
+    .is("parent_id", null)
     .order("sort_order");
 
   if (categoriesError) {

@@ -2,6 +2,10 @@
 
 The public storefront supports MIRO's dark/medium/light themes. Version 2 adds calmer charcoal/gold and warm bright palettes, framed icons, consistent component geometry and phone layouts. Version 1 restores the original presentation. The customer layers keep their own palette, separate from the management console.
 
+2026-10-17 product presentation: Version 2 detail pages now balance equal-width/equal-height desktop image and information panels, with ordered price/availability, variant and purchase sections. Phones stack panels and contact alternatives at comfortable control sizes. Cards share clearer readable category/title/price hierarchy and aligned footer controls. `product-detail-refinement.css` owns detail-only refinements; `product-card-sections.css` retains the card anatomy/gesture contract. Version 1 layout remains restorable. Missing descriptions produce no empty full-description band, and unnamed variant colors fall back to the actual SKU. No catalog prices, availability or commerce settings are changed by this presentation work. Latest dimensions/verification are in `docs/DESIGN_SYSTEM.md` and `docs/PROJECT_STATUS.md`.
+
+Popup sizing clarification: smaller unified dimensions apply only to product preview windows. Static card widths remain responsive as before. Version 2 previews are capped at 416×560px and adapt to available viewport/source-footer space; long content scrolls in their existing details region. Actual SKU and barcode values now appear as separate bold, labeled fields in cards, rails, previews and product details. Internal reference codes are labeled as such, and missing barcode values are omitted. No barcode is fabricated or certified as a supplier GTIN.
+
 ## Animation controls and appearance restoration
 
 Open `/he/admin/settings#settings-animation` or `/en/admin/settings#settings-animation`. An active CEO can save; Admin can read. The master switch, 13 effect switches and enhanced-appearance switch have bilingual notes. Timing inputs control presentation durations, and styles choose radial/fade theme changes, lift/fade page reveals and easing. Defaults are enabled; reduced-motion preferences take priority. Existing Store Design controls still set rail speeds, hover intent and background intervals, with the global switches deciding whether those decorative effects run.
@@ -34,6 +38,8 @@ Uploads accept PNG/JPEG/WebP/AVIF/sanitized SVG up to 5 MB. Content signatures m
 The additive seed script previews unless `--apply` is supplied and preserves matching model/slug entries. It publishes original artwork before adding references. Asset publication changes only rows still pointing at matching original local paths; later owner uploads are retained. The missing hosted storage bucket was provisioned through Storage API with the image-only 5 MB settings already documented by the historical media migration.
 
 ## Navigation, motion and accessibility
+
+Category pages support two levels: a collapsed main-category bar and highlighted subcategory links beside search. Main navigation remains main-category-only. Management supports optional child assignment and inline creation; a main category is mandatory for new products. Operating steps, URLs, database invariants and safe QA instructions are in `docs/CATALOG_CATEGORIES.md`.
 
 The hamburger panel is a document-positioned glass portal, floating below the header above the store imagery. Its natural height uses the document scrollbar; it has no separate scrolling container and does not change the sticky header's height. Account popups use their own portal and stay within 16px viewport gutters. Glass backgrounds use a deep 96% theme surface with blur; menu text does not fade through the imagery while opening. Account arrows/Home/End navigate items; Escape restores focus and closes a nested account menu before the outer navigation.
 

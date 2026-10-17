@@ -8,6 +8,7 @@ import {
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getCategoryWriteError } from "@/lib/catalog/category-errors";
 
 // List query schema
 const listQuerySchema = z.object({
@@ -18,6 +19,7 @@ const listQuerySchema = z.object({
     .optional()
     .default("all"),
   category: z.string().uuid().optional(),
+  subcategory: z.string().uuid().optional(),
   supplier: z.string().uuid().optional(),
   sort: z
     .enum([
@@ -38,7 +40,8 @@ const listQuerySchema = z.object({
 // Product creation schema
 const productSchema = z
   .object({
-    category_id: z.string().uuid().nullable().optional(),
+    category_id: z.string().uuid(),
+    subcategory_id: z.string().uuid().nullable().optional(),
     slug: z
       .string()
       .min(1)
@@ -64,7 +67,8 @@ const productPatchSchema = z
       .max(100)
       .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/)
       .optional(),
-    category_id: z.string().uuid().nullable().optional(),
+    category_id: z.string().uuid().optional(),
+    subcategory_id: z.string().uuid().nullable().optional(),
     brand: z.string().max(255).nullable().optional(),
     model_number: z.string().max(255).nullable().optional(),
     short_description_he: z.string().max(500).nullable().optional(),
@@ -103,6 +107,7 @@ const PUBLISH_INCOMPLETE_REASONS = [
   "Missing English name",
   "Missing category",
   "Category is not active",
+  "Internal category is not active",
   "at least one active variant",
 ];
 
@@ -130,8 +135,18 @@ export async function GET(request: Request) {
     return errorResponse("Invalid query params", 400, parsed.error.flatten());
   }
 
-  const { id, q, status, category, supplier, sort, order, page, limit } =
-    parsed.data;
+  const {
+    id,
+    q,
+    status,
+    category,
+    subcategory,
+    supplier,
+    sort,
+    order,
+    page,
+    limit,
+  } = parsed.data;
   const { admin } = auth;
 
   // If ID is provided, return single product (backward compat)
@@ -140,14 +155,15 @@ export async function GET(request: Request) {
       .from("products")
       .select(
         `
-        id, slug, category_id, name_he, name_en, short_description_he, short_description_en,
+        id, slug, category_id, subcategory_id, name_he, name_en, short_description_he, short_description_en,
         description_he, description_en, price, compare_at_price, sale_price, inventory_count,
         is_active, is_featured, image_url, metadata, created_at, updated_at,
         brand, model_number, tags, specifications, warranty_he, warranty_en,
         seo_title_he, seo_title_en, seo_description_he, seo_description_en,
         sort_order, currency, purchase_cost, recommended_price, out_of_stock_policy,
         expected_restock_date, tracking_mode, supplier_id, status,
-        categories (id, slug, name_he, name_en, sort_order, is_active),
+        categories:categories!products_category_id_fkey (id, slug, name_he, name_en, parent_id, sort_order, is_active),
+        subcategories:categories!products_subcategory_id_fkey (id, slug, name_he, name_en, parent_id, sort_order, is_active),
         product_images (id, image_url, alt_he, alt_en, sort_order),
         product_prices (role, price),
         product_variants (id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, supplier_id, supplier_sku, is_default, is_active, stock_qty, low_stock_threshold, reorder_point, reorder_qty),
@@ -169,14 +185,15 @@ export async function GET(request: Request) {
     .from("products")
     .select(
       `
-      id, slug, category_id, name_he, name_en, short_description_he, short_description_en,
+      id, slug, category_id, subcategory_id, name_he, name_en, short_description_he, short_description_en,
       description_he, description_en, price, compare_at_price, sale_price, inventory_count,
       is_active, is_featured, image_url, metadata, created_at, updated_at,
       brand, model_number, tags, specifications, warranty_he, warranty_en,
       seo_title_he, seo_title_en, seo_description_he, seo_description_en,
       sort_order, currency, purchase_cost, recommended_price, out_of_stock_policy,
       expected_restock_date, tracking_mode, supplier_id, status,
-      categories (id, slug, name_he, name_en, sort_order, is_active),
+      categories:categories!products_category_id_fkey (id, slug, name_he, name_en, parent_id, sort_order, is_active),
+      subcategories:categories!products_subcategory_id_fkey (id, slug, name_he, name_en, parent_id, sort_order, is_active),
       product_images (id, image_url, alt_he, alt_en, sort_order),
       product_prices (role, price),
       product_variants (id, sku, barcode, color_he, color_en, color_hex, price_override, cost_override, supplier_id, supplier_sku, is_default, is_active, stock_qty, low_stock_threshold, reorder_point, reorder_qty),
@@ -192,6 +209,9 @@ export async function GET(request: Request) {
   }
   if (category) {
     query = query.eq("category_id", category);
+  }
+  if (subcategory) {
+    query = query.eq("subcategory_id", subcategory);
   }
   if (supplier) {
     query = query.eq("supplier_id", supplier);
@@ -233,7 +253,7 @@ export async function GET(request: Request) {
     query,
     admin
       .from("categories")
-      .select("id, slug, name_he, name_en, sort_order, is_active")
+      .select("id, slug, name_he, name_en, parent_id, sort_order, is_active")
       .order("sort_order"),
   ]);
 
@@ -262,6 +282,12 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = productSchema.safeParse(body);
   if (!parsed.success) {
+    if (parsed.error.issues.some((issue) => issue.path[0] === "category_id")) {
+      return NextResponse.json(
+        { error: "External category is required", code: "category_required" },
+        { status: 400 },
+      );
+    }
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
@@ -272,11 +298,15 @@ export async function POST(request: Request) {
       p_slug: parsed.data.slug,
       p_name_he: parsed.data.name_he,
       p_name_en: parsed.data.name_en,
-      p_category_id: parsed.data.category_id ?? null,
+      p_category_id: parsed.data.category_id,
+      p_subcategory_id: parsed.data.subcategory_id ?? null,
     },
   );
 
   if (productError) {
+    const hierarchy = getCategoryWriteError(productError);
+    if (hierarchy)
+      return NextResponse.json(hierarchy.body, { status: hierarchy.status });
     return mapPostgresError(productError);
   }
 
@@ -315,6 +345,9 @@ export async function PATCH(request: Request) {
   );
 
   if (rpcError) {
+    const hierarchy = getCategoryWriteError(rpcError);
+    if (hierarchy)
+      return NextResponse.json(hierarchy.body, { status: hierarchy.status });
     console.error("update_product failed:", rpcError.code, rpcError.message);
     if (rpcError.code === "42501") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

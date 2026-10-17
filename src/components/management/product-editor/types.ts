@@ -13,6 +13,7 @@ export type Category = {
   slug: string;
   name_he: string;
   name_en: string;
+  parent_id: string | null;
   sort_order: number;
   is_active: boolean;
 };
@@ -63,6 +64,7 @@ export type Product = {
   id: string;
   slug: string;
   category_id: string | null;
+  subcategory_id: string | null;
   name_he: string;
   name_en: string;
   short_description_he: string | null;

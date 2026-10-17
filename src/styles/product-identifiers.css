@@ -1,0 +1,79 @@
+/* Actual variant identifiers, shared by product cards, previews and details.
+   New fields stay outside the restorable Version 1 presentation. */
+.product-identifiers {
+  display: none;
+}
+
+:root[data-appearance-version="2"] {
+  .product-identifiers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem 1rem;
+    min-inline-size: 0;
+    margin: 0;
+    text-align: start;
+  }
+
+  .product-identifier {
+    display: grid;
+    align-content: start;
+    gap: 0.2rem;
+    min-inline-size: 0;
+  }
+
+  .product-identifier-label {
+    margin: 0;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.5;
+  }
+
+  .product-identifier-value {
+    margin: 0;
+    min-inline-size: 0;
+    color: var(--foreground);
+    font-size: 1.125rem;
+    font-weight: 750;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums slashed-zero;
+    letter-spacing: 0.015em;
+    overflow-wrap: anywhere;
+    text-align: start;
+    user-select: text;
+  }
+
+  .product-identifiers--compact {
+    gap: 0.5rem 0.75rem;
+  }
+
+  .product-identifiers--compact .product-identifier-label {
+    font-size: 0.7rem;
+  }
+
+  .product-identifiers--compact .product-identifier-value {
+    font-size: 1.05rem;
+  }
+
+  .sf-product-price-block > .sf-product-sku {
+    display: none;
+  }
+
+  .sf-detail-identifiers {
+    grid-column: 1 / -1;
+    padding-block-start: 0.85rem;
+    border-block-start: 1px solid var(--border-subtle);
+  }
+
+  .sf-hover-preview-details > .product-identifiers {
+    margin-block: 1rem;
+    padding-block: 0.85rem;
+    border-block: 1px solid var(--border-subtle);
+  }
+}
+
+@media (max-width: 380px) {
+  :root[data-appearance-version="2"] .sf-detail-identifiers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

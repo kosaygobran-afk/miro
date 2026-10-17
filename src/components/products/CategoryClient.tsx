@@ -1,6 +1,9 @@
 "use client";
 
-import { ProductsClient } from "@/components/products/ProductsClient";
+import {
+  ProductsClient,
+  type SubcategoryNavigation,
+} from "@/components/products/ProductsClient";
 import type { Product } from "@/features/catalog/product-data";
 
 export function CategoryClient({
@@ -9,12 +12,14 @@ export function CategoryClient({
   locale,
   initialQuery = "",
   savedProductIds = [],
+  subcategoryNavigation,
 }: {
   products: Product[];
   category: { key: string; label: string };
   locale: "he" | "en";
   initialQuery?: string;
   savedProductIds?: string[];
+  subcategoryNavigation?: SubcategoryNavigation;
 }) {
   return (
     <ProductsClient
@@ -24,6 +29,7 @@ export function CategoryClient({
       locale={locale}
       initialQuery={initialQuery}
       savedProductIds={savedProductIds}
+      subcategoryNavigation={subcategoryNavigation}
     />
   );
 }

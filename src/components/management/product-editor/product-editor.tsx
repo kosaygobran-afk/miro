@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "@/components/motion/motion-link";
 import { useRouter } from "@/components/motion/use-motion-router";
+import { getProductStorefrontHref } from "@/lib/catalog/routes";
 import {
   ArrowLeft,
   ArrowRight,
@@ -38,6 +39,7 @@ import { MediaGallery } from "./media-gallery";
 import { RolePricesSection } from "./role-prices-section";
 import { VariantsSection } from "./variants-section";
 import { SalesChannelControl } from "./sales-channel-control";
+import { CategoryAssignmentFields } from "./category-assignment-fields";
 import {
   OUT_OF_STOCK_POLICIES,
   STATUS_OPTIONS,
@@ -58,6 +60,7 @@ type EditorForm = {
   name_en: string;
   slug: string;
   category_id: string;
+  subcategory_id: string;
   brand: string;
   model_number: string;
   tags: string[];
@@ -102,6 +105,7 @@ function toForm(product: Product): EditorForm {
     name_en: product.name_en,
     slug: product.slug,
     category_id: product.category_id ?? "",
+    subcategory_id: product.subcategory_id ?? "",
     brand: product.brand ?? "",
     model_number: product.model_number ?? "",
     tags: product.tags ?? [],
@@ -170,6 +174,12 @@ function buildPatch(
   }
   if (form.category_id !== initial.category_id) {
     patch.category_id = form.category_id || null;
+  }
+  if (
+    form.subcategory_id !== initial.subcategory_id ||
+    form.category_id !== initial.category_id
+  ) {
+    patch.subcategory_id = form.subcategory_id || null;
   }
   for (const key of TEXT_FIELDS) {
     const next = emptyToNull(form[key]);
@@ -412,6 +422,7 @@ export function ProductEditor({
       name_en: "general",
       slug: "general",
       category_id: "general",
+      subcategory_id: "general",
       price: "pricing",
       compare_at_price: "pricing",
       sale_price: "pricing",
@@ -429,8 +440,31 @@ export function ProductEditor({
     } else if (!SLUG_PATTERN.test(current.slug.trim())) {
       errors.slug = validationCopy.slugInvalid[locale];
     }
-    if (current.status === "active" && !current.category_id) {
-      errors.category_id = validationCopy.categoryRequiredForPublish[locale];
+    if (
+      !categories.some(
+        (category) =>
+          category.id === current.category_id &&
+          !category.parent_id &&
+          (category.is_active ||
+            (current.status !== "active" &&
+              current.category_id === initialForm?.category_id)),
+      )
+    ) {
+      errors.category_id = validationCopy.categoryRequired[locale];
+    }
+    if (
+      current.subcategory_id &&
+      !categories.some(
+        (category) =>
+          category.id === current.subcategory_id &&
+          category.parent_id === current.category_id &&
+          (category.is_active ||
+            (current.status !== "active" &&
+              current.category_id === initialForm?.category_id &&
+              current.subcategory_id === initialForm?.subcategory_id)),
+      )
+    ) {
+      errors.subcategory_id = validationCopy.subcategoryInvalid[locale];
     }
     for (const key of MONEY_FIELDS) {
       const raw = current[key].trim();
@@ -609,7 +643,7 @@ export function ProductEditor({
     null;
   const storefrontHref =
     initialForm.status === "active" && savedCategorySlug
-      ? `/${locale}/store/${savedCategorySlug}/${initialForm.slug}`
+      ? getProductStorefrontHref(locale, savedCategorySlug, initialForm.slug)
       : null;
 
   const BackArrow = he ? ArrowRight : ArrowLeft;
@@ -796,32 +830,22 @@ export function ProductEditor({
                     />
                   )}
                 </FormField>
-                <FormField
-                  id="product-category"
-                  label={fieldLabels.category[locale]}
-                  required={form.status === "active"}
-                  error={fieldErrors.category_id}
-                >
-                  {(control) => (
-                    <select
-                      {...control}
-                      className="miro-input"
-                      value={form.category_id}
-                      onChange={(e) => setField("category_id", e.target.value)}
-                    >
-                      <option value="">
-                        {fieldLabels.selectCategory[locale]}
-                      </option>
-                      {categories
-                        .filter((category) => category.is_active)
-                        .map((category) => (
-                          <option key={category.id} value={category.id}>
-                            {he ? category.name_he : category.name_en}
-                          </option>
-                        ))}
-                    </select>
-                  )}
-                </FormField>
+                <CategoryAssignmentFields
+                  locale={locale}
+                  idPrefix="product"
+                  categories={categories}
+                  categoryId={form.category_id}
+                  subcategoryId={form.subcategory_id}
+                  onCategoryChange={(id) => {
+                    setField("category_id", id);
+                    setField("subcategory_id", "");
+                  }}
+                  onSubcategoryChange={(id) => setField("subcategory_id", id)}
+                  onCategoriesChange={setCategories}
+                  categoryError={fieldErrors.category_id}
+                  subcategoryError={fieldErrors.subcategory_id}
+                  disabled={saving}
+                />
                 <FormField
                   id="product-slug"
                   label={fieldLabels.slug[locale]}

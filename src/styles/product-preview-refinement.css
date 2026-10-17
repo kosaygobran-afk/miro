@@ -1,0 +1,59 @@
+/* A smaller, consistent popup frame. Static cards keep their existing layout. */
+:root[data-appearance-version="2"] .sf-hover-preview {
+  width: min(26rem, calc(100vw - 2rem));
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview .sf-hover-preview-inner {
+  height: min(
+    35rem,
+    var(--sf-preview-available-height, calc(100dvh - 2rem)),
+    calc(100dvh - 2rem)
+  );
+  max-height: min(
+    35rem,
+    var(--sf-preview-available-height, calc(100dvh - 2rem)),
+    calc(100dvh - 2rem)
+  );
+  overflow: hidden;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview .sf-hover-preview-gallery {
+  flex: 0 1 13rem;
+  max-height: 42%;
+  min-height: 0;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview .sf-hover-preview-content {
+  min-height: 0;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview .sf-hover-preview-details {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding-inline: 1rem;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview .sf-hover-preview-title {
+  margin-block: 0.4rem 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview .sf-hover-preview-footer {
+  flex: none;
+  padding-inline: 1rem;
+}
+
+@media (max-width: 380px) {
+  :root[data-appearance-version="2"]
+    .sf-hover-preview
+    .sf-hover-preview-details,
+  :root[data-appearance-version="2"]
+    .sf-hover-preview
+    .sf-hover-preview-footer {
+    padding-inline: 0.85rem;
+  }
+}

@@ -6,7 +6,11 @@ export const categoriesCopy = {
     he: "עץ קטגוריות הקטלוג, היררכיה וסדר תצוגה.",
     en: "Catalog category tree, hierarchy and display order.",
   },
-  addCategory: { he: "הוספת קטגוריה", en: "Add category" },
+  addCategory: { he: "הוספת קטגוריה ראשית", en: "Add main category" },
+  addSubcategory: { he: "הוספת תת־קטגוריה", en: "Add subcategory" },
+  mainCategory: { he: "קטגוריה ראשית", en: "Main category" },
+  subcategory: { he: "תת־קטגוריה", en: "Subcategory" },
+  subcategories: { he: "תת־קטגוריות", en: "Subcategories" },
   searchPlaceholder: {
     he: "חיפוש לפי שם או slug…",
     en: "Search name or slug…",
@@ -27,14 +31,14 @@ export const categoriesCopy = {
   colNameHe: { he: "שם (עברית)", en: "Name (HE)" },
   colNameEn: { he: "שם (אנגלית)", en: "Name (EN)" },
   colSlug: { he: "Slug", en: "Slug" },
-  colParent: { he: "קטגוריית אב", en: "Parent" },
+  colParent: { he: "קטגוריה ראשית", en: "Main category" },
   colProducts: { he: "מוצרים", en: "Products" },
   colStatus: { he: "סטטוס", en: "Status" },
   colSort: { he: "סדר", en: "Order" },
   colActions: { he: "פעולות", en: "Actions" },
   tableCaption: { he: "טבלת קטגוריות הקטלוג", en: "Catalog categories table" },
 
-  noParent: { he: "ללא (קטגוריית שורש)", en: "None (root category)" },
+  noParent: { he: "קטגוריה ראשית (ללא אב)", en: "Main category (no parent)" },
   statusActive: { he: "פעילה", en: "Active" },
   statusInactive: { he: "מושבתת", en: "Inactive" },
 
@@ -49,11 +53,12 @@ export const categoriesCopy = {
     en: "Hard delete is only available for categories with zero products. Deactivation is always available.",
   },
 
-  dialogCreateTitle: { he: "קטגוריה חדשה", en: "New category" },
+  dialogCreateTitle: { he: "קטגוריה ראשית חדשה", en: "New main category" },
+  dialogCreateChildTitle: { he: "תת־קטגוריה חדשה", en: "New subcategory" },
   dialogEditTitle: { he: "עריכת קטגוריה", en: "Edit category" },
   dialogDescription: {
-    he: "שדות השם וה-slug הם חובה. קטגוריית אב לא יכולה להיות הקטגוריה עצמה או אחד הצאצאים שלה.",
-    en: "Names and slug are required. A parent cannot be the category itself or one of its descendants.",
+    he: "שמות ומזהה הם חובה. ללא קטגוריית אב תיווצר קטגוריה ראשית; לבניית תת־קטגוריה בחרו קטגוריה ראשית קיימת.",
+    en: "Names and slug are required. Leave the parent empty for a main category, or select an existing main category to create a subcategory.",
   },
   fieldSlug: {
     he: "Slug (באנגלית, באותיות קטנות)",
@@ -67,7 +72,15 @@ export const categoriesCopy = {
   fieldNameEn: { he: "שם באנגלית", en: "English name" },
   fieldDescriptionHe: { he: "תיאור בעברית", en: "Hebrew description" },
   fieldDescriptionEn: { he: "תיאור באנגלית", en: "English description" },
-  fieldParent: { he: "קטגוריית אב", en: "Parent category" },
+  fieldParent: { he: "קטגוריה ראשית משויכת", en: "Parent main category" },
+  fieldParentHint: {
+    he: "שתי רמות בלבד: קטגוריה ראשית ותת־קטגוריה. כדי להעביר קטגוריה שיש לה מוצרים או תת־קטגוריות, יש להעביר אותם תחילה.",
+    en: "Two levels: main category and subcategory. Reassign linked products or subcategories before moving their category.",
+  },
+  invalidParent: {
+    he: "בחרו קטגוריה ראשית קיימת",
+    en: "Choose an existing main category",
+  },
   fieldSortOrder: { he: "סדר תצוגה", en: "Sort order" },
   fieldVisual: { he: "תצוגה חזותית", en: "Visual" },
   fieldVisualHint: {

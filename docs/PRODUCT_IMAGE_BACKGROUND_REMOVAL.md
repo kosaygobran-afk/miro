@@ -1,8 +1,12 @@
 # Product image background removal
 
-Reviewed: 2026-10-16. This document supersedes the original implementation notes.
+Reviewed: 2026-10-17. This document supersedes the original implementation notes.
 
 Catalog managers upload a file or import a public HTTPS image in Product Editor → Media. Both routes validate the image, call the same optional private worker, save the resulting file in `product-media`, insert `product_images`, and record the actual processing outcome in the audit event. Authorization and same-origin checks remain in `withManagementAuth(..., "manageCatalog")`.
+
+Existing gallery images now have a separate **Remove background** button. The upload checkbox applies to new images; product **Save** does not run image processing. The explicit action processes the existing saved image immediately through `/api/management/product-images/remove-background`. On success it replaces only that image row's URL with a new PNG URL, preserving its ID, order and alt text. A conditional update rejects concurrent replacement, and cache invalidation covers home, category and detail pages in both locales. It is shared by all products.
+
+Unavailable processing and unsupported SVG return an error without changing the existing image. Already-transparent input leaves its reference unchanged. The original object is retained, with its previous URL in the audit event; there is still no one-click restore UI. Failed confirmed updates clean up only the new cutout; unknown write outcomes retain it for reconciliation and require a gallery refresh before retry.
 
 ## Actual behavior
 
@@ -16,7 +20,7 @@ Catalog managers upload a file or import a public HTTPS image in Product Editor 
 - Uploaded objects are removed if the image-row insert fails. Existing owned references are normalized to their public storage URL without downloading/reprocessing them.
 - The UI reports measurable transfer progress, a combined processing/saving state, and the actual saved outcome in Hebrew/English. It does not simulate inference stages. Unknown upload outcomes instruct the operator to refresh before retrying.
 
-The feature does **not** retain a second original after successful processing, provide before/after comparison, or implement one-click restoration. The original notes claimed these controls, but they were absent. Keep the source file externally; restore by turning off “Remove background when available” and uploading that source again. Do not advertise restoration until original retention and a real restore flow exist.
+New uploads/imports do **not** retain a second original after successful processing. Existing-image processing retains its prior object as described above. Neither path provides before/after comparison or one-click restoration. Keep source files externally; to restore through the UI, turn off removal for new uploads and upload the source again. Do not advertise a restore control until that flow exists.
 
 ## Files and contracts
 
@@ -26,11 +30,14 @@ The feature does **not** retain a second original after successful processing, p
 | `src/lib/remote-product-image.ts`                            | Public-only HTTPS downloads with DNS pinning and bounded streams          |
 | `src/app/api/management/product-images/upload/route.ts`      | File validation, storage, image row/audit, cleanup                        |
 | `src/app/api/management/product-images/route.ts`             | URL import/reference normalization; existing metadata/delete operations   |
+| `src/app/api/management/product-images/remove-background/route.ts` | Explicit processing of an existing image; conditional URL replacement |
 | `src/components/management/product-editor/media-gallery.tsx` | Progress and truthful localized results                                   |
 | `python-worker/main.py`                                      | Authenticated FastAPI worker, alpha inspection and CPU inference          |
 | `python-worker/test_main.py`                                 | Actual Pillow/worker endpoint tests; no copied detector                   |
 | `tests/unit/background-removal-transparency.test.mjs`        | Executable Node tests of shared processing, both routes and downloader    |
 | `scripts/verify-product-image-review.mjs`                    | Disposable CEO/browser QA with synthetic catalog mutations                |
+| `tests/unit/product-image-reprocessing.test.mjs`             | Existing-image route processing, authorization, concurrency and cleanup |
+| `scripts/start-background-removal-worker.mjs`                | Local loopback worker launcher with private env and existing Python venv |
 
 Worker JSON uses **`image_base64`**, matching Python. Browser/audit metadata uses:
 
@@ -83,7 +90,21 @@ docker run --env BACKGROUND_REMOVAL_WORKER_TOKEN -p 127.0.0.1:8000:8000 miro-bg-
 
 Use private networking or TLS across hosts. Keep this service off public unauthenticated ingress; add platform request limits and provision CPU/RAM. The fixed model is **`isnet-general-use`**; there is no environment model switch. First opaque-image use lazily downloads/loads its weights; warm the actual model before activation and persist its cache. `/health` reports authentication configuration and whether the model has loaded; a healthy process alone is not evidence of successful inference. Container health uses Python's standard library, without an undeclared curl dependency.
 
-Deployment owner: deploy the worker separately, configure both server variables, warm it, and prove an authenticated hosted upload/import round trip. The current local website environment has no worker URL/token. The Python worker is not deployed by a Next.js build or a Git merge. Docker is not available in the review environment; the exact pinned Python environment and HTTP worker were exercised locally, but the container build remains a deployment check.
+Deployment owner: deploy the worker separately, configure both server variables, warm it, and prove an authenticated hosted upload/import round trip. The Python worker is not deployed by a Next.js build or a Git merge. Docker is not available in the review environment; the exact pinned Python environment and HTTP worker were exercised locally, but the container build remains a deployment check.
+
+2026-10-17 local setup: `.env.local` now contains a private loopback URL, matching token and 60-second deadline. The real worker was started and warmed using the retained Python 3.13 environment and existing ISNet model (about 170 MiB; no new download). Hosted configuration remains separate. Start/restart locally with:
+
+```sh
+npm run dev:image-worker
+# In another terminal, run the website as usual:
+npm run dev
+```
+
+Keep the worker terminal open and restart it after reboot. The launcher reuses `python-worker/.venv` or a retained review venv; set `BACKGROUND_REMOVAL_PYTHON` to another installed worker Python executable if needed. It never installs packages, substitutes a model, prints the token or replaces a busy listener. Only loopback HTTP is accepted by this development launcher. Model weights may download on first use if the selected cache is absent. A configured URL alone is not proof of successful removal.
+
+Manual check: open any product → Media → **Remove background** below an existing raster image. Wait for **Background removed**, refresh, then choose **View storefront**. The image is saved immediately, without product Save. Product `5586793` was verified with the real action: the same single image row now serves a PNG with alpha 0–255 through Hebrew/English detail pages, and its original JPEG remains unchanged. Both `/store/tools/5586793` and canonical `/store/accessories/5586793` resolve; all editor links use the shared catalog category mapping.
+
+Follow-up display correction: public single-image galleries previously placed the main stage inside the 84px thumbnail column, making the decoded image appear blank. `storefront.css` now spans the main stage across the gallery when thumbnails are absent; multi-image galleries keep their side strip and mobile places it below. Verify visible product content and main-stage size after using View storefront; a 200 response and valid PNG alone do not verify presentation.
 
 ## Verification and limits
 
@@ -96,6 +117,8 @@ npm run typecheck
 npm run build
 # Against a running production server; auth actors are deleted in finally.
 ADMIN_BASE_URL=https://127.0.0.1:3217 IMAGE_REVIEW_BROWSER=chromium node scripts/verify-product-image-review.mjs
+# Limit browser fixtures to this feature:
+ADMIN_BASE_URL=http://localhost:3000 IMAGE_REVIEW_SCOPE=media node scripts/verify-product-image-review.mjs
 ```
 
 Use a local HTTPS proxy/certificate for WebKit secure-cookie authentication. The harness accepts `chromium`, `webkit` or `firefox` through `IMAGE_REVIEW_BROWSER`; results default to separate OS temporary directories. The local Firefox runtime currently fails before application startup and remains a tooling-owner check.

@@ -138,33 +138,33 @@ export function ManagementTopbar({
     serverTheme,
   );
 
-  // Measure topbar height for sticky coordination (border-box)
+  // Keep sticky content and the navigation beam within the actual workspace.
   useLayoutEffect(() => {
     const element = topbarRef.current;
     if (!element) return;
 
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        // Use borderBoxSize.blockSize if available (Chrome 84+), fallback to contentRect.height
-        const height =
-          entry.borderBoxSize?.[0]?.blockSize ?? entry.contentRect.height;
-        document.documentElement.style.setProperty(
-          "--mgmt-topbar-height",
-          `${height}px`,
-        );
-      }
-    });
-
+    const measure = () => {
+      const bounds = element.getBoundingClientRect();
+      const style = document.documentElement.style;
+      style.setProperty("--mgmt-topbar-height", `${bounds.height}px`);
+      style.setProperty("--mgmt-workspace-left", `${bounds.left}px`);
+      style.setProperty(
+        "--mgmt-workspace-right",
+        `${document.documentElement.clientWidth - bounds.right}px`,
+      );
+    };
+    const resizeObserver = new ResizeObserver(measure);
     resizeObserver.observe(element, { box: "border-box" });
-    // Set initial height using border-box
-    document.documentElement.style.setProperty(
-      "--mgmt-topbar-height",
-      `${element.getBoundingClientRect().height}px`,
-    );
+    // A breakpoint can move the workspace while leaving its width unchanged.
+    window.addEventListener("resize", measure);
+    measure();
 
     return () => {
       resizeObserver.unobserve(element);
+      window.removeEventListener("resize", measure);
       document.documentElement.style.removeProperty("--mgmt-topbar-height");
+      document.documentElement.style.removeProperty("--mgmt-workspace-left");
+      document.documentElement.style.removeProperty("--mgmt-workspace-right");
     };
   }, []);
 

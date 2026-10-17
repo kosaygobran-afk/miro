@@ -7,8 +7,14 @@ import { storeCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
 import { trackProductSearch } from "@/components/analytics/track";
 import { AnimatedNumber } from "@/components/motion/animated-number";
+import Link from "@/components/motion/motion-link";
 
 type CatalogCategory = { key: string; label: string };
+export type SubcategoryNavigation = {
+  items: Array<{ id: string; label: string; href: string }>;
+  activeId?: string;
+  rootHref: string;
+};
 
 export function ProductsClient({
   products,
@@ -17,6 +23,7 @@ export function ProductsClient({
   initialQuery = "",
   fixedCategory,
   savedProductIds = [],
+  subcategoryNavigation,
 }: {
   products: Product[];
   categories: CatalogCategory[];
@@ -24,6 +31,7 @@ export function ProductsClient({
   initialQuery?: string;
   fixedCategory?: string;
   savedProductIds?: string[];
+  subcategoryNavigation?: SubcategoryNavigation;
 }) {
   const copy = storeCopy[locale];
   const [query, setQuery] = useState(initialQuery);
@@ -31,6 +39,7 @@ export function ProductsClient({
   const [sort, setSort] = useState("featured");
   const [limit, setLimit] = useState(12);
   const normalized = query.toLocaleLowerCase(locale).trim();
+  const activeSubcategoryId = subcategoryNavigation?.activeId;
   const searchTrackedRef = useRef<string>("");
 
   const categoryCounts = useMemo(() => {
@@ -57,12 +66,16 @@ export function ProductsClient({
         .filter((product) => {
           const matchCategory =
             category === "all" || product.category === category;
+          const matchSubcategory =
+            !activeSubcategoryId ||
+            product.subcategoryId === activeSubcategoryId;
           const haystack =
-            `${product.name} ${product.description} ${product.category} ${product.categoryLabel ?? ""}`.toLocaleLowerCase(
+            `${product.name} ${product.description} ${product.category} ${product.categoryLabel ?? ""} ${product.subcategoryLabel ?? ""}`.toLocaleLowerCase(
               locale,
             );
           return (
             matchCategory &&
+            matchSubcategory &&
             normalized.split(/\s+/).every((word) => haystack.includes(word))
           );
         })
@@ -87,7 +100,7 @@ export function ProductsClient({
           // featured
           return Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured));
         }),
-    [products, category, normalized, sort, locale],
+    [products, category, normalized, sort, locale, activeSubcategoryId],
   );
 
   useEffect(() => {
@@ -108,51 +121,95 @@ export function ProductsClient({
   const isFiltered = Boolean(
     query || category !== (fixedCategory ?? "all") || sort !== "featured",
   );
+  function withSearch(href: string) {
+    return query.trim()
+      ? `${href}${href.includes("?") ? "&" : "?"}q=${encodeURIComponent(query.trim())}`
+      : href;
+  }
 
   return (
     <div className="sf-catalog" data-testid="store-catalog">
-      <div className="sf-catalog-toolbar">
-        <div className="sf-search">
-          <Search size={19} aria-hidden="true" />
-          <input
-            type="search"
-            aria-label={copy.search}
-            placeholder={copy.search}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setLimit(12);
-            }}
-          />
-          {query && (
-            <button
-              type="button"
-              aria-label={copy.clear}
-              onClick={() => {
-                setQuery("");
+      <div className={subcategoryNavigation ? "sf-category-tools" : undefined}>
+        <div
+          className="sf-catalog-toolbar"
+          dir={locale === "he" ? "rtl" : "ltr"}
+        >
+          <div className="sf-search">
+            <Search size={19} aria-hidden="true" />
+            <input
+              type="search"
+              aria-label={copy.search}
+              placeholder={copy.search}
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setLimit(12);
+              }}
+            />
+            {query && (
+              <button
+                type="button"
+                aria-label={copy.clear}
+                onClick={() => {
+                  setQuery("");
+                  setLimit(12);
+                }}
+              >
+                <X size={17} aria-hidden="true" />
+              </button>
+            )}
+          </div>
+          <label className="sf-sort">
+            <SlidersHorizontal size={16} aria-hidden="true" />
+            <span className="sr-only">{copy.sort}</span>
+            <select
+              value={sort}
+              onChange={(event) => {
+                setSort(event.target.value);
                 setLimit(12);
               }}
             >
-              <X size={17} aria-hidden="true" />
-            </button>
-          )}
+              <option value="featured">{copy.featured}</option>
+              <option value="low">{copy.low}</option>
+              <option value="high">{copy.high}</option>
+              <option value="name">{copy.name}</option>
+            </select>
+          </label>
         </div>
-        <label className="sf-sort">
-          <SlidersHorizontal size={16} aria-hidden="true" />
-          <span className="sr-only">{copy.sort}</span>
-          <select
-            value={sort}
-            onChange={(event) => {
-              setSort(event.target.value);
-              setLimit(12);
-            }}
+        {subcategoryNavigation && (
+          <nav
+            className="sf-subcategories"
+            aria-label={locale === "he" ? "תתי־קטגוריות" : "Subcategories"}
+            dir={locale === "he" ? "rtl" : "ltr"}
           >
-            <option value="featured">{copy.featured}</option>
-            <option value="low">{copy.low}</option>
-            <option value="high">{copy.high}</option>
-            <option value="name">{copy.name}</option>
-          </select>
-        </label>
+            <p>{locale === "he" ? "תתי־קטגוריות" : "Subcategories"}</p>
+            <div className="sf-subcategory-links">
+              <Link
+                href={withSearch(subcategoryNavigation.rootHref)}
+                prefetch={false}
+                aria-current={
+                  !subcategoryNavigation.activeId ? "page" : undefined
+                }
+              >
+                {locale === "he" ? "כל המוצרים" : "All products"}
+              </Link>
+              {subcategoryNavigation.items.map((item) => (
+                <Link
+                  key={item.id}
+                  href={withSearch(item.href)}
+                  prefetch={false}
+                  aria-current={
+                    item.id === subcategoryNavigation.activeId
+                      ? "page"
+                      : undefined
+                  }
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
       </div>
       {!fixedCategory && (
         <div

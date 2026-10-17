@@ -3,6 +3,7 @@
 import Link from "@/components/motion/motion-link";
 import { useAnimationSettings } from "@/components/motion/animation-provider";
 import { usePathname } from "next/navigation";
+import { useId, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -15,9 +16,12 @@ import {
   Server,
   ShieldCheck,
   Wrench,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { RevealImage as Image } from "@/components/ui/reveal-image";
 import { isLocale, type Locale } from "@/lib/i18n";
+import { getCategoryKeyFromSlug } from "@/lib/catalog/routes";
 
 const categoryIcons: Record<string, typeof Camera> = {
   cameras: Camera,
@@ -33,13 +37,14 @@ const categoryIcons: Record<string, typeof Camera> = {
 function getCategoryKeyFromPath(pathname: string): string | null {
   // Extract category from paths like /en/store/cameras or /he/store/alarms
   const match = pathname.match(/\/[a-z]{2}\/store\/([^/]+)/);
-  return match ? match[1] : null;
+  return match ? getCategoryKeyFromSlug(match[1]) : null;
 }
 
 export function ProductSubNav({
   categories,
   locale,
   ariaLabel = "Store categories",
+  collapsible = false,
 }: {
   categories: Array<{
     key: string;
@@ -49,9 +54,16 @@ export function ProductSubNav({
   }>;
   locale: Locale;
   ariaLabel?: string;
+  collapsible?: boolean;
 }) {
   const pathname = usePathname();
   const currentCategory = getCategoryKeyFromPath(pathname);
+  const [expanded, setExpanded] = useState(false);
+  const panelId = useId();
+  const visibleCategories =
+    collapsible && !expanded
+      ? categories.filter((category) => category.key === currentCategory)
+      : categories;
   const isRtl = isLocale(locale) ? locale === "he" : false;
   const enhanced = useAnimationSettings().appearanceVersion === "2";
   const Arrow = enhanced
@@ -63,25 +75,46 @@ export function ProductSubNav({
       : ArrowRight;
 
   return (
-    <nav className="sf-departments" aria-label={ariaLabel}>
-      <div className="miro-container sf-department-grid">
-        {categories.map((category) => {
+    <nav
+      className={`sf-departments${collapsible ? " sf-departments-collapsible" : ""}`}
+      aria-label={ariaLabel}
+      data-expanded={collapsible ? expanded : undefined}
+    >
+      {collapsible && (
+        <div className="miro-container sf-departments-controls">
+          <p>{locale === "he" ? "קטגוריות ראשיות" : "Main categories"}</p>
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={panelId}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? (
+              <ChevronUp size={20} aria-hidden="true" />
+            ) : (
+              <ChevronDown size={20} aria-hidden="true" />
+            )}
+            {expanded
+              ? locale === "he"
+                ? "צמצום קטגוריות"
+                : "Collapse categories"
+              : locale === "he"
+                ? "הצגת כל הקטגוריות"
+                : "Expand categories"}
+          </button>
+        </div>
+      )}
+      <div className="miro-container sf-department-grid" id={panelId}>
+        {visibleCategories.map((category) => {
           const Icon = categoryIcons[category.key] ?? ShieldCheck;
           const isActive = category.key === currentCategory;
-          const isDescendant =
-            currentCategory && pathname.startsWith(category.href);
-          const ariaCurrent = isActive
-            ? "page"
-            : isDescendant
-              ? "location"
-              : undefined;
 
           return (
             <Link
               key={category.key}
               href={category.href}
               prefetch={false}
-              aria-current={ariaCurrent}
+              aria-current={isActive ? "page" : undefined}
               className="sf-department"
             >
               {category.imageUrl ? (

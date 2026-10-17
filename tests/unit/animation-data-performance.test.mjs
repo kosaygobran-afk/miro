@@ -26,6 +26,16 @@ const servicesSource = await readFile(
 );
 const pricing = {};
 runInNewContext(compile(pricingSource), { exports: pricing });
+const routes = {};
+runInNewContext(
+  compile(
+    await readFile(
+      new URL("../../src/lib/catalog/routes.ts", import.meta.url),
+      "utf8",
+    ),
+  ),
+  { exports: routes },
+);
 
 function deferred() {
   let resolve;
@@ -122,6 +132,10 @@ function loadStore({
           query.filters.push([field, value]);
           return builder;
         },
+        is(field, value) {
+          query.filters.push([field, value]);
+          return builder;
+        },
         in(field, values) {
           query.filters.push([field, values]);
           return builder;
@@ -180,6 +194,7 @@ function loadStore({
       createServerSupabaseClient: async () => client("session"),
     },
     "@/lib/catalog/pricing": pricing,
+    "@/lib/catalog/routes": routes,
   };
   const exports = {};
   runInNewContext(compile(storeSource), {
@@ -298,6 +313,98 @@ test("hidden out-of-stock products stay hidden after catalogue parallelization",
     "ceo",
   );
   assert.equal(saved.length, 0);
+});
+
+test("catalog separates roots from internal categories and keeps canonical product URLs", async () => {
+  const rows = fixtures();
+  rows.categories.push({
+    id: "child-1",
+    parent_id: "category-1",
+    slug: "tools",
+    name_he: "אביזרי מצלמות",
+    name_en: "Camera accessories",
+  });
+  rows.products[0].subcategory_id = "child-1";
+  const store = loadStore({ rows });
+  const catalog = await store.getStoreCatalog("en");
+  assert.deepEqual(
+    Array.from(catalog.categories, ({ id, key }) => ({ id, key })),
+    [{ id: "category-1", key: "cameras" }],
+  );
+  assert.equal(catalog.subcategories.length, 1);
+  assert.equal(
+    catalog.subcategories[0].key,
+    "tools",
+    "Internal slugs are not rewritten as legacy external aliases",
+  );
+  assert.equal(catalog.subcategories[0].parentId, "category-1");
+  assert.equal(
+    catalog.subcategories[0].href,
+    "/store/cameras?subcategory=tools",
+  );
+  assert.equal(catalog.products[0].category, "cameras");
+  assert.equal(catalog.products[0].subcategoryId, "child-1");
+  assert.equal(catalog.products[0].subcategorySlug, "tools");
+  assert.equal(catalog.products[0].subcategoryLabel, "Camera accessories");
+  const hebrew = await store.getStoreCatalog("he");
+  assert.equal(hebrew.products[0].subcategoryLabel, "אביזרי מצלמות");
+  const projection = store.queries.find(({ table }) => table === "products");
+  assert.match(projection.fields, /subcategory_id/);
+  assert.match(
+    store.queries.find(({ table }) => table === "categories").fields,
+    /parent_id/,
+  );
+});
+
+test("public catalog fails closed for missing roots, mismatched children and unsupported nesting", async () => {
+  for (const kind of [
+    "missing-root",
+    "child-as-root",
+    "missing-child",
+    "different-parent",
+    "nested-child",
+  ]) {
+    const rows = fixtures();
+    rows.categories.push(
+      {
+        id: "child-1",
+        parent_id: "category-1",
+        slug: "child",
+        name_he: "תת־קטגוריה",
+        name_en: "Child",
+      },
+      {
+        id: "other-root",
+        parent_id: null,
+        slug: "other",
+        name_he: "אחר",
+        name_en: "Other",
+      },
+      {
+        id: "nested-child",
+        parent_id: "child-1",
+        slug: "nested",
+        name_he: "מקוננת",
+        name_en: "Nested",
+      },
+    );
+    if (kind === "missing-root") rows.products[0].category_id = "not-found";
+    if (kind === "child-as-root") rows.products[0].category_id = "child-1";
+    if (kind === "missing-child") rows.products[0].subcategory_id = "not-found";
+    if (kind === "different-parent") {
+      rows.products[0].category_id = "other-root";
+      rows.products[0].subcategory_id = "child-1";
+    }
+    if (kind === "nested-child")
+      rows.products[0].subcategory_id = "nested-child";
+    const catalog = await loadStore({ rows }).getStoreCatalog("en");
+    assert.equal(catalog.products.length, 0, kind);
+    assert.ok(!catalog.categories.some(({ id }) => id === "child-1"), kind);
+    assert.ok(
+      !catalog.subcategories.some(({ id }) => id === "nested-child"),
+      kind,
+    );
+  }
 });
 
 test("service metadata and page share the same published read within one request", async () => {
