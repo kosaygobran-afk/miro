@@ -6,6 +6,27 @@
   display: none;
 }
 :root[data-appearance-version="2"] {
+  .mgmt-sidebar {
+    padding-block-start: 0;
+  }
+  .mgmt-sidebar__brand {
+    block-size: calc(var(--navbar-content-height) + 1px);
+    flex: 0 0 auto;
+    padding-block: 0;
+    padding-inline: 0.25rem;
+    align-items: center;
+  }
+  .mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar__brand {
+    display: grid;
+    grid-template-rows: var(--navbar-content-height) 44px;
+    justify-items: center;
+    justify-content: center;
+    block-size: auto;
+    padding-block-end: 0.5rem;
+  }
+  .mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar__brand-link {
+    flex: none;
+  }
   .mgmt-topbar {
     block-size: calc(var(--navbar-content-height) + 1px);
     min-block-size: calc(var(--navbar-content-height) + 1px);

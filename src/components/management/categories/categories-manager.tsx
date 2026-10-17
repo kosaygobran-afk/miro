@@ -196,26 +196,46 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
     void load();
   }, [load]);
 
+  const orderedCategories = useMemo(() => {
+    const roots = categories.filter((category) => !category.parent_id);
+    const rootIds = new Set(roots.map((category) => category.id));
+    return [
+      ...roots.flatMap((root) => [
+        root,
+        ...categories.filter((category) => category.parent_id === root.id),
+      ]),
+      ...categories.filter(
+        (category) => category.parent_id && !rootIds.has(category.parent_id),
+      ),
+    ];
+  }, [categories]);
+
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return categories.filter(
+    return orderedCategories.filter(
       (c) =>
         (visibility === "all" || c.is_active === (visibility === "active")) &&
         (!needle ||
-          [c.name_he, c.name_en, c.slug].some((value) =>
-            value.toLowerCase().includes(needle),
-          )),
+          [
+            c.name_he,
+            c.name_en,
+            c.slug,
+            categories.find((category) => category.id === c.parent_id)
+              ?.name_he ?? "",
+            categories.find((category) => category.id === c.parent_id)
+              ?.name_en ?? "",
+          ].some((value) => value.toLowerCase().includes(needle))),
     );
-  }, [categories, search, visibility]);
+  }, [categories, orderedCategories, search, visibility]);
 
   const categoryName = useCallback(
     (id: string | null) => {
-      if (!id) return "—";
+      if (!id) return copy.mainCategory[locale];
       const found = categories.find((c) => c.id === id);
       if (!found) return "—";
       return he ? found.name_he : found.name_en;
     },
-    [categories, he],
+    [categories, he, locale],
   );
 
   function setField<K extends keyof CategoryForm>(
@@ -226,10 +246,11 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
   }
 
-  function openCreate() {
+  function openCreate(parentId = "") {
+    const next = { ...emptyForm, parent_id: parentId };
     setEditing(null);
-    setForm(emptyForm);
-    setInitialForm(emptyForm);
+    setForm(next);
+    setInitialForm(next);
     setFieldErrors({});
     setDialogError("");
     setDialogOpen(true);
@@ -262,6 +283,17 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
     }
     if (!SLUG_PATTERN.test(form.slug.trim())) {
       errors.slug = copy.errorSlug[locale];
+    }
+    if (
+      form.parent_id &&
+      !categories.some(
+        (category) =>
+          category.id === form.parent_id &&
+          !category.parent_id &&
+          category.id !== editing?.id,
+      )
+    ) {
+      errors.parent_id = copy.invalidParent[locale];
     }
     const imageUrl = form.image_url.trim();
     if (imageUrl && !/^https?:\/\//i.test(imageUrl)) {
@@ -520,7 +552,10 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
 
   async function moveSort(row: CategoryRow, delta: number) {
     if (reorderLock.current) return;
-    const updates = buildOrderUpdates(categories, row.id, delta);
+    const siblings = categories.filter(
+      (category) => category.parent_id === row.parent_id,
+    );
+    const updates = buildOrderUpdates(siblings, row.id, delta);
     if (!updates.length) return;
     reorderLock.current = true;
     setReordering(true);
@@ -621,7 +656,7 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
           <button
             type="button"
             className="miro-button miro-button-primary"
-            onClick={openCreate}
+            onClick={() => openCreate()}
           >
             <Plus size={16} aria-hidden="true" />
             {copy.addCategory[locale]}
@@ -706,7 +741,7 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
               <button
                 type="button"
                 className="miro-button miro-button-primary"
-                onClick={openCreate}
+                onClick={() => openCreate()}
               >
                 <Plus size={16} aria-hidden="true" />
                 {copy.addCategory[locale]}
@@ -732,8 +767,18 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
       >
         {visible.map((row) => {
           const Icon = FolderTree;
+          const children = categories.filter(
+            (category) => category.parent_id === row.id,
+          );
+          const siblings = categories.filter(
+            (category) => category.parent_id === row.parent_id,
+          );
+          const canDelete = row.product_count === 0 && children.length === 0;
           return (
-            <tr key={row.id}>
+            <tr
+              key={row.id}
+              className={row.parent_id ? styles.childRow : styles.rootRow}
+            >
               <td>
                 <span className={styles.visualCell} aria-hidden="true">
                   {row.icon_image_url ? (
@@ -748,8 +793,20 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
                   )}
                 </span>
               </td>
-              <td dir="auto">{row.name_he}</td>
-              <td dir="auto">{row.name_en}</td>
+              <td dir="auto">
+                <span className={styles.categoryName}>{row.name_he}</span>
+                <small className={styles.categoryLevel}>
+                  {row.parent_id
+                    ? copy.subcategory[locale]
+                    : copy.mainCategory[locale]}
+                  {!row.parent_id && children.length
+                    ? ` · ${children.length} ${copy.subcategories[locale]}`
+                    : ""}
+                </small>
+              </td>
+              <td dir="auto">
+                <span className={styles.categoryName}>{row.name_en}</span>
+              </td>
               <td>
                 <OverflowText
                   text={row.slug}
@@ -772,14 +829,13 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
               <td>
                 <span className={styles.sortCell}>
                   <span className={styles.sortValue}>
-                    {categories.findIndex(
-                      (category) => category.id === row.id,
-                    ) + 1}
+                    {siblings.findIndex((category) => category.id === row.id) +
+                      1}
                   </span>
                   <button
                     type="button"
                     className="mgmt-icon-action"
-                    disabled={reordering || categories[0]?.id === row.id}
+                    disabled={reordering || siblings[0]?.id === row.id}
                     title={copy.sortUp[locale]}
                     onClick={() => void moveSort(row, -1)}
                     aria-label={copy.sortUp[locale]}
@@ -789,7 +845,7 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
                   <button
                     type="button"
                     className="mgmt-icon-action"
-                    disabled={reordering || categories.at(-1)?.id === row.id}
+                    disabled={reordering || siblings.at(-1)?.id === row.id}
                     title={copy.sortDown[locale]}
                     onClick={() => void moveSort(row, 1)}
                     aria-label={copy.sortDown[locale]}
@@ -800,6 +856,14 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
               </td>
               <td>
                 <span className={styles.actionsCell}>
+                  {!row.parent_id ? (
+                    <IconAction
+                      label={`${copy.addSubcategory[locale]} · ${he ? row.name_he : row.name_en}`}
+                      onClick={() => openCreate(row.id)}
+                    >
+                      <Plus size={17} aria-hidden="true" />
+                    </IconAction>
+                  ) : null}
                   <IconAction
                     label={copy.edit[locale]}
                     onClick={() => openEdit(row)}
@@ -818,16 +882,16 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
                   />
                   <IconAction
                     label={
-                      row.product_count === 0
+                      canDelete
                         ? copy.delete[locale]
                         : he
-                          ? "יש להעביר את המוצרים המקושרים לפני המחיקה"
-                          : "Reassign linked products before deleting"
+                          ? "יש להעביר מוצרים ותת־קטגוריות לפני המחיקה"
+                          : "Reassign products and subcategories before deleting"
                     }
                     tone="danger"
-                    aria-disabled={row.product_count > 0}
+                    aria-disabled={!canDelete}
                     onClick={() => {
-                      if (row.product_count > 0) return;
+                      if (!canDelete) return;
                       setPendingDelete(row);
                       setDeleteConfirmText("");
                     }}
@@ -848,7 +912,9 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
         title={
           editing
             ? copy.dialogEditTitle[locale]
-            : copy.dialogCreateTitle[locale]
+            : form.parent_id
+              ? copy.dialogCreateChildTitle[locale]
+              : copy.dialogCreateTitle[locale]
         }
         description={copy.dialogDescription[locale]}
         size="lg"
@@ -968,18 +1034,32 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
                 />
               )}
             </FormField>
-            <FormField id="category-parent" label={copy.fieldParent[locale]}>
+            <FormField
+              id="category-parent"
+              label={copy.fieldParent[locale]}
+              description={copy.fieldParentHint[locale]}
+              error={fieldErrors.parent_id}
+            >
               {(control) => (
                 <select
                   {...control}
                   className="miro-input"
                   value={form.parent_id}
                   onChange={(e) => setField("parent_id", e.target.value)}
-                  disabled={saving}
+                  disabled={
+                    saving ||
+                    Boolean(
+                      editing &&
+                      (editing.product_count > 0 ||
+                        categories.some(
+                          (category) => category.parent_id === editing.id,
+                        )),
+                    )
+                  }
                 >
                   <option value="">{copy.noParent[locale]}</option>
                   {categories
-                    .filter((c) => !blockedParents.has(c.id))
+                    .filter((c) => !c.parent_id && !blockedParents.has(c.id))
                     .map((c) => (
                       <option key={c.id} value={c.id}>
                         {he ? c.name_he : c.name_en}

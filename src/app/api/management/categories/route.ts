@@ -7,14 +7,22 @@ import {
 } from "@/app/api/management/_shared";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { PUBLIC_STORE_NAVIGATION_TAG } from "@/lib/public-presentation-cache";
+import { getCategoryWriteError } from "@/lib/catalog/category-errors";
+
+function mapCategoryError(error: { code?: string; message?: string }) {
+  const hierarchy = getCategoryWriteError(error);
+  return hierarchy
+    ? NextResponse.json(hierarchy.body, { status: hierarchy.status })
+    : mapPostgresError(error);
+}
 
 const categorySchema = z.object({
   id: z.string().uuid().optional(),
   slug: z.string().min(1).max(100),
   name_he: z.string().min(1).max(255),
   name_en: z.string().min(1).max(255),
-  description_he: z.string().optional(),
-  description_en: z.string().optional(),
+  description_he: z.string().nullable().optional(),
+  description_en: z.string().nullable().optional(),
   parent_id: z.string().uuid().nullable().optional(),
   image_url: z
     .string()
@@ -33,6 +41,8 @@ async function revalidateCatalog() {
   revalidatePath("/en");
   revalidatePath("/he/store/[category]", "page");
   revalidatePath("/en/store/[category]", "page");
+  revalidatePath("/he/store/[category]/[slug]", "page");
+  revalidatePath("/en/store/[category]/[slug]", "page");
 }
 
 export async function GET(request: Request) {
@@ -42,7 +52,9 @@ export async function GET(request: Request) {
   const { admin } = auth;
   const { data, error: categoriesError } = await admin
     .from("categories")
-    .select("*, products(count)")
+    .select(
+      "*, products:products!products_category_id_fkey(count), child_products:products!products_subcategory_id_fkey(count)",
+    )
     .order("sort_order");
 
   if (categoriesError) {
@@ -51,13 +63,22 @@ export async function GET(request: Request) {
 
   // Flatten the bounded count embed into a plain product_count per row so the
   // management UI can gate hard deletes on "zero products" without a join.
-  const categories = (data ?? []).map(({ products: productCount, ...row }) => ({
-    ...row,
-    product_count:
-      Array.isArray(productCount) && productCount[0]
-        ? (productCount[0] as { count: number }).count
-        : 0,
-  }));
+  const countProducts = (counts: { count: number }[] | null) =>
+    Array.isArray(counts) ? (counts[0]?.count ?? 0) : 0;
+  const categories = (data ?? []).map(
+    ({
+      products: productCount,
+      child_products: childProductCount,
+      ...row
+    }) => ({
+      ...row,
+      product_count:
+        countProducts(productCount) + countProducts(childProductCount),
+      subcategory_count: (data ?? []).filter(
+        (child) => child.parent_id === row.id,
+      ).length,
+    }),
+  );
 
   return NextResponse.json({ categories });
 }
@@ -80,13 +101,17 @@ export async function POST(request: Request) {
     .single();
 
   if (categoryError) {
-    return mapPostgresError(categoryError);
+    return mapCategoryError(categoryError);
   }
 
   await admin.from("audit_events").insert({
     action: "category_created",
     user_id: actor.user.id,
-    details: { category_id: category.id, slug: category.slug },
+    details: {
+      category_id: category.id,
+      slug: category.slug,
+      parent_id: category.parent_id,
+    },
     entity_type: "category",
     entity_id: category.id,
   });
@@ -103,7 +128,13 @@ export async function PATCH(request: Request) {
   const body = await request.json().catch(() => null);
   const parsed = categorySchema
     .partial()
-    .extend({ id: z.string().uuid() })
+    .extend({
+      id: z.string().uuid(),
+      // Zod 4 applies inner defaults even after partial(); PATCH must never
+      // reset ordering or reactivate a category when those keys are omitted.
+      sort_order: z.number().int().optional(),
+      is_active: z.boolean().optional(),
+    })
     .safeParse(body);
   if (!parsed.success) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
@@ -120,13 +151,17 @@ export async function PATCH(request: Request) {
     .single();
 
   if (categoryError) {
-    return mapPostgresError(categoryError);
+    return mapCategoryError(categoryError);
   }
 
   await admin.from("audit_events").insert({
     action: "category_updated",
     user_id: actor.user.id,
-    details: { category_id: category.id, slug: category.slug },
+    details: {
+      category_id: category.id,
+      slug: category.slug,
+      parent_id: category.parent_id,
+    },
     entity_type: "category",
     entity_id: category.id,
   });
@@ -157,7 +192,7 @@ export async function DELETE(request: Request) {
       .eq("id", id);
 
     if (deactivateError) {
-      return mapPostgresError(deactivateError);
+      return mapCategoryError(deactivateError);
     }
 
     await admin.from("audit_events").insert({
@@ -179,7 +214,7 @@ export async function DELETE(request: Request) {
     .eq("id", id);
 
   if (deleteError) {
-    return mapPostgresError(deleteError);
+    return mapCategoryError(deleteError);
   }
 
   await admin.from("audit_events").insert({

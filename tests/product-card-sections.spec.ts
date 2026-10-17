@@ -50,29 +50,83 @@ async function ready(
 }
 
 async function pointOn(target: Locator): Promise<Point> {
-  await target.scrollIntoViewIfNeeded();
-  if (gesturePages.has(target.page())) {
-    // Let the scroll event from bringing the source into view settle before
-    // starting a gesture whose contract deliberately cancels on scrolling.
-    await target.page().clock.runFor(50);
+  // Pausing JS time does not flush Chromium's native scroll event queue.
+  // Listen before scrolling and require each moved ancestor's real event;
+  // otherwise a delayed setup scroll can correctly cancel the next hold.
+  const scrollState = gesturePages.has(target.page())
+    ? await target.evaluateHandle((element) => {
+        const positions: {
+          element: Element;
+          seenLeft: number;
+          seenTop: number;
+        }[] = [];
+        for (
+          let ancestor: Element | null = element;
+          ancestor;
+          ancestor = ancestor.parentElement
+        ) {
+          positions.push({
+            element: ancestor,
+            seenLeft: ancestor.scrollLeft,
+            seenTop: ancestor.scrollTop,
+          });
+        }
+        const listener = (event: Event) => {
+          const scroller =
+            event.target === document
+              ? document.scrollingElement
+              : event.target;
+          const position = positions.find((item) => item.element === scroller);
+          if (position) {
+            position.seenLeft = position.element.scrollLeft;
+            position.seenTop = position.element.scrollTop;
+          }
+        };
+        window.addEventListener("scroll", listener, true);
+        return { positions, listener };
+      })
+    : null;
+  const settleScroll = async () => {
+    if (!scrollState) return;
+    await expect
+      .poll(() =>
+        scrollState.evaluate(({ positions }) =>
+          positions.every(
+            ({ element, seenLeft, seenTop }) =>
+              element.scrollLeft === seenLeft && element.scrollTop === seenTop,
+          ),
+        ),
+      )
+      .toBe(true);
+  };
+  try {
+    await target.scrollIntoViewIfNeeded();
+    await settleScroll();
+    // Scrolling a taller card schedules portal remeasurement on the next frame.
+    // Require the actual target to become hit-tested after that scroll settles.
+    await expect
+      .poll(() =>
+        target.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            box.x + box.width / 2,
+            box.y + box.height / 2,
+          );
+          return hit !== null && element.contains(hit);
+        }),
+      )
+      .toBe(true);
+    await settleScroll();
+    const box = (await target.boundingBox())!;
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  } finally {
+    if (scrollState) {
+      await scrollState.evaluate(({ listener }) =>
+        window.removeEventListener("scroll", listener, true),
+      );
+      await scrollState.dispose();
+    }
   }
-  // Scrolling a taller card schedules portal remeasurement on the next frame.
-  // Require the actual target to become hit-tested after that scroll settles.
-  await expect
-    .poll(() =>
-      target.evaluate((element) => {
-        const box = element.getBoundingClientRect();
-        const hit = document.elementFromPoint(
-          box.x + box.width / 2,
-          box.y + box.height / 2,
-        );
-        return hit !== null && element.contains(hit);
-      }),
-    )
-    .toBe(true);
-  const box = (await target.boundingBox())!;
-  const point = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
-  return point;
 }
 
 async function touch(

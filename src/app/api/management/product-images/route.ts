@@ -54,6 +54,8 @@ async function revalidateCatalog() {
   revalidatePath("/en");
   revalidatePath("/he/store/[category]", "page");
   revalidatePath("/en/store/[category]", "page");
+  revalidatePath("/he/store/[category]/[slug]", "page");
+  revalidatePath("/en/store/[category]/[slug]", "page");
 }
 
 export async function GET(request: Request) {

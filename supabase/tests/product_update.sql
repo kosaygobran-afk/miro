@@ -412,9 +412,9 @@ begin
   v_b := public.manage_category('create', null,
     jsonb_build_object('slug','pu-chain-b','name_he','שרשרת ב','name_en','Chain B','parent_id', v_a));
   v_c := public.manage_category('create', null,
-    jsonb_build_object('slug','pu-chain-c','name_he','שרשרת ג','name_en','Chain C','parent_id', v_b));
+    jsonb_build_object('slug','pu-chain-c','name_he','שרשרת ג','name_en','Chain C','parent_id', v_a));
 
-  -- A->B->C exists; making A a child of C closes A->B->C->A
+  -- B and C are internal categories under A; A cannot become a child of C.
   begin
     perform public.manage_category('update', v_a, jsonb_build_object('parent_id', v_c));
     raise exception 'Category cycle accepted via RPC';

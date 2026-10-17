@@ -14,6 +14,10 @@ import {
   Eye,
 } from "lucide-react";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
+import {
+  ProductIdentifiers,
+  getProductIdentifierVariant,
+} from "./product-identifiers";
 
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
@@ -80,6 +84,7 @@ export function ProductCard({
   const previewButtonRef = useRef<HTMLButtonElement | null>(null);
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
   const primaryImage = getPrimaryImage(product);
+  const identifierVariant = getProductIdentifierVariant(product.variants);
 
   // Use pre-computed prices from server (already includes role prices and promotions)
   // Do NOT call resolvePrice() again - server already computed final display price
@@ -316,6 +321,12 @@ export function ProductCard({
                 <OverflowLabel>{product.name}</OverflowLabel>
               </Link>
             </h3>
+            <ProductIdentifiers
+              sku={identifierVariant?.sku}
+              barcode={identifierVariant?.barcode}
+              locale={locale}
+              compact
+            />
             <p className="sf-product-description" dir="auto">
               {product.shortDescription || product.description}
             </p>

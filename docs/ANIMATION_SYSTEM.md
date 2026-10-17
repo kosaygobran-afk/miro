@@ -159,6 +159,8 @@ Back/forward starts from a capture-phase history listener before Next’s listen
 
 Styling lives in `motion.css`: `--motion-beam-height` (2px), small glow, LTR/RTL transform origin, `--header-sticky-offset` for the public header and `--mgmt-topbar-height` for the console. The beam is fixed and pointer-transparent, so it occupies no layout space.
 
+Console chrome alignment (2026-10-17): Version 2's sidebar brand row uses the same `--navbar-content-height` as the topbar, with no extra sidebar top padding. Expanded brand icon/text share the navbar's vertical center; collapsed mode keeps the icon centered in that row and puts its 44px expand control below it. Version 1 geometry is preserved. The navigation beam uses measured `--mgmt-workspace-left`/`--mgmt-workspace-right` bounds and clips its glow to the workspace, leaving the sidebar clear in both locales and appearance versions. `ManagementTopbar` measures on mount, element resize and window resize (a breakpoint may move the workspace without changing its width), and clears the properties/listener on unmount. Preserve these bounds rather than duplicating sidebar widths in global CSS. `scripts/verify-management-navbar.mjs` checks real disposable CEO/admin sessions, expanded/collapsed alignment, beam lifecycle/bounds, responsive controls and keyboard/axe behavior without changing business records.
+
 `PageReveal` animates the existing changing region with a short 6px lift/fade; it does not change children keys or remount unsaved forms, cart state, sidebar, header or dashboard providers. Initial route loading boundaries remain below persistent layouts.
 
 ## Skeletons, images and async outcomes

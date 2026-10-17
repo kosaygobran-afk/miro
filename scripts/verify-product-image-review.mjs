@@ -15,6 +15,8 @@ nextEnv.loadEnvConfig(process.cwd());
 const engine = process.env.IMAGE_REVIEW_BROWSER || "chromium";
 const browserType = { chromium, firefox, webkit }[engine];
 assert.ok(browserType, "Supported engines: chromium, firefox, webkit");
+const scope = process.env.IMAGE_REVIEW_SCOPE || "full";
+assert.ok(["full", "media"].includes(scope), "Supported scopes: full, media");
 const base = process.env.ADMIN_BASE_URL || "http://127.0.0.1:3216";
 const output =
   process.env.IMAGE_REVIEW_OUTPUT_DIR ||
@@ -112,9 +114,59 @@ try {
   let failUpload = false;
   let holdUpload = null;
   let expectedRemoval = true;
+  let existingRemovalStatus = "processed";
+  let holdExistingRemoval = null;
+  let expectedExistingImageId = null;
   await context.route("**/api/management/**", async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
+    if (pathname.endsWith("/product-images/remove-background")) {
+      assert.equal(request.method(), "POST");
+      assert.deepEqual(request.postDataJSON(), { id: expectedExistingImageId });
+      const existing = images.find(
+        (image) => image.id === expectedExistingImageId,
+      );
+      assert.ok(existing, "Removal must target an existing image fixture");
+      if (holdExistingRemoval) await holdExistingRemoval;
+      if (existingRemovalStatus === "unavailable")
+        return route.fulfill({
+          status: 503,
+          json: {
+            error:
+              "Background removal is unavailable. The saved image has not changed.",
+            code: "background_removal_unavailable",
+            background_removal: {
+              status: "original",
+              skipped: true,
+              reason: "worker_not_configured",
+            },
+          },
+        });
+      const image =
+        existingRemovalStatus === "processed"
+          ? {
+              ...existing,
+              image_url:
+                existing.image_url === "/images/catalog/dome-02.svg"
+                  ? "/images/catalog/dome-03.svg"
+                  : "/images/catalog/dome-02.svg",
+            }
+          : existing;
+      images = images.map((entry) => (entry.id === image.id ? image : entry));
+      return route.fulfill({
+        json: {
+          image,
+          background_removal: {
+            status: existingRemovalStatus,
+            skipped: existingRemovalStatus === "transparent",
+            reason:
+              existingRemovalStatus === "transparent"
+                ? "already transparent"
+                : null,
+          },
+        },
+      });
+    }
     if (
       pathname.endsWith("/product-images/upload") ||
       (pathname.endsWith("/product-images") && request.method() === "POST")
@@ -304,6 +356,144 @@ try {
         )
         .first(),
     ).toBeVisible();
+    // Re-open Media to clear prior upload notices. The gallery fixture persists,
+    // so this exercises an existing image rather than creating another row.
+    await page.reload({ waitUntil: "networkidle" });
+    await page
+      .getByRole("button", {
+        name: locale === "he" ? "מדיה" : "Media",
+        exact: true,
+      })
+      .click();
+    const galleryTitle = locale === "he" ? "תמונות מוצר" : "Product images";
+    const gallery = page.getByRole("list", { name: galleryTitle, exact: true });
+    const imageTiles = gallery.locator(":scope > li");
+    const removeLabel = locale === "he" ? "הסרת רקע" : "Remove background";
+    const removedLabel = locale === "he" ? "הרקע הוסר" : "Background removed";
+    const transparentLabel =
+      locale === "he"
+        ? "כבר שקוף — נשמר המקור"
+        : "Already transparent — original saved";
+    const savedLabel =
+      locale === "he"
+        ? "התמונה נשמרה ותופיע מיד ברשימת המוצרים ובחנות."
+        : "Image saved. It now appears in the product list and storefront.";
+    await expect(
+      page.getByText(
+        locale === "he"
+          ? "לתמונה קיימת, לחצו על הסרת רקע מתחת לתמונה. השינוי נשמר מיד; אין צורך בשמירת המוצר."
+          : "For a saved image, use Remove background below it. Images save immediately; product Save is not needed.",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("checkbox", {
+        name:
+          locale === "he"
+            ? "הסרת רקע בהעלאת תמונות חדשות (ניתן לבטל כדי לשמור מקור)"
+            : "Remove background on new uploads (turn off to keep the original)",
+        exact: true,
+      }),
+    ).toBeVisible();
+    pass(
+      `${locale}: new-upload scope and per-image immediate-save instructions are explicit`,
+    );
+    const initialCount = images.length;
+    await expect(imageTiles).toHaveCount(initialCount);
+    expectedExistingImageId = images[0].id;
+    const originalReference = images[0].image_url;
+    let releaseExisting;
+    holdExistingRemoval = new Promise((resolve) => {
+      releaseExisting = resolve;
+    });
+    existingRemovalStatus = "processed";
+    await gallery
+      .getByRole("button", { name: removeLabel, exact: true })
+      .first()
+      .click();
+    await expect(
+      gallery.getByRole("button", {
+        name: locale === "he" ? "מסיר רקע…" : "Removing background…",
+        exact: true,
+      }),
+    ).toHaveAttribute("aria-busy", "true");
+    for (const button of await gallery.getByRole("button").all())
+      await expect(button).toBeDisabled();
+    await expect(page.locator('input[type="file"]')).toBeDisabled();
+    await expect(
+      page.getByRole("checkbox", { name: /Remove background|הסרת רקע/ }),
+    ).toBeDisabled();
+    await expect(
+      page.getByRole("button", {
+        name: locale === "he" ? "הוסף מכתובת" : "Add by URL",
+        exact: true,
+      }),
+    ).toBeDisabled();
+    releaseExisting();
+    holdExistingRemoval = null;
+    await expect(
+      page.getByRole("status").filter({ hasText: removedLabel }),
+    ).toBeVisible();
+    await expect(imageTiles).toHaveCount(initialCount);
+    await expect(imageTiles.first().locator("img").last()).toHaveAttribute(
+      "src",
+      images[0].image_url,
+    );
+    assert.notEqual(images[0].image_url, originalReference);
+    assert.equal(images[0].id, expectedExistingImageId);
+    await expect(page.locator('input[type="file"]')).toBeEnabled();
+    pass(
+      `${locale}: pending existing-image removal blocks mutations; success updates one existing row without duplication`,
+    );
+    existingRemovalStatus = "transparent";
+    const processedReference = images[0].image_url;
+    await gallery
+      .getByRole("button", { name: removeLabel, exact: true })
+      .first()
+      .click();
+    await expect(
+      page.getByRole("status").filter({ hasText: transparentLabel }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("status").filter({ hasText: removedLabel }),
+    ).toHaveCount(0);
+    assert.equal(images[0].image_url, processedReference);
+    await expect(imageTiles).toHaveCount(initialCount);
+    pass(
+      `${locale}: already-transparent existing image is reported truthfully without duplication`,
+    );
+    existingRemovalStatus = "unavailable";
+    await gallery
+      .getByRole("button", { name: removeLabel, exact: true })
+      .first()
+      .click();
+    await expect(
+      page.getByRole("alert").filter({
+        hasText:
+          locale === "he"
+            ? "שירות הסרת הרקע אינו זמין כרגע. התמונה הקיימת לא השתנתה."
+            : "Background removal is unavailable. The saved image has not changed.",
+      }),
+    ).toBeVisible();
+    await expect(page.getByText(savedLabel, { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("status").filter({ hasText: removedLabel }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("status").filter({ hasText: transparentLabel }),
+    ).toHaveCount(0);
+    assert.equal(images[0].image_url, processedReference);
+    await expect(imageTiles).toHaveCount(initialCount);
+    await gallery
+      .getByRole("button", { name: removeLabel, exact: true })
+      .first()
+      .focus();
+    await expect(
+      gallery.getByRole("button", { name: removeLabel, exact: true }).first(),
+    ).toBeFocused();
+    pass(
+      `${locale}: unavailable removal shows a visible error without success or a changed image; button supports keyboard focus`,
+    );
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       for (const theme of ["dark", "medium", "light"]) {
@@ -316,6 +506,23 @@ try {
           ),
           `${locale}/${width}/${theme} gallery overflow`,
         );
+        if (width === 320) {
+          await page.evaluate(() => document.activeElement?.blur());
+          await page.waitForTimeout(350);
+          const accessibility = await new AxeBuilder({ page })
+            .include(`[aria-label="${galleryTitle}"]`)
+            .analyze();
+          if (accessibility.violations.length)
+            await writeFile(
+              join(output, `axe-gallery-${locale}-${theme}-320.json`),
+              JSON.stringify(accessibility.violations, null, 2),
+            );
+          assert.deepEqual(
+            accessibility.violations.map(({ id, impact }) => ({ id, impact })),
+            [],
+            `${locale}/320/${theme} existing-image controls must be accessible`,
+          );
+        }
       }
     }
     await page.evaluate(() => {
@@ -345,81 +552,89 @@ try {
     pass(`${locale}: gallery in three themes at 320/390/1440px; axe clean`);
     expectedRemoval = true;
   }
-  for (const locale of ["en", "he"]) {
-    for (const section of ["users", "customers"]) {
-      await page.goto(`${base}/${locale}/admin/${section}`, {
-        waitUntil: "networkidle",
-      });
-      const prefix =
-        section === "users" ? "users-management" : "customers-manager";
-      for (const width of [320, 390, 767, 768, 1440]) {
-        await page.setViewportSize({ width, height: 1000 });
-        if (width < 768) {
-          await expect(page.locator(`.${prefix}__card-list`)).toBeVisible();
-          await expect(page.locator(`.${prefix}__table-wrapper`)).toBeHidden();
-        } else {
-          await expect(page.locator(`.${prefix}__card-list`)).toBeHidden();
-          await expect(page.locator(`.${prefix}__table-wrapper`)).toBeVisible();
+  if (scope === "full") {
+    for (const locale of ["en", "he"]) {
+      for (const section of ["users", "customers"]) {
+        await page.goto(`${base}/${locale}/admin/${section}`, {
+          waitUntil: "networkidle",
+        });
+        const prefix =
+          section === "users" ? "users-management" : "customers-manager";
+        for (const width of [320, 390, 767, 768, 1440]) {
+          await page.setViewportSize({ width, height: 1000 });
+          if (width < 768) {
+            await expect(page.locator(`.${prefix}__card-list`)).toBeVisible();
+            await expect(
+              page.locator(`.${prefix}__table-wrapper`),
+            ).toBeHidden();
+          } else {
+            await expect(page.locator(`.${prefix}__card-list`)).toBeHidden();
+            await expect(
+              page.locator(`.${prefix}__table-wrapper`),
+            ).toBeVisible();
+          }
+          assert.ok(
+            await page.evaluate(
+              () => document.documentElement.scrollWidth <= innerWidth + 1,
+            ),
+            `${section}/${locale}/${width} overflow`,
+          );
         }
-        assert.ok(
-          await page.evaluate(
-            () => document.documentElement.scrollWidth <= innerWidth + 1,
-          ),
-          `${section}/${locale}/${width} overflow`,
+        pass(
+          `${section}/${locale}: cards below 768px, tables at 768px+, bounded layout`,
         );
       }
-      pass(
-        `${section}/${locale}: cards below 768px, tables at 768px+, bounded layout`,
+    }
+    const gradients = {};
+    for (const locale of ["en", "he"]) {
+      await page.goto(`${base}/${locale}/admin/analytics`, {
+        waitUntil: "networkidle",
+      });
+      const ranking = page
+        .locator("li")
+        .filter({ hasText: "Synthetic ranking" });
+      await expect(ranking).toBeVisible();
+      gradients[locale === "he" ? "rtl" : "ltr"] = await ranking.evaluate(
+        (item) =>
+          getComputedStyle(item.lastElementChild.firstElementChild)
+            .backgroundImage,
       );
     }
-  }
-  const gradients = {};
-  for (const locale of ["en", "he"]) {
-    await page.goto(`${base}/${locale}/admin/analytics`, {
-      waitUntil: "networkidle",
+    assert.ok(/90deg|to right/.test(gradients.ltr), gradients.ltr);
+    assert.ok(/270deg|-90deg|to left/.test(gradients.rtl), gradients.rtl);
+    assert.notEqual(gradients.ltr, gradients.rtl);
+    pass("analytics ranking gradient mirrors correctly in RTL");
+    // Inspect the actual loaded CSS for the recent RTL motion/gradient contract.
+    await page.emulateMedia({ reducedMotion: "no-preference" });
+    const rtl = await page.evaluate(() => {
+      const selectors = ["inventory-manager__toast", "settings-panel__toast"];
+      return selectors.map((name) => {
+        const node = document.createElement("div");
+        node.className = name;
+        document.body.append(node);
+        const animation = getComputedStyle(node).animationName;
+        node.remove();
+        return animation;
+      });
     });
-    const ranking = page.locator("li").filter({ hasText: "Synthetic ranking" });
-    await expect(ranking).toBeVisible();
-    gradients[locale === "he" ? "rtl" : "ltr"] = await ranking.evaluate(
-      (item) =>
-        getComputedStyle(item.lastElementChild.firstElementChild)
-          .backgroundImage,
-    );
-  }
-  assert.ok(/90deg|to right/.test(gradients.ltr), gradients.ltr);
-  assert.ok(/270deg|-90deg|to left/.test(gradients.rtl), gradients.rtl);
-  assert.notEqual(gradients.ltr, gradients.rtl);
-  pass("analytics ranking gradient mirrors correctly in RTL");
-  // Inspect the actual loaded CSS for the recent RTL motion/gradient contract.
-  await page.emulateMedia({ reducedMotion: "no-preference" });
-  const rtl = await page.evaluate(() => {
-    const selectors = ["inventory-manager__toast", "settings-panel__toast"];
-    return selectors.map((name) => {
+    assert.ok(rtl.every((name) => name === "toast-enter-rtl"));
+    pass("Hebrew toast animation uses the anchored RTL direction");
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const reduced = await page.evaluate(() => {
       const node = document.createElement("div");
-      node.className = name;
+      node.className = "settings-panel__toast";
       document.body.append(node);
-      const animation = getComputedStyle(node).animationName;
+      const name = getComputedStyle(node).animationName;
       node.remove();
-      return animation;
+      return name;
     });
-  });
-  assert.ok(rtl.every((name) => name === "toast-enter-rtl"));
-  pass("Hebrew toast animation uses the anchored RTL direction");
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  const reduced = await page.evaluate(() => {
-    const node = document.createElement("div");
-    node.className = "settings-panel__toast";
-    document.body.append(node);
-    const name = getComputedStyle(node).animationName;
-    node.remove();
-    return name;
-  });
-  assert.equal(reduced, "none");
-  pass("reduced motion overrides the new RTL animation");
+    assert.equal(reduced, "none");
+    pass("reduced motion overrides the new RTL animation");
+  }
   assert.deepEqual(runtimeErrors, []);
   await writeFile(
     join(output, "results.json"),
-    JSON.stringify({ engine, checks, runtimeErrors }, null, 2),
+    JSON.stringify({ engine, scope, checks, runtimeErrors }, null, 2),
   );
   console.log(`Evidence: ${output}`);
 } finally {

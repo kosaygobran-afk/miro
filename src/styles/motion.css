@@ -71,6 +71,10 @@
 }
 html:has(.mgmt-shell) .motion-navigation-progress {
   top: var(--mgmt-topbar-height, 64px);
+  inset-inline: auto;
+  left: var(--mgmt-workspace-left, 0px);
+  right: var(--mgmt-workspace-right, 0px);
+  overflow: clip;
 }
 .motion-navigation-progress[data-state="loading"],
 .motion-navigation-progress[data-state="complete"] {

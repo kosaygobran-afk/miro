@@ -31,7 +31,22 @@ const service = createClient(
 const actorIds = [];
 const checks = [];
 const errors = [];
+const beamOffset = (page) =>
+  page.evaluate(() => {
+    const header = document
+      .querySelector(".mgmt-topbar")
+      .getBoundingClientRect();
+    const beam = document
+      .querySelector(".motion-navigation-progress")
+      .getBoundingClientRect();
+    return Math.max(
+      Math.abs(beam.left - header.left),
+      Math.abs(beam.right - header.right),
+      Math.abs(beam.top - header.bottom),
+    );
+  });
 let browser;
+let activePage;
 try {
   browser = await browserType.launch();
   await mkdir(output, { recursive: true });
@@ -66,6 +81,7 @@ try {
       ignoreHTTPSErrors: true,
     });
     const page = await context.newPage();
+    activePage = page;
     page.on("pageerror", (error) => errors.push(error.message));
     await context.route("**/api/track", (route) =>
       route.fulfill({ status: 204 }),
@@ -98,7 +114,9 @@ try {
       );
       const path = new URL(route.request().url()).pathname;
       if (path.endsWith("/products"))
-        return route.fulfill({ json: { products: [], totalCount: 0 } });
+        return route.fulfill({
+          json: { products: [], categories: [], totalCount: 0 },
+        });
       return route.continue();
     });
     for (const locale of ["en", "he"]) {
@@ -114,6 +132,9 @@ try {
         waitUntil: "networkidle",
       });
       await expect(page.locator(".mgmt-topbar")).toBeVisible();
+      await page.evaluate(() => {
+        document.documentElement.dataset.appearanceVersion = "2";
+      });
       for (const width of [320, 390, 768, 1024, 1200, 1440, 1920]) {
         await page.setViewportSize({ width, height: 1000 });
         for (const theme of ["dark", "medium", "light"]) {
@@ -133,6 +154,68 @@ try {
             ),
             `${role}/${locale}/${width}/${theme} overflow`,
           );
+          // Exercise the real beam lifecycle and sidebar toggle, including RTL.
+          for (const sidebar of ["expanded", "collapsed"]) {
+            if (sidebar === "collapsed" && width < 1024) continue;
+            if (width >= 1024) {
+              const shell = page.locator(".mgmt-shell");
+              if ((await shell.getAttribute("data-sidebar")) !== sidebar)
+                await page.locator(".mgmt-sidebar__collapse").click();
+            }
+            await page.evaluate(() => {
+              window.dispatchEvent(
+                new CustomEvent("miro-navigation-start", {
+                  detail: { href: `${location.pathname}?navbar-qa=loading` },
+                }),
+              );
+            });
+            await expect(
+              page.locator(".motion-navigation-progress"),
+            ).toHaveAttribute("data-state", "loading");
+            await expect
+              .poll(() => beamOffset(page), {
+                message: `${role}/${locale}/${width}/${theme}/${sidebar}: beam follows workspace`,
+              })
+              .toBeLessThan(1);
+            if (width >= 1024) {
+              const alignment = await page.evaluate(() => {
+                const center = (selector) => {
+                  const box = document
+                    .querySelector(selector)
+                    .getBoundingClientRect();
+                  return box.top + box.height / 2;
+                };
+                const header = center(".mgmt-topbar");
+                return {
+                  mark: Math.abs(center(".mgmt-sidebar__brand-mark") - header),
+                  text:
+                    document.querySelector(".mgmt-shell").dataset.sidebar ===
+                    "expanded"
+                      ? Math.abs(center(".mgmt-sidebar__brand-text") - header)
+                      : 0,
+                };
+              });
+              assert.ok(
+                alignment.mark < 1 && alignment.text < 1,
+                `${role}/${locale}/${width}/${theme}/${sidebar}: brand centered with navbar ${JSON.stringify(alignment)}`,
+              );
+              if (width === 1440 && theme === "dark")
+                await page.screenshot({
+                  path: join(
+                    output,
+                    `${role}-${locale}-${sidebar}-loading.png`,
+                  ),
+                });
+            }
+            await page.evaluate(() =>
+              window.dispatchEvent(new Event("miro-navigation-end")),
+            );
+            await expect(
+              page.locator(".motion-navigation-progress"),
+            ).toHaveAttribute("data-state", "idle");
+          }
+          if (width >= 1024)
+            await page.locator(".mgmt-sidebar__collapse").click();
           const controls = page.locator(".mgmt-topbar__controls");
           if (width < 1200) {
             const toggle = page.locator(".mgmt-topbar__controls-toggle");
@@ -153,7 +236,7 @@ try {
             ).toBeHidden();
           }
           checks.push(
-            `${role}/${locale}/${width}/${theme}: equal navbar heights and reachable contained controls`,
+            `${role}/${locale}/${width}/${theme}: aligned brand, bounded loading beam, equal navbar heights and reachable contained controls`,
           );
         }
       }
@@ -216,6 +299,38 @@ try {
       checks.push(
         `${role}/${locale}: nested Escape, focus, account context/bounds, resize preservation and navbar axe`,
       );
+      for (const version of ["1", "2"]) {
+        await page.evaluate((version) => {
+          document.documentElement.dataset.appearanceVersion = version;
+        }, version);
+        for (const reducedMotion of ["no-preference", "reduce"]) {
+          await page.emulateMedia({ reducedMotion });
+          for (const width of [1440, 390]) {
+            await page.setViewportSize({ width, height: 1000 });
+            await page.evaluate(() =>
+              window.dispatchEvent(
+                new CustomEvent("miro-navigation-start", {
+                  detail: { href: `${location.pathname}?navbar-qa=motion` },
+                }),
+              ),
+            );
+            await expect(
+              page.locator(".motion-navigation-progress"),
+            ).toHaveAttribute("data-state", "loading");
+            await expect.poll(() => beamOffset(page)).toBeLessThan(1);
+            await page.evaluate(() =>
+              window.dispatchEvent(new Event("miro-navigation-end")),
+            );
+            await expect(
+              page.locator(".motion-navigation-progress"),
+            ).toHaveAttribute("data-state", "idle");
+            checks.push(
+              `${role}/${locale}/v${version}/${reducedMotion}/${width}: bounded beam lifecycle`,
+            );
+          }
+        }
+      }
+      console.log(`PASS ${role}/${locale} chrome checks`);
     }
     await context.close();
   }
@@ -227,6 +342,33 @@ try {
   console.log(
     `PASS ${checks.length} navbar checks in ${engine}; evidence ${output}`,
   );
+} catch (error) {
+  if (activePage && !activePage.isClosed()) {
+    const geometry = await activePage.evaluate(() => ({
+      viewport: innerWidth,
+      direction: getComputedStyle(document.documentElement).direction,
+      variables: document.documentElement.getAttribute("style"),
+      elements: [
+        ".mgmt-topbar",
+        ".mgmt-sidebar__brand",
+        ".motion-navigation-progress",
+      ].map((selector) => {
+        const node = document.querySelector(selector);
+        return {
+          selector,
+          bounds: node?.getBoundingClientRect().toJSON(),
+          left: node && getComputedStyle(node).left,
+          right: node && getComputedStyle(node).right,
+        };
+      }),
+    }));
+    await writeFile(
+      join(output, "failure-geometry.json"),
+      JSON.stringify(geometry, null, 2),
+    );
+    await activePage.screenshot({ path: join(output, "failure.png") });
+  }
+  throw error;
 } finally {
   await browser?.close();
   for (const id of actorIds) {

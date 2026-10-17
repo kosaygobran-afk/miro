@@ -8,7 +8,7 @@
   :is(.sf-product-card, .sf-moving-rail-card-shell):has(
     > [data-preview-source]
   ) {
-  --sf-card-section-padding: 1.15rem;
+  --sf-card-section-padding: 1.25rem;
 }
 
 .sf-product-preview-source {
@@ -478,7 +478,7 @@
   .sf-product-summary {
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 0.5rem;
   }
 
   .sf-product-summary h3,
@@ -486,10 +486,26 @@
     margin: 0;
   }
 
+  .sf-product-summary .sf-product-category {
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.5;
+    letter-spacing: 0.035em;
+  }
+
+  .sf-product-summary h3 {
+    min-height: 0;
+    font-size: 1.125rem;
+    font-weight: 720;
+    line-height: 1.5;
+    letter-spacing: 0;
+  }
+
   .sf-product-summary .sf-product-description {
     margin: 0;
     padding: 0;
     border: 0;
+    font-size: 0.875rem;
     line-height: 1.65;
     /* Never reserve copy space: an empty description must remove its row and
        let the pricing divider sit closer to real content. */
@@ -502,9 +518,9 @@
 
   .sf-product-facts {
     display: grid;
-    gap: 0.35rem;
-    margin-block-start: 0.25rem;
-    font-size: 0.72rem;
+    gap: 0.4rem;
+    margin: 0.25rem 0 0;
+    font-size: 0.75rem;
     line-height: 1.5;
   }
 
@@ -530,8 +546,28 @@
   }
 
   .sf-product-price__amount strong {
-    font-size: clamp(1.05rem, 1.3vw, 1.35rem);
+    font-size: 1.5rem;
+    font-weight: 750;
+    letter-spacing: 0;
     overflow-wrap: anywhere;
+  }
+
+  .sf-product-card .sf-product-price__amount:not(:has(small)) > strong {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.6;
+    color: var(--foreground);
+  }
+
+  .sf-product-card .sf-product-price__amount small {
+    font-size: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .sf-product-card .sf-product-price__promotion {
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    line-height: 1.5;
   }
 
   .sf-product-price__promotion:empty {
@@ -562,6 +598,36 @@
     padding: 0.55rem;
     gap: 0.5rem;
     min-height: 48px;
+    font-size: 0.8125rem;
+    border-color: var(--border-control);
+  }
+
+  .sf-product-actions > :is(.sf-save-button, .sf-product-quick-preview) {
+    border-color: var(--border-control);
+  }
+
+  .sf-product-actions
+    > :is(
+      .sf-product-action,
+      .sf-save-button,
+      .sf-product-quick-preview
+    ):hover:not(:disabled) {
+    border-color: var(--primary);
+  }
+
+  .sf-moving-rail-category {
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.035em;
+  }
+
+  .sf-moving-rail-details-link {
+    font-size: 0.8125rem;
+    border-color: var(--border-control);
+  }
+
+  .sf-moving-rail-details-link:hover {
+    border-color: var(--primary);
   }
 
   /* The details label ellipsizes on its own line and never wraps mid-label.

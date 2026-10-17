@@ -25,6 +25,10 @@ import type { Product, ProductImage } from "@/features/catalog/product-data";
 import { PromoBadge } from "@/features/catalog/product-promo-badge";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
 import {
+  ProductIdentifiers,
+  getProductIdentifierVariant,
+} from "./product-identifiers";
+import {
   formatPrice,
   getDiscountPercent,
   priceBeforeVat,
@@ -139,6 +143,7 @@ export function ProductHoverPreview({
     ...Object.entries(product.specifications ?? {}),
   ];
   const effectivePrice = product.priceIls;
+  const identifierVariant = getProductIdentifierVariant(product.variants);
   const compareAtPrice = product.compareAtPrice ?? null;
   const discountPercent = getDiscountPercent(compareAtPrice, effectivePrice);
   const formattedPrice = formatPrice(
@@ -215,8 +220,10 @@ export function ProductHoverPreview({
       ?.getBoundingClientRect();
     const preview = previewRef.current;
     const gutter = 16;
+    const maximumHeight = enhanced ? 560 : 600;
     const width =
-      preview?.offsetWidth ?? Math.min(420, window.innerWidth - gutter * 2);
+      preview?.offsetWidth ??
+      Math.min(enhanced ? 416 : 420, window.innerWidth - gutter * 2);
     const sourceScale = Math.min(1, triggerRect.width / width);
     const actionsRect = actionsRef.current?.getBoundingClientRect();
     const separation = 16;
@@ -231,12 +238,14 @@ export function ProductHoverPreview({
         ? Math.max(
             1,
             Math.min(
-              600,
+              maximumHeight,
               bottomLimit - gutter,
               (actionsRect.top - separation - triggerRect.top) / sourceScale,
             ),
           )
-        : window.innerHeight - gutter * 2;
+        : enhanced
+          ? Math.min(maximumHeight, window.innerHeight - gutter * 2)
+          : window.innerHeight - gutter * 2;
     let left = Math.max(
       gutter,
       Math.min(
@@ -256,14 +265,17 @@ export function ProductHoverPreview({
           rightRoom >= leftRoom
             ? actionsRect.right + separation
             : actionsRect.left - width - separation;
-        availableHeight = Math.min(600, window.innerHeight - gutter * 2);
+        availableHeight = Math.min(
+          maximumHeight,
+          window.innerHeight - gutter * 2,
+        );
         bottomLimit = window.innerHeight - gutter;
         separatedFallback = true;
       } else {
         const belowRoom =
           window.innerHeight - gutter - actionsRect.bottom - separation;
         if (belowRoom > availableHeight) {
-          availableHeight = Math.min(600, belowRoom);
+          availableHeight = Math.min(maximumHeight, belowRoom);
           bottomLimit = window.innerHeight - gutter;
           belowActions = true;
           separatedFallback = true;
@@ -672,6 +684,11 @@ export function ProductHoverPreview({
             <h3 id={titleId} className="sf-hover-preview-title" dir="auto">
               {product.name}
             </h3>
+            <ProductIdentifiers
+              sku={identifierVariant?.sku}
+              barcode={identifierVariant?.barcode}
+              locale={locale}
+            />
             <div className="sf-hover-preview-price">
               <div className="sf-price-display__amount">
                 <strong dir="auto">{formattedPrice}</strong>

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
     const result = await admin
       .from("products")
       .select(
-        "id,status,sales_channel,price,product_variants(id,is_default,is_active,stock_qty),categories(is_active)",
+        "id,status,sales_channel,price,product_variants(id,is_default,is_active,stock_qty),categories!products_category_id_fkey(is_active)",
       )
       .in("id", [...new Set(parsed.data.items.map((item) => item.product_id))]);
     checkRpcError(result.error);

@@ -1618,12 +1618,17 @@ body:has(.sf-product-dialog[open]) {
   }
 }
 .sf-main-image {
+  /* Single-image, illustration and loading stages use the entire gallery. */
+  grid-column: 1 / -1;
   position: relative;
   border-radius: 12px;
   overflow: hidden;
   background: var(--surface-muted);
   aspect-ratio: 1;
   border: 1px solid var(--border-subtle);
+}
+.sf-thumbnail-strip + .sf-main-image {
+  grid-column: 2;
 }
 .sf-product-main-image {
   display: block;
@@ -1752,6 +1757,9 @@ body:has(.sf-product-dialog[open]) {
   }
   .sf-thumbnail-strip {
     order: 2;
+  }
+  .sf-thumbnail-strip + .sf-main-image {
+    grid-column: 1 / -1;
   }
   .sf-thumbnail-list {
     flex-direction: row;

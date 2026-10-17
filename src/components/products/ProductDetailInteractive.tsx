@@ -23,6 +23,7 @@ import {
 } from "@/lib/catalog/pricing";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
+import { ProductIdentifiers } from "@/features/catalog/product-identifiers";
 
 interface ProductDetailInteractiveProps {
   productId: string;
@@ -258,9 +259,15 @@ export function ProductDetailInteractive({
       </div>
 
       <div className="sf-product-info">
-        {header}
+        <div className="sf-detail-heading">{header}</div>
 
-        <div className="sf-product-price-block">
+        <div
+          className="sf-product-price-block"
+          data-price-published={effectivePrice !== null}
+        >
+          <p className="sf-detail-section-label">
+            {locale === "he" ? "מחיר וזמינות" : "Price & availability"}
+          </p>
           <div className="sf-price-display" aria-live="polite">
             <div className="sf-price-display__amount">
               <strong dir="auto">{displayPrice}</strong>
@@ -303,6 +310,12 @@ export function ProductDetailInteractive({
               <span>{locale === "he" ? "מק״ט" : "SKU"}</span>: {displaySku}
             </p>
           )}
+          <ProductIdentifiers
+            sku={displaySku}
+            barcode={selectedVariant?.barcode}
+            locale={locale}
+            className="sf-detail-identifiers"
+          />
         </div>
 
         {displayedStock <= 0 && (
@@ -313,9 +326,7 @@ export function ProductDetailInteractive({
 
         {variants.length > 0 && (
           <fieldset className="sf-variant-fieldset">
-            <legend>
-              {copy.variants} {copy.color}
-            </legend>
+            <legend>{copy.variants}</legend>
             <div
               className="sf-variant-chips"
               role="radiogroup"
@@ -323,6 +334,11 @@ export function ProductDetailInteractive({
             >
               {variants.map((variant) => {
                 const isSelected = selectedVariantId === variant.id;
+                const variantName =
+                  (locale === "he" ? variant.colorHe : variant.colorEn) ||
+                  variant.colorHe ||
+                  variant.colorEn ||
+                  variant.sku;
                 const variantPrice =
                   variant.price !== null
                     ? formatPrice(variant.price, locale, copy.priceUnpublished)
@@ -345,10 +361,13 @@ export function ProductDetailInteractive({
                         } as React.CSSProperties
                       }
                     >
-                      <span className="sf-variant-swatch" aria-hidden="true" />
-                      <span className="sf-variant-name">
-                        {locale === "he" ? variant.colorHe : variant.colorEn}
-                      </span>
+                      {variant.colorHex ? (
+                        <span
+                          className="sf-variant-swatch"
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      <span className="sf-variant-name">{variantName}</span>
                       <span className="sf-variant-stock">
                         {variant.stockQty}{" "}
                         {locale === "he" ? "במלאי" : "in stock"}
@@ -369,35 +388,37 @@ export function ProductDetailInteractive({
 
         {description}
 
-        {effectivePrice !== null && (
-          <AddToCartButton
+        <div className="sf-detail-purchase">
+          {effectivePrice !== null && (
+            <AddToCartButton
+              locale={locale}
+              disabled={
+                !canAddToCart ||
+                (variants.length > 0 && (selectedVariant?.stockQty ?? 0) <= 0)
+              }
+              item={{
+                productId,
+                variantId: selectedVariant?.id ?? null,
+                slug: productSlug,
+                category: productCategory,
+                name: productName,
+                imageUrl: activeImage?.url ?? images[0]?.url ?? null,
+                unitPrice: effectivePrice,
+              }}
+            />
+          )}
+
+          <ProductDetailActions
+            productId={productId}
+            productSlug={productSlug}
+            productName={productName}
             locale={locale}
-            disabled={
-              !canAddToCart ||
-              (variants.length > 0 && (selectedVariant?.stockQty ?? 0) <= 0)
-            }
-            item={{
-              productId,
-              variantId: selectedVariant?.id ?? null,
-              slug: productSlug,
-              category: productCategory,
-              name: productName,
-              imageUrl: activeImage?.url ?? images[0]?.url ?? null,
-              unitPrice: effectivePrice,
-            }}
+            variantId={selectedVariant?.id ?? null}
+            contact={contact}
           />
-        )}
+        </div>
 
-        <ProductDetailActions
-          productId={productId}
-          productSlug={productSlug}
-          productName={productName}
-          locale={locale}
-          variantId={selectedVariant?.id ?? null}
-          contact={contact}
-        />
-
-        {footer}
+        <div className="sf-detail-footer">{footer}</div>
       </div>
     </>
   );

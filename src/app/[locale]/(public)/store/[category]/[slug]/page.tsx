@@ -14,6 +14,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { pageMetadata } from "@/lib/seo";
 import { getStoreCatalog, getStorePageData } from "@/lib/store-data";
+import { getCategoryKeyFromSlug } from "@/lib/catalog/routes";
 import { withLocale, isLocale } from "@/lib/i18n";
 import { ProductViewTracker } from "@/components/analytics/ProductViewTracker";
 import { ProductDetailInteractive } from "@/components/products/ProductDetailInteractive";
@@ -26,10 +27,6 @@ interface ProductDetailPageProps {
   params: Promise<{ locale: string; category: string; slug: string }>;
 }
 
-function normalizeCategory(category: string) {
-  return category === "network-gear" ? "networkGear" : category;
-}
-
 export async function generateMetadata({
   params,
 }: ProductDetailPageProps): Promise<Metadata> {
@@ -38,7 +35,7 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "metadata.products" });
   const catalog = await getStoreCatalog(locale);
   const product = catalog.products.find(
-    (p) => p.slug === slug && p.category === normalizeCategory(category),
+    (p) => p.slug === slug && p.category === getCategoryKeyFromSlug(category),
   );
 
   if (!product) {
@@ -129,7 +126,7 @@ export default async function ProductDetailPage({
 }: ProductDetailPageProps) {
   const { locale: rawLocale, category: rawCategory, slug } = await params;
   const locale = isLocale(rawLocale) ? rawLocale : "he";
-  const category = normalizeCategory(rawCategory);
+  const category = getCategoryKeyFromSlug(rawCategory);
   const copy = storeCopy[locale] as StoreCopy;
   const Arrow = locale === "he" ? ArrowRight : ArrowLeft;
   const [{ catalog }, contactConfig] = await Promise.all([
@@ -326,17 +323,18 @@ export default async function ProductDetailPage({
           </div>
         </section>
 
-        {/* Full Description */}
-        <section className="sf-product-description-section">
-          <div className="miro-container">
-            <h2>{locale === "he" ? "תיאור מלא" : "Full description"}</h2>
-            <div className="sf-description-content" dir="auto">
-              {product.description.split("\n\n").map((paragraph, index) => (
-                <p key={index}>{paragraph}</p>
-              ))}
+        {product.description.trim() ? (
+          <section className="sf-product-description-section">
+            <div className="miro-container">
+              <h2>{locale === "he" ? "תיאור מלא" : "Full description"}</h2>
+              <div className="sf-description-content" dir="auto">
+                {product.description.split("\n\n").map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        ) : null}
 
         {/* Related products could go here */}
       </div>

@@ -1,5 +1,9 @@
 "use client";
 import { useAnimationFeature } from "@/components/motion/animation-provider";
+import {
+  ProductIdentifiers,
+  getProductIdentifierVariant,
+} from "./product-identifiers";
 
 import {
   useCallback,
@@ -90,6 +94,7 @@ function RailProduct({
   const previewButtonRef = useRef<HTMLButtonElement | null>(null);
   const copy = storeCopy[locale];
   const primaryImage = product.images[0] ?? null;
+  const identifierVariant = getProductIdentifierVariant(product.variants);
   const effectivePrice = product.priceIls;
   const compareAtPrice = product.compareAtPrice ?? null;
   const discountPercent = getDiscountPercent(compareAtPrice, effectivePrice);
@@ -214,6 +219,12 @@ function RailProduct({
             <h3 className="sf-moving-rail-title" dir="auto">
               <OverflowLabel>{product.name}</OverflowLabel>
             </h3>
+            <ProductIdentifiers
+              sku={identifierVariant?.sku}
+              barcode={identifierVariant?.barcode}
+              locale={locale}
+              compact
+            />
           </div>
           <div className="sf-moving-rail-price" data-product-section="pricing">
             <div className="sf-price-display__amount">

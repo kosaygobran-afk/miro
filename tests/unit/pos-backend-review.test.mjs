@@ -83,6 +83,7 @@ async function catalogHarness({
   rate = "ok",
   availabilityError = null,
   matchingProducts = [{ product_id: productId }],
+  navigationCategories = [],
 } = {}) {
   const queries = [];
   const product = {
@@ -139,7 +140,15 @@ async function catalogHarness({
     from(table) {
       const query = { table, operations: [] };
       queries.push(query);
-      for (const method of ["select", "eq", "order", "or", "limit", "range"])
+      for (const method of [
+        "select",
+        "eq",
+        "is",
+        "order",
+        "or",
+        "limit",
+        "range",
+      ])
         query[method] = (...args) => {
           query.operations.push({ method, args });
           return query;
@@ -151,7 +160,15 @@ async function catalogHarness({
               ? [product]
               : table === "product_variants"
                 ? matchingProducts
-                : [],
+                : table === "categories"
+                  ? navigationCategories.filter((category) =>
+                      query.operations.every(
+                        ({ method, args }) =>
+                          !["eq", "is"].includes(method) ||
+                          category[args[0]] === args[1],
+                      ),
+                    )
+                  : [],
           count: table === "products" ? 1 : null,
           error: null,
         }).then(resolve, reject);
@@ -200,6 +217,45 @@ test("POS catalog requires cashier access and fails closed on unavailable rate-l
     assert.equal(response.status, expected);
     assert.equal(route.queries.length, 0);
   }
+});
+
+test("POS category navigation excludes children and inactive roots while products retain their explicit root relationship", async () => {
+  const route = await catalogHarness({
+    navigationCategories: [
+      { id: productId, parent_id: null, is_active: true },
+      { id: variantId, parent_id: productId, is_active: true },
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        parent_id: null,
+        is_active: false,
+      },
+    ],
+  });
+  const response = await route.GET(
+    new Request(
+      `https://miro.example/api/management/pos/catalog?category=${productId}`,
+    ),
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    Array.from(response.body.categories, (category) => category.id),
+    [productId],
+  );
+  assert.equal(response.body.products[0].category.id, productId);
+  const productQuery = route.queries.find(
+    (query) => query.table === "products",
+  );
+  const select = productQuery.operations.find(
+    (operation) => operation.method === "select",
+  ).args[0];
+  assert.match(select, /categories!products_category_id_fkey!inner\s*\(/);
+  assert.equal(
+    productQuery.operations.some(
+      ({ method, args }) =>
+        method === "eq" && args[0] === "categories.id" && args[1] === productId,
+    ),
+    true,
+  );
 });
 
 test("POS catalog quotes reserved filter characters and uses canonical POS prices/held stock", async () => {

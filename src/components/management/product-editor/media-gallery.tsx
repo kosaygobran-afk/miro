@@ -6,6 +6,7 @@ import {
   ArrowDown,
   ArrowUp,
   CheckCircle2,
+  Eraser,
   ImageIcon,
   Link2,
   Loader2,
@@ -127,6 +128,7 @@ export function MediaGallery({
   const [savedNotice, setSavedNotice] = useState(false);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ProductImage | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [altEdit, setAltEdit] = useState<ProductImage | null>(null);
@@ -454,6 +456,58 @@ export function MediaGallery({
     }
   }
 
+  async function removeImageBackground(image: ProductImage) {
+    if (removingId || uploading || busyId) return;
+    setRemovingId(image.id);
+    setNotice("");
+    setProcessingNotice("");
+    setSavedNotice(false);
+    try {
+      const response = await fetch(
+        "/api/management/product-images/remove-background",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: image.id }),
+        },
+      );
+      const body = (await response.json()) as {
+        image?: ProductImage;
+        background_removal?: BackgroundRemovalInfo;
+        code?: string;
+      };
+      if (!response.ok) {
+        const message =
+          body.code === "background_removal_unsupported"
+            ? mediaCopy.removalUnsupported[locale]
+            : body.code === "background_removal_unavailable"
+              ? mediaCopy.removalUnavailable[locale]
+              : response.status === 409
+                ? mediaCopy.removalConflict[locale]
+                : mediaCopy.removalFailed[locale];
+        setNotice(message);
+        return;
+      }
+      if (
+        !body.image?.id ||
+        !["processed", "transparent"].includes(
+          body.background_removal?.status ?? "",
+        )
+      ) {
+        throw new Error("Unconfirmed image processing");
+      }
+      await loadImages();
+      setProcessingNotice(
+        getStatusLabel(body.background_removal!.status, locale),
+      );
+      announceSaved();
+    } catch {
+      setNotice(mediaCopy.uploadUncertain[locale]);
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
   async function moveImage(index: number, direction: -1 | 1) {
     if (images === null) return;
     const target = index + direction;
@@ -627,7 +681,7 @@ export function MediaGallery({
           type="file"
           accept="image/png,image/jpeg,image/webp,image/avif,image/svg+xml"
           multiple
-          disabled={uploading}
+          disabled={uploading || removingId !== null}
           className={styles.fileInput}
           onChange={(e) => void handleFilesSelected(e.target.files)}
         />
@@ -642,7 +696,7 @@ export function MediaGallery({
           type="button"
           className="miro-button miro-button-secondary inline-flex items-center gap-2 cursor-pointer"
           onClick={openUrlUpload}
-          disabled={uploading}
+          disabled={uploading || removingId !== null}
         >
           <Link2 className="h-4 w-4" aria-hidden="true" />
           {mediaCopy.addByUrlLabel[locale]}
@@ -655,11 +709,12 @@ export function MediaGallery({
         <input
           type="checkbox"
           checked={removeBackground}
-          disabled={uploading || urlUpload.loading}
+          disabled={uploading || urlUpload.loading || removingId !== null}
           onChange={(event) => setRemoveBackground(event.target.checked)}
         />
         {mediaCopy.removeBackgroundOption[locale]}
       </label>
+      <p className={styles.statusNote}>{mediaCopy.removalScope[locale]}</p>
 
       {uploads.length > 0 ? (
         <ul className={styles.uploadList}>
@@ -752,6 +807,27 @@ export function MediaGallery({
                   />
                 </div>
                 <div className={styles.tileBody}>
+                  <button
+                    type="button"
+                    className={`miro-button miro-button-secondary ${styles.removeBackgroundButton}`}
+                    onClick={() => void removeImageBackground(image)}
+                    disabled={
+                      removingId !== null || uploading || busyId !== null
+                    }
+                    aria-busy={removingId === image.id || undefined}
+                  >
+                    {removingId === image.id ? (
+                      <Loader2
+                        className="h-4 w-4 animate-spin"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      <Eraser className="h-4 w-4" aria-hidden="true" />
+                    )}
+                    {removingId === image.id
+                      ? mediaCopy.removingBackground[locale]
+                      : mediaCopy.removeExistingBackground[locale]}
+                  </button>
                   <p
                     className={`${styles.statusNote} truncate`}
                     dir="auto"
@@ -764,7 +840,9 @@ export function MediaGallery({
                       type="button"
                       className={styles.iconButton}
                       onClick={() => void moveImage(index, -1)}
-                      disabled={index === 0 || busyId !== null}
+                      disabled={
+                        index === 0 || busyId !== null || removingId !== null
+                      }
                       aria-label={mediaCopy.moveUp[locale]}
                     >
                       <ArrowUp className="h-4 w-4" aria-hidden="true" />
@@ -773,7 +851,11 @@ export function MediaGallery({
                       type="button"
                       className={styles.iconButton}
                       onClick={() => void moveImage(index, 1)}
-                      disabled={index === images.length - 1 || busyId !== null}
+                      disabled={
+                        index === images.length - 1 ||
+                        busyId !== null ||
+                        removingId !== null
+                      }
                       aria-label={mediaCopy.moveDown[locale]}
                     >
                       <ArrowDown className="h-4 w-4" aria-hidden="true" />
@@ -788,7 +870,9 @@ export function MediaGallery({
                           mediaCopy.imageOperationFailed[locale],
                         )
                       }
-                      disabled={isPrimary || busyId !== null}
+                      disabled={
+                        isPrimary || busyId !== null || removingId !== null
+                      }
                       aria-label={mediaCopy.setPrimary[locale]}
                       title={mediaCopy.setPrimary[locale]}
                     >
@@ -798,6 +882,7 @@ export function MediaGallery({
                       type="button"
                       className={styles.iconButton}
                       onClick={() => openAltEdit(image)}
+                      disabled={removingId !== null}
                       aria-label={mediaCopy.editAlt[locale]}
                       title={mediaCopy.editAlt[locale]}
                     >
@@ -807,6 +892,7 @@ export function MediaGallery({
                       type="button"
                       className={`${styles.iconButton} ${styles.iconButtonDanger}`}
                       onClick={() => setPendingDelete(image)}
+                      disabled={removingId !== null}
                       aria-label={mediaCopy.deleteImage[locale]}
                       title={mediaCopy.deleteImage[locale]}
                     >

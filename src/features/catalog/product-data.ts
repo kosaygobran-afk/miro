@@ -1,6 +1,7 @@
 export interface ProductVariant {
   id: string;
   sku: string;
+  barcode?: string | null;
   colorHe: string;
   colorEn: string;
   colorHex: string;
@@ -46,6 +47,9 @@ export interface Product {
   badge?: string;
   icon?: string;
   categoryLabel?: string;
+  subcategoryId?: string;
+  subcategorySlug?: string;
+  subcategoryLabel?: string;
   isFeatured?: boolean;
   /** Explicit placement in the managed storefront rail. */
   railSortOrder?: number | null;

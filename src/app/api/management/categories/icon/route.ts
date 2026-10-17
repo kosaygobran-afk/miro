@@ -21,7 +21,7 @@ import {
 const uploadCategoryIconSchema = z.object({
   category_id: z.string().uuid(),
   // Accept either an external URL or a file upload (handled via multipart/form-data)
-  image_url: z.string().url().optional(),
+  image_url: z.string().url().nullable().optional(),
 });
 
 async function revalidateStorefront() {

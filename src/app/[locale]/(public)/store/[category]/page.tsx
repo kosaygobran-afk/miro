@@ -10,14 +10,16 @@ import { storeCopy } from "@/features/catalog/store-copy";
 import type { Metadata } from "next";
 import { pageMetadata } from "@/lib/seo";
 import { getStoreCatalog, getStorePageData } from "@/lib/store-data";
+import { getCategoryKeyFromSlug } from "@/lib/catalog/routes";
 import { CategoryViewTracker } from "@/components/analytics/CategoryViewTracker";
 
 interface CategoryPageProps {
   params: Promise<{ locale: string; category: string }>;
-  searchParams: Promise<{ q?: string | string[] }>;
+  searchParams: Promise<{
+    q?: string | string[];
+    subcategory?: string | string[];
+  }>;
 }
-const normalizeCategory = (category: string) =>
-  category === "network-gear" ? "networkGear" : category;
 
 export async function generateMetadata({
   params,
@@ -27,8 +29,9 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "metadata.products" });
   const catalog = await getStoreCatalog(locale);
   const label =
-    catalog.categories.find((item) => item.key === normalizeCategory(category))
-      ?.label ?? category;
+    catalog.categories.find(
+      (item) => item.key === getCategoryKeyFromSlug(category),
+    )?.label ?? category;
   return pageMetadata({
     locale,
     path: `store/${category}`,
@@ -47,10 +50,19 @@ export default async function CategoryPage({
   const [{ locale: rawLocale, category: rawCategory }, query] =
     await Promise.all([params, searchParams]);
   const locale = rawLocale === "en" ? "en" : "he";
-  const category = normalizeCategory(rawCategory);
+  const category = getCategoryKeyFromSlug(rawCategory);
   const { viewer, catalog } = await getStorePageData(locale);
   const selected = catalog.categories.find((item) => item.key === category);
   if (!selected) notFound();
+  const subcategories = (catalog.subcategories ?? []).filter(
+    (item) => item.parentId === selected.id,
+  );
+  const subcategoryKey =
+    typeof query.subcategory === "string" ? query.subcategory : undefined;
+  const selectedSubcategory = subcategories.find(
+    (item) => item.key === subcategoryKey,
+  );
+  if (query.subcategory !== undefined && !selectedSubcategory) notFound();
   const products = catalog.products.filter(
     (product) => product.category === category,
   );
@@ -80,22 +92,35 @@ export default async function CategoryPage({
         </div>
       </section>
       <ProductSubNav
+        key={`${category}:${subcategoryKey ?? "all"}`}
         categories={catalog.categories.map((item) => ({
           ...item,
           href: `/${locale}${item.href}`,
         }))}
         locale={locale}
         ariaLabel={copy.category}
+        collapsible
       />
       <section className="sf-collection-section" id="store-items">
         <div className="miro-container">
+          <h2 className="sr-only">
+            {selectedSubcategory?.label ?? selected.label}
+          </h2>
           <CategoryClient
-            key={`${category}-${initialQuery}`}
+            key={`${category}-${subcategoryKey ?? "all"}-${initialQuery}`}
             products={products}
             category={selected}
             locale={locale}
             initialQuery={initialQuery}
             savedProductIds={viewer.savedProductIds}
+            subcategoryNavigation={{
+              items: subcategories.map((item) => ({
+                ...item,
+                href: `/${locale}${item.href}`,
+              })),
+              activeId: selectedSubcategory?.id,
+              rootHref: `/${locale}${selected.href}`,
+            }}
           />
           <p className="sf-preview-note">
             <span aria-hidden="true" />

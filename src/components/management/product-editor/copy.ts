@@ -118,8 +118,14 @@ export const roleLabels: Record<PriceRole, LocalizedText> = {
 };
 
 export const fieldLabels = {
-  category: { he: "קטגוריה", en: "Category" },
-  selectCategory: { he: "בחר קטגוריה", en: "Select category" },
+  category: { he: "קטגוריה ראשית", en: "Main category" },
+  selectCategory: { he: "בחרו קטגוריה ראשית", en: "Select main category" },
+  subcategory: { he: "תת־קטגוריה (רשות)", en: "Subcategory (optional)" },
+  noSubcategory: { he: "ללא תת־קטגוריה", en: "No subcategory" },
+  categoryAssignmentHint: {
+    he: "קטגוריה ראשית היא חובה; תת־קטגוריה היא רשות. ניתן לשנות את השיוך בכל עת.",
+    en: "A main category is required; a subcategory is optional. You can change this assignment at any time.",
+  },
   slug: { he: "מזהה (Slug)", en: "Slug" },
   slugDescription: {
     he: "אותיות קטנות, ספרות ומקפים בלבד. משמש בכתובת החנות.",
@@ -204,8 +210,16 @@ export const validationCopy = {
     en: "Compare-at price must be greater than the sale price",
   },
   categoryRequiredForPublish: {
-    he: "לא ניתן לפרסם: יש לבחור קטגוריה",
-    en: "Cannot publish: choose a category",
+    he: "לא ניתן לפרסם: יש לבחור קטגוריה ראשית",
+    en: "Cannot publish: choose a main category",
+  },
+  categoryRequired: {
+    he: "יש לבחור קטגוריה ראשית פעילה",
+    en: "Choose an active main category",
+  },
+  subcategoryInvalid: {
+    he: "בחרו תת־קטגוריה פעילה השייכת לקטגוריה הראשית, או השאירו ללא תת־קטגוריה.",
+    en: "Choose an active subcategory belonging to the main category, or leave it empty.",
   },
   publishFailed: {
     he: "לא ניתן לפרסם",
@@ -214,6 +228,44 @@ export const validationCopy = {
   invalidNumber: {
     he: "ערך מספרי לא תקין",
     en: "Invalid numeric value",
+  },
+} as const satisfies Record<string, LocalizedText>;
+
+export const categoryAssignmentCopy = {
+  create: { he: "יצירת תת־קטגוריה", en: "Create subcategory" },
+  title: { he: "תת־קטגוריה חדשה", en: "New subcategory" },
+  description: {
+    he: "תת־הקטגוריה תיווצר תחת הקטגוריה הראשית שנבחרה. לאחר היצירה יש לשמור את המוצר כדי לשייך אותו.",
+    en: "The subcategory will be created under the selected main category. Save the product afterward to apply its assignment.",
+  },
+  chooseMain: {
+    he: "בחרו תחילה קטגוריה ראשית",
+    en: "Choose a main category first",
+  },
+  created: {
+    he: "תת־הקטגוריה נוצרה ונבחרה. שמרו את המוצר כדי לשייך אותו אליה.",
+    en: "Subcategory created and selected. Save the product to apply its assignment.",
+  },
+  createdUnderPreviousMain: {
+    he: "תת־הקטגוריה נוצרה תחת הקטגוריה הראשית המקורית. בחרו אותה כדי לשייך את המוצר.",
+    en: "The subcategory was created under the original main category. Select that category to assign the product.",
+  },
+  failed: {
+    he: "יצירת תת־הקטגוריה נכשלה. פרטי הטופס נשמרו.",
+    en: "Subcategory creation failed. Your draft is preserved.",
+  },
+  uncertain: {
+    he: "לא ניתן לאשר את השמירה. בדקו את רשימת הקטגוריות לפני יצירה נוספת.",
+    en: "The save could not be confirmed. Check the category list before creating again.",
+  },
+  checkSaved: { he: "בדיקת קטגוריות שמורות", en: "Check saved categories" },
+  checkFailed: {
+    he: "לא ניתן לטעון את הקטגוריות. פרטי הטופס נשמרו.",
+    en: "Could not load categories. Your draft is preserved.",
+  },
+  notFound: {
+    he: "לא נמצאה תת־קטגוריה תואמת ברשימה המעודכנת. ניתן לנסות ליצור שוב.",
+    en: "No matching subcategory was found in the refreshed list. You can try creating again.",
   },
 } as const satisfies Record<string, LocalizedText>;
 
@@ -281,8 +333,30 @@ export const mediaCopy = {
   },
   processingQueued: { he: "ממתין להעלאה", en: "Queued" },
   removeBackgroundOption: {
-    he: "הסרת רקע אוטומטית כשזמינה (ניתן לבטל כדי לשמור מקור)",
-    en: "Remove background when available (turn off to keep the original)",
+    he: "הסרת רקע בהעלאת תמונות חדשות (ניתן לבטל כדי לשמור מקור)",
+    en: "Remove background on new uploads (turn off to keep the original)",
+  },
+  removalScope: {
+    he: "לתמונה קיימת, לחצו על הסרת רקע מתחת לתמונה. השינוי נשמר מיד; אין צורך בשמירת המוצר.",
+    en: "For a saved image, use Remove background below it. Images save immediately; product Save is not needed.",
+  },
+  removeExistingBackground: { he: "הסרת רקע", en: "Remove background" },
+  removingBackground: { he: "מסיר רקע…", en: "Removing background…" },
+  removalUnavailable: {
+    he: "שירות הסרת הרקע אינו זמין כרגע. התמונה הקיימת לא השתנתה.",
+    en: "Background removal is unavailable. The saved image has not changed.",
+  },
+  removalUnsupported: {
+    he: "הסרת רקע אינה נתמכת בקובצי SVG. העלו תמונת PNG, JPEG, WebP או AVIF.",
+    en: "SVG does not support background removal. Use a PNG, JPEG, WebP or AVIF image.",
+  },
+  removalConflict: {
+    he: "התמונה השתנתה במהלך העיבוד. רעננו את הגלריה לפני ניסיון נוסף.",
+    en: "The image changed while processing. Refresh the gallery before trying again.",
+  },
+  removalFailed: {
+    he: "לא ניתן להסיר את הרקע. רעננו את הגלריה כדי לבדוק את התמונה השמורה.",
+    en: "Background removal could not be completed. Refresh the gallery to check the saved image.",
   },
   processingUploading: { he: "מעלה תמונה…", en: "Uploading image…" },
   processingSaving: { he: "מעבד ושומר…", en: "Processing and saving…" },

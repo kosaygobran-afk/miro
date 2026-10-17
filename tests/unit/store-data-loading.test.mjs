@@ -19,6 +19,16 @@ const source = await readFile(
   "utf8",
 );
 const compiled = compile(source);
+const routes = {};
+runInNewContext(
+  compile(
+    await readFile(
+      new URL("../../src/lib/catalog/routes.ts", import.meta.url),
+      "utf8",
+    ),
+  ),
+  { exports: routes },
+);
 const cacheSource = compile(
   await readFile(
     new URL("../../src/lib/public-presentation-cache.ts", import.meta.url),
@@ -97,10 +107,16 @@ function harness() {
       const filters = {};
       let result;
       const query = {
-        select() {
+        select(fields) {
+          request.projections ??= [];
+          request.projections.push({ table, fields, publicRead, filters });
           return query;
         },
         eq(key, value) {
+          filters[key] = value;
+          return query;
+        },
+        is(key, value) {
           filters[key] = value;
           return query;
         },
@@ -140,6 +156,8 @@ function harness() {
                 {
                   id: "variant",
                   product_id: "product",
+                  sku: "0005586793",
+                  barcode: "0001234567890",
                   stock_qty: request.stock ?? 2,
                   is_default: true,
                 },
@@ -154,7 +172,14 @@ function harness() {
               assert.equal(filters.role, request.role);
             if (publicRead && table === "categories")
               return {
-                data: request.navigationRows ?? rows.categories,
+                data: (request.navigationRows ?? rows.categories).filter(
+                  (row) =>
+                    Object.entries(filters).every(([key, value]) =>
+                      value === null
+                        ? row[key] == null
+                        : row[key] === undefined || row[key] === value,
+                    ),
+                ),
                 error: request.navigationError ?? null,
               };
             return { data: rows[table] ?? [], error: null };
@@ -171,6 +196,7 @@ function harness() {
     require(name) {
       if (name === "react") return react;
       if (name === "zod") return { z };
+      if (name === "@/lib/catalog/routes") return routes;
       if (name === "@/lib/public-presentation-cache") return presentationCache;
       if (name === "@/lib/supabase/public-server")
         return {
@@ -270,6 +296,15 @@ test("viewer and live catalog stay isolated and fresh between requests", async (
   assert.ok(!anonymous.events.includes("session:product_prices"));
 });
 
+test("public catalog retains real SKU/barcode strings, including leading zeros", async () => {
+  const h = harness();
+  const catalog = await h.run(visitor(), () =>
+    h.exports.getStoreCatalog("en", null, true),
+  );
+  assert.equal(catalog.products[0].variants[0].sku, "0005586793");
+  assert.equal(catalog.products[0].variants[0].barcode, "0001234567890");
+});
+
 test("global navigation uses anonymous reads and deduplicates within a request", async () => {
   const h = harness();
   const request = visitor();
@@ -328,6 +363,52 @@ test("global navigation never persists outage or invalid-payload fallbacks", asy
   assert.equal(h.entries.size, 1);
 });
 
+test("global navigation filters internal categories at the anonymous query boundary", async () => {
+  const h = harness();
+  const request = visitor({
+    navigationRows: [
+      {
+        slug: "tools",
+        name_he: "אביזרים",
+        name_en: "Accessories",
+        parent_id: null,
+        is_active: true,
+      },
+      {
+        slug: "owner-child",
+        name_he: "תת־קטגוריה",
+        name_en: "Child category",
+        parent_id: "root",
+        is_active: true,
+      },
+      {
+        slug: "inactive-root",
+        name_he: "לא פעילה",
+        name_en: "Inactive root",
+        parent_id: null,
+        is_active: false,
+      },
+    ],
+  });
+  const navigation = await h.run(request, () =>
+    h.exports.getStoreNavigationCategories("en"),
+  );
+  assert.deepEqual(
+    Array.from(navigation, ({ key, label }) => ({ key, label })),
+    [{ key: "accessories", label: "Accessories" }],
+  );
+  const projection = request.projections.find(
+    ({ table, publicRead }) => table === "categories" && publicRead,
+  );
+  assert.equal(projection.filters.parent_id, null);
+  assert.equal(projection.filters.is_active, true);
+  assert.equal(
+    projection.fields,
+    "slug, name_he, name_en",
+    "Navigation caches only approved public bilingual fields",
+  );
+});
+
 test("an early catalog preload failure still settles through the existing fallback", async () => {
   const h = harness();
   const auth = deferred();
@@ -357,6 +438,16 @@ const categoryRoute = compile(
   ),
 );
 const categoryId = "11111111-1111-4111-8111-111111111111";
+const categoryErrors = {};
+runInNewContext(
+  compile(
+    await readFile(
+      new URL("../../src/lib/catalog/category-errors.ts", import.meta.url),
+      "utf8",
+    ),
+  ),
+  { exports: categoryErrors },
+);
 
 function categoryApi({ authorized = true, fail = false } = {}) {
   const invalidations = [];
@@ -401,6 +492,7 @@ function categoryApi({ authorized = true, fail = false } = {}) {
         };
       if (name === "@/lib/public-presentation-cache")
         return { PUBLIC_STORE_NAVIGATION_TAG: "public-store-navigation" };
+      if (name === "@/lib/catalog/category-errors") return categoryErrors;
       assert.equal(name, "@/app/api/management/_shared");
       return {
         withManagementAuth: async () =>

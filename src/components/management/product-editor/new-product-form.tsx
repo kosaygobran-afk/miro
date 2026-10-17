@@ -13,6 +13,7 @@ import {
 } from "../ui";
 import { editorCopy, fieldLabels, validationCopy } from "./copy";
 import type { Category, Locale } from "./types";
+import { CategoryAssignmentFields } from "./category-assignment-fields";
 import styles from "./product-editor.module.css";
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
@@ -36,10 +37,13 @@ export function NewProductForm({ locale }: { locale: Locale }) {
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [categoryId, setCategoryId] = useState("");
+  const [subcategoryId, setSubcategoryId] = useState("");
   const [errors, setErrors] = useState<{
     name_he?: string;
     name_en?: string;
     slug?: string;
+    category_id?: string;
+    subcategory_id?: string;
   }>({});
   const [submitError, setSubmitError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -74,6 +78,27 @@ export function NewProductForm({ locale }: { locale: Locale }) {
     event.preventDefault();
     if (saving) return;
     const nextErrors: typeof errors = {};
+    if (
+      !categories?.some(
+        (category) =>
+          category.id === categoryId &&
+          !category.parent_id &&
+          category.is_active,
+      )
+    ) {
+      nextErrors.category_id = validationCopy.categoryRequired[locale];
+    }
+    if (
+      subcategoryId &&
+      !categories?.some(
+        (category) =>
+          category.id === subcategoryId &&
+          category.parent_id === categoryId &&
+          category.is_active,
+      )
+    ) {
+      nextErrors.subcategory_id = validationCopy.subcategoryInvalid[locale];
+    }
     if (!nameHe.trim())
       nextErrors.name_he = validationCopy.nameHeRequired[locale];
     if (!nameEn.trim())
@@ -99,7 +124,8 @@ export function NewProductForm({ locale }: { locale: Locale }) {
           name_he: nameHe.trim(),
           name_en: nameEn.trim(),
           slug: finalSlug,
-          category_id: categoryId || null,
+          category_id: categoryId,
+          subcategory_id: subcategoryId || null,
           status: "draft",
         }),
       });
@@ -245,29 +271,30 @@ export function NewProductForm({ locale }: { locale: Locale }) {
                 />
               )}
             </FormField>
-            <FormField
-              id={`${formId}-category`}
-              label={fieldLabels.category[locale]}
-            >
-              {(control) => (
-                <select
-                  {...control}
-                  className="miro-input"
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  disabled={saving}
-                >
-                  <option value="">{fieldLabels.selectCategory[locale]}</option>
-                  {categories
-                    .filter((category) => category.is_active)
-                    .map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {he ? category.name_he : category.name_en}
-                      </option>
-                    ))}
-                </select>
-              )}
-            </FormField>
+            <CategoryAssignmentFields
+              locale={locale}
+              idPrefix={formId}
+              categories={categories}
+              categoryId={categoryId}
+              subcategoryId={subcategoryId}
+              onCategoryChange={(id) => {
+                setCategoryId(id);
+                setSubcategoryId("");
+                setErrors((prev) => ({
+                  ...prev,
+                  category_id: undefined,
+                  subcategory_id: undefined,
+                }));
+              }}
+              onSubcategoryChange={(id) => {
+                setSubcategoryId(id);
+                setErrors((prev) => ({ ...prev, subcategory_id: undefined }));
+              }}
+              onCategoriesChange={setCategories}
+              categoryError={errors.category_id}
+              subcategoryError={errors.subcategory_id}
+              disabled={saving}
+            />
           </div>
         </FormSection>
 

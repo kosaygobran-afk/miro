@@ -19,6 +19,7 @@ import type {
   ResolvedOutOfStockPolicy,
 } from "@/features/catalog/inventory-types";
 import { resolvePrice, type PublicPromotion } from "@/lib/catalog/pricing";
+import { getCategoryKeyFromSlug } from "@/lib/catalog/routes";
 
 export type StoreCategory = {
   id: string;
@@ -26,6 +27,7 @@ export type StoreCategory = {
   label: string;
   href: string;
   imageUrl: string | null;
+  parentId?: string | null;
 };
 
 const navigationCategoriesSchema = z.array(
@@ -45,6 +47,7 @@ const readStoreNavigationCategories = cachePublicPresentation(
       .from("categories")
       .select("slug, name_he, name_en")
       .eq("is_active", true)
+      .is("parent_id", null)
       .order("sort_order", { ascending: true });
     if (error) throw error;
     return navigationCategoriesSchema.parse(data);
@@ -70,6 +73,7 @@ export const getStoreNavigationCategories = cache(
 
 export type StoreCatalog = {
   categories: StoreCategory[];
+  subcategories?: StoreCategory[];
   products: Product[];
 };
 
@@ -189,27 +193,6 @@ function mapCategoryLabel(
   return locale === "he" ? rawCategory.name_he : rawCategory.name_en;
 }
 
-function getCategoryKeyFromSlug(slug: string) {
-  const slugMap: Record<string, string> = {
-    cameras: "cameras",
-    "security-cameras": "cameras",
-    servers: "servers",
-    nvr: "servers",
-    routers: "routers",
-    network: "routers",
-    cables: "cables",
-    accessories: "accessories",
-    tools: "accessories",
-    "network-gear": "networkGear",
-    networkgear: "networkGear",
-    "alarm-systems": "alarms",
-    "intercom-access": "intercom",
-    "intercom-and-access": "intercom",
-  };
-
-  return slugMap[slug] ?? slug;
-}
-
 function getProductIcon(categoryKey: string) {
   const iconMap: Record<string, string> = {
     cameras: "camera",
@@ -244,7 +227,7 @@ const getCatalogRows = cache(async (anonymous: boolean) => {
   ] = await Promise.all([
     supabase
       .from("categories")
-      .select("id, slug, name_he, name_en, sort_order")
+      .select("id, slug, name_he, name_en, sort_order, parent_id")
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),
     // Storefront merchandising is deployed independently of the core
@@ -254,7 +237,7 @@ const getCatalogRows = cache(async (anonymous: boolean) => {
     supabase
       .from("products")
       .select(
-        "id, slug, category_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order, tags",
+        "id, slug, category_id, subcategory_id, name_he, name_en, short_description_he, short_description_en, description_he, description_en, price, image_url, is_active, is_featured, brand, model_number, specifications, warranty_he, warranty_en, status, out_of_stock_policy, expected_restock_date, tracking_mode, seo_title_he, seo_title_en, seo_description_he, seo_description_en, sort_order, tags",
       )
       .eq("status", "active")
       .order("is_featured", { ascending: false })
@@ -368,6 +351,7 @@ export async function getStoreCatalog(
       list.push({
         id: variant.id,
         sku: variant.sku,
+        barcode: variant.barcode ?? null,
         colorHe: variant.color_he ?? "",
         colorEn: variant.color_en ?? "",
         colorHex: variant.color_hex ?? "#cccccc",
@@ -467,19 +451,41 @@ export async function getStoreCatalog(
         (category) => [category.id, category.icon_image_url],
       ),
     );
-    const categories = (categoriesResult.data ?? []).map((category) => {
-      const key = getCategoryKeyFromSlug(category.slug as string);
-      return {
+    const categories: StoreCategory[] = (categoriesResult.data ?? [])
+      .filter((category) => !category.parent_id)
+      .map((category) => {
+        const key = getCategoryKeyFromSlug(category.slug as string);
+        return {
+          id: category.id as string,
+          key,
+          label: mapCategoryLabel(
+            locale,
+            category as { slug: string; name_he: string; name_en: string },
+          ),
+          href: `/store/${key}`,
+          imageUrl: categoryIconById.get(category.id) ?? null,
+          parentId: null,
+        };
+      });
+
+    const rootsById = new Map(
+      categories.map((category) => [category.id, category]),
+    );
+    const subcategories: StoreCategory[] = (categoriesResult.data ?? [])
+      .filter(
+        (category) => category.parent_id && rootsById.has(category.parent_id),
+      )
+      .map((category) => ({
         id: category.id as string,
-        key,
-        label: mapCategoryLabel(
-          locale,
-          category as { slug: string; name_he: string; name_en: string },
-        ),
-        href: `/store/${key}`,
+        key: category.slug as string,
+        label: mapCategoryLabel(locale, category),
+        href: `${rootsById.get(category.parent_id)!.href}?subcategory=${encodeURIComponent(category.slug)}`,
         imageUrl: categoryIconById.get(category.id) ?? null,
-      };
-    });
+        parentId: category.parent_id as string,
+      }));
+    const childrenById = new Map(
+      subcategories.map((category) => [category.id, category]),
+    );
 
     const categoryMap = new Map(
       (categoriesResult.data ?? []).map((c) => [c.id, c.slug]),
@@ -500,6 +506,14 @@ export async function getStoreCatalog(
 
     const products = (productsResult.data ?? [])
       .filter((product) => {
+        if (!rootsById.has(product.category_id)) return false;
+        if (
+          product.subcategory_id &&
+          childrenById.get(product.subcategory_id)?.parentId !==
+            product.category_id
+        ) {
+          return false;
+        }
         const productVariants = variantsByProduct.get(product.id) ?? [];
         const stockQty = productVariants.reduce(
           (sum, v) => sum + v.stockQty,
@@ -616,6 +630,9 @@ export async function getStoreCatalog(
           category: categoryKey,
           categorySlug: categoryKey,
           categoryLabel: categoryLabelByKey.get(categoryKey),
+          subcategoryId: product.subcategory_id ?? undefined,
+          subcategorySlug: childrenById.get(product.subcategory_id)?.key,
+          subcategoryLabel: childrenById.get(product.subcategory_id)?.label,
           badge: product.is_featured
             ? locale === "he"
               ? "מהקולקציה"
@@ -667,7 +684,7 @@ export async function getStoreCatalog(
         };
       });
 
-    return { categories, products };
+    return { categories, subcategories, products };
   } catch (error) {
     console.error("Supabase catalog read failed.", error);
     return { categories: [], products: [] };
