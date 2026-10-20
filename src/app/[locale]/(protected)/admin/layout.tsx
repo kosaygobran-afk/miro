@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { getDirection, isLocale, type Locale } from "@/lib/i18n";
 import { ManagementShell } from "@/components/management/shell/management-shell";
 import "@/styles/management.css";
+import "@/styles/workspace.css";
 import "@/styles/console.css";
 import "@/styles/business-console.css";
 import "@/styles/console-evolution.css";

@@ -85,22 +85,33 @@ export function ProductSubNav({
           <p>{locale === "he" ? "קטגוריות ראשיות" : "Main categories"}</p>
           <button
             type="button"
+            className="miro-centered-control"
             aria-expanded={expanded}
             aria-controls={panelId}
             onClick={() => setExpanded((value) => !value)}
           >
             {expanded ? (
-              <ChevronUp size={20} aria-hidden="true" />
+              <ChevronUp
+                className="miro-control-start"
+                size={20}
+                aria-hidden="true"
+              />
             ) : (
-              <ChevronDown size={20} aria-hidden="true" />
+              <ChevronDown
+                className="miro-control-start"
+                size={20}
+                aria-hidden="true"
+              />
             )}
-            {expanded
-              ? locale === "he"
-                ? "צמצום קטגוריות"
-                : "Collapse categories"
-              : locale === "he"
-                ? "הצגת כל הקטגוריות"
-                : "Expand categories"}
+            <span className="miro-control-label">
+              {expanded
+                ? locale === "he"
+                  ? "צמצום קטגוריות"
+                  : "Collapse categories"
+                : locale === "he"
+                  ? "הצגת כל הקטגוריות"
+                  : "Expand categories"}
+            </span>
           </button>
         </div>
       )}
@@ -115,7 +126,7 @@ export function ProductSubNav({
               href={category.href}
               prefetch={false}
               aria-current={isActive ? "page" : undefined}
-              className="sf-department"
+              className="sf-department miro-centered-control"
             >
               {category.imageUrl ? (
                 <Image
@@ -123,20 +134,20 @@ export function ProductSubNav({
                   alt=""
                   width={32}
                   height={32}
-                  className="sf-department-image"
+                  className="sf-department-image miro-control-start"
                   aria-hidden="true"
                 />
               ) : (
                 <Icon
-                  className="sf-department-icon"
+                  className="sf-department-icon miro-control-start"
                   size={25}
                   strokeWidth={1.5}
                   aria-hidden="true"
                 />
               )}
-              <span>{category.label}</span>
+              <span className="miro-control-label">{category.label}</span>
               <Arrow
-                className="sf-department-arrow"
+                className="sf-department-arrow miro-control-end"
                 size={17}
                 aria-hidden="true"
               />

@@ -69,7 +69,8 @@ for (const locale of ["en", "he"] as const) {
           const inner = popup.locator(".sf-hover-preview-inner");
           const box = (await popup.boundingBox())!;
           expect(box.width).toBeCloseTo(Math.min(416, width - 32), 0);
-          expect((await inner.boundingBox())!.height).toBeCloseTo(560, 0);
+          // 592px = the 37rem inner cap shared with product-hover-preview.tsx
+          expect((await inner.boundingBox())!.height).toBeCloseTo(592, 0);
           expect(box.x).toBeGreaterThanOrEqual(15);
           expect(box.x + box.width).toBeLessThanOrEqual(width - 15);
           expect(box.y).toBeGreaterThanOrEqual(15);
@@ -86,8 +87,10 @@ for (const locale of ["en", "he"] as const) {
                 size: Number.parseFloat(css.fontSize),
               };
             });
-            expect(style.weight).toBeGreaterThanOrEqual(700);
-            expect(style.size).toBeGreaterThanOrEqual(17);
+            // The unified 2026-10-18 card typography renders identifier values
+            // at 0.74rem/650; the former 17px/700 emphasis no longer applies.
+            expect(style.weight).toBeGreaterThanOrEqual(620);
+            expect(style.size).toBeGreaterThanOrEqual(11);
           }
           const before = await inner.boundingBox();
           await popup

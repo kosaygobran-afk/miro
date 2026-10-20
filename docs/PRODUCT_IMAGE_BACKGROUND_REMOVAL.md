@@ -2,42 +2,45 @@
 
 Reviewed: 2026-10-17. This document supersedes the original implementation notes.
 
-Catalog managers upload a file or import a public HTTPS image in Product Editor → Media. Both routes validate the image, call the same optional private worker, save the resulting file in `product-media`, insert `product_images`, and record the actual processing outcome in the audit event. Authorization and same-origin checks remain in `withManagementAuth(..., "manageCatalog")`.
+Catalog managers upload a file or import a public HTTPS image in Product Editor → Media. New uploads/imports always save the validated original (SVG is sanitized); there is no automatic-removal checkbox. Obsolete `remove_background` upload flags are ignored. Authorization and same-origin checks remain in `withManagementAuth(..., "manageCatalog")`.
 
-Existing gallery images now have a separate **Remove background** button. The upload checkbox applies to new images; product **Save** does not run image processing. The explicit action processes the existing saved image immediately through `/api/management/product-images/remove-background`. On success it replaces only that image row's URL with a new PNG URL, preserving its ID, order and alt text. A conditional update rejects concurrent replacement, and cache invalidation covers home, category and detail pages in both locales. It is shared by all products.
+**Remove backgrounds from all images** processes every saved image in the current product's Media section, sequentially through the existing explicit removal endpoint. This avoids overlapping native inference and provides a real completed/total count. Individual **Remove background** buttons remain. Product **Save** does not process images. The section reports removed/already-transparent/failed/unprocessed totals and each image's actual result; partial success never becomes an all-success message. Unknown write outcomes stop the batch, disable further mutations and offer **Refresh gallery**, without automatic retries.
 
-Unavailable processing and unsupported SVG return an error without changing the existing image. Already-transparent input leaves its reference unchanged. The original object is retained, with its previous URL in the audit event; there is still no one-click restore UI. Failed confirmed updates clean up only the new cutout; unknown write outcomes retain it for reconciliation and require a gallery refresh before retry.
+Every successful explicit removal saves a new transparent PNG and atomically retains the first source in `product_images.original_image_url`. Owned source objects are left intact; external sources are snapshotted into owned storage before the cutout reference is committed. Later removal/restoration never overwrites that first source. IDs, order and alt text are preserved. A red **Restore original** button appears beneath each processed image and survives navigation/reload. It restores immediately through `/api/management/product-images/restore-original`, verifies the source is still available, and conditionally updates only the displayed URL. The retained source and cutout objects remain intact. Both actions invalidate home, category and detail views in both locales. The gallery uses a checkerboard to make real alpha visible; it is display styling, not baked into the file.
+
+Migration `20261017030000_product_image_originals.sql` adds the durable source reference and restricts public image reads to the existing display/alt/order fields. The source field is management metadata, even though retained media objects continue to use the existing public bucket. The migration follows proven prior removal audit links backwards from the current cutout to recover existing originals, with a bounded/cycle-safe traversal. It never guesses from an unrelated event. Older automatic uploads that discarded their source cannot be restored unless the owner uploads the original again. Historical external sources can only be restored if they remain accessible and valid; newly processed external images keep an owned byte snapshot.
 
 ## Actual behavior
 
-- Supported uploads: JPEG, PNG, WebP, AVIF and sanitized SVG. Maximum 5 MB and 16 megapixels; animated images are rejected. Raster files are decoded before processing/storage. Local filenames must match their detected format.
-- Operators can turn off automatic removal for either file uploads or URL imports; the validated original is saved with `reason: "user_requested_original"`.
-- SVG stays sanitized SVG and never enters the model. External SVG imports use the same sanitizer as local uploads.
-- No worker URL: save the original, with `status: "original"` and `reason: "worker_not_configured"`.
-- Worker failure, timeout, malformed/oversized response, or unusable cutout: preserve the original with `status: "original"` and `reason: "processing_unavailable"`. No automatic retry of the catalog write.
-- Already-transparent input: preserve exact original bytes and format, including transparent WebP. Return `status: "transparent"`.
-- Successful processing: validate/decode the PNG result and require usable alpha; store it with `.png` and `image/png`. Return `status: "processed"`.
-- Uploaded objects are removed if the image-row insert fails. Existing owned references are normalized to their public storage URL without downloading/reprocessing them.
-- The UI reports measurable transfer progress, a combined processing/saving state, and the actual saved outcome in Hebrew/English. It does not simulate inference stages. Unknown upload outcomes instruct the operator to refresh before retrying.
-
-New uploads/imports do **not** retain a second original after successful processing. Existing-image processing retains its prior object as described above. Neither path provides before/after comparison or one-click restoration. Keep source files externally; to restore through the UI, turn off removal for new uploads and upload the source again. Do not advertise a restore control until that flow exists.
+- Supported uploads: JPEG, PNG, WebP, AVIF and sanitized SVG. Maximum 5 MB and 16 megapixels; animated images are rejected. Raster files are decoded before storage. Local filenames must match their detected format.
+- All new files/imports keep their original bytes/MIME (sanitized SVG excepted) and report `status: "original"`, `reason: "user_requested_original"`. No worker call occurs during creation.
+- SVG never enters the model. Explicit removal returns an unsupported error without changing the saved image.
+- An unconfigured/unavailable worker, timeout, malformed/oversized response, or unusable cutout returns an explicit removal failure. The saved image and its original stay intact.
+- Already-transparent input keeps its exact saved reference/format and reports `status: "transparent"` without mutation.
+- Successful removal validates/decodes the PNG and requires usable alpha before storing it as `.png` / `image/png`, with `status: "processed"`.
+- Upload/import insert failure cleans its new object. Confirmed removal update failure cleans only that attempt's new cutout/external-source snapshot; unknown outcomes retain objects for reconciliation. No automatic retry occurs.
+- Restoration accepts only the image ID and expected current URL, never a caller-supplied source. Catalog authorization, same-origin checks and conditional current/source checks protect the write; stale views return 409. Missing/invalid retained sources return 410 without changing the image. Restoration does not call the model.
+- Transfer progress is measurable; upload saving is labeled separately from explicit removal. Bulk results and red restore controls are localized and keyboard accessible. There is no before/after comparison or guarantee that segmentation preserves every fine item detail; restore is the recovery path.
 
 ## Files and contracts
 
-| File                                                         | Responsibility                                                            |
-| ------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| `src/lib/product-image-processing.ts`                        | Shared decode/validation, worker call, output checks, fallback and status |
-| `src/lib/remote-product-image.ts`                            | Public-only HTTPS downloads with DNS pinning and bounded streams          |
-| `src/app/api/management/product-images/upload/route.ts`      | File validation, storage, image row/audit, cleanup                        |
-| `src/app/api/management/product-images/route.ts`             | URL import/reference normalization; existing metadata/delete operations   |
-| `src/app/api/management/product-images/remove-background/route.ts` | Explicit processing of an existing image; conditional URL replacement |
-| `src/components/management/product-editor/media-gallery.tsx` | Progress and truthful localized results                                   |
-| `python-worker/main.py`                                      | Authenticated FastAPI worker, alpha inspection and CPU inference          |
-| `python-worker/test_main.py`                                 | Actual Pillow/worker endpoint tests; no copied detector                   |
-| `tests/unit/background-removal-transparency.test.mjs`        | Executable Node tests of shared processing, both routes and downloader    |
-| `scripts/verify-product-image-review.mjs`                    | Disposable CEO/browser QA with synthetic catalog mutations                |
-| `tests/unit/product-image-reprocessing.test.mjs`             | Existing-image route processing, authorization, concurrency and cleanup |
-| `scripts/start-background-removal-worker.mjs`                | Local loopback worker launcher with private env and existing Python venv |
+| File                                                               | Responsibility                                                            |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
+| `src/lib/product-image-processing.ts`                              | Shared decode/validation, worker call, output checks, fallback and status |
+| `src/lib/remote-product-image.ts`                                  | Public-only HTTPS downloads with DNS pinning and bounded streams          |
+| `src/app/api/management/product-images/upload/route.ts`            | File validation, storage, image row/audit, cleanup                        |
+| `src/app/api/management/product-images/route.ts`                   | URL import/reference normalization; existing metadata/delete operations   |
+| `src/app/api/management/product-images/remove-background/route.ts` | Explicit processing, durable source retention and conditional replacement |
+| `src/app/api/management/product-images/restore-original/route.ts`  | Authorized restoration of the retained original, without model inference  |
+| `supabase/migrations/20261017030000_product_image_originals.sql`   | Private source reference and proven legacy-source recovery                |
+| `supabase/tests/product_image_originals.sql`                       | Migration recovery, metadata preservation and source privacy regression   |
+| `src/components/management/product-editor/media-gallery.tsx`       | Progress and truthful localized results                                   |
+| `python-worker/main.py`                                            | Authenticated FastAPI worker, alpha inspection and CPU inference          |
+| `python-worker/test_main.py`                                       | Actual Pillow/worker endpoint tests; no copied detector                   |
+| `tests/unit/background-removal-transparency.test.mjs`              | Executable Node tests of shared processing, both routes and downloader    |
+| `scripts/verify-product-image-review.mjs`                          | Disposable CEO/browser QA with synthetic catalog mutations                |
+| `tests/unit/product-image-reprocessing.test.mjs`                   | Existing-image route processing, authorization, concurrency and cleanup   |
+| `scripts/start-background-removal-worker.mjs`                      | Local loopback worker launcher with private env and existing Python venv  |
 
 Worker JSON uses **`image_base64`**, matching Python. Browser/audit metadata uses:
 
@@ -57,7 +60,7 @@ Worker JSON uses **`image_base64`**, matching Python. Browser/audit metadata use
 
 External imports require HTTPS, default port 443, and no embedded credentials. Each redirect (at most three) is resolved relative to the previous URL and validated independently. All DNS answers must be public; private, loopback, link-local, mapped IPv4, reserved and documented special-use ranges are rejected. The HTTPS socket is pinned to a validated DNS answer while retaining hostname TLS verification. DNS/connection/response streaming share a 15-second deadline. The actual stream has a 5 MB cap, independent of Content-Length; redirects do not buffer arbitrary bodies. A returned MIME header alone never establishes image safety.
 
-The worker requires `Authorization: Bearer <token>`. It enforces a multipart stream cap before parsing, a 5 MB image cap, decoded pixel/frame limits and EXIF orientation normalization for processed results. A single nonblocking inference lock protects session initialization and prevents unbounded native-inference queues. Busy workers return 503 and the application saves the original. Native inference runs outside the event loop, so health remains responsive. The application deadline cancels its HTTP request; it **does not forcibly terminate** an ONNX call already running. Size the service and use a supervisor for hard process limits.
+The worker requires `Authorization: Bearer <token>`. It enforces a multipart stream cap before parsing, a 5 MB image cap, decoded pixel/frame limits and EXIF orientation normalization for processed results. A single nonblocking inference lock protects session initialization and prevents unbounded native-inference queues. Busy workers return 503 and the explicit action leaves the saved image unchanged. Native inference runs outside the event loop, so health remains responsive. The application deadline cancels its HTTP request; it **does not forcibly terminate** an ONNX call already running. Size the service and use a supervisor for hard process limits.
 
 Transparency is measured from decoded RGBA alpha, including palette and PNG tRNS forms. More than 30% nonopaque pixels plus more than 10% alpha below 128 skips inference. This heuristic can process cutouts with small transparent margins; visually review important product images. Empty or entirely opaque model outputs are rejected. This is not a guarantee of segmentation quality for every photograph.
 
@@ -123,7 +126,7 @@ ADMIN_BASE_URL=http://localhost:3000 IMAGE_REVIEW_SCOPE=media node scripts/verif
 
 Use a local HTTPS proxy/certificate for WebKit secure-cookie authentication. The harness accepts `chromium`, `webkit` or `firefox` through `IMAGE_REVIEW_BROWSER`; results default to separate OS temporary directories. The local Firefox runtime currently fails before application startup and remains a tooling-owner check.
 
-The browser harness blocks catalog mutations with fixtures; it does not certify live Supabase writes or hosted worker availability. Route tests exercise storage MIME/bytes and insert-failure cleanup with storage doubles. The actual ISNet weights and local HTTP worker are verified separately with a synthetic camera image and an already-transparent second pass. Record final results in `docs/PROJECT_STATUS.md`; evidence containing private management data stays outside the repository.
+The browser harness covers original uploads, individual/bulk outcomes, persistent restoration, retry locks, actual red styling and bilingual/theme accessibility; it blocks catalog mutations with fixtures; it does not certify live Supabase writes or hosted worker availability. Route tests exercise storage MIME/bytes and insert-failure cleanup with storage doubles. The actual ISNet weights and local HTTP worker are verified separately with a synthetic camera image and an already-transparent second pass. Record final results in `docs/PROJECT_STATUS.md`; evidence containing private management data stays outside the repository.
 
 ## Rights, privacy and accessibility owners
 

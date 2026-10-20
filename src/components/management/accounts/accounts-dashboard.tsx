@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { reportingRangeParams } from "@/lib/management-reporting";
 import { formatCount, formatCurrency, t, accountsCopy } from "./accounts-copy";
 import { DashboardSkeleton } from "@/components/management/ui/skeleton";
 import { DataTable } from "@/components/management/ui/data-table";
@@ -107,20 +108,14 @@ type PaymentStatusOption = {
 };
 
 function getPaymentStatusOptions(locale: Locale): PaymentStatusOption[] {
-  // We don't have a centralized list of payment statuses, but we can infer from common ones
-  // or we can leave it as a text input. However, the API expects a status parameter.
-  // Let's assume common statuses: pending, paid, failed, refunded, etc.
-  // Since we don't have a definitive list, we'll make it a text input for flexibility.
-  // But the task says "payment status select", so we need to provide options.
-  // We'll check if there's a pattern in other dashboards. Since we don't see one, we'll create a select with common options.
-  const statuses: string[] = ["pending", "paid", "failed", "refunded"];
+  const statuses: string[] = ["pending", "paid", "voided", "refunded"];
   const labels: Record<
     PaymentStatusOption["value"],
     { he: string; en: string }
   > = {
     pending: { he: "ממתין", en: "Pending" },
     paid: { he: "משולם", en: "Paid" },
-    failed: { he: "נכשל", en: "Failed" },
+    voided: { he: "בוטל", en: "Voided" },
     refunded: { he: "החזר", en: "Refunded" },
   };
   return [
@@ -140,11 +135,14 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
   }));
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
   const [paymentStatus, setPaymentStatus] = useState<string>(""); // empty for all
-  const [cashierSearch, setCashierSearch] = useState("");
+  const [cashierId, setCashierId] = useState("");
+  const [cashiers, setCashiers] = useState<{ id: string; name: string }[]>([]);
+  const [cashiersError, setCashiersError] = useState(false);
+  const [cashiersRetry, setCashiersRetry] = useState(0);
   const [generalSearch, setGeneralSearch] = useState("");
   const [limit] = useState(25);
   const [offset, setOffset] = useState(0);
-  const [totalCount] = useState(0);
+  const detailController = useRef<AbortController | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
   const [detailData, setDetailData] = useState<{
     order_number: string;
@@ -179,22 +177,77 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
   } | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  useEffect(() => () => detailController.current?.abort(), []);
+  useEffect(() => {
+    const controller = new AbortController();
+    // These are the two roles with recordSale capability. Load each role in
+    // bounded pages; names select a real UUID rather than becoming a UUID filter.
+    void Promise.all(
+      ["ceo", "admin"].map(async (role) => {
+        const options: { id: string; name: string }[] = [];
+        for (let offset = 0; ; offset += 100) {
+          if (controller.signal.aborted) return [];
+          const response = await fetch(
+            `/api/management/users?role=${role}&limit=100&offset=${offset}`,
+            { cache: "no-store", signal: controller.signal },
+          );
+          const body = await response.json();
+          if (!response.ok || !Array.isArray(body?.users)) throw new Error();
+          options.push(
+            ...body.users.map(
+              (user: { id: string; full_name: string | null }) => ({
+                id: user.id,
+                name: user.full_name || user.id,
+              }),
+            ),
+          );
+          if (body.users.length < 100 || offset + 100 >= body.totalCount)
+            return options;
+        }
+      }),
+    )
+      .then((groups) => {
+        if (controller.signal.aborted) return;
+        setCashiers(groups.flat().sort((a, b) => a.name.localeCompare(b.name)));
+        setCashiersError(false);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setCashiersError(true);
+      });
+    return () => controller.abort();
+  }, [cashiersRetry]);
+
   const fetchDetail = async (orderId: string) => {
+    detailController.current?.abort();
+    const controller = new AbortController();
+    detailController.current = controller;
+    setDetailData(null);
     setDetailLoading(true);
     try {
       const res = await fetch(`/api/management/accounts/${orderId}`, {
         cache: "no-store",
+        signal: controller.signal,
       });
-      if (res.ok) {
-        const data = await res.json();
-        setDetailData(data);
-      } else {
-        setDetailData(null);
-      }
+      const data = await res.json();
+      if (
+        !res.ok ||
+        data?.order?.order_id !== orderId ||
+        !Array.isArray(data.order_items) ||
+        !Array.isArray(data.order_payments) ||
+        !Array.isArray(data.stock_movements)
+      )
+        throw new Error();
+      if (!controller.signal.aborted)
+        setDetailData({
+          ...data.order,
+          order_items: data.order_items,
+          order_payments: data.order_payments,
+          stock_movements: data.stock_movements,
+        });
     } catch {
-      setDetailData(null);
+      if (!controller.signal.aborted) setDetailData(null);
     } finally {
-      setDetailLoading(false);
+      if (!controller.signal.aborted) setDetailLoading(false);
     }
   };
 
@@ -204,27 +257,30 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
   };
 
   const closeDetail = () => {
+    detailController.current?.abort();
     setDetailOrderId(null);
     setDetailData(null);
+    setDetailLoading(false);
   };
 
+  const query = reportingRangeParams(range);
+  if (paymentMethod) query.set("method", paymentMethod);
+  if (paymentStatus) query.set("payment-status", paymentStatus);
+  if (cashierId) query.set("cashier", cashierId);
+  if (generalSearch.trim()) query.set("search", generalSearch.trim());
+  query.set("limit", String(limit));
+  query.set("offset", String(offset));
   const { data, error, loading, reload } =
     useManagementReport<AccountsResponse>(
-      `/api/management/accounts?${new URLSearchParams({
-        from: range.from,
-        to: range.to,
-        method: paymentMethod,
-        status: paymentStatus,
-        cashier: cashierSearch,
-        search: generalSearch,
-        limit: limit.toString(),
-        offset: offset.toString(),
-      }).toString()}`,
+      `/api/management/accounts?${query}`,
       he ? "לא ניתן לטעון נתוני חשבונות" : "Unable to load accounts data",
     );
 
   const totals = data?.summary ?? null;
   const orders = data?.orders ?? [];
+  const totalCount = data?.total_count ?? 0;
+  const firstItem = orders.length ? offset + 1 : 0;
+  const lastItem = orders.length ? offset + orders.length : 0;
 
   // Prepare data for the table
   const tableData = orders.map((order) => ({
@@ -358,7 +414,7 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
                 // Reset filters
                 setPaymentMethod("");
                 setPaymentStatus("");
-                setCashierSearch("");
+                setCashierId("");
                 setGeneralSearch("");
                 setOffset(0);
               }}
@@ -382,14 +438,21 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
         <div className="flex flex-wrap items-center gap-4">
           <DateRangePicker
             value={range}
-            onChange={setRange}
+            onChange={(value) => {
+              setRange(value);
+              setOffset(0);
+            }}
             labels={dateRangeLabels(locale)}
           />
           <div className="relative">
-            <label className="block text-xs font-medium mb-1">
+            <label
+              htmlFor="accounts-payment-method"
+              className="block text-xs font-medium mb-1"
+            >
               {t(locale, accountsCopy.paymentMethodFilter)}
             </label>
             <select
+              id="accounts-payment-method"
               className="mgmt-select"
               value={paymentMethod}
               onChange={(e) => {
@@ -405,10 +468,14 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
             </select>
           </div>
           <div className="relative">
-            <label className="block text-xs font-medium mb-1">
+            <label
+              htmlFor="accounts-payment-status"
+              className="block text-xs font-medium mb-1"
+            >
               {t(locale, accountsCopy.paymentStatusFilter)}
             </label>
             <select
+              id="accounts-payment-status"
               className="mgmt-select"
               value={paymentStatus}
               onChange={(e) => {
@@ -424,25 +491,51 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
             </select>
           </div>
           <div className="relative">
-            <label className="block text-xs font-medium mb-1">
-              {t(locale, accountsCopy.cashierSearch)}
+            <label
+              htmlFor="accounts-cashier"
+              className="block text-xs font-medium mb-1"
+            >
+              {t(locale, accountsCopy.cashier)}
             </label>
-            <input
-              type="text"
-              className="miro-input"
-              value={cashierSearch}
+            <select
+              id="accounts-cashier"
+              className="mgmt-select"
+              value={cashierId}
               onChange={(e) => {
-                setCashierSearch(e.target.value);
+                setCashierId(e.target.value);
                 setOffset(0);
               }}
-              placeholder={t(locale, accountsCopy.cashierSearch)}
-            />
+            >
+              <option value="">{he ? "כל הקופאים" : "All cashiers"}</option>
+              {cashiers.map((cashier) => (
+                <option key={cashier.id} value={cashier.id}>
+                  {cashier.name}
+                </option>
+              ))}
+            </select>
+            {cashiersError && (
+              <p role="status">
+                {he
+                  ? "לא ניתן לטעון את רשימת הקופאים"
+                  : "Unable to load cashiers"}{" "}
+                <button
+                  type="button"
+                  onClick={() => setCashiersRetry((value) => value + 1)}
+                >
+                  {he ? "נסה שוב" : "Retry"}
+                </button>
+              </p>
+            )}
           </div>
           <div className="relative">
-            <label className="block text-xs font-medium mb-1">
+            <label
+              htmlFor="accounts-search"
+              className="block text-xs font-medium mb-1"
+            >
               {t(locale, accountsCopy.generalSearch)}
             </label>
             <input
+              id="accounts-search"
               type="text"
               className="miro-input"
               value={generalSearch}
@@ -465,7 +558,7 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
             : ""}
       </p>
 
-      {error && !data ? (
+      {error ? (
         <ErrorState
           title={t(locale, {
             he: "לא ניתן לטעון את הדוח",
@@ -644,8 +737,8 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
             </button>
             <span className={report.muted} style={{ margin: "0 1rem" }}>
               {he
-                ? `הצגת ${offset + 1}-${Math.min(offset + limit, totalCount)} מתוך ${totalCount}`
-                : `Showing ${offset + 1}-${Math.min(offset + limit, totalCount)} of ${totalCount}`}
+                ? `הצגת ${firstItem}-${lastItem} מתוך ${totalCount}`
+                : `Showing ${firstItem}-${lastItem} of ${totalCount}`}
             </span>
             <button
               type="button"

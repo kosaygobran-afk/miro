@@ -3,11 +3,11 @@
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { ProductGrid } from "@/components/products/ProductGrid";
+import { SubcategoryBar } from "@/components/products/subcategory-bar";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
 import { trackProductSearch } from "@/components/analytics/track";
 import { AnimatedNumber } from "@/components/motion/animated-number";
-import Link from "@/components/motion/motion-link";
 
 type CatalogCategory = { key: string; label: string };
 export type SubcategoryNavigation = {
@@ -59,6 +59,36 @@ export function ProductsClient({
     },
     [locale],
   );
+
+  const subcategoryCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const product of products) {
+      if (!product.subcategoryId) continue;
+      counts.set(
+        product.subcategoryId,
+        (counts.get(product.subcategoryId) ?? 0) + 1,
+      );
+    }
+    return counts;
+  }, [products]);
+
+  const subcategoryItems = useMemo(() => {
+    if (!subcategoryNavigation) return [];
+    const trimmedQuery = query.trim();
+    const withQuery = (href: string) =>
+      trimmedQuery
+        ? `${href}${href.includes("?") ? "&" : "?"}q=${encodeURIComponent(
+            trimmedQuery,
+          )}`
+        : href;
+    return subcategoryNavigation.items.map((item) => ({
+      id: item.id,
+      label: item.label,
+      href: withQuery(item.href),
+      count: subcategoryCounts.get(item.id) ?? 0,
+    }));
+    // Chip links carry the live search query, matching withSearch below.
+  }, [subcategoryNavigation, subcategoryCounts, query]);
 
   const filtered = useMemo(
     () =>
@@ -129,87 +159,61 @@ export function ProductsClient({
 
   return (
     <div className="sf-catalog" data-testid="store-catalog">
-      <div className={subcategoryNavigation ? "sf-category-tools" : undefined}>
-        <div
-          className="sf-catalog-toolbar"
-          dir={locale === "he" ? "rtl" : "ltr"}
-        >
-          <div className="sf-search">
-            <Search size={19} aria-hidden="true" />
-            <input
-              type="search"
-              aria-label={copy.search}
-              placeholder={copy.search}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setLimit(12);
-              }}
-            />
-            {query && (
-              <button
-                type="button"
-                aria-label={copy.clear}
-                onClick={() => {
-                  setQuery("");
-                  setLimit(12);
-                }}
-              >
-                <X size={17} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-          <label className="sf-sort">
-            <SlidersHorizontal size={16} aria-hidden="true" />
-            <span className="sr-only">{copy.sort}</span>
-            <select
-              value={sort}
-              onChange={(event) => {
-                setSort(event.target.value);
+      {subcategoryNavigation && subcategoryItems.length > 0 && (
+        <SubcategoryBar
+          items={subcategoryItems}
+          activeId={subcategoryNavigation.activeId}
+          rootHref={withSearch(subcategoryNavigation.rootHref)}
+          rootLabel={copy.all}
+          rootCount={products.length}
+          heading={copy.subcategories}
+          scrollStartLabel={copy.scrollToStart}
+          scrollEndLabel={copy.scrollToEnd}
+          locale={locale}
+        />
+      )}
+      <div className="sf-catalog-toolbar" dir={locale === "he" ? "rtl" : "ltr"}>
+        <div className="sf-search">
+          <Search size={19} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label={copy.search}
+            placeholder={copy.search}
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setLimit(12);
+            }}
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label={copy.clear}
+              onClick={() => {
+                setQuery("");
                 setLimit(12);
               }}
             >
-              <option value="featured">{copy.featured}</option>
-              <option value="low">{copy.low}</option>
-              <option value="high">{copy.high}</option>
-              <option value="name">{copy.name}</option>
-            </select>
-          </label>
+              <X size={17} aria-hidden="true" />
+            </button>
+          )}
         </div>
-        {subcategoryNavigation && (
-          <nav
-            className="sf-subcategories"
-            aria-label={locale === "he" ? "תתי־קטגוריות" : "Subcategories"}
-            dir={locale === "he" ? "rtl" : "ltr"}
+        <label className="sf-sort">
+          <SlidersHorizontal size={16} aria-hidden="true" />
+          <span className="sr-only">{copy.sort}</span>
+          <select
+            value={sort}
+            onChange={(event) => {
+              setSort(event.target.value);
+              setLimit(12);
+            }}
           >
-            <p>{locale === "he" ? "תתי־קטגוריות" : "Subcategories"}</p>
-            <div className="sf-subcategory-links">
-              <Link
-                href={withSearch(subcategoryNavigation.rootHref)}
-                prefetch={false}
-                aria-current={
-                  !subcategoryNavigation.activeId ? "page" : undefined
-                }
-              >
-                {locale === "he" ? "כל המוצרים" : "All products"}
-              </Link>
-              {subcategoryNavigation.items.map((item) => (
-                <Link
-                  key={item.id}
-                  href={withSearch(item.href)}
-                  prefetch={false}
-                  aria-current={
-                    item.id === subcategoryNavigation.activeId
-                      ? "page"
-                      : undefined
-                  }
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
-          </nav>
-        )}
+            <option value="featured">{copy.featured}</option>
+            <option value="low">{copy.low}</option>
+            <option value="high">{copy.high}</option>
+            <option value="name">{copy.name}</option>
+          </select>
+        </label>
       </div>
       {!fixedCategory && (
         <div
@@ -219,27 +223,33 @@ export function ProductsClient({
         >
           <button
             type="button"
+            className="miro-centered-control"
             aria-pressed={category === "all"}
             onClick={() => {
               setCategory("all");
               setLimit(12);
             }}
           >
-            {copy.all}
-            <AnimatedNumber value={products.length} />
+            <span className="miro-control-label">{copy.all}</span>
+            <span className="miro-control-end">
+              <AnimatedNumber value={products.length} />
+            </span>
           </button>
           {categories.map((item) => (
             <button
               key={item.key}
               type="button"
+              className="miro-centered-control"
               aria-pressed={category === item.key}
               onClick={() => {
                 setCategory(item.key);
                 setLimit(12);
               }}
             >
-              {item.label}
-              <AnimatedNumber value={categoryCounts.get(item.key) ?? 0} />
+              <span className="miro-control-label">{item.label}</span>
+              <span className="miro-control-end">
+                <AnimatedNumber value={categoryCounts.get(item.key) ?? 0} />
+              </span>
             </button>
           ))}
         </div>

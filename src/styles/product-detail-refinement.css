@@ -30,11 +30,51 @@
 
   .sf-main-image {
     align-self: stretch;
+    inline-size: 100%;
+    min-inline-size: 0;
     block-size: 100%;
     min-block-size: 0;
     aspect-ratio: auto;
     border-radius: 1.5rem;
     box-shadow: var(--shadow-soft);
+  }
+
+  .sf-detail-magnifier {
+    --magnifier-media-inset: 2rem;
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    min-inline-size: 0;
+    min-block-size: 0;
+  }
+
+  .sf-detail-magnifier .sf-hover-preview-image-stage {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .sf-detail-magnifier .sf-product-main-image {
+    transform: none;
+    transition: none;
+  }
+
+  .sf-detail-magnifier .sf-hover-preview-image-tools {
+    padding: 0.25rem 0.75rem 0.5rem;
+    background: var(--surface);
+    border-block-start: 1px solid var(--border-subtle);
+  }
+
+  .sf-detail-magnifier .sf-gallery-position {
+    position: static;
+    inset: auto;
+    transform: none;
+  }
+
+  .sf-detail-magnifier .sf-product-visual-placeholder {
+    position: absolute;
+    inset: 0;
   }
 
   .sf-product-main-image {
@@ -351,6 +391,15 @@
       block-size: auto;
       aspect-ratio: 1;
     }
+
+    /* Keep an in-flow square when the stacked gallery has an automatic height.
+       An entirely absolute grid can collapse its image track in WebKit. */
+    .sf-detail-magnifier {
+      position: relative;
+      inset: auto;
+      inline-size: 100%;
+      aspect-ratio: 1;
+    }
   }
 }
 
@@ -363,6 +412,10 @@
 
     .sf-product-main-image {
       padding: 1.25rem;
+    }
+
+    .sf-detail-magnifier {
+      --magnifier-media-inset: 1.25rem;
     }
 
     h1 {

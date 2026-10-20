@@ -8,6 +8,7 @@ import {
   useRef,
 } from "react";
 import { useManagementTools } from "../management-tool-provider";
+import { useConfirmDialog } from "../../ui/use-confirm-dialog";
 import { toAgorot } from "@/lib/commerce/money";
 import {
   computePosTotals,
@@ -148,6 +149,9 @@ export function PosWindow({
   }, [userId]);
   const t = (map: Record<"he" | "en", string>) => map[locale];
   const { saveDraft, clearDraft, getDraft } = useManagementTools();
+  // Themed, accessible confirmation dialogs (same blocking semantics as the
+  // previous native confirm() calls, rendered above the tool window stack).
+  const { confirm, dialogNode } = useConfirmDialog();
   const [lines, setLines] = useState<PosCartLine[]>(() => [emptyLine()]);
   const [customer, setCustomer] = useState<PosCustomer | null>(null);
   const [payments, setPayments] = useState<PosPayment[]>(() => [
@@ -949,15 +953,18 @@ export function PosWindow({
         )
         .map((payment) => payment.id);
       if (retryKeys.length) {
-        if (
-          !window.confirm(
-            t({
-              he: "הספק אישר שהתשלום נדחה או בוטל. לנסות שוב רק את הסכום שלא נגבה? תשלומים שכבר התקבלו יישמרו.",
-              en: "The provider verified a decline or void. Retry only the uncollected amount? Funds already recorded will be preserved.",
-            }),
-          )
-        )
-          return;
+        const proceedWithRetry = await confirm({
+          title: t({
+            he: "הספק אישר שהתשלום נדחה או בוטל. לנסות שוב רק את הסכום שלא נגבה? תשלומים שכבר התקבלו יישמרו.",
+            en: "The provider verified a decline or void. Retry only the uncollected amount? Funds already recorded will be preserved.",
+          }),
+          confirmLabel: t({
+            he: "אישור ניסיון חוזר",
+            en: "Confirm retry",
+          }),
+          cancelLabel: t({ he: "עדיין לא", en: "Not yet" }),
+        });
+        if (!proceedWithRetry) return;
         operationPayments = payments.map((payment) =>
           retryKeys.includes(payment.id)
             ? { ...payment, id: generateIdempotencyKey() }
@@ -979,16 +986,20 @@ export function PosWindow({
               attempt.state === "captured",
           ),
       );
-      if (
-        manualUnrecorded &&
-        !window.confirm(
-          t({
+      if (manualUnrecorded) {
+        const proceedWithExternal = await confirm({
+          title: t({
             he: "אשרו שהסכומים החיצוניים התקבלו בפועל לפני רישומם.",
             en: "Confirm the external funds were actually received before recording them.",
           }),
-        )
-      )
-        return;
+          confirmLabel: t({
+            he: "התקבלו — לרשום",
+            en: "Received — record",
+          }),
+          cancelLabel: t({ he: "עדיין לא", en: "Not yet" }),
+        });
+        if (!proceedWithExternal) return;
+      }
       // Record external legs first; a hosted redirect must not skip later split tenders.
       for (const payment of [...operationPayments].sort(
         (a, b) =>
@@ -1159,15 +1170,19 @@ export function PosWindow({
             en: "Recorded or unresolved payments exist. Reconcile them in payment operations.",
           }),
         );
-      if (
-        !window.confirm(
-          t({
-            he: "לבטל את המכירה שטרם שולמה ולשחרר את המלאי השמור?",
-            en: "Cancel this unpaid sale and release its stock hold?",
-          }),
-        )
-      )
-        return;
+      const proceedWithCancel = await confirm({
+        title: t({
+          he: "לבטל את המכירה שטרם שולמה ולשחרר את המלאי השמור?",
+          en: "Cancel this unpaid sale and release its stock hold?",
+        }),
+        confirmLabel: t({
+          he: "לבטל את המכירה",
+          en: "Cancel sale",
+        }),
+        cancelLabel: t({ he: "השאר פתוחה", en: "Keep pending" }),
+        tone: "danger",
+      });
+      if (!proceedWithCancel) return;
       const response = await fetch(
         `/api/commerce/intents/${pendingIntent.id}`,
         { method: "DELETE", cache: "no-store" },
@@ -1239,31 +1254,34 @@ export function PosWindow({
   };
 
   return (
-    <PosShell
-      locale={locale}
-      cartLines={lines}
-      onCartLineChange={updateLine}
-      onCartLineRemove={handleRemoveLine}
-      onVariantPick={handleVariantPick}
-      customer={customer}
-      onCustomerChange={handleCustomerChange}
-      payments={payments}
-      onPaymentChange={handlePaymentChange}
-      onRecordSale={recordSale}
-      onClearCart={handleClearCart}
-      saving={saving}
-      successMessage={successMessage}
-      onDismissSuccess={() => setSuccessMessage(null)}
-      gatewayCapabilities={gatewayCapabilities}
-      vatRate={vatRate}
-      formErrors={formErrors}
-      saveError={saveError}
-      pendingIntentId={
-        pendingIntent?.id ?? (attemptedSnapshot ? "unresolved" : null)
-      }
-      locked={locked || readyUser !== userId}
-      onCancelPending={cancelPending}
-      refreshToken={refreshToken}
-    />
+    <>
+      {dialogNode}
+      <PosShell
+        locale={locale}
+        cartLines={lines}
+        onCartLineChange={updateLine}
+        onCartLineRemove={handleRemoveLine}
+        onVariantPick={handleVariantPick}
+        customer={customer}
+        onCustomerChange={handleCustomerChange}
+        payments={payments}
+        onPaymentChange={handlePaymentChange}
+        onRecordSale={recordSale}
+        onClearCart={handleClearCart}
+        saving={saving}
+        successMessage={successMessage}
+        onDismissSuccess={() => setSuccessMessage(null)}
+        gatewayCapabilities={gatewayCapabilities}
+        vatRate={vatRate}
+        formErrors={formErrors}
+        saveError={saveError}
+        pendingIntentId={
+          pendingIntent?.id ?? (attemptedSnapshot ? "unresolved" : null)
+        }
+        locked={locked || readyUser !== userId}
+        onCancelPending={cancelPending}
+        refreshToken={refreshToken}
+      />
+    </>
   );
 }

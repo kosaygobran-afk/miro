@@ -5,6 +5,7 @@ import {
   errorResponse,
   checkManagementRateLimit,
   getClientIp,
+  tooManyRequests,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { channelDbValues, PAYMENT_METHODS } from "@/lib/sales-channel";
@@ -104,10 +105,7 @@ export async function GET(request: Request) {
     return errorResponse("Unable to process request", 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Too many requests", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   const { searchParams } = new URL(request.url);
@@ -221,10 +219,7 @@ export async function POST(request: Request) {
     return errorResponse("Unable to process request", 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Too many requests", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   let body: unknown;

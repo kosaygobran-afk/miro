@@ -6,6 +6,7 @@ export default defineConfig(base, {
   testMatch: [
     "product-card-sections.spec.ts",
     "product-card-widgets.spec.ts",
+    "product-image-magnifier.spec.ts",
     "navigation-bar.spec.ts",
     "navigation-loading-bar.spec.ts",
     "motion.spec.ts",

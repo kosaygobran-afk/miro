@@ -230,3 +230,47 @@
     }
   }
 }
+
+/* Narrow-phone fallback (≤419px) for the inline version 1 topbar chrome:
+   convert the always-inline tools group into the popup pattern the version 2
+   chrome already uses, so a 320px viewport still fits every control while
+   staying mounted (drawer-like contents; Escape and outside-pointer
+   dismissal are handled by ManagementTopbar itself). The version 2 rules
+   above outrank these by specificity, so version 2 rendering is unchanged. */
+@media (max-width: 419px) {
+  .mgmt-topbar__controls-toggle {
+    display: grid;
+  }
+  .mgmt-topbar__controls {
+    display: none;
+    position: absolute;
+    inset-block-start: calc(100% + 0.75rem);
+    inset-inline-end: 0;
+    inline-size: min(20rem, calc(100vw - 1rem));
+    max-inline-size: calc(100vw - 1rem);
+    padding: 1rem;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    border: 1px solid var(--border-control);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-lift);
+    z-index: 55;
+  }
+  .mgmt-topbar__controls[data-open="true"] {
+    display: flex;
+  }
+  .mgmt-topbar__controls .mgmt-workspace-search {
+    flex: 1 1 100%;
+    min-inline-size: 0;
+  }
+  .mgmt-topbar__controls .mgmt-topbar__storefront-text {
+    display: inline;
+  }
+  .mgmt-topbar__text {
+    max-inline-size: 100%;
+  }
+  .mgmt-topbar__title {
+    overflow-wrap: anywhere;
+  }
+}

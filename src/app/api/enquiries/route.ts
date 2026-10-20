@@ -87,10 +87,11 @@ function failureResponse(
   status: number,
   locale: "he" | "en",
   extra?: Record<string, unknown>,
+  headers?: Record<string, string>,
 ) {
   return NextResponse.json(
     { ok: false, code, message: failureCopy[locale][code], ...extra },
-    { status },
+    { status, headers },
   );
 }
 
@@ -168,7 +169,9 @@ export async function POST(request: NextRequest) {
     return failureResponse("unavailable", 503, locale);
   }
   if (rateLimit === "limited") {
-    return failureResponse("rate_limited", 429, locale);
+    return failureResponse("rate_limited", 429, locale, undefined, {
+      "Retry-After": "60",
+    });
   }
 
   const parsed = enquirySchema.safeParse(body);
@@ -275,7 +278,9 @@ export async function POST(request: NextRequest) {
     if (error) {
       // Map RPC errors to user-facing codes
       if (error.code === "42001" || error.message?.includes("Rate limited")) {
-        return failureResponse("rate_limited", 429, locale);
+        return failureResponse("rate_limited", 429, locale, undefined, {
+          "Retry-After": "60",
+        });
       }
       if (error.code === "22023") {
         return failureResponse("invalid_input", 400, locale);

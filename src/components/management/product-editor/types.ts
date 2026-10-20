@@ -55,6 +55,7 @@ export type ProductImage = {
   id: string;
   product_id: string;
   image_url: string;
+  original_image_url?: string | null;
   alt_he: string | null;
   alt_en: string | null;
   sort_order: number;

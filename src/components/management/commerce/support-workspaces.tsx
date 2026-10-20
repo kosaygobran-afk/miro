@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FormField } from "../ui";
+import { FormField, useConfirmDialog } from "../ui";
 import { toAgorot } from "@/lib/commerce/money";
 import {
   ActionButton,
@@ -1061,6 +1061,8 @@ function PaymentsHistory({ locale }: { locale: Locale }) {
   );
   const reconcilingRefundRef = useRef<string | null>(null);
   const [refundOutcomeUnknown, setRefundOutcomeUnknown] = useState(false);
+  // Themed, accessible replacement for the refund-submission confirm().
+  const { confirm, dialogNode } = useConfirmDialog();
   const refreshPayments = async () => {
     const ok = await load();
     if (ok) {
@@ -1242,6 +1244,7 @@ function PaymentsHistory({ locale }: { locale: Locale }) {
       onRetry={() => void refreshPayments()}
       locale={locale}
     >
+      {dialogNode}
       {notice ? (
         <p role="status" className={styles.helpText} aria-live="polite">
           {notice}
@@ -1424,14 +1427,16 @@ function PaymentsHistory({ locale }: { locale: Locale }) {
               kind="danger"
               disabled={busy || refundOutcomeUnknown}
               onClick={() => {
-                if (
-                  window.confirm(
-                    he
-                      ? "לשלוח את בקשת ההחזר לספק?"
-                      : "Submit this refund request to the provider?",
-                  )
-                )
-                  void refund();
+                void confirm({
+                  title: he
+                    ? "לשלוח את בקשת ההחזר לספק?"
+                    : "Submit this refund request to the provider?",
+                  confirmLabel: he ? "לשלוח לספק" : "Send to provider",
+                  cancelLabel: he ? "עדיין לא" : "Not yet",
+                  tone: "danger",
+                }).then((proceed) => {
+                  if (proceed) void refund();
+                });
               }}
             />
             {notice ? (

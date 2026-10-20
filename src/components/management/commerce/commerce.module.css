@@ -69,6 +69,23 @@
   line-height: 1.55;
 }
 
+/* Every commerce card owns spacing between fields, notes, tables and actions. */
+:global(html[data-appearance-version="2"]) .card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 1rem;
+}
+:global(html[data-appearance-version="2"])
+  .card
+  > :is(.cardHeader, .toolbar, .metricRow) {
+  margin-block-end: 0;
+}
+:global(html[data-appearance-version="2"]) .card > button {
+  justify-self: start;
+  max-inline-size: 100%;
+}
+
 .loading {
   display: grid;
   gap: 0.75rem;

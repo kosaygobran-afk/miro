@@ -224,8 +224,14 @@ test("pointer travel from the popup to its source preserves the same open dialog
   const sourceElement = card.locator('[data-preview-source="true"]');
   const source = (await sourceElement.boundingBox())!;
   const popup = (await preview.boundingBox())!;
+  // Natural card content can extend below the viewport. Return to its visible
+  // edge so this checks pointer intent rather than hit-testing offscreen.
+  const viewportHeight = page.viewportSize()!.height;
   const returnPoint = [
-    { x: source.x + source.width / 2, y: source.y + source.height - 2 },
+    {
+      x: source.x + source.width / 2,
+      y: Math.min(source.y + source.height - 2, viewportHeight - 2),
+    },
     { x: source.x + source.width / 2, y: source.y + 2 },
     { x: source.x + 2, y: source.y + source.height / 2 },
     { x: source.x + source.width - 2, y: source.y + source.height / 2 },

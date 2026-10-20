@@ -24,7 +24,6 @@ import { NavigationProgress } from "@/components/motion/navigation-progress";
 import { PageReveal } from "@/components/motion/page-reveal";
 import { getPublicAnimationSettings } from "@/lib/animation-settings-server";
 import { motionAttributes, motionStyle } from "@/lib/motion";
-import "@/styles/workspace.css";
 import "@/styles/motion.css";
 import "@/styles/product-card-sections.css";
 import "@/styles/product-detail-refinement.css";
@@ -32,6 +31,8 @@ import "@/styles/product-identifiers.css";
 import "@/styles/product-preview-refinement.css";
 import "@/styles/navigation-refinements.css";
 import "@/styles/category-hierarchy.css";
+import "@/styles/card-refinement.css";
+import "@/styles/public-refinement.css";
 import {
   getDirection,
   getMessages,

@@ -76,9 +76,10 @@
     ),
     var(--background);
   --mgmt-sidebar-width: 16rem;
+  --mgmt-content-padding: clamp(1rem, 2.5vw, 2rem);
 }
 .mgmt-shell__main {
-  padding: clamp(1rem, 2.5vw, 2rem);
+  padding: var(--mgmt-content-padding);
 }
 .mgmt-shell__main > :not(script) {
   min-inline-size: 0;
@@ -94,8 +95,6 @@
   border-inline-end-color: var(--border-subtle);
 }
 .mgmt-sidebar__brand {
-  padding: 1.5rem 1rem;
-  gap: 0.7rem;
   border-color: var(--border-subtle);
 }
 .mgmt-sidebar__brand-mark {

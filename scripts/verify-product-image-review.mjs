@@ -113,22 +113,36 @@ try {
   let resultStatus = "original";
   let failUpload = false;
   let holdUpload = null;
-  let expectedRemoval = true;
+  const removalRequests = [];
+  let batchBehaviors = null;
+  let restoreRequests = 0;
   let existingRemovalStatus = "processed";
   let holdExistingRemoval = null;
   let expectedExistingImageId = null;
   await context.route("**/api/management/**", async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
+    if (pathname.endsWith("/product-images/restore-original")) {
+      const body = request.postDataJSON();
+      const existing = images.find((image) => image.id === body.id);
+      assert.ok(existing?.original_image_url);
+      assert.equal(body.image_url, existing.image_url);
+      restoreRequests++;
+      const image = { ...existing, image_url: existing.original_image_url };
+      images = images.map((entry) => (entry.id === image.id ? image : entry));
+      return route.fulfill({ json: { image } });
+    }
     if (pathname.endsWith("/product-images/remove-background")) {
       assert.equal(request.method(), "POST");
-      assert.deepEqual(request.postDataJSON(), { id: expectedExistingImageId });
-      const existing = images.find(
-        (image) => image.id === expectedExistingImageId,
-      );
+      const id = request.postDataJSON().id;
+      if (expectedExistingImageId) assert.equal(id, expectedExistingImageId);
+      removalRequests.push(id);
+      const existing = images.find((image) => image.id === id);
+      const outcome =
+        batchBehaviors?.[images.indexOf(existing)] ?? existingRemovalStatus;
       assert.ok(existing, "Removal must target an existing image fixture");
       if (holdExistingRemoval) await holdExistingRemoval;
-      if (existingRemovalStatus === "unavailable")
+      if (outcome === "unavailable")
         return route.fulfill({
           status: 503,
           json: {
@@ -142,10 +156,17 @@ try {
             },
           },
         });
+      if (outcome === "uncertain")
+        return route.fulfill({
+          status: 503,
+          json: { code: "image_write_uncertain" },
+        });
       const image =
-        existingRemovalStatus === "processed"
+        outcome === "processed"
           ? {
               ...existing,
+              original_image_url:
+                existing.original_image_url || existing.image_url,
               image_url:
                 existing.image_url === "/images/catalog/dome-02.svg"
                   ? "/images/catalog/dome-03.svg"
@@ -157,12 +178,9 @@ try {
         json: {
           image,
           background_removal: {
-            status: existingRemovalStatus,
-            skipped: existingRemovalStatus === "transparent",
-            reason:
-              existingRemovalStatus === "transparent"
-                ? "already transparent"
-                : null,
+            status: outcome,
+            skipped: outcome === "transparent",
+            reason: outcome === "transparent" ? "already transparent" : null,
           },
         },
       });
@@ -173,13 +191,13 @@ try {
     ) {
       if (pathname.endsWith("/upload")) {
         assert.ok(
-          request
+          !request
             .postDataBuffer()
             .toString()
-            .includes(`name="remove_background"\r\n\r\n${expectedRemoval}`),
+            .includes('name="remove_background"'),
         );
       } else {
-        assert.equal(request.postDataJSON().remove_background, expectedRemoval);
+        assert.equal(request.postDataJSON().remove_background, undefined);
       }
       if (holdUpload) await holdUpload;
       if (failUpload)
@@ -260,6 +278,7 @@ try {
   );
   await mkdir(output, { recursive: true });
   for (const locale of ["en", "he"]) {
+    images = [];
     await page.goto(`${base}/${locale}/admin/products/${productId}`, {
       waitUntil: "networkidle",
     });
@@ -270,7 +289,7 @@ try {
       })
       .click();
     await expect(page.locator('input[type="file"]')).toBeAttached();
-    for (const status of ["original", "transparent", "processed"]) {
+    for (const status of ["original"]) {
       resultStatus = status;
       let release;
       holdUpload = new Promise((resolve) => {
@@ -301,10 +320,9 @@ try {
       await expect(page.locator('input[type="file"]')).toBeEnabled();
       pass(`${locale}: actual pending state and truthful ${status} result`);
     }
-    expectedRemoval = false;
-    await page
-      .getByRole("checkbox", { name: /Remove background|הסרת רקע/ })
-      .uncheck();
+    await expect(
+      page.getByRole("checkbox", { name: /Remove background|הסרת רקע/ }),
+    ).toHaveCount(0);
     resultStatus = "original";
     await page.locator('input[type="file"]').setInputFiles({
       name: "keep-original.jpg",
@@ -381,8 +399,8 @@ try {
     await expect(
       page.getByText(
         locale === "he"
-          ? "לתמונה קיימת, לחצו על הסרת רקע מתחת לתמונה. השינוי נשמר מיד; אין צורך בשמירת המוצר."
-          : "For a saved image, use Remove background below it. Images save immediately; product Save is not needed.",
+          ? "תמונות חדשות נשמרות במקור. הסרת רקע יוצרת רקע שקוף סביב המוצר. ניתן לשחזר כל מקור שנשמר באמצעות הכפתור האדום. השינויים נשמרים מיד."
+          : "New images keep their original. Background removal makes the area around the product transparent. Use the red button to restore a retained original. Changes save immediately.",
         { exact: true },
       ),
     ).toBeVisible();
@@ -394,9 +412,9 @@ try {
             : "Remove background on new uploads (turn off to keep the original)",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toHaveCount(0);
     pass(
-      `${locale}: new-upload scope and per-image immediate-save instructions are explicit`,
+      `${locale}: original uploads, explicit processing and restore instructions replace automatic-removal checkbox`,
     );
     const initialCount = images.length;
     await expect(imageTiles).toHaveCount(initialCount);
@@ -421,7 +439,13 @@ try {
       await expect(button).toBeDisabled();
     await expect(page.locator('input[type="file"]')).toBeDisabled();
     await expect(
-      page.getByRole("checkbox", { name: /Remove background|הסרת רקע/ }),
+      page.getByRole("button", {
+        name:
+          locale === "he"
+            ? "הסרת רקע מכל התמונות"
+            : "Remove backgrounds from all images",
+        exact: true,
+      }),
     ).toBeDisabled();
     await expect(
       page.getByRole("button", {
@@ -432,7 +456,7 @@ try {
     releaseExisting();
     holdExistingRemoval = null;
     await expect(
-      page.getByRole("status").filter({ hasText: removedLabel }),
+      page.getByRole("status").filter({ hasText: removedLabel }).first(),
     ).toBeVisible();
     await expect(imageTiles).toHaveCount(initialCount);
     await expect(imageTiles.first().locator("img").last()).toHaveAttribute(
@@ -452,10 +476,10 @@ try {
       .first()
       .click();
     await expect(
-      page.getByRole("status").filter({ hasText: transparentLabel }),
+      page.getByRole("status").filter({ hasText: transparentLabel }).first(),
     ).toBeVisible();
     await expect(
-      page.getByRole("status").filter({ hasText: removedLabel }),
+      page.getByRole("status").filter({ hasText: removedLabel }).first(),
     ).toHaveCount(0);
     assert.equal(images[0].image_url, processedReference);
     await expect(imageTiles).toHaveCount(initialCount);
@@ -477,10 +501,10 @@ try {
     ).toBeVisible();
     await expect(page.getByText(savedLabel, { exact: true })).toHaveCount(0);
     await expect(
-      page.getByRole("status").filter({ hasText: removedLabel }),
+      page.getByRole("status").filter({ hasText: removedLabel }).first(),
     ).toHaveCount(0);
     await expect(
-      page.getByRole("status").filter({ hasText: transparentLabel }),
+      page.getByRole("status").filter({ hasText: transparentLabel }).first(),
     ).toHaveCount(0);
     assert.equal(images[0].image_url, processedReference);
     await expect(imageTiles).toHaveCount(initialCount);
@@ -494,12 +518,141 @@ try {
     pass(
       `${locale}: unavailable removal shows a visible error without success or a changed image; button supports keyboard focus`,
     );
+    const restoreLabel = locale === "he" ? "שחזור המקור" : "Restore original";
+    const allLabel =
+      locale === "he"
+        ? "הסרת רקע מכל התמונות"
+        : "Remove backgrounds from all images";
+    await page.reload({ waitUntil: "networkidle" });
+    await page
+      .getByRole("button", {
+        name: locale === "he" ? "מדיה" : "Media",
+        exact: true,
+      })
+      .click();
+    await expect(
+      gallery.getByRole("button", { name: restoreLabel, exact: true }).first(),
+    ).toBeVisible();
+    await gallery
+      .getByRole("button", { name: restoreLabel, exact: true })
+      .first()
+      .click();
+    await expect(
+      gallery.getByRole("button", { name: restoreLabel, exact: true }),
+    ).toHaveCount(0);
+    assert.equal(images[0].image_url, originalReference);
+    assert.equal(images[0].original_image_url, originalReference);
+    pass(
+      `${locale}: restore remains available after reload and restores the exact retained original`,
+    );
+
+    expectedExistingImageId = null;
+    batchBehaviors = images.map((_, index) =>
+      index === 0 ? "processed" : index === 1 ? "unavailable" : "transparent",
+    );
+    const requestStart = removalRequests.length;
+    let releaseBatch;
+    holdExistingRemoval = new Promise((resolve) => {
+      releaseBatch = resolve;
+    });
+    await page.getByRole("button", { name: allLabel, exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: allLabel, exact: true }),
+    ).toHaveAttribute("aria-busy", "true");
+    await expect(page.locator('input[type="file"]')).toBeDisabled();
+    await expect(
+      gallery.getByRole("button", { name: removeLabel, exact: true }).last(),
+    ).toBeDisabled();
+    releaseBatch();
+    holdExistingRemoval = null;
+    await expect(
+      page.getByRole("button", { name: allLabel, exact: true }),
+    ).toBeEnabled();
+    assert.deepEqual(
+      removalRequests.slice(requestStart),
+      images.map((image) => image.id),
+    );
+    await expect(
+      page.getByText(
+        locale === "he"
+          ? `הוסרו רקעים: 1. כבר שקופות: ${images.length - 2}. נכשלו: 1. לא עובדו: 0.`
+          : `Backgrounds removed: 1. Already transparent: ${images.length - 2}. Failed: 1. Not processed: 0.`,
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(
+      gallery.getByRole("button", { name: restoreLabel, exact: true }).first(),
+    ).toBeVisible();
+    pass(
+      `${locale}: bulk processing handles each image once, reports partial failures and retains red restore controls`,
+    );
+    await gallery
+      .getByRole("button", { name: restoreLabel, exact: true })
+      .first()
+      .click();
+    assert.equal(images[0].image_url, originalReference);
+    assert.ok(restoreRequests > 0);
+    pass(`${locale}: repeated remove/restore keeps the first original`);
+
+    batchBehaviors = images.map(() => "uncertain");
+    const uncertainStart = removalRequests.length;
+    await page.getByRole("button", { name: allLabel, exact: true }).click();
+    const refresh = page.getByRole("button", {
+      name: locale === "he" ? "רענון הגלריה" : "Refresh gallery",
+      exact: true,
+    });
+    await expect(refresh).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: allLabel, exact: true }),
+    ).toBeDisabled();
+    assert.equal(removalRequests.length - uncertainStart, 1);
+    pass(
+      `${locale}: uncertain bulk write stops the batch, locks retries and offers refresh`,
+    );
+    batchBehaviors = null;
+    await refresh.click();
+    await page
+      .getByRole("button", {
+        name: locale === "he" ? "מדיה" : "Media",
+        exact: true,
+      })
+      .click();
+    // Leave one reversible cutout visible for bilingual/theme accessibility QA.
+    existingRemovalStatus = "processed";
+    expectedExistingImageId = images[0].id;
+    await gallery
+      .getByRole("button", { name: removeLabel, exact: true })
+      .first()
+      .click();
+    await expect(
+      gallery.getByRole("button", { name: restoreLabel, exact: true }).first(),
+    ).toBeVisible();
+
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       for (const theme of ["dark", "medium", "light"]) {
         await page.evaluate((theme) => {
           document.documentElement.dataset.theme = theme;
         }, theme);
+        const restoreColors = await gallery
+          .getByRole("button", { name: restoreLabel, exact: true })
+          .first()
+          .evaluate((button) => {
+            const probe = document.createElement("span");
+            probe.style.color = "var(--error-text)";
+            button.append(probe);
+            const colors = {
+              actual: getComputedStyle(button).color,
+              expected: getComputedStyle(probe).color,
+            };
+            probe.remove();
+            return colors;
+          });
+        assert.equal(
+          restoreColors.actual,
+          restoreColors.expected,
+          "Restore must use the red error color in every theme",
+        );
         assert.ok(
           await page.evaluate(
             () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -550,7 +703,7 @@ try {
       [],
     );
     pass(`${locale}: gallery in three themes at 320/390/1440px; axe clean`);
-    expectedRemoval = true;
+    expectedExistingImageId = null;
   }
   if (scope === "full") {
     for (const locale of ["en", "he"]) {

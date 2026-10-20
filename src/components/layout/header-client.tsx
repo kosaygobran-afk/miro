@@ -295,18 +295,29 @@ export function HeaderClient({
                   href={withLocale(locale, `store/${key}`)}
                   prefetch={false}
                   onClick={closeNavigation}
+                  className="miro-centered-control"
                 >
-                  {label}
-                  <Arrow size={15} aria-hidden="true" />
+                  <span className="miro-control-label">{label}</span>
+                  <Arrow
+                    className="miro-control-end"
+                    size={15}
+                    aria-hidden="true"
+                  />
                 </Link>
               ))}
               <Link
                 href={productsHref}
                 onClick={closeNavigation}
-                className="premium-dropdown-all"
+                className="premium-dropdown-all miro-centered-control"
               >
-                {he ? "לכל המוצרים" : "Explore the store"}
-                <Arrow size={15} aria-hidden="true" />
+                <span className="miro-control-label">
+                  {he ? "לכל המוצרים" : "Explore the store"}
+                </span>
+                <Arrow
+                  className="miro-control-end"
+                  size={15}
+                  aria-hidden="true"
+                />
               </Link>
             </div>
           )}
@@ -455,16 +466,30 @@ export function HeaderClient({
                   <Link
                     href={withLocale(locale, "services/home")}
                     onClick={closeNavigation}
+                    className="miro-centered-control"
                   >
-                    {labels.nav.homeServices}
-                    <Arrow size={16} aria-hidden="true" />
+                    <span className="miro-control-label">
+                      {labels.nav.homeServices}
+                    </span>
+                    <Arrow
+                      className="miro-control-end"
+                      size={16}
+                      aria-hidden="true"
+                    />
                   </Link>
                   <Link
                     href={withLocale(locale, "services/business")}
                     onClick={closeNavigation}
+                    className="miro-centered-control"
                   >
-                    {labels.nav.business}
-                    <Arrow size={16} aria-hidden="true" />
+                    <span className="miro-control-label">
+                      {labels.nav.business}
+                    </span>
+                    <Arrow
+                      className="miro-control-end"
+                      size={16}
+                      aria-hidden="true"
+                    />
                   </Link>
                   <AccountMenu
                     locale={locale}

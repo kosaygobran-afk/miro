@@ -6,6 +6,7 @@ import {
   errorResponse,
   checkManagementRateLimit,
   getClientIp,
+  tooManyRequests,
 } from "@/app/api/management/_shared";
 
 export const dynamic = "force-dynamic";
@@ -27,10 +28,7 @@ export async function GET(
     return errorResponse("Unable to process request", 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Too many requests", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   const parsed = z

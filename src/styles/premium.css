@@ -75,12 +75,6 @@ html {
 body {
   background: var(--background);
 }
-.miro-container {
-  width: 100%;
-  max-width: 112rem;
-  padding-inline: 2rem;
-  margin-inline: auto;
-}
 .miro-main {
   min-width: 0;
 }
@@ -128,10 +122,6 @@ body {
 }
 .miro-page-panel h1 {
   margin-bottom: 0.5rem;
-}
-.miro-feature-icon,
-.miro-step-number {
-  color: var(--accent-text);
 }
 .premium-skip-link {
   position: fixed;
@@ -646,10 +636,6 @@ body {
   }
 }
 @media (max-width: 767px) {
-  .miro-container {
-    padding-inline: 1rem;
-    width: 100%;
-  }
   .premium-topbar-inner {
     justify-content: center;
     min-height: 30px;

@@ -86,28 +86,59 @@
   .premium-account-destination-action:hover {
     background: var(--surface-hover);
   }
-  .sf-department {
+  .premium-dropdown {
+    inline-size: min(20rem, calc(100vw - 2rem));
+    max-block-size: calc(
+      100dvh - var(--navigation-header-edge, var(--navbar-content-height)) -
+        2rem
+    );
+    overflow-y: auto;
+    scrollbar-gutter: stable both-edges;
+  }
+  /* Equal edge tracks keep the label at the control's true inline midpoint.
+     Explicit slots also reserve the empty side of a one-icon control. Grid
+     follows the inherited direction: start is right in Hebrew, left in English. */
+  .miro-centered-control {
+    --control-edge-size: 1.25rem;
     display: grid;
-    grid-template-columns: 40px minmax(0, 1fr) 18px;
+    grid-template-columns: var(--control-edge-size) minmax(0, 1fr) var(
+        --control-edge-size
+      );
     gap: 0.5rem;
     min-inline-size: 0;
     align-items: center;
+    text-align: center;
   }
-  .sf-department > :is(.sf-department-icon, .sf-department-image) {
+  .miro-centered-control > .miro-control-start {
     grid-column: 1;
     grid-row: 1;
+    justify-self: start;
   }
-  .sf-department > span {
+  .miro-centered-control > .miro-control-label {
     grid-column: 2;
     grid-row: 1;
     min-inline-size: 0;
+    text-align: center;
+    overflow-wrap: anywhere;
   }
-  .sf-department > .sf-department-arrow {
+  .miro-centered-control > .miro-control-end {
     grid-column: 3;
     grid-row: 1;
+    justify-self: end;
+  }
+  .sf-category-filters .miro-centered-control {
+    --control-edge-size: 3ch;
+    max-inline-size: 100%;
+  }
+  .sf-department-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  }
+  .sf-department {
+    --control-edge-size: 40px;
+  }
+  .sf-department > .sf-department-arrow {
     inline-size: 18px;
     block-size: 18px;
-    justify-self: center;
     transform: none;
   }
   .sf-department:hover > .sf-department-arrow {
@@ -120,9 +151,6 @@
     .premium-mobile-toggle {
     display: inline-flex;
   }
-  :root[data-appearance-version="2"] .sf-department-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 @media (max-width: 767px) {
   :root[data-appearance-version="2"] {
@@ -133,16 +161,23 @@
       gap: 0.3rem;
     }
     .sf-department {
-      grid-template-columns: minmax(0, 1fr) 20px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       padding: 0.65rem;
     }
-    .sf-department > span {
+    .sf-department > .miro-control-label {
       grid-column: 1 / -1;
       grid-row: 2;
+    }
+    .sf-department > .miro-control-start {
+      grid-column: 1;
+      grid-row: 1;
     }
     .sf-department > .sf-department-arrow {
       grid-column: 2;
       grid-row: 1;
+    }
+    .sf-department-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 }
@@ -182,9 +217,6 @@
     }
     .premium-brand-caption {
       display: none;
-    }
-    .sf-department-grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 }

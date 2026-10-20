@@ -1,3 +1,5 @@
+/* MIRO global foundation. Live tokens/controls only; see docs/DESIGN_SYSTEM.md. */
+
 @import "tailwindcss";
 
 :root,
@@ -230,50 +232,35 @@ body::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--primary) 92%, #f3d86d);
   background-clip: padding-box;
 }
+
 .miro-main {
   flex: 1;
-}
-
-.miro-viewport-warning {
-  display: none;
 }
 
 .miro-main > .miro-section h1 {
   font-size: 2.25rem;
   line-height: 1.25;
 }
-.miro-footer-grid {
-  display: grid;
-  grid-template-columns: 0.85fr 1.4fr 1fr;
-  gap: 2.5rem;
-  align-items: start;
-  padding-block: 2.5rem;
-}
-.miro-footer-grid > * {
-  min-width: 0;
-}
+
 h1,
 h2,
 h3 {
   text-wrap: balance;
   overflow-wrap: break-word;
 }
+
 p {
   text-wrap: pretty;
 }
+
 button,
 a,
 summary {
   -webkit-tap-highlight-color: transparent;
 }
+
 svg {
   flex-shrink: 0;
-}
-
-[data-theme="dark"] .theme-icon-moon,
-[data-theme="medium"] .theme-icon-sun,
-[data-theme="light"] .theme-icon-sun {
-  display: none;
 }
 
 a {
@@ -292,29 +279,18 @@ textarea {
   outline-offset: 3px;
 }
 
+/* Single source for the shared container (premium layer no longer re-declares it). */
 .miro-container {
-  width: calc(100% - 1.5rem);
-  max-width: 96rem;
+  width: 100%;
+  max-width: 112rem;
   margin-inline: auto;
-  padding-inline: clamp(0.75rem, 1.8vw, 2.2rem);
+  padding-inline: 2rem;
 }
 
-.miro-main .miro-section-heading,
-.miro-main .miro-stat-card,
-.miro-main .miro-feature-card,
-.miro-main .miro-step-card,
-.miro-main .miro-mini-card,
-.miro-main .miro-service-card,
-.miro-main .miro-store-package-inner {
-  text-align: center;
-}
-
-.miro-main .miro-section-heading {
-  justify-content: center;
-}
-
-.miro-main .miro-store-hero-copy {
-  justify-items: center;
+@media (max-width: 767px) {
+  .miro-container {
+    padding-inline: 1rem;
+  }
 }
 
 .miro-section {
@@ -326,20 +302,6 @@ textarea {
   display: grid;
   min-height: calc(100svh - 17rem);
   align-items: center;
-}
-
-.miro-page-panel,
-.miro-split-panel,
-.miro-contact-layout {
-  width: 100%;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-2xl);
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--surface) 97%, var(--background)),
-    color-mix(in srgb, var(--surface-muted) 90%, var(--background))
-  );
-  box-shadow: var(--shadow-lift);
 }
 
 .miro-page-panel {
@@ -359,188 +321,9 @@ textarea {
   margin-inline: auto;
 }
 
-.miro-split-panel,
-.miro-contact-layout {
-  display: grid;
-  align-items: center;
-  gap: clamp(1.25rem, 4vw, 3rem);
-  min-height: 30rem;
-  padding: clamp(1.25rem, 4vw, 3rem);
-}
-
-.miro-split-panel {
-  grid-template-columns: minmax(0, 0.95fr) minmax(20rem, 1.05fr);
-}
-
-.miro-contact-layout {
-  grid-template-columns: minmax(0, 0.85fr) minmax(22rem, 1.15fr);
-}
-
-.miro-split-copy,
-.miro-contact-copy {
-  display: grid;
-  justify-items: start;
-  gap: 1rem;
-  text-align: start;
-}
-
-.miro-split-copy p,
-.miro-contact-copy p {
-  max-width: 58ch;
-}
-
-.miro-visual-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
-}
-
-.miro-visual-grid-3 {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.miro-visual-tile {
-  display: grid;
-  min-height: 9.5rem;
-  place-items: center;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--surface) 88%, var(--background));
-  box-shadow: var(--shadow-soft);
-  padding: 1rem;
-}
-
 .miro-contact-form {
   align-self: center;
   text-align: start;
-}
-
-.miro-rich-panel {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-2xl);
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--surface) 96%, var(--background)),
-    color-mix(in srgb, var(--surface-muted) 90%, var(--background))
-  );
-  box-shadow: var(--shadow-soft);
-  padding: clamp(1rem, 1.7vw, 1.5rem);
-}
-
-.miro-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: 1rem;
-}
-
-.miro-stat-card {
-  display: grid;
-  place-items: center;
-  align-content: center;
-  min-height: 7.5rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--surface) 90%, var(--background));
-  box-shadow: var(--shadow-soft);
-  padding: 0.8rem 0.8rem;
-  text-align: center;
-}
-
-.miro-stat-value {
-  display: block;
-  font-size: 2.2rem;
-  line-height: 1;
-  font-weight: 900;
-  color: var(--foreground);
-}
-
-.miro-stat-label {
-  display: block;
-  margin-top: 0.5rem;
-  color: var(--muted-foreground);
-  font-size: 0.78rem;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
-.miro-feature-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-  gap: 1rem;
-}
-
-.miro-feature-card {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  justify-items: center;
-  gap: 0.7rem 0.9rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
-  padding: 1rem 0.95rem;
-  text-align: center;
-}
-
-.miro-feature-card > .miro-feature-icon {
-  grid-column: 1;
-  grid-row: 1;
-  justify-self: center;
-}
-
-.miro-feature-card > .miro-card-title,
-.miro-feature-card > .miro-compact-copy {
-  grid-column: 2;
-  width: 100%;
-}
-
-.miro-feature-icon {
-  display: grid;
-  place-items: center;
-  width: 2.8rem;
-  height: 2.8rem;
-  border-radius: var(--radius-lg);
-  background: rgba(242, 194, 29, 0.12);
-  border: 1px solid rgba(242, 194, 29, 0.22);
-  color: var(--primary);
-}
-
-.miro-steps-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
-  gap: 1rem;
-}
-
-.miro-step-card {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 0.55rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--surface) 92%, var(--background));
-  padding: 1rem 0.9rem;
-  text-align: center;
-}
-
-.miro-step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
-  border-radius: var(--radius-full);
-  background: rgba(242, 194, 29, 0.12);
-  color: var(--primary);
-  font-size: 0.82rem;
-  font-weight: 900;
-}
-
-.miro-compact-copy {
-  font-size: 0.96rem;
-  line-height: 1.8;
-  color: var(--muted-foreground);
 }
 
 .miro-card {
@@ -605,691 +388,10 @@ textarea {
   box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
 }
 
-.miro-brand-mark {
-  border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--primary) 0%, #fff1a8 100%);
-  box-shadow: var(--shadow-glow);
-}
-
-.miro-nav-link,
-.miro-product-menu-link,
-.miro-product-subnav-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.miro-nav-link,
-.miro-product-menu-link,
-.miro-product-subnav-link,
-.miro-icon-action {
-  border: 1px solid transparent;
-  color: var(--muted-foreground);
-  transition:
-    background-color 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    box-shadow 140ms ease,
-    transform 140ms ease;
-}
-
-.theme-switch {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 7rem;
-  height: 2.5rem;
-  padding: 0.2rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--surface-muted) 82%, var(--background));
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.theme-switch-track {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  width: 100%;
-  height: 100%;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.theme-switch-thumb {
-  position: absolute;
-  top: 0.12rem;
-  left: 0;
-  width: calc(33.333% - 0.16rem);
-  height: calc(100% - 0.24rem);
-  border-radius: 999px;
-  background: var(--primary);
-  box-shadow: var(--shadow-glow);
-  transition: left 180ms ease;
-}
-
-.theme-switch-label {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-
-.theme-switch-label.active {
-  color: var(--primary-foreground);
-}
-
-.miro-nav-link {
-  min-height: 2.5rem;
-  border-radius: var(--radius-full);
-  padding: 0.55rem 0.85rem;
-  font-size: 0.875rem;
-  font-weight: 800;
-  line-height: 1.2;
-}
-
-.miro-product-menu-link {
-  min-height: 2.5rem;
-  justify-content: flex-start;
-  border-radius: var(--radius-lg);
-  padding: 0.65rem 0.8rem;
-  font-size: 0.875rem;
-  font-weight: 750;
-  text-align: start;
-}
-
-.miro-icon-action {
-  border-radius: var(--radius-lg);
-}
-
-.miro-nav-link:hover,
-.miro-product-menu-link:hover,
-.miro-icon-action:hover,
-.miro-product-subnav-link:hover {
-  border-color: color-mix(in srgb, var(--border-control) 72%, transparent);
-  background: var(--surface-hover);
-  color: var(--foreground);
-}
-
-.miro-nav-link-active,
-.miro-product-menu-link-active,
-.miro-product-subnav-link-active {
-  border-color: var(--primary);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  box-shadow: var(--shadow-glow);
-}
-
-.miro-nav-link-active:hover,
-.miro-product-menu-link-active:hover,
-.miro-product-subnav-link-active:hover {
-  background: var(--primary-hover);
-  color: var(--primary-foreground);
-}
-
-.miro-product-menu {
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--surface) 94%, var(--background));
-  box-shadow: var(--shadow-lift);
-  animation: miro-menu-enter 140ms ease-out both;
-}
-
-.miro-product-subnav {
-  border-bottom: 1px solid
-    color-mix(in srgb, var(--border-subtle) 72%, transparent);
-  box-shadow: 0 10px 26px color-mix(in srgb, #000 14%, transparent);
-}
-
-.miro-product-subnav-rail {
-  display: flex;
-  gap: 0.35rem;
-  max-width: 100%;
-  overflow-x: auto;
-  padding: 0.35rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-2xl);
-  background: color-mix(in srgb, var(--surface-muted) 82%, var(--background));
-  box-shadow: var(--shadow-soft);
-  scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--primary) 72%, #f4d76c) transparent;
-}
-
-.miro-product-subnav-rail::-webkit-scrollbar {
-  height: 8px;
-}
-
-.miro-product-subnav-rail::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.miro-product-subnav-rail::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 76%, #e3cb76);
-}
-
-.miro-product-subnav-link {
-  min-height: 2.65rem;
-  flex: 0 0 auto;
-  border-radius: var(--radius-xl);
-  padding: 0.65rem 1rem;
-  font-size: 0.875rem;
-  font-weight: 800;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.miro-search-input {
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-soft);
-  transition:
-    border-color 140ms ease,
-    box-shadow 140ms ease,
-    background-color 140ms ease;
-}
-
-.miro-search-input:focus {
-  box-shadow:
-    var(--shadow-soft),
-    0 0 0 4px color-mix(in srgb, var(--primary) 20%, transparent);
-}
-
-.miro-product-card {
-  border-radius: var(--radius-2xl);
-  flex: 1 1 16rem;
-  max-width: none;
-  width: 100%;
-  min-width: 0;
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.02),
-    rgba(255, 255, 255, 0.01)
-  );
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.miro-product-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(15.5rem, 1fr));
-  justify-content: stretch;
-  align-items: stretch;
-  gap: 1.1rem;
-}
-
-.miro-product-card-media,
-.miro-product-icon-shell {
-  border-radius: var(--radius-xl);
-}
-
-.miro-product-card-media {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.03),
-    rgba(255, 255, 255, 0.02)
-  );
-}
-
-.miro-product-icon-shell {
-  box-shadow:
-    inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent),
-    var(--shadow-soft);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.08),
-    rgba(255, 255, 255, 0.03)
-  );
-}
-
 .miro-input::placeholder {
   color: var(--muted-foreground);
 }
 
-.miro-text-balance {
-  text-wrap: balance;
-}
-
-.miro-desktop-action {
-  display: none;
-}
-
-@media (min-width: 1280px) {
-  .miro-desktop-action {
-    display: inline-flex;
-  }
-
-  span.miro-desktop-action {
-    display: grid;
-  }
-}
-
-.miro-hero {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  background:
-    linear-gradient(
-      90deg,
-      rgba(5, 7, 10, 0.96) 0%,
-      rgba(14, 17, 20, 0.72) 46%,
-      rgba(5, 7, 10, 0.45) 100%
-    ),
-    linear-gradient(115deg, transparent 35%, var(--hero-glow) 100%), #090b0d;
-  color: #fff;
-}
-.miro-hero-image {
-  object-fit: contain;
-  object-position: right center;
-  filter: drop-shadow(0 26px 48px rgba(0, 0, 0, 0.4));
-}
-.miro-hero-media {
-  position: absolute;
-  inset-block: 0;
-  inset-inline-end: 0;
-  width: min(75%, 60rem);
-  z-index: -1;
-}
-[dir="rtl"] .miro-hero-image {
-  transform: scaleX(-1);
-}
-.miro-hero-inner {
-  min-height: 26rem;
-  display: flex;
-  align-items: center;
-  padding-block: 2.5rem;
-}
-.miro-hero-copy {
-  width: 48%;
-  display: grid;
-  gap: 1.5rem;
-  animation: miro-enter 450ms ease-out both;
-}
-.miro-hero-title {
-  font-size: 3.2rem;
-  line-height: 1.08;
-  font-weight: 900;
-  max-width: 18ch;
-}
-.miro-hero-description {
-  max-width: 42ch;
-  font-size: 1.0625rem;
-  color: rgba(255, 255, 255, 0.75);
-}
-.miro-hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-.miro-hero .miro-button-secondary {
-  background: rgba(17, 21, 23, 0.9);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.18);
-}
-.miro-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--primary);
-  font-size: 13px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-}
-.miro-eyebrow span {
-  width: 28px;
-  height: 2px;
-  background: currentColor;
-}
-.miro-hero-caption {
-  padding-block: 18px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-}
-.miro-hero-caption svg {
-  color: var(--secondary-accent);
-}
-
-.miro-store-highlight-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
-  gap: 0.75rem;
-  margin-top: 1.25rem;
-}
-
-.miro-store-highlight-item {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.65rem;
-  min-height: 3.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xl);
-  background: rgba(15, 18, 21, 0.9);
-  box-shadow: var(--shadow-soft);
-  padding: 0.7rem 0.9rem;
-  color: var(--foreground);
-  font-size: 0.79rem;
-  font-weight: 800;
-  text-align: center;
-}
-
-.miro-store-highlight-badge {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: var(--radius-full);
-  background: rgba(242, 194, 29, 0.12);
-  border: 1px solid rgba(242, 194, 29, 0.24);
-  color: var(--primary);
-}
-.miro-store-hero-section {
-  padding-block: 1.5rem 0;
-}
-.miro-store-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
-  gap: 1.5rem;
-  min-height: 17rem;
-  align-items: center;
-  overflow: hidden;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-2xl);
-  background:
-    linear-gradient(135deg, rgba(242, 194, 29, 0.09) 0%, transparent 35%),
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--surface) 97%, var(--background)),
-      color-mix(in srgb, var(--surface-muted) 91%, var(--background))
-    );
-  box-shadow: var(--shadow-lift);
-  padding: clamp(1.25rem, 3vw, 2rem);
-}
-.miro-store-hero-copy {
-  display: grid;
-  gap: 1.1rem;
-  justify-items: start;
-}
-.miro-store-title {
-  max-width: 14ch;
-  font-size: 4.2rem;
-  line-height: 0.98;
-  font-weight: 950;
-}
-.miro-store-subtitle {
-  max-width: 54ch;
-  color: var(--muted-foreground);
-  font-size: 1.0625rem;
-}
-.miro-store-note {
-  max-width: 44ch;
-  font-size: 0.8125rem;
-  font-weight: 800;
-  color: var(--accent-text);
-}
-.miro-store-hero-visual {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
-}
-.miro-store-device {
-  display: grid;
-  min-height: 8rem;
-  place-items: center;
-  gap: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: var(--radius-xl);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.05),
-    rgba(255, 255, 255, 0.02)
-  );
-  box-shadow: var(--shadow-soft);
-  padding: 1rem;
-  text-align: center;
-  font-size: 0.875rem;
-  font-weight: 900;
-}
-.miro-store-package-band {
-  border-block: 1px solid var(--border-subtle);
-  background:
-    linear-gradient(135deg, rgba(242, 194, 29, 0.08), transparent 36%),
-    linear-gradient(
-      90deg,
-      color-mix(in srgb, var(--surface-muted) 92%, var(--background)),
-      color-mix(in srgb, var(--surface) 96%, var(--background))
-    );
-}
-.miro-store-package-inner {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) auto auto;
-  gap: 2rem;
-  align-items: center;
-  justify-items: center;
-  text-align: center;
-  padding-block: 2rem;
-}
-.miro-store-package-devices {
-  display: flex;
-  gap: 0.55rem;
-}
-.miro-store-package-devices > svg {
-  box-sizing: content-box;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.04),
-    rgba(255, 255, 255, 0.02)
-  );
-  box-shadow: var(--shadow-soft);
-  padding: 0.75rem;
-}
-.miro-store-trust-section {
-  padding-block: 1rem 3rem;
-}
-.miro-store-trust-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  gap: 0.75rem;
-}
-.miro-store-trust-item {
-  display: flex;
-  min-height: 3.5rem;
-  align-items: center;
-  justify-content: center;
-  gap: 0.65rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  box-shadow: var(--shadow-soft);
-  padding: 0.75rem;
-  text-align: center;
-  font-size: 0.875rem;
-  font-weight: 850;
-}
-.miro-store-brand-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.75rem;
-  margin-top: 0.85rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--surface) 88%, var(--background));
-  box-shadow: var(--shadow-soft);
-  padding: 0.85rem;
-}
-.miro-store-brand-row > span {
-  min-width: 7rem;
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-  font-weight: 900;
-  text-align: center;
-}
-.miro-store-category-hero {
-  padding-block: 3rem 1.5rem;
-}
-.miro-service-card {
-  position: relative;
-  border-top: 3px solid var(--primary);
-  transition:
-    transform 220ms ease,
-    background-color 220ms ease,
-    border-color 220ms ease;
-  padding: 0.9rem 0.9rem;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: 0.55rem;
-  min-width: 0;
-}
-
-.miro-mini-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: 0.85rem;
-}
-
-.miro-mini-card {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 0.45rem;
-  min-height: 8.5rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--surface) 90%, var(--background));
-  box-shadow: var(--shadow-soft);
-  padding: 0.85rem 0.8rem;
-  text-align: center;
-}
-
-.miro-mini-label {
-  color: var(--accent-text);
-  font-size: 0.7rem;
-  letter-spacing: 0.12em;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.miro-mini-title {
-  font-size: 1.05rem;
-  line-height: 1.35;
-  font-weight: 800;
-}
-
-.miro-mini-copy {
-  color: var(--muted-foreground);
-  font-size: 0.82rem;
-  line-height: 1.7;
-}
-
-.miro-service-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-  gap: 1rem;
-  container-type: inline-size;
-}
-.miro-service-grid-wide {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.miro-service-symbols {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-.miro-service-icon {
-  width: 2.25rem;
-  height: 2.25rem;
-}
-.miro-card-title {
-  font-size: 1.125rem;
-  line-height: 1.4;
-  font-weight: 750;
-}
-.miro-card-description {
-  font-size: 0.875rem;
-  line-height: 1.65;
-  color: var(--muted-foreground);
-}
-.miro-heading {
-  font-size: var(--type-section);
-  line-height: 1.3;
-  font-weight: 800;
-}
-.miro-section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.8rem 1.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-}
-.miro-section-heading > a {
-  font-size: 0.875rem;
-}
-.miro-business-inner {
-  display: grid;
-  grid-template-columns: 0.7fr 1.5fr auto;
-  align-items: center;
-  gap: 1.5rem;
-  padding-block: 1.75rem;
-}
-.miro-band-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--muted-foreground);
-  max-width: 18ch;
-}
-.miro-business-inner p,
-.miro-contact-band p {
-  max-width: 60ch;
-}
-.miro-details-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3rem;
-}
-.miro-details-grid > div {
-  min-width: 0;
-}
-.miro-contact-band .miro-button {
-  justify-self: end;
-}
-@container (max-width: 56rem) {
-  .miro-service-card {
-    padding: 1.25rem;
-  }
-}
-.miro-service-card:nth-child(even) {
-  border-top-color: var(--secondary-accent);
-}
-.miro-service-card:nth-child(even) > div > svg:first-child {
-  color: var(--secondary-accent);
-}
-.miro-business-band {
-  background: var(--surface-muted);
-}
-.miro-step-number {
-  color: var(--secondary-accent);
-  font-size: 1.5rem;
-  line-height: 1;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-.miro-contact-band {
-  background: var(--surface-muted);
-  border-top: 1px solid var(--border-subtle);
-}
 .miro-button,
 header button,
 header a {
@@ -1298,6 +400,7 @@ header a {
     color 180ms ease,
     transform 180ms ease;
 }
+
 .miro-button:active {
   transform: translateY(1px);
 }
@@ -1317,19 +420,24 @@ summary {
   list-style-position: outside;
   margin-inline-start: 18px;
 }
+
 summary::marker {
   color: var(--secondary-accent);
 }
+
 details[open] > p {
   animation: miro-enter 220ms ease-out;
 }
+
 #mobile-navigation {
   animation: miro-enter 180ms ease-out;
 }
+
 ::selection {
   background: #ffcf00;
   color: #090a0b;
 }
+
 @keyframes miro-enter {
   from {
     opacity: 0;
@@ -1340,6 +448,7 @@ details[open] > p {
     transform: translateY(0);
   }
 }
+
 @keyframes miro-menu-enter {
   from {
     opacity: 0;
@@ -1350,99 +459,23 @@ details[open] > p {
     transform: translateY(0) scale(1);
   }
 }
+
 @media (hover: hover) {
   .miro-card:hover {
     border-color: color-mix(in srgb, var(--border-control) 76%, transparent);
   }
-  .miro-service-card:hover {
-    transform: translateY(-4px);
-    background: var(--surface-hover);
-    border-inline-color: var(--border-control);
-  }
-  .miro-product-card:hover {
-    transform: translateY(-5px);
-    background: var(--surface-hover);
-    box-shadow: var(--shadow-lift);
-  }
   .miro-button:hover {
     transform: translateY(-2px);
   }
-  .miro-nav-link:hover,
-  .miro-product-menu-link:hover,
-  .miro-product-subnav-link:hover,
-  .miro-icon-action:hover {
-    transform: translateY(-1px);
-  }
 }
+
 @media (max-width: 1023px) {
-  .miro-footer-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
-  }
-  .miro-footer-grid > nav {
-    grid-column: 1 / -1;
-    grid-row: 2;
-  }
   :root {
     --space-section: 3rem;
     --type-section: 1.5rem;
   }
-  .miro-service-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
   .miro-page-shell {
     min-height: auto;
-  }
-  .miro-split-panel,
-  .miro-contact-layout {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: auto;
-  }
-  .miro-split-copy,
-  .miro-contact-copy {
-    justify-items: center;
-    text-align: center;
-  }
-  .miro-split-copy p,
-  .miro-contact-copy p {
-    margin-inline: auto;
-  }
-  .miro-stat-value {
-    font-size: 1.9rem;
-  }
-  .miro-business-inner {
-    grid-template-columns: 1fr auto;
-  }
-  .miro-band-label {
-    grid-column: 1 / -1;
-    max-width: none;
-  }
-  .miro-hero-inner {
-    min-height: 28rem;
-  }
-  .miro-hero-title {
-    font-size: 2.5rem;
-  }
-  .miro-hero-copy {
-    width: 52%;
-  }
-  .miro-store-hero {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .miro-store-hero-copy {
-    justify-items: center;
-    text-align: center;
-  }
-  .miro-store-title {
-    font-size: 3rem;
-  }
-  .miro-store-package-inner {
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-    text-align: center;
-  }
-  .miro-store-trust-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1453,203 +486,22 @@ details[open] > p {
     word-break: break-word;
     overflow-wrap: break-word;
   }
-
-  .miro-rich-panel,
-  .miro-card,
-  .miro-stat-card,
-  .miro-feature-card,
-  .miro-step-card,
-  .miro-mini-card {
-    border-radius: var(--radius-lg);
-  }
 }
 
 @media (max-width: 639px) {
   .miro-main > .miro-section h1 {
     font-size: 1.875rem;
   }
-  .miro-footer-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1.5rem;
-  }
   :root {
     --space-section: 2.5rem;
     --space-panel: 1.25rem;
     --type-section: 1.375rem;
   }
-  .miro-container {
-    width: calc(100% - 2rem);
-  }
-  .miro-hero {
-    display: flex;
-    flex-direction: column;
-  }
-  .miro-hero-media {
-    position: relative;
-    inset: auto;
-    order: 2;
-    width: 100%;
-    aspect-ratio: 1.8;
-  }
-  .miro-hero-caption {
-    order: 3;
-    justify-content: center;
-    text-align: center;
-    padding-block: 0.875rem;
-  }
-  .miro-hero-inner {
-    min-height: 0;
-    padding-block: 2.5rem 0.5rem;
-    justify-content: center;
-  }
-  .miro-hero-copy {
-    width: 100%;
-    max-width: 30rem;
-    justify-items: center;
-    text-align: center;
-    gap: 1.25rem;
-  }
-  .miro-hero-title {
-    font-size: 2rem;
-    max-width: 18ch;
-  }
-  .miro-hero-image {
-    object-fit: cover;
-    object-position: right center;
-  }
-  [dir="rtl"] .miro-hero-image {
-    transform: none;
-  }
-  .miro-hero-caption {
-    font-size: 0.6875rem;
-  }
-  .miro-hero-description {
-    font-size: 1rem;
-  }
-  .miro-hero-actions {
-    justify-content: center;
-    width: 100%;
-  }
-  .miro-hero-actions > a {
-    flex: 1 1 10.5rem;
-    max-width: 24rem;
-  }
-  .miro-store-hero-section {
-    padding-block-start: 1rem;
-  }
-  .miro-store-hero {
-    gap: 1.25rem;
-    padding: 1.25rem;
-  }
-  .miro-page-panel,
-  .miro-split-panel,
-  .miro-contact-layout {
-    padding: 1.25rem;
-  }
-  .miro-stat-value {
-    font-size: 1.6rem;
-  }
-  .miro-visual-grid,
-  .miro-visual-grid-3 {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .miro-visual-tile {
-    min-height: 6.5rem;
-  }
-  .miro-store-title {
-    font-size: 2.25rem;
-  }
-  .miro-store-hero-visual {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .miro-store-device {
-    min-height: 5.5rem;
-    grid-template-columns: auto minmax(0, 1fr);
-    justify-items: start;
-    text-align: start;
-  }
-  .miro-store-trust-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .miro-store-brand-row > span {
-    min-width: 5.5rem;
-  }
-  .miro-service-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.75rem;
-  }
-  .miro-service-card {
-    grid-template-columns: 2.25rem minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    column-gap: 1rem;
-    row-gap: 0.375rem;
-    align-items: start;
-  }
-  .miro-service-symbols {
-    grid-row: 1 / 3;
-    margin: 0;
-    padding-top: 0.125rem;
-  }
-  .miro-service-symbols > svg:last-child {
-    display: none;
-  }
-  .miro-card-description {
-    grid-column: 2;
-  }
-  .miro-product-card {
-    flex-basis: 100%;
-    max-width: 24rem;
-  }
-  .miro-business-inner {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }
 
 @media (min-width: 321px) and (max-width: 479px) {
-  .miro-container {
-    width: calc(100% - 1.15rem);
-  }
-
   .miro-button {
     width: 100%;
-  }
-
-  .miro-hero-actions {
-    flex-direction: column;
-  }
-
-  .miro-hero-actions > a {
-    width: 100%;
-  }
-}
-
-@media (max-width: 320px) {
-  .miro-button,
-  .miro-nav-link,
-  .miro-product-menu-link,
-  .miro-product-subnav-link {
-    min-height: 2.35rem;
-    padding-inline: 0.75rem;
-  }
-
-  .miro-heading {
-    font-size: 1.1rem;
-  }
-
-  .miro-mini-copy,
-  .miro-card-description,
-  .miro-compact-copy {
-    font-size: 0.78rem;
-  }
-}
-
-@media (min-width: 768px) and (max-width: 1023px) {
-  .miro-hero-copy {
-    width: 58%;
-  }
-
-  .miro-store-package-inner {
-    grid-template-columns: minmax(0, 1fr) auto auto;
   }
 }
 
@@ -1657,179 +509,13 @@ details[open] > p {
   html {
     scroll-behavior: auto;
   }
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-@media (prefers-contrast: more) {
-  .miro-card,
-  .miro-rich-panel,
-  .miro-stat-card,
-  .miro-feature-card,
-  .miro-step-card,
-  .miro-mini-card {
-    border-color: var(--border-control);
-  }
-}
-
-@media (max-width: 639px) {
-  .miro-main > .miro-section h1 {
-    font-size: 1.875rem;
-  }
-  .miro-footer-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 1.5rem;
-  }
-  :root {
-    --space-section: 2.5rem;
-    --space-panel: 1.25rem;
-    --type-section: 1.375rem;
-  }
-  .miro-container {
-    width: calc(100% - 2rem);
-  }
-  .miro-hero {
-    display: flex;
-    flex-direction: column;
-  }
-  .miro-hero-media {
-    position: relative;
-    inset: auto;
-    order: 2;
-    width: 100%;
-    aspect-ratio: 1.8;
-  }
-  .miro-hero-caption {
-    order: 3;
-    justify-content: center;
-    text-align: center;
-    padding-block: 0.875rem;
-  }
-  .miro-hero-inner {
-    min-height: 0;
-    padding-block: 2.5rem 0.5rem;
-    justify-content: center;
-  }
-  .miro-hero-copy {
-    width: 100%;
-    max-width: 30rem;
-    justify-items: center;
-    text-align: center;
-    gap: 1.25rem;
-  }
-  .miro-hero-title {
-    font-size: 2rem;
-    max-width: 18ch;
-  }
-  .miro-hero-image {
-    object-fit: cover;
-    object-position: right center;
-  }
-  [dir="rtl"] .miro-hero-image {
-    transform: none;
-  }
-  .miro-hero-caption {
-    font-size: 0.6875rem;
-  }
-  .miro-hero-description {
-    font-size: 1rem;
-  }
-  .miro-hero-actions {
-    justify-content: center;
-    width: 100%;
-  }
-  .miro-hero-actions > a {
-    flex: 1 1 10.5rem;
-    max-width: 24rem;
-  }
-  .miro-store-hero-section {
-    padding-block-start: 1rem;
-  }
-  .miro-store-hero {
-    gap: 1.25rem;
-    padding: 1.25rem;
-  }
-  .miro-store-title {
-    font-size: 2.25rem;
-  }
-  .miro-store-hero-visual {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .miro-store-device {
-    min-height: 5.5rem;
-    grid-template-columns: auto minmax(0, 1fr);
-    justify-items: start;
-    text-align: start;
-  }
-  .miro-store-trust-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .miro-store-brand-row > span {
-    min-width: 5.5rem;
-  }
-  .miro-service-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.75rem;
-  }
-  .miro-service-card {
-    grid-template-columns: 2.25rem minmax(0, 1fr);
-    grid-template-rows: auto auto;
-    column-gap: 1rem;
-    row-gap: 0.375rem;
-    align-items: start;
-  }
-  .miro-service-symbols {
-    grid-row: 1 / 3;
-    margin: 0;
-    padding-top: 0.125rem;
-  }
-  .miro-service-symbols > svg:last-child {
-    display: none;
-  }
-  .miro-card-description {
-    grid-column: 2;
-  }
-  .miro-product-card {
-    flex-basis: 100%;
-    max-width: 24rem;
-  }
-  .miro-business-inner {
-    grid-template-columns: minmax(0, 1fr);
-    text-align: center;
-    justify-items: center;
-    gap: 1rem;
-    padding-block: 2rem;
-  }
-  .miro-business-inner > a {
-    justify-self: center;
-  }
-  .miro-details-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2.5rem;
-  }
-  .miro-contact-band {
-    text-align: center;
-  }
-  .miro-contact-band .miro-button {
-    justify-self: center;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
-    scroll-behavior: auto !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
@@ -1937,11 +623,13 @@ details[open] > p {
   white-space: nowrap;
   border: 1px solid transparent;
 }
+
 .mgmt-sales-channel-badge[data-sales-channel="pos"] {
   color: var(--sales-channel-pos);
   border-color: color-mix(in srgb, var(--sales-channel-pos) 45%, transparent);
   background: color-mix(in srgb, var(--sales-channel-pos) 14%, transparent);
 }
+
 .mgmt-sales-channel-badge[data-sales-channel="website"] {
   color: var(--sales-channel-website);
   border-color: color-mix(
@@ -1951,6 +639,7 @@ details[open] > p {
   );
   background: color-mix(in srgb, var(--sales-channel-website) 14%, transparent);
 }
+
 .mgmt-sales-channel-badge[data-sales-channel="legacy"] {
   color: var(--muted-foreground);
   border-color: var(--border-subtle);
@@ -1962,6 +651,7 @@ details[open] > p {
   border-radius: var(--radius-lg);
   touch-action: manipulation;
 }
+
 :where(button, [role="button"], [role="switch"]):focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 3px;

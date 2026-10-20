@@ -58,3 +58,24 @@
   border: 1px solid var(--miro-border, #555);
   border-radius: 0.5rem;
 }
+
+/* Customer payment states use the same active public palette as the store. */
+:global(html[data-appearance-version="2"]) .card {
+  border-color: var(--border-subtle);
+  background: var(--surface);
+  color: var(--foreground);
+}
+:global(html[data-appearance-version="2"]) .brand {
+  color: var(--accent-text);
+}
+:global(html[data-appearance-version="2"]) .card select {
+  background: var(--surface);
+  border-color: var(--border-control);
+  border-radius: var(--public-icon-radius, 0.75rem);
+}
+:global(html[data-appearance-version="2"]) .error {
+  border-color: var(--error-text);
+}
+:global(html[data-appearance-version="2"]) .warning {
+  border-color: var(--accent-text);
+}

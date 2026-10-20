@@ -1,5 +1,15 @@
 # MIRO animation, loading and appearance system
 
+## Preview magnifier interaction — 2026-10-17
+
+The same interaction now applies to every Version 2 product-detail gallery through `ProductImageMagnifier`, not only card/rail previews. Each selected photo has its own keyed instance. Page gallery arrows/thumbnails remain independent of lens/slider keyboard input. On product pages, Escape is scoped to the image/controls; account menus and other overlays keep their own Escape priority. Preview dialogs retain their document-level first-Escape zoom exit. The detail wrapper preserves panel geometry and image priority, shares the exact base/lens media inset and disables the previous image hover-scale effect. Version 1 keeps its original gallery.
+
+Version 2 popup magnification uses a movable circular lens, controlled by `ProductImageMagnifier`. The base image remains at its normal `contain` size. A clipped, decorative copy uses the same responsive image source and mirrors the stage geometry at the selected scale; never expose a second spoken image. Pointer updates write local CSS variables without rerendering the popup or making per-movement requests. The lens fits inside the current stage and recalculates on resize.
+
+The compact icon toggles on/off and shows a localized helper on hover/focus. It stays on the physical left in both locales; the image counter is independently centered. Their visible controls are 32px tall, with a 44px magnifier hit target. A native slider and current value appear only while magnification is active: 1.25×–5× in 0.25× steps, initially 2×. Ordinary wheel scrolling over the active image adjusts that same value without moving the page; Ctrl/Meta wheel shortcuts remain native. Slider arrow/Home/End keys adjust zoom without changing the selected gallery image. Turning off preserves the chosen level; selecting another image remounts the stage and resets to 2× with the lens off.
+
+Mouse movement and captured touch/pen drags move the lens only while enabled. Physical arrow keys move it and Home recenters; the first Escape exits magnification and focuses its toggle, before the enclosing preview handles a later Escape. No zoom/pan transitions are introduced, including under reduced motion. Native gestures remain unchanged when magnification is off; failed/missing media has no magnifier control. Counter, toggle and slider remain outside the image border, with separate gallery arrow lanes and header Close. Keep the compact/minimal gallery fallbacks and footer-clearance regressions.
+
 ## Fast display counters — 2026-10-11
 
 `AnimatedNumber` animates designated statistics on mount, route revisits and value updates, including browser reloads. It takes twice the saved Content Reveal duration, capped at 400ms (320ms at the standard 160ms setting). Master motion, Content Reveal and reduced motion govern it; a disabled feature or reduced motion immediately displays the exact value. Counting never delays page data, navigation or loading settlement.

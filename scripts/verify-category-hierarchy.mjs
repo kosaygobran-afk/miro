@@ -561,7 +561,7 @@ async function verifyPublic(page) {
           `${locale}/${width}/${theme}: selected child is bold`,
         );
         const positioning = await page
-          .locator(".sf-category-tools")
+          .locator('[data-testid="store-catalog"]')
           .evaluate((node) => {
             const bounds = (selector) => {
               const rect = node.querySelector(selector).getBoundingClientRect();
@@ -573,25 +573,25 @@ async function verifyPublic(page) {
               };
             };
             return {
-              children: bounds(".sf-subcategories"),
+              bar: bounds(".sf-subcategories"),
               toolbar: bounds(".sf-catalog-toolbar"),
             };
           });
-        if (width >= 960) {
+        const containerEdge = positioning.toolbar.x + positioning.toolbar.width;
+        assert.ok(
+          positioning.bar.y + positioning.bar.height <=
+            positioning.toolbar.y + 1,
+          `${locale}/${width}: subcategory bar sits above the search toolbar without overlap`,
+        );
+        assert.ok(
+          Math.abs(positioning.bar.x + positioning.bar.width - containerEdge) <=
+            2,
+          `${locale}/${width}: subcategory bar spans the same container as the toolbar`,
+        );
+        if (width <= 767) {
           assert.ok(
-            positioning.children.x + positioning.children.width <=
-              positioning.toolbar.x + 1,
-            `${locale}/${theme}: internal categories are physically left of search`,
-          );
-          assert.ok(
-            Math.abs(positioning.children.y - positioning.toolbar.y) <= 1.5,
-            `${locale}/${theme}: desktop controls align vertically`,
-          );
-        } else {
-          assert.ok(
-            positioning.children.y >=
-              positioning.toolbar.y + positioning.toolbar.height - 1,
-            `${locale}/${width}: stacked mobile controls do not overlap`,
+            Math.abs(positioning.bar.x - positioning.toolbar.x) <= 2,
+            `${locale}/${width}: stacked controls share the same start edge`,
           );
         }
         if (width === 320) {

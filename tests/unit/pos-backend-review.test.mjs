@@ -84,6 +84,8 @@ async function catalogHarness({
   availabilityError = null,
   matchingProducts = [{ product_id: productId }],
   navigationCategories = [],
+  productImages = [],
+  legacyImage = null,
 } = {}) {
   const queries = [];
   const product = {
@@ -91,7 +93,8 @@ async function catalogHarness({
     slug: "camera",
     name_he: "מצלמה",
     name_en: "Camera",
-    image_url: null,
+    image_url: legacyImage,
+    product_images: productImages,
     price: 100,
     sale_price: null,
     tracking_mode: "quantity",
@@ -195,6 +198,11 @@ async function catalogHarness({
             : { ok: false, response: { status: 403 } };
         },
         checkManagementRateLimit: async () => rate,
+        tooManyRequests: () => ({
+          body: { error: "Too many requests", code: "rate_limited" },
+          status: 429,
+          headers: { "Retry-After": "60" },
+        }),
         getClientIp: () => "fixture",
         errorResponse: (error, status = 500) => ({ body: { error }, status }),
         mapPostgresError: () => ({ status: 503 }),
@@ -203,6 +211,61 @@ async function catalogHarness({
   );
   return { ...route, queries };
 }
+
+test("POS uses the first ordered gallery image with a legacy-only fallback", async () => {
+  for (const [productImages, legacyImage, expected] of [
+    [
+      [{ image_url: "https://media.example/current-cutout.png" }],
+      "https://media.example/old.jpg",
+      "https://media.example/current-cutout.png",
+    ],
+    [
+      [{ image_url: "https://media.example/restored-original.jpg" }],
+      null,
+      "https://media.example/restored-original.jpg",
+    ],
+    [
+      [],
+      "https://media.example/legacy.jpg",
+      "https://media.example/legacy.jpg",
+    ],
+    [[], null, null],
+  ]) {
+    const route = await catalogHarness({ productImages, legacyImage });
+    const response = await route.GET(
+      new Request("https://miro.example/api/management/pos/catalog"),
+    );
+    assert.equal(response.status, 200);
+    assert.equal(response.body.products[0].image_url, expected);
+    const operations = route.queries.find(
+      (q) => q.table === "products",
+    ).operations;
+    assert.match(
+      operations.find((op) => op.method === "select").args[0],
+      /product_images\s*\(image_url\)/,
+    );
+    assert.ok(
+      operations.some(
+        ({ method, args }) =>
+          method === "order" &&
+          args[0] === "sort_order" &&
+          args[1]?.referencedTable === "product_images",
+      ),
+    );
+    assert.ok(
+      operations.some(
+        ({ method, args }) =>
+          method === "limit" &&
+          args[0] === 1 &&
+          args[1]?.referencedTable === "product_images",
+      ),
+    );
+    assert.equal(
+      Object.hasOwn(response.body.products[0], "product_images"),
+      false,
+    );
+  }
+});
 
 test("POS catalog requires cashier access and fails closed on unavailable rate-limit storage", async () => {
   for (const [options, expected] of [

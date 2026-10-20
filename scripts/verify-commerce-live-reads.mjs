@@ -58,6 +58,27 @@ try {
     JSON.stringify(signed.data.session),
   ).toString("base64url")}`;
   const reads = [
+    ["products?limit=10", (body) => Array.isArray(body?.products)],
+    ["categories", (body) => Array.isArray(body?.categories)],
+    ["inventory?limit=10", (body) => Array.isArray(body?.items)],
+    ["services", (body) => Array.isArray(body?.services)],
+    ["suppliers", (body) => Array.isArray(body?.suppliers)],
+    ["requests?limit=10", (body) => Array.isArray(body?.rows)],
+    [
+      "analytics",
+      (body) => body?.totals != null && Array.isArray(body?.perProduct),
+    ],
+    ["finance", (body) => body?.totals != null],
+    ["settings", (body) => Array.isArray(body?.settings)],
+    [
+      "settings/animation",
+      (body) => body?.settings != null && typeof body?.revision === "string",
+    ],
+    [
+      "storefront/design",
+      (body) => body?.design != null && typeof body?.revision === "string",
+    ],
+    ["storefront/rail", (body) => Array.isArray(body?.railItems)],
     [
       "pos/catalog?limit=30",
       (body) =>
@@ -67,6 +88,19 @@ try {
       "accounts?limit=10",
       (body) => Array.isArray(body?.orders) && body?.totals != null,
     ],
+    [
+      "accounts?from=2026-10-10T21:00:00.000Z&to=2026-10-17T20:59:59.999Z&limit=25&offset=0",
+      (body) => Array.isArray(body?.orders) && body?.totals != null,
+    ],
+    [
+      `accounts?method=cash&payment-status=voided&cashier=${actorId}&limit=25&offset=0`,
+      (body) => Array.isArray(body?.orders) && body?.totals != null,
+    ],
+    ...["ceo", "admin"].map((role) => [
+      `users?role=${role}&limit=100&offset=0`,
+      (body) =>
+        Array.isArray(body?.users) && Number.isSafeInteger(body?.totalCount),
+    ]),
     ["tax", (body) => Array.isArray(body?.taxRates)],
     [
       "customers?limit=20&activeOnly=true",
@@ -101,6 +135,36 @@ try {
     console.log(
       `${passed ? "PASS" : "FAIL"} ${route}: HTTP ${response.status}`,
     );
+    if (route.startsWith("pos/catalog?") && passed && body.products.length) {
+      const { data, error } = await service
+        .from("product_images")
+        .select("product_id, image_url, sort_order")
+        .in(
+          "product_id",
+          body.products.map((product) => product.id),
+        )
+        .order("sort_order");
+      const firstImages = new Map();
+      for (const image of data ?? []) {
+        if (!firstImages.has(image.product_id))
+          firstImages.set(image.product_id, image.image_url);
+      }
+      const valid =
+        !error &&
+        body.products.every(
+          (product) =>
+            !firstImages.has(product.id) ||
+            product.image_url === firstImages.get(product.id),
+        );
+      report.reads.push({
+        route: "pos/catalog gallery consistency",
+        status: response.status,
+        passed: valid,
+      });
+      console.log(
+        `${valid ? "PASS" : "FAIL"} POS images match the current product galleries`,
+      );
+    }
     if (route.startsWith("accounts?") && passed && body.orders.length) {
       const detail = await fetch(
         `${base}/api/management/accounts/${body.orders[0].order_id}`,

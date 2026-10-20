@@ -16,7 +16,7 @@ import {
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
-import { PageHeader, FormSection } from "../ui";
+import { PageHeader, FormSection, Notice } from "../ui";
 import {
   storefrontDesignSchema,
   defaultStorefrontDesign,
@@ -42,6 +42,10 @@ export function StoreDesign({
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  // Revision conflict: another CEO published while this draft was open.
+  // Mirrors animation-settings: publishing is blocked until the latest
+  // saved revision is reloaded and reviewed.
+  const [conflict, setConflict] = useState(false);
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -55,6 +59,7 @@ export function StoreDesign({
       setDesign(data.design);
       setSaved(JSON.stringify(data.design));
       setRevision(data.revision);
+      setConflict(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unable to load design");
     } finally {
@@ -72,7 +77,7 @@ export function StoreDesign({
   }, [load]);
   const dirty = design !== null && JSON.stringify(design) !== saved;
   async function save() {
-    if (!design || !isCeo) return;
+    if (!design || !isCeo || conflict) return;
     const parsed = storefrontDesignSchema.safeParse(design);
     if (!parsed.success) {
       setError(
@@ -92,6 +97,13 @@ export function StoreDesign({
         body: JSON.stringify({ design: parsed.data, revision }),
       });
       const data = await response.json();
+      if (response.status === 409) {
+        // SQLSTATE PT409 surfaces as a reviewable conflict here, matching the
+        // animation-settings contract: the draft is kept on screen and the
+        // latest revision must be reloaded before publishing.
+        setConflict(true);
+        return;
+      }
       if (!response.ok) throw new Error(data.error || "Unable to save");
       setDesign(data.design);
       setSaved(JSON.stringify(data.design));
@@ -200,6 +212,12 @@ export function StoreDesign({
     return result;
   }
   const text = (en: string, heb: string) => (he ? heb : en);
+  // Empty or partial numeric input must not inject NaN into the draft before
+  // schema validation runs; the previous value stands until a valid number.
+  function parseControlNumber(value: string, fallback: number): number {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
   return (
     <div className={styles.page}>
       <PageHeader
@@ -247,7 +265,8 @@ export function StoreDesign({
               <button
                 className="mgmt-button mgmt-button--primary"
                 type="button"
-                disabled={!dirty || saving || uploading || loading}
+                disabled={!dirty || saving || uploading || loading || conflict}
+                aria-busy={saving || undefined}
                 onClick={() => void save()}
               >
                 <Save size={16} />
@@ -283,6 +302,29 @@ export function StoreDesign({
         <p role="alert" className={styles.error}>
           {error}
         </p>
+      ) : null}
+      {conflict ? (
+        <Notice
+          tone="warning"
+          action={
+            <button
+              type="button"
+              className="mgmt-button"
+              onClick={() => void load()}
+              disabled={loading || saving || uploading}
+            >
+              {text(
+                "Reload saved design and discard draft",
+                "טעינת הגרסה השמורה וביטול הטיוטה",
+              )}
+            </button>
+          }
+        >
+          {text(
+            "Another CEO published a design revision. Your draft stays on this screen, but you must reload the latest version before publishing.",
+            "מנכ״ל אחר פרסם גרסת עיצוב. הטיוטה שלך נשמרת במסך הזה, אך יש לטעון את הגרסה העדכנית לפני פרסום.",
+          )}
+        </Notice>
       ) : null}
       {message ? (
         <p role="status" className={styles.success}>
@@ -322,7 +364,13 @@ export function StoreDesign({
                   max={60}
                   value={design.hero.intervalSeconds}
                   onChange={(e) =>
-                    updateHero("intervalSeconds", Number(e.target.value))
+                    updateHero(
+                      "intervalSeconds",
+                      parseControlNumber(
+                        e.target.value,
+                        design.hero.intervalSeconds,
+                      ),
+                    )
                   }
                 />
               </label>
@@ -355,7 +403,13 @@ export function StoreDesign({
                   step={50}
                   value={design.hero.transitionMs}
                   onChange={(e) =>
-                    updateHero("transitionMs", Number(e.target.value))
+                    updateHero(
+                      "transitionMs",
+                      parseControlNumber(
+                        e.target.value,
+                        design.hero.transitionMs,
+                      ),
+                    )
                   }
                 />
               </label>
@@ -516,7 +570,13 @@ export function StoreDesign({
                   max={120}
                   value={design.brands.durationSeconds}
                   onChange={(e) =>
-                    updateBrands("durationSeconds", Number(e.target.value))
+                    updateBrands(
+                      "durationSeconds",
+                      parseControlNumber(
+                        e.target.value,
+                        design.brands.durationSeconds,
+                      ),
+                    )
                   }
                 />
               </label>
@@ -668,7 +728,10 @@ export function StoreDesign({
                       ...design,
                       products: {
                         ...design.products,
-                        pixelsPerSecond: Number(e.target.value),
+                        pixelsPerSecond: parseControlNumber(
+                          e.target.value,
+                          design.products.pixelsPerSecond,
+                        ),
                       },
                     })
                   }
@@ -690,7 +753,10 @@ export function StoreDesign({
                       ...design,
                       products: {
                         ...design.products,
-                        hoverDelayMs: Number(e.target.value),
+                        hoverDelayMs: parseControlNumber(
+                          e.target.value,
+                          design.products.hoverDelayMs,
+                        ),
                       },
                     })
                   }

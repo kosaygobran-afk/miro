@@ -33,6 +33,11 @@ export {
   type DialogProps,
   type ConfirmationDialogProps,
 } from "./dialog";
+export {
+  useConfirmDialog,
+  type ConfirmDialogApi,
+  type ConfirmDialogOptions,
+} from "./use-confirm-dialog";
 export { FormSection, type FormSectionProps } from "./form-section";
 export {
   FormField,

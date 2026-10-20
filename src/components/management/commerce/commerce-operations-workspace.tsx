@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { FormField, FormSection } from "../ui";
+import { FormField, FormSection, useConfirmDialog } from "../ui";
 import { toAgorot } from "@/lib/commerce/money";
 import {
   ActionButton,
@@ -436,6 +436,8 @@ export function RecurringWorkspace({ locale }: { locale: Locale }) {
   });
   const [feedback, setFeedback] = useState("");
   const [createWriteUnknown, setCreateWriteUnknown] = useState(false);
+  // Themed, accessible replacement for the recurring-cancel confirm().
+  const { confirm, dialogNode } = useConfirmDialog();
   const edit = (row: CommerceRow) =>
     setForm({
       name: read(row, "name"),
@@ -503,6 +505,7 @@ export function RecurringWorkspace({ locale }: { locale: Locale }) {
         />
       }
     >
+      {dialogNode}
       <SectionFeedback notice={notice} setNotice={setNotice} locale={locale} />
       {feedback ? (
         <p role="status" className={styles.helpText}>
@@ -563,20 +566,23 @@ export function RecurringWorkspace({ locale }: { locale: Locale }) {
                   label={he ? "ביטול" : "Cancel"}
                   kind="danger"
                   onClick={() => {
-                    if (
-                      window.confirm(
-                        he
-                          ? "לבטל את החיוב המחזורי?"
-                          : "Cancel this recurring schedule?",
-                      )
-                    )
-                      void action("recurring_cancel", {
-                        id: read(row, "id"),
-                        expected_revision: Number(row.revision) || 0,
-                        reason: he
-                          ? "בוטל דרך הממשק"
-                          : "Cancelled from management",
-                      });
+                    void confirm({
+                      title: he
+                        ? "לבטל את החיוב המחזורי?"
+                        : "Cancel this recurring schedule?",
+                      confirmLabel: he ? "לבטל חיוב" : "Cancel recurring",
+                      cancelLabel: he ? "השאר פעיל" : "Keep active",
+                      tone: "danger",
+                    }).then((proceed) => {
+                      if (proceed)
+                        void action("recurring_cancel", {
+                          id: read(row, "id"),
+                          expected_revision: Number(row.revision) || 0,
+                          reason: he
+                            ? "בוטל דרך הממשק"
+                            : "Cancelled from management",
+                        });
+                    });
                   }}
                 />
               </div>

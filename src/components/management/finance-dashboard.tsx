@@ -272,7 +272,7 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
           label={he ? "טוען נתונים פיננסיים…" : "Loading finance data…"}
         />
       ) : data ? (
-        <div className="motion-content-reveal">
+        <div className={`${s.contentStack} motion-content-reveal`}>
           <div className={s.metrics}>
             {cards.map((card) => {
               const change =

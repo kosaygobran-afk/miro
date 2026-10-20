@@ -56,6 +56,11 @@ async function load(
             }
           : { ok: false, response: { status: 403 } },
       checkManagementRateLimit: async () => rate,
+      tooManyRequests: () => ({
+        body: { error: "Too many requests", code: "rate_limited" },
+        status: 429,
+        headers: { "Retry-After": "60" },
+      }),
       getClientIp: () => "127.0.0.1",
       errorResponse: (message, status) => ({
         body: { error: message },

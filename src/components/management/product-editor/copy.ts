@@ -332,13 +332,31 @@ export const mediaCopy = {
     en: "Image saved. It now appears in the product list and storefront.",
   },
   processingQueued: { he: "ממתין להעלאה", en: "Queued" },
-  removeBackgroundOption: {
-    he: "הסרת רקע בהעלאת תמונות חדשות (ניתן לבטל כדי לשמור מקור)",
-    en: "Remove background on new uploads (turn off to keep the original)",
+  removeAllBackgrounds: {
+    he: "הסרת רקע מכל התמונות",
+    en: "Remove backgrounds from all images",
   },
   removalScope: {
-    he: "לתמונה קיימת, לחצו על הסרת רקע מתחת לתמונה. השינוי נשמר מיד; אין צורך בשמירת המוצר.",
-    en: "For a saved image, use Remove background below it. Images save immediately; product Save is not needed.",
+    he: "תמונות חדשות נשמרות במקור. הסרת רקע יוצרת רקע שקוף סביב המוצר. ניתן לשחזר כל מקור שנשמר באמצעות הכפתור האדום. השינויים נשמרים מיד.",
+    en: "New images keep their original. Background removal makes the area around the product transparent. Use the red button to restore a retained original. Changes save immediately.",
+  },
+  restoreOriginal: { he: "שחזור המקור", en: "Restore original" },
+  restoringOriginal: { he: "משחזר מקור…", en: "Restoring original…" },
+  originalRestored: {
+    he: "התמונה המקורית שוחזרה",
+    en: "Original image restored",
+  },
+  restoreFailed: {
+    he: "לא ניתן לשחזר את המקור. רעננו את הגלריה לבדיקת התמונה השמורה.",
+    en: "Could not restore the original. Refresh the gallery to check the saved image.",
+  },
+  originalUnavailable: {
+    he: "המקור השמור אינו זמין. התמונה הנוכחית לא השתנתה.",
+    en: "The retained original is unavailable. The current image has not changed.",
+  },
+  imageWriteUncertain: {
+    he: "לא ניתן לאשר את השינוי. רעננו את הגלריה לפני פעולה נוספת.",
+    en: "The change could not be confirmed. Refresh the gallery before another action.",
   },
   removeExistingBackground: { he: "הסרת רקע", en: "Remove background" },
   removingBackground: { he: "מסיר רקע…", en: "Removing background…" },
@@ -359,7 +377,7 @@ export const mediaCopy = {
     en: "Background removal could not be completed. Refresh the gallery to check the saved image.",
   },
   processingUploading: { he: "מעלה תמונה…", en: "Uploading image…" },
-  processingSaving: { he: "מעבד ושומר…", en: "Processing and saving…" },
+  processingSaving: { he: "שומר תמונה…", en: "Saving image…" },
   processingBgRemoved: { he: "הרקע הוסר", en: "Background removed" },
   processingAlreadyTransparent: {
     he: "כבר שקוף — נשמר המקור",

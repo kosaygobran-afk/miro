@@ -33,6 +33,51 @@ const pass = (value) => {
   checks.push(value);
   console.log(`PASS ${value}`);
 };
+async function assertCardSpacing(page, section) {
+  const geometry = await page.evaluate((section) => {
+    const cards = [
+      ...document.querySelectorAll(
+        ".mgmt-shell__main :is(.mgmt-metric-card, .insight-card)",
+      ),
+    ].filter((card) => card.getClientRects().length);
+    const overlaps = [];
+    for (let i = 0; i < cards.length; i++) {
+      const a = cards[i].getBoundingClientRect();
+      for (let j = i + 1; j < cards.length; j++) {
+        const b = cards[j].getBoundingClientRect();
+        if (
+          Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+          Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1
+        )
+          overlaps.push([i, j]);
+      }
+    }
+    const stack =
+      section === "finance"
+        ? document.querySelector(
+            ".insight-report-workspace > .motion-content-reveal",
+          )
+        : null;
+    const gaps = stack
+      ? [...stack.children]
+          .slice(1)
+          .map(
+            (child, index) =>
+              child.getBoundingClientRect().top -
+              stack.children[index].getBoundingClientRect().bottom,
+          )
+      : [];
+    return { overlaps, gaps };
+  }, section);
+  assert.deepEqual(geometry.overlaps, [], `${section}: cards must not overlap`);
+  if (section === "finance") {
+    assert.ok(geometry.gaps.length >= 2, "Finance content must be loaded");
+    assert.ok(
+      geometry.gaps.every((gap) => gap >= 23),
+      `Finance sections must stay separated: ${geometry.gaps.join(", ")}`,
+    );
+  }
+}
 const totals = {
   revenueGross: 11800,
   revenueNet: 10000,
@@ -345,17 +390,19 @@ try {
   if (!process.argv.includes("--a11y-only")) {
     for (const locale of ["en", "he"])
       for (const theme of ["dark", "medium", "light"])
-        for (const width of [1440, 390]) {
+        for (const width of [1440, 1024, 390, 320]) {
           await page.setViewportSize({ width, height: 1000 });
           for (const section of ["requests", "finance", "analytics"]) {
             await page.goto(`${base}/${locale}/admin/${section}`, {
               waitUntil: "networkidle",
             });
-            await page.evaluate(
-              (value) =>
-                document.documentElement.setAttribute("data-theme", value),
-              theme,
-            );
+            await page.evaluate((value) => {
+              document.documentElement.setAttribute("data-theme", value);
+              document.documentElement.setAttribute(
+                "data-appearance-version",
+                "2",
+              );
+            }, theme);
             assert.ok(await page.locator("h1").isVisible());
             await page.waitForTimeout(100);
             const overflow = await page.evaluate(
@@ -367,6 +414,7 @@ try {
               false,
               `${locale}/${theme}/${width}/${section} must not overflow the viewport`,
             );
+            await assertCardSpacing(page, section);
             if (
               (locale === "en" && theme === "dark" && width === 1440) ||
               (locale === "he" && theme === "light" && width === 390)
@@ -439,6 +487,7 @@ try {
       .getByRole("button", { name: "Daily ledger", exact: true })
       .click();
     assert.ok(await page.getByRole("table").isVisible());
+    await assertCardSpacing(page, "finance");
     pass("Finance All, order charts, bars and daily ledger");
     financeFail = true;
     await page.getByRole("button", { name: "Refresh", exact: true }).click();

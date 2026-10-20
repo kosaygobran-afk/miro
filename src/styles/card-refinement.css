@@ -1,0 +1,262 @@
+/* Compact unified card refinement — 2026-10-18.
+   Owner-requested pass for the visually active Version 2 presentation only;
+   Version 1 keeps its protected original appearance. The shortened
+   unpublished-price copy is a data change and applies to both versions.
+
+   Scope:
+   -"One size" control system for card footers, quick-preview actions and the
+   collection filter chips (42px height, 0.79rem/700 labels, pill radius in v2).
+   - The details link shares the action row again on wide viewports; narrow
+   phones keep the stacked full-width row from storefront.css.
+   - Calmer body typography: smaller identifier/fact values, tighter summary
+   rhythm and a quote notice that reads as supporting text, not as a price.
+   - Quick preview gains a slightly taller frame with the same unified controls.
+   Image sections (card media, popup gallery) are intentionally untouched. */
+
+/* ---------- Unified compact controls ---------- */
+:root[data-appearance-version="2"]
+  :is(
+    .sf-product-actions .sf-product-action,
+    .sf-product-actions .sf-add-cart-button,
+    .sf-product-actions .sf-save-button,
+    .sf-product-actions .sf-product-quick-preview,
+    .sf-hover-preview-footer .sf-add-cart-button,
+    .sf-hover-preview-footer .sf-hover-preview-link
+  ) {
+  min-height: 42px;
+  font-size: 0.79rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  gap: 0.4rem;
+  border-radius: 999px;
+  transition-duration: var(--motion-button-duration, 180ms);
+  transition-timing-function: var(--motion-easing, ease);
+}
+
+:root[data-appearance-version="2"]
+  .sf-product-card
+  > .sf-product-actions
+  > :is(.sf-add-cart-button, .sf-save-button, .sf-product-quick-preview) {
+  flex: 0 0 40px;
+  width: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding-inline: 0.5rem;
+}
+
+:root[data-appearance-version="2"]
+  .sf-product-card
+  > .sf-product-actions
+  > .sf-product-action {
+  flex: 1 1 5rem;
+  min-width: 0;
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-product-actions, .sf-hover-preview-footer) {
+  gap: 0.3rem;
+}
+
+:root[data-appearance-version="2"] .sf-product-actions {
+  padding: 0.5rem 1.05rem;
+}
+
+/* The details link fits beside the icon controls again on viewports that have
+   room; storefront.css (max-width: 600px) restores the stacked row on phones. */
+:root[data-appearance-version="2"] .sf-product-actions > .sf-product-action {
+  min-height: 42px;
+  padding: 0.3rem 0.8rem;
+}
+
+/* Narrow phones keep the storefront.css stacked full-width details row. */
+@media (max-width: 600px) {
+  :root[data-appearance-version="2"]
+    .sf-product-card
+    > .sf-product-actions
+    .sf-product-action {
+    flex-basis: 100%;
+  }
+}
+
+/* ---------- Calmer body typography ---------- */
+:root[data-appearance-version="2"] .sf-product-summary {
+  gap: 0.42rem;
+}
+
+:root[data-appearance-version="2"] .sf-product-summary .sf-product-category {
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+:root[data-appearance-version="2"] .sf-product-summary h3 {
+  font-size: 1rem;
+  font-weight: 760;
+  line-height: 1.45;
+}
+
+:root[data-appearance-version="2"] .sf-product-summary .sf-product-description {
+  font-size: 0.8rem;
+  line-height: 1.62;
+}
+
+/* Identifier and fact rows share one label voice across cards and previews. */
+:root[data-appearance-version="2"]
+  :is(.sf-product-summary, .sf-hover-preview-details)
+  :is(.product-identifier-label, .sf-product-facts dt) {
+  color: var(--accent-text);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-product-summary, .sf-hover-preview-details)
+  :is(
+    .product-identifier-value,
+    .product-identifier-value a,
+    .sf-product-facts dd
+  ) {
+  color: var(--foreground);
+  font-size: 0.74rem;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-product-summary, .sf-hover-preview-details)
+  :is(.product-identifiers, .sf-product-facts) {
+  gap: 0.3rem;
+}
+
+/* ---------- Compact price presentation ---------- */
+/* Mirror the strongest existing selector shapes so these calm values win the
+   cascade regardless of source order. */
+:root[data-appearance-version="2"]
+  .sf-product-card
+  .sf-product-summary
+  + .sf-product-price {
+  min-height: 4.75rem;
+  padding-block: 0.8rem;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview-price {
+  min-height: 4.75rem;
+  padding-block: 0.8rem;
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-product-card, .sf-hover-preview, .sf-moving-rail-card-shell)
+  :is(.sf-product-price__amount, .sf-price-display__amount):has(small)
+  > strong {
+  font-size: 1.2rem;
+  font-weight: 780;
+  letter-spacing: -0.015em;
+}
+
+/* The unpublished-price notice is supporting text, never a giant headline. */
+:root[data-appearance-version="2"]
+  :is(.sf-product-card, .sf-hover-preview, .sf-moving-rail-card-shell)
+  :is(.sf-product-price__amount, .sf-price-display__amount):not(:has(small))
+  > strong {
+  font-size: 0.82rem;
+  font-weight: 640;
+  line-height: 1.55;
+  color: var(--foreground);
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-product-card, .sf-hover-preview, .sf-moving-rail-card-shell)
+  :is(.sf-product-price__amount, .sf-price-display__amount)
+  small {
+  font-size: 0.7rem;
+}
+
+/* ---------- Quick preview frame ---------- */
+/* The taller 37rem inner frame is canonical in product-preview-refinement.css
+   together with the placement constant in product-hover-preview.tsx. */
+
+:root[data-appearance-version="2"] .sf-hover-preview-details {
+  gap: 0.62rem;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview-description {
+  font-size: 0.8rem;
+  line-height: 1.62;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview-title {
+  font-size: 1.06rem;
+  line-height: 1.45;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview-category {
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+/* ---------- Collection filter chips ----------
+   Same design language as the subcategory bar chips: 10px radius + 42px
+   height in Version 1, pill radius in Version 2, foreground labels and
+   translucent currentColor count badges. */
+.sf-category-filters button {
+  min-height: 42px;
+  padding: 0.32rem 0.9rem;
+  border-radius: 10px;
+  color: var(--foreground);
+  background: var(--background);
+  font-weight: 650;
+}
+
+.sf-category-filters button .miro-control-label {
+  font-size: 0.82rem;
+  font-weight: 650;
+  opacity: 1;
+}
+
+.sf-category-filters button:hover {
+  color: var(--foreground);
+  background: var(--surface-hover);
+}
+
+.sf-category-filters button[aria-pressed="true"] {
+  font-weight: 800;
+}
+
+/* Counts read as compact badges, matching .sf-subcategory-count. */
+.sf-category-filters button .miro-control-end {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35rem;
+  padding: 0.08rem 0.4rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  color: inherit;
+  font-size: 0.66rem;
+  font-weight: 750;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  opacity: 1;
+}
+
+.sf-category-filters button[aria-pressed="true"] .miro-control-end {
+  background: color-mix(in srgb, currentColor 24%, transparent);
+}
+
+/* ---------- Reduced motion always wins ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-appearance-version="2"]
+    :is(
+      .sf-product-actions .sf-product-action,
+      .sf-product-actions .sf-add-cart-button,
+      .sf-product-actions .sf-save-button,
+      .sf-product-actions .sf-product-quick-preview,
+      .sf-hover-preview-footer .sf-add-cart-button,
+      .sf-hover-preview-footer .sf-hover-preview-link,
+      .sf-category-filters button
+    ) {
+    transition-duration: 0ms;
+  }
+}

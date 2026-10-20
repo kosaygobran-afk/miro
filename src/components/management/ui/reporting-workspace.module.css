@@ -6,6 +6,12 @@
   gap: 1.5rem;
   min-inline-size: 0;
 }
+/* Loaded sections need their own layout: the reveal wrapper only animates. */
+:global(html[data-appearance-version="2"]) .contentStack {
+  display: grid;
+  gap: 1.5rem;
+  min-inline-size: 0;
+}
 :global([data-theme="medium"]) .workspace,
 :global([data-theme="light"]) .workspace {
   --report-cyan: #006d68;
@@ -284,6 +290,7 @@
 }
 :global(html[data-appearance-version="2"]) .choices {
   border-radius: 1rem;
+  row-gap: 0.5rem;
 }
 :global(html[data-appearance-version="2"]) .choices button {
   border-radius: 0.75rem;
