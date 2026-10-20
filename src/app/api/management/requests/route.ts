@@ -4,6 +4,7 @@ import {
   withManagementAuth,
   errorResponse,
   mapPostgresError,
+  tooManyRequests,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import type { Json } from "@/lib/supabase/database.types";
@@ -124,10 +125,7 @@ export async function GET(request: Request) {
     return errorResponse("Unable to process request", 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Too many requests", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   const { searchParams } = new URL(request.url);

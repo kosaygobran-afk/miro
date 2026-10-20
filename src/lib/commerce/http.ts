@@ -20,19 +20,33 @@ export class CommerceError extends Error {
   }
 }
 
-export function commerceJson(body: unknown, status = 200) {
+export function commerceJson(
+  body: unknown,
+  status = 200,
+  headers?: Record<string, string>,
+) {
   return NextResponse.json(body, {
     status,
     headers: {
       "Cache-Control": "private, no-store",
       "X-Content-Type-Options": "nosniff",
+      ...headers,
     },
   });
 }
 
+/** The narrow limiter bucket most callers exhaust first is the 1-minute one. */
+const RATE_LIMIT_RETRY_AFTER = "60";
+
 export function commerceFailure(error: unknown, operation: string) {
   if (error instanceof CommerceError)
-    return commerceJson({ error: error.code, code: error.code }, error.status);
+    return commerceJson(
+      { error: error.code, code: error.code },
+      error.status,
+      error.code === "rate_limited"
+        ? { "Retry-After": RATE_LIMIT_RETRY_AFTER }
+        : undefined,
+    );
   const correlationId = randomUUID();
   console.error(
     JSON.stringify({

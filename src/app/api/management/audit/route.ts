@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import {
   withManagementAuth,
   errorResponse,
+  tooManyRequests,
 } from "@/app/api/management/_shared";
 
 // Per-IP rate limiting for management read endpoints (tiered: 60/min, 300/hour)
@@ -55,10 +56,7 @@ export async function GET(request: Request) {
     return errorResponse("Unable to process request", 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Too many requests", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   const { searchParams } = new URL(request.url);

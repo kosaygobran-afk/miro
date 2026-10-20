@@ -312,21 +312,6 @@
   opacity: 0.55;
   cursor: wait;
 }
-.backgroundChoice {
-  display: flex;
-  align-items: center;
-  gap: 0.625rem;
-  min-block-size: 2.75rem;
-  font-size: 0.875rem;
-  color: var(--foreground);
-  cursor: pointer;
-}
-.backgroundChoice input {
-  flex: 0 0 auto;
-  inline-size: 1.125rem;
-  block-size: 1.125rem;
-  accent-color: var(--primary);
-}
 
 /* Media gallery */
 .galleryGrid {
@@ -352,7 +337,14 @@
 .imageFrame {
   position: relative;
   aspect-ratio: 4 / 3;
-  background: var(--surface-muted);
+  background-color: var(--surface-muted);
+  background-image: conic-gradient(
+    var(--border-subtle) 25%,
+    transparent 0 50%,
+    var(--border-subtle) 0 75%,
+    transparent 0
+  );
+  background-size: 1.25rem 1.25rem;
 }
 
 .tileBody {
@@ -380,6 +372,27 @@
 
 .removeBackgroundButton svg {
   flex-shrink: 0;
+}
+
+.restoreOriginalButton {
+  color: var(--error-text);
+  border: 1px solid
+    color-mix(in srgb, var(--error-text) 50%, var(--border-subtle));
+  background: color-mix(in srgb, var(--error-text) 12%, var(--surface));
+}
+
+.restoreOriginalButton:hover:not(:disabled) {
+  color: var(--error-text);
+  background: color-mix(in srgb, var(--error-text) 20%, var(--surface));
+}
+
+.imageResult {
+  font-size: 0.8125rem;
+  color: var(--muted-foreground);
+}
+
+.imageResult[data-error="true"] {
+  color: var(--error-text);
 }
 
 .iconButton {

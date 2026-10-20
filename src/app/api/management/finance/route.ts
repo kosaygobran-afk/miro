@@ -6,6 +6,7 @@ import {
   mapPostgresError,
   checkManagementRateLimit,
   getClientIp,
+  tooManyRequests,
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { channelDbValues } from "@/lib/sales-channel";
@@ -104,10 +105,7 @@ export async function GET(request: Request) {
     return errorResponse("Unable to process request", 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Too many requests", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   // RPC authorizes via active_app_role(), which reads the caller's JWT and

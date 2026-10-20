@@ -14,16 +14,27 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 export async function GET(request: Request) {
   try {
-    const secret = process.env.COMMERCE_JOB_AUTH_SECRET;
+    // Two scheduler origins are accepted: an external runner presenting
+    // COMMERCE_JOB_AUTH_SECRET, and Vercel Cron, which itself sends
+    // `Authorization: Bearer ${CRON_SECRET}` when that variable is configured.
+    const candidates = [
+      process.env.COMMERCE_JOB_AUTH_SECRET,
+      process.env.CRON_SECRET,
+    ].filter(
+      (value): value is string =>
+        typeof value === "string" && value.length >= 32,
+    );
     const presented = request.headers.get("authorization") ?? "";
-    const expected = secret ? `Bearer ${secret}` : "";
-    if (
-      !secret ||
-      secret.length < 32 ||
-      Buffer.byteLength(presented) !== Buffer.byteLength(expected) ||
-      !timingSafeEqual(Buffer.from(presented), Buffer.from(expected))
-    )
-      throw new CommerceError("unauthorized", 401);
+    const authorized = candidates.some(
+      (candidate) =>
+        Buffer.byteLength(presented) ===
+          Buffer.byteLength(`Bearer ${candidate}`) &&
+        timingSafeEqual(
+          Buffer.from(presented),
+          Buffer.from(`Bearer ${candidate}`),
+        ),
+    );
+    if (!authorized) throw new CommerceError("unauthorized", 401);
     const admin = createAdminClient();
     const expired = await admin.rpc("commerce_expire_intents", {
       p_limit: 500,

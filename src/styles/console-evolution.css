@@ -1,6 +1,9 @@
 /* Appearance 2 refines component geometry; the console's dark palette is preserved. */
+:root[data-appearance-version="2"] .mgmt-shell {
+  --mgmt-content-padding: clamp(1rem, 2.5vw, 2.4rem);
+}
 :root[data-appearance-version="2"] .mgmt-shell__main {
-  padding: clamp(1rem, 2.5vw, 2.4rem);
+  padding: var(--mgmt-content-padding);
 }
 :root[data-appearance-version="2"] .mgmt-shell__main > :not(script) {
   width: 100%;
@@ -37,6 +40,14 @@
 :root[data-appearance-version="2"] .mgmt-form-section__body {
   padding: clamp(1rem, 1.9vw, 1.65rem);
 }
+/* Footer fragments and wrapped action groups share the same responsive gap. */
+:root[data-appearance-version="2"] .mgmt-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
 :root[data-appearance-version="2"]
   :is(
     .mgmt-section-icon,
@@ -65,7 +76,6 @@
 :root[data-appearance-version="2"] .mgmt-metric-card__value {
   font-size: clamp(1.55rem, 2.5vw, 2.3rem);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
 }
 :root[data-appearance-version="2"] .mgmt-metric-card__label {
   line-height: 1.5;
@@ -150,6 +160,14 @@
 }
 
 /* Neutral reading surfaces replace icy whites only in the brighter console modes. */
+:root[data-appearance-version="2"]:is(
+    [data-theme="light"],
+    [data-theme="medium"]
+  )
+  :is(.mgmt-shell, #mgmt-overlay-portal-host)
+  .mgmt-status-badge--info {
+  color: color-mix(in srgb, var(--report-cyan) 88%, var(--foreground));
+}
 :root[data-appearance-version="2"][data-theme="light"]
   :is(.mgmt-shell-root, #mgmt-overlay-portal-host) {
   --background: #f3f3ef;

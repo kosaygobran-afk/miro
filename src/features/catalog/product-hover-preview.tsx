@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 import { productPreviewHoverDelay, productPreviewTiming } from "@/lib/motion";
 import { ProductMedia } from "./product-media";
+import { ProductImageMagnifier } from "./product-image-magnifier";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import {
   useAnimationSettings,
@@ -220,7 +221,9 @@ export function ProductHoverPreview({
       ?.getBoundingClientRect();
     const preview = previewRef.current;
     const gutter = 16;
-    const maximumHeight = enhanced ? 560 : 600;
+    // Enhanced frame cap: 592px (37rem) mirrors the sheet cap in
+    // product-preview-refinement.css so CSS and placement stay in sync.
+    const maximumHeight = enhanced ? 592 : 600;
     const width =
       preview?.offsetWidth ??
       Math.min(enhanced ? 416 : 420, window.innerWidth - gutter * 2);
@@ -284,7 +287,7 @@ export function ProductHoverPreview({
     }
     const height = preserveSourceActions
       ? availableHeight
-      : (preview?.offsetHeight ?? Math.min(560, availableHeight));
+      : (preview?.offsetHeight ?? Math.min(592, availableHeight));
     const desiredTop = enhanced
       ? (mediaRect?.top ?? triggerRect.top) - 12
       : triggerRect.top + triggerRect.height / 2 - height / 2;
@@ -496,6 +499,27 @@ export function ProductHoverPreview({
     setActiveImageIndex((current) => (current + 1) % allImages.length);
   };
 
+  const imageCounter =
+    allImages.length > 0 ? (
+      <span
+        className="sf-hover-preview-count"
+        dir="ltr"
+        aria-live="polite"
+        aria-atomic="true"
+        aria-label={
+          locale === "he"
+            ? `תמונה ${activeImageIndex + 1} מתוך ${allImages.length}`
+            : `Image ${activeImageIndex + 1} of ${allImages.length}`
+        }
+      >
+        {activeImageIndex + 1} / {allImages.length}
+      </span>
+    ) : null;
+  const imageAlt =
+    locale === "he"
+      ? (allImages[activeImageIndex]?.altHe ?? product.name)
+      : (allImages[activeImageIndex]?.altEn ?? product.name);
+
   return createPortal(
     <div
       ref={previewRef}
@@ -551,15 +575,20 @@ export function ProductHoverPreview({
       }}
     >
       <div className="sf-hover-preview-inner">
-        <button
-          ref={closeButtonRef}
-          type="button"
-          className="sf-hover-preview-close"
-          onClick={() => beginExit(true, true, true)}
-          aria-label={copy.close}
-        >
-          <X size={17} aria-hidden="true" />
-        </button>
+        <div className="sf-hover-preview-toolbar">
+          <span className="sf-hover-preview-eyebrow">
+            {locale === "he" ? "מבט מקרוב" : "A closer look"}
+          </span>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            className="sf-hover-preview-close"
+            onClick={() => beginExit(true, true, true)}
+            aria-label={copy.close}
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
 
         <div
           className="sf-hover-preview-gallery"
@@ -613,18 +642,26 @@ export function ProductHoverPreview({
             </div>
           ) : null}
           <div id={imageId} className="sf-hover-preview-media">
-            <ProductMedia
-              product={product}
-              src={allImages[activeImageIndex]?.url}
-              alt={
-                locale === "he"
-                  ? (allImages[activeImageIndex]?.altHe ?? product.name)
-                  : (allImages[activeImageIndex]?.altEn ?? product.name)
-              }
-              sizes="(max-width: 380px) calc(100vw - 5rem), (max-width: 512px) calc(100vw - 9rem), 360px"
-              loading="eager"
-              className="sf-hover-preview-image"
-            />
+            {enhanced ? (
+              <ProductImageMagnifier
+                key={`${product.id}:${allImages[activeImageIndex]?.id ?? "empty"}`}
+                product={product}
+                src={allImages[activeImageIndex]?.url}
+                alt={imageAlt}
+                locale={locale}
+                active={phase === "open"}
+                counter={imageCounter}
+              />
+            ) : (
+              <ProductMedia
+                product={product}
+                src={allImages[activeImageIndex]?.url}
+                alt={imageAlt}
+                sizes="(max-width: 380px) calc(100vw - 5rem), (max-width: 512px) calc(100vw - 9rem), 360px"
+                loading="eager"
+                className="sf-hover-preview-image"
+              />
+            )}
             {allImages.length > 1 ? (
               <>
                 <button
@@ -647,21 +684,7 @@ export function ProductHoverPreview({
                 </button>
               </>
             ) : null}
-            {allImages.length > 0 ? (
-              <span
-                className="sf-hover-preview-count"
-                dir="ltr"
-                aria-live="polite"
-                aria-atomic="true"
-                aria-label={
-                  locale === "he"
-                    ? `תמונה ${activeImageIndex + 1} מתוך ${allImages.length}`
-                    : `Image ${activeImageIndex + 1} of ${allImages.length}`
-                }
-              >
-                {activeImageIndex + 1} / {allImages.length}
-              </span>
-            ) : null}
+            {!enhanced ? imageCounter : null}
           </div>
         </div>
 

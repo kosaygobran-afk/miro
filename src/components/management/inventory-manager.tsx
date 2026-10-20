@@ -126,6 +126,7 @@ function formatCurrency(value: number, locale: "he" | "en"): string {
 
 function formatDate(dateStr: string, locale: "he" | "en"): string {
   return new Date(dateStr).toLocaleString(locale === "he" ? "he-IL" : "en-IL", {
+    timeZone: "Asia/Jerusalem",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

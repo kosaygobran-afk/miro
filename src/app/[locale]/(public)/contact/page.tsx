@@ -7,6 +7,7 @@ import { getPublicContactConfig } from "@/lib/contact-config";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { Mail, MessageCircle, Phone } from "lucide-react";
 
 const uuidSchema = z.string().uuid();
 
@@ -181,7 +182,7 @@ export default async function ContactPage({
               aria-labelledby="contact-direct-title"
             >
               <h2 id="contact-direct-title">{t("directTitle")}</h2>
-              <ul className="space-y-2">
+              <ul className="experience-contact-methods">
                 {contactConfig.phone && contactConfig.phoneHref ? (
                   <li>
                     <a
@@ -189,7 +190,8 @@ export default async function ContactPage({
                       href={`tel:${contactConfig.phoneHref}`}
                       dir="ltr"
                     >
-                      {contactConfig.phone}
+                      <Phone size={17} aria-hidden="true" />
+                      <span>{contactConfig.phone}</span>
                     </a>
                   </li>
                 ) : null}
@@ -201,7 +203,8 @@ export default async function ContactPage({
                       target="_blank"
                       rel="noopener noreferrer"
                     >
-                      {t("whatsappAction")}
+                      <MessageCircle size={17} aria-hidden="true" />
+                      <span>{t("whatsappAction")}</span>
                     </a>
                   </li>
                 ) : null}
@@ -212,7 +215,8 @@ export default async function ContactPage({
                       href={`mailto:${contactConfig.email}`}
                       dir="ltr"
                     >
-                      {contactConfig.email}
+                      <Mail size={17} aria-hidden="true" />
+                      <span>{contactConfig.email}</span>
                     </a>
                   </li>
                 ) : null}

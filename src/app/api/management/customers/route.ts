@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   withManagementAuth,
   errorResponse,
+  tooManyRequests,
 } from "@/app/api/management/_shared";
 
 function parsePagination(url: URL) {
@@ -71,10 +72,7 @@ export async function GET(request: Request) {
     return errorResponse("Unable to process request", 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Too many requests", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   const url = new URL(request.url);

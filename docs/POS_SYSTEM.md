@@ -1,6 +1,6 @@
 # MIRO POS: implementation and operating contract
 
-Updated 2026-10-09. This supersedes the earlier redesign's placeholder layout and verification claims. The POS is a protected cashier workspace; payment-provider and official-document activation still require the business readiness described in `commerce/`.
+Updated 2026-10-17. This supersedes the earlier redesign's placeholder layout and verification claims. The POS is a protected cashier workspace; payment-provider and official-document activation still require the business readiness described in `commerce/`.
 
 ## Interface and component ownership
 
@@ -20,6 +20,10 @@ The three owner references guide rounded icon tiles, a receipt/cart beside a pro
 ## API and data authority
 
 `GET /api/management/pos/catalog` requires active `recordSale` authorization. It returns only active POS-enabled variants, server POS price precedence and stock net of effective reservations. Search terms are safely quoted for the PostgREST filter grammar; pagination/input are bounded, responses are private/no-store and rate-limit failures stop the read. Availability aggregation uses service-only `commerce_pos_available_stock`, with bounded UUID batches.
+
+Cashier images use the first `product_images` entry ordered by `sort_order`, matching the editor/storefront gallery. Only a missing gallery uses the legacy `products.image_url` field. Gallery removal/restoration therefore also appears in fresh POS reads; do not copy image URLs back into owner products to repair the presentation.
+
+POS Accounts converts date controls through `reportingRangeParams`, sends only selected filters and uses the API's `payment-status` key and actual pending/paid/voided/refunded statuses. Cashier names are a paginated CEO/admin selector backed by the existing protected users API; the selected value is the cashier UUID. Summary/list failures remain visible after a refresh, pagination uses the server total, and range/filter changes reset the offset. Receipt details consume the nested `{order, order_items, order_payments, stock_movements}` response; closing/changing receipts aborts stale reads. Preserve these client/API contracts in `tests/unit/pos-accounts-dashboard.test.mjs`, including both locales and all-time ranges.
 
 A sale creates `/api/management/commerce/intents`, then records confirmed external tenders through `/api/management/commerce/tenders`, or starts hosted collection through `/api/commerce/attempts`. `/api/commerce/intents/{id}` returns the authorized safe quote/status, attempt keys, actual order number and remaining balance. Staff-only POS resume links are excluded from guest payment-link responses. Website quote/status DTOs omit cost snapshots and internal customer/actor details.
 
@@ -66,7 +70,7 @@ For future rollouts, compare `npx supabase migration list --linked` and `npx sup
 COMMERCE_LIVE_BASE_URL=http://localhost:3000 node scripts/verify-commerce-live-reads.mjs
 ```
 
-This command loads the normal local connection configuration, creates and deletes a disposable CEO QA identity, and performs only GETs against existing business data. It checks the POS catalog, accounts, tax, customer lookup, sales and all commerce sections, plus anonymous denial. Evidence goes to a local temporary directory by default; `COMMERCE_LIVE_OUTPUT_DIR` overrides it. It never charges a provider or seeds/reset business records. Use the actual running application origin for deployment checks; do not mistake isolated fixture success for connected-schema readiness.
+This command loads the normal local connection configuration, creates and deletes a disposable CEO QA identity, and performs only GETs against existing business data. It checks products/categories, inventory, services, suppliers, requests, analytics/finance/settings/design, the POS catalog and gallery-image consistency, accounts with realistic date/payment/cashier queries, staff options, tax, customer lookup, sales and all commerce sections, plus anonymous denial. Evidence goes to a local temporary directory by default; `COMMERCE_LIVE_OUTPUT_DIR` overrides it. It never charges a provider or seeds/reset business records. Use the actual running application origin for deployment checks; do not mistake isolated fixture success for connected-schema readiness.
 
 Account reporting functions require the actor's authenticated server client, not a service-role RPC call: SQL retains `active_app_role()`/`auth.uid()` authorization. Keep the management capability/rate-limit checks, non-null default list date bounds, actual nested detail projection, 404 missing-order handling and private/no-store responses. Regression coverage is in `tests/unit/pos-accounts-api.test.mjs`.
 

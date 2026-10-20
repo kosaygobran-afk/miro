@@ -25,6 +25,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
   gap: 1rem;
+  container-type: inline-size;
 }
 
 .metricLink {
@@ -202,6 +203,8 @@
   color: var(--report-cyan);
 }
 .innerGrid {
+  gap: 0.75rem;
+  container-type: inline-size;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 @media (min-width: 85rem) {
@@ -261,4 +264,17 @@
   :global(html[data-appearance-version="2"]) .root {
     gap: 1.35rem;
   }
+}
+
+/* Metric values shrink with their tight cells; tabular numbers must not
+   split mid-digit to fit, and grid cells must never be forced wider. */
+:global(html[data-appearance-version="2"])
+  .cardGrid
+  :global(.mgmt-metric-card__value) {
+  font-size: clamp(1.02rem, 3.9cqw, 2.3rem);
+}
+:global(html[data-appearance-version="2"])
+  .innerGrid
+  :global(.mgmt-metric-card__value) {
+  font-size: clamp(1.02rem, 7.6cqw, 2.3rem);
 }

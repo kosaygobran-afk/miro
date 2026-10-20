@@ -438,6 +438,7 @@ export type Database = {
       };
       product_images: {
         Row: {
+          original_image_url: string | null;
           alt_en: string | null;
           alt_he: string | null;
           created_at: string;
@@ -447,6 +448,7 @@ export type Database = {
           sort_order: number;
         };
         Insert: {
+          original_image_url?: string | null;
           alt_en?: string | null;
           alt_he?: string | null;
           created_at?: string;
@@ -456,6 +458,7 @@ export type Database = {
           sort_order?: number;
         };
         Update: {
+          original_image_url?: string | null;
           alt_en?: string | null;
           alt_he?: string | null;
           created_at?: string;

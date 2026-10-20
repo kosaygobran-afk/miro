@@ -886,3 +886,59 @@
     }
   }
 }
+
+/* Rounded card media — 2026-10-19 (owner request):
+   the images inside the sectioned cards share the catalog media radius
+   (0.85rem, matching .sf-thumbnail). Radius-only change: the Version 2
+   media insets, reveal/preview contracts, badges and overlays are
+   untouched; Version 1 keeps its protected square media. Popup stage
+   wrappers intentionally get no overflow clipping (the magnifier tooltip
+   and lens must stay visible); rounded pixels come from the image rows
+   themselves. */
+:root[data-appearance-version="2"]
+  .sf-product-card
+  :is(.sf-product-image-fit, .sf-product-visual) {
+  border-radius: 0.85rem;
+}
+
+:root[data-appearance-version="2"]
+  .sf-moving-rail-media
+  :is(.sf-product-image-fit, .sf-product-visual, .sf-moving-rail-image) {
+  border-radius: 0.85rem;
+}
+
+:root[data-appearance-version="2"]
+  .sf-hover-preview-media
+  :is(.sf-product-image-fit, .sf-product-visual) {
+  border-radius: 0.85rem;
+}
+
+:root[data-appearance-version="2"]
+  .sf-hover-preview-media
+  :is(.sf-hover-preview-image, .sf-hover-preview-image-stage img) {
+  border-radius: 0.85rem;
+}
+/* The enhanced stage already owns a subtle 0.9rem border frame in
+   product-preview-refinement.css; it stays as the popup's own shell. */
+
+:root[data-appearance-version="2"]
+  .sf-hover-preview-thumbnail
+  :is(.sf-product-image-fit, img) {
+  border-radius: 0.85rem;
+}
+
+/* Rounded card media — reduced motion needs no radius exception; the reveal
+   transitions above already have their mandated kills. */
+
+/* 2026-10-20: clip the actual resting bitmap, not only its wider fit wrapper.
+   A computed border-radius did not clip the image's visible overflow, leaving
+   opaque photo corners square until the rounded popup stage opened. Keep the
+   natural image dimensions; trim only the corners, independently of hover,
+   preview intent, decode state and motion. Popup stages/lenses stay untouched. */
+:root[data-appearance-version="2"] .sf-product-card .sf-product-image-fit > img,
+:root[data-appearance-version="2"]
+  .sf-moving-rail-media
+  .sf-product-image-fit
+  > img {
+  clip-path: inset(0 round 0.85rem);
+}

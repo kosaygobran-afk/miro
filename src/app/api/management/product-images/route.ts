@@ -33,7 +33,6 @@ const imageSchema = z.object({
   alt_he: z.string().max(300).nullish(),
   alt_en: z.string().max(300).nullish(),
   sort_order: z.number().int().default(0),
-  remove_background: z.boolean().default(true),
 });
 
 // PATCH goes through upsert_product_image_meta: alt texts, sort_order and the
@@ -135,11 +134,7 @@ export async function POST(request: Request) {
     try {
       const bytes = await downloadProductImage(image_url);
       const type = await validateProductImage(bytes);
-      imported = await processProductImage(
-        bytes,
-        type,
-        parsed.data.remove_background,
-      );
+      imported = await processProductImage(bytes, type, false);
     } catch {
       return errorResponse(
         "Could not import image. Use a public HTTPS URL for a valid still image (5 MB, 16 megapixels maximum).",

@@ -367,6 +367,20 @@
   padding: 0.875rem;
 }
 
+/* Let the existing window scroller handle short space instead of shrinking
+   six key rows underneath the history panel. Version 1 keeps its geometry. */
+:global(html[data-appearance-version="2"]) .container {
+  height: auto;
+  min-block-size: 100%;
+}
+:global(html[data-appearance-version="2"]) .displayGroup {
+  flex: 0 0 auto;
+}
+:global(html[data-appearance-version="2"]) .keypad {
+  flex: 1 0 auto;
+  grid-template-rows: repeat(6, minmax(3.25rem, 1fr));
+}
+
 .button {
   min-height: 3.25rem;
   border-radius: var(--radius-sm);

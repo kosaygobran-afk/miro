@@ -24,6 +24,8 @@ import {
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
 import { ProductIdentifiers } from "@/features/catalog/product-identifiers";
+import { ProductImageMagnifier } from "@/features/catalog/product-image-magnifier";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 
 interface ProductDetailInteractiveProps {
   productId: string;
@@ -73,6 +75,7 @@ export function ProductDetailInteractive({
   availabilityUnconfirmed = false,
 }: ProductDetailInteractiveProps) {
   const copy = storeCopy[locale] as StoreCopy;
+  const enhanced = useAnimationSettings().appearanceVersion === "2";
   const PreviousArrow = locale === "he" ? ChevronRight : ChevronLeft;
   const NextArrow = locale === "he" ? ChevronLeft : ChevronRight;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -155,6 +158,19 @@ export function ProductDetailInteractive({
   const formattedCompareAtPrice = promoCompareAtPrice
     ? formatPrice(promoCompareAtPrice, locale, copy.priceUnpublished)
     : null;
+  const imageFallback = (
+    <div className="sf-product-visual-placeholder" aria-hidden="true">
+      <ProductVisual kind={visualKind} />
+      <p className="sf-illustration-note">{copy.illustration}</p>
+    </div>
+  );
+  const imageAnnotation = activeImage?.url.match(
+    /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
+  ) ? (
+    <p className="sf-illustration-note sf-reference-image-note">
+      {copy.illustration}
+    </p>
+  ) : null;
 
   return (
     <>
@@ -191,7 +207,49 @@ export function ProductDetailInteractive({
           </div>
         )}
         <div className="sf-main-image">
-          {activeImage && !activeImageFailed ? (
+          {enhanced ? (
+            <div className="sf-detail-magnifier">
+              <ProductImageMagnifier
+                key={`${productId}:${activeImage?.id ?? "empty"}`}
+                product={{
+                  id: productId,
+                  name: productName,
+                  category: productCategory,
+                }}
+                src={activeImage?.url}
+                alt={
+                  locale === "he"
+                    ? (activeImage?.altHe ?? productName)
+                    : (activeImage?.altEn ?? productName)
+                }
+                locale={locale}
+                active
+                sizes="(max-width: 1200px) 100vw, 800px"
+                imageClassName="sf-product-main-image"
+                fetchPriority="high"
+                escapeScope="local"
+                fallback={imageFallback}
+                annotation={imageAnnotation}
+                counter={
+                  activeImage ? (
+                    <span
+                      className="sf-hover-preview-count sf-gallery-position"
+                      dir="ltr"
+                      aria-live="polite"
+                      aria-atomic="true"
+                      aria-label={
+                        locale === "he"
+                          ? `תמונה ${resolvedActiveImageIndex + 1} מתוך ${images.length}`
+                          : `Image ${resolvedActiveImageIndex + 1} of ${images.length}`
+                      }
+                    >
+                      {resolvedActiveImageIndex + 1}/{images.length}
+                    </span>
+                  ) : null
+                }
+              />
+            </div>
+          ) : activeImage && !activeImageFailed ? (
             <Image
               key={activeImage.id}
               src={activeImage.url}
@@ -214,18 +272,9 @@ export function ProductDetailInteractive({
               }
             />
           ) : (
-            <div className="sf-product-visual-placeholder" aria-hidden="true">
-              <ProductVisual kind={visualKind} />
-              <p className="sf-illustration-note">{copy.illustration}</p>
-            </div>
+            imageFallback
           )}
-          {activeImage?.url.match(
-            /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
-          ) ? (
-            <p className="sf-illustration-note sf-reference-image-note">
-              {copy.illustration}
-            </p>
-          ) : null}
+          {!enhanced ? imageAnnotation : null}
           {images.length > 1 ? (
             <>
               <button
@@ -246,13 +295,15 @@ export function ProductDetailInteractive({
               >
                 <NextArrow size={24} aria-hidden="true" />
               </button>
-              <span
-                className="sf-gallery-position"
-                dir="ltr"
-                aria-live="polite"
-              >
-                {resolvedActiveImageIndex + 1}/{images.length}
-              </span>
+              {!enhanced ? (
+                <span
+                  className="sf-gallery-position"
+                  dir="ltr"
+                  aria-live="polite"
+                >
+                  {resolvedActiveImageIndex + 1}/{images.length}
+                </span>
+              ) : null}
             </>
           ) : null}
         </div>

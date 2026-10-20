@@ -579,6 +579,9 @@
   color: var(--report-cyan);
   border-color: color-mix(in srgb, var(--report-cyan) 35%, transparent);
 }
+:global(html[data-appearance-version="2"]) .statusTabs {
+  row-gap: 0.5rem;
+}
 .drawerFilters {
   display: grid;
   gap: 1.25rem;

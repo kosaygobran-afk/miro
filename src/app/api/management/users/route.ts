@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   withManagementAuth,
   errorResponse,
+  tooManyRequests,
 } from "@/app/api/management/_shared";
 
 const roles = ["customer", "worker", "admin"] as const;
@@ -80,10 +81,7 @@ export async function GET(request: Request) {
     return errorResponse("Unable to process request", 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Too many requests", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   const url = new URL(request.url);

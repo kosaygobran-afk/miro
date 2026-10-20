@@ -83,6 +83,8 @@ async function imageRoute({
   conflict = false,
   uncertainUpdate = false,
   uploadError = false,
+  downloadError = false,
+  routePath = "remove-background",
 } = {}) {
   const calls = {
     auth: [],
@@ -127,7 +129,10 @@ async function imageRoute({
   const storage = {
     download: async (name) => {
       calls.downloads.push(name);
-      return { data: new Blob([input]), error: null };
+      return {
+        data: downloadError ? null : new Blob([input]),
+        error: downloadError ? {} : null,
+      };
     },
     upload: async (name, bytes, options) => {
       calls.uploaded.push({ name, bytes, options });
@@ -185,7 +190,7 @@ async function imageRoute({
     },
   };
   const route = await loadSource(
-    "src/app/api/management/product-images/remove-background/route.ts",
+    `src/app/api/management/product-images/${routePath}/route.ts`,
     {
       "next/server": { NextResponse: Response },
       "next/cache": {
@@ -320,7 +325,11 @@ test("processing an existing owned image saves a real PNG and preserves metadata
   assert.equal(body.image.alt_en, originalImage.alt_en);
   assert.equal(body.image.sort_order, originalImage.sort_order);
   assert.equal(route.calls.updated.length, 1);
-  assert.deepEqual(Object.keys(route.calls.updated[0].patch), ["image_url"]);
+  assert.deepEqual(Object.keys(route.calls.updated[0].patch), [
+    "image_url",
+    "original_image_url",
+  ]);
+  assert.equal(body.image.original_image_url, originalImage.image_url);
   assert.deepEqual(route.calls.updated[0].query.filters, [
     ["id", imageId],
     ["image_url", originalImage.image_url],
@@ -358,7 +367,13 @@ test("external existing images use the hardened downloader before the shared pro
   assert.equal(response.status, 200);
   assert.deepEqual(route.calls.downloads, []);
   assert.deepEqual(route.calls.externalDownloads, [image.image_url]);
-  assert.ok(route.calls.uploaded[0].bytes.equals(cutout));
+  assert.ok(route.calls.uploaded[0].bytes.equals(sourceBytes));
+  assert.ok(route.calls.uploaded[1].bytes.equals(cutout));
+  const body = await response.json();
+  assert.equal(
+    body.image.original_image_url,
+    storageUrl(route.calls.uploaded[0].name),
+  );
 });
 
 test("a confirmed update failure or concurrent image change cleans up only the newly uploaded cutout", async () => {
@@ -383,7 +398,9 @@ test("upload failure leaves the existing image and original storage untouched", 
 
 test("an uncertain update response keeps the cutout available for reconciliation", async () => {
   const route = await imageRoute({ uncertainUpdate: true });
-  await assert.rejects(route.POST(request()), /Response lost after update/);
+  const response = await route.POST(request());
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).code, "image_write_uncertain");
   assert.equal(route.calls.uploaded.length, 1);
   assert.equal(route.calls.removed.length, 0);
   assert.equal(route.calls.audits.length, 0);
@@ -395,8 +412,150 @@ test("transport and cancellation database errors retain the new cutout for recon
       updateError: true,
       updateErrorCode: code,
     });
-    assert.equal((await route.POST(request())).status, 400);
+    assert.equal((await route.POST(request())).status, 503);
     assert.equal(route.calls.uploaded.length, 1);
+    assert.equal(route.calls.removed.length, 0);
+    assert.equal(route.calls.audits.length, 0);
+  }
+});
+
+test("reprocessing retains the first original rather than the previous cutout", async () => {
+  const first = storageUrl(`products/${productId}/first.jpeg`);
+  const route = await imageRoute({
+    image: { ...originalImage, original_image_url: first },
+  });
+  const body = await (await route.POST(request())).json();
+  assert.equal(body.image.original_image_url, first);
+  assert.equal(route.calls.uploaded.length, 1);
+});
+
+test("external-source snapshot and cutout are cleaned together only after a confirmed failed write", async () => {
+  for (const uncertainUpdate of [false, true]) {
+    const route = await imageRoute({
+      image: {
+        ...originalImage,
+        image_url: "https://external.example/photo.jpg",
+      },
+      updateError: !uncertainUpdate,
+      uncertainUpdate,
+    });
+    const response = await route.POST(request());
+    assert.equal(response.status, uncertainUpdate ? 503 : 400);
+    assert.equal(route.calls.uploaded.length, 2);
+    assert.deepEqual(
+      route.calls.removed,
+      uncertainUpdate ? [] : route.calls.uploaded.map((item) => item.name),
+    );
+  }
+});
+
+const restorable = {
+  ...originalImage,
+  image_url: storageUrl(`products/${productId}/cutout.png`),
+  original_image_url: originalImage.image_url,
+};
+const restoreRequest = (
+  body = { id: imageId, image_url: restorable.image_url },
+) => request(body);
+
+test("restore enforces authorization and strict inputs before reading storage", async () => {
+  const denied = await imageRoute({
+    routePath: "restore-original",
+    authorized: false,
+  });
+  assert.equal((await denied.POST(restoreRequest())).status, 403);
+  assert.equal(denied.calls.selected.length, 0);
+  for (const body of [
+    { id: imageId },
+    {
+      id: imageId,
+      image_url: restorable.image_url,
+      original_image_url: "https://attacker.example",
+    },
+  ]) {
+    const route = await imageRoute({ routePath: "restore-original" });
+    assert.equal((await route.POST(restoreRequest(body))).status, 400);
+    assertNoMutation(route.calls);
+  }
+});
+
+test("restore uses only the retained source, preserving identity, metadata, order and both objects", async () => {
+  const route = await imageRoute({
+    routePath: "restore-original",
+    image: restorable,
+  });
+  const response = await route.POST(restoreRequest());
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.image.image_url, originalImage.image_url);
+  assert.equal(body.image.original_image_url, originalImage.image_url);
+  assert.equal(body.image.id, imageId);
+  assert.equal(body.image.alt_en, originalImage.alt_en);
+  assert.equal(body.image.sort_order, originalImage.sort_order);
+  assert.equal(route.calls.worker, 0);
+  assert.equal(route.calls.uploaded.length, 0);
+  assert.equal(route.calls.removed.length, 0);
+  assert.deepEqual(route.calls.downloads, [originalObject]);
+  assert.deepEqual(route.calls.updated[0].query.filters, [
+    ["id", imageId],
+    ["image_url", restorable.image_url],
+    ["original_image_url", originalImage.image_url],
+  ]);
+  assert.equal(route.calls.audits[0].action, "product_image_original_restored");
+  assert.ok(
+    route.calls.revalidated.some(
+      ([path, scope]) => path === "/en/store" && scope === "layout",
+    ),
+  );
+});
+
+test("restore rejects missing originals, unavailable files, stale views and concurrent changes", async () => {
+  for (const [options, expected] of [
+    [{ found: false }, 404],
+    [{ image: { ...restorable, original_image_url: null } }, 422],
+    [{ downloadError: true }, 410],
+    [{ image: { ...restorable, image_url: originalImage.image_url } }, 409],
+    [{ conflict: true }, 409],
+  ]) {
+    const route = await imageRoute({
+      routePath: "restore-original",
+      image: restorable,
+      ...options,
+    });
+    assert.equal((await route.POST(restoreRequest())).status, expected);
+    assert.equal(route.calls.removed.length, 0);
+    assert.equal(route.calls.audits.length, 0);
+  }
+});
+
+test("restore is idempotent and uncertain restores never remove either object or retry", async () => {
+  const original = { ...restorable, image_url: originalImage.image_url };
+  const noOp = await imageRoute({
+    routePath: "restore-original",
+    image: original,
+  });
+  assert.equal(
+    (
+      await noOp.POST(
+        restoreRequest({ id: imageId, image_url: original.image_url }),
+      )
+    ).status,
+    200,
+  );
+  assertNoMutation(noOp.calls);
+  for (const options of [
+    { uncertainUpdate: true },
+    { updateError: true, updateErrorCode: "57014" },
+  ]) {
+    const route = await imageRoute({
+      routePath: "restore-original",
+      image: restorable,
+      ...options,
+    });
+    const response = await route.POST(restoreRequest());
+    assert.equal(response.status, 503);
+    assert.equal((await response.json()).code, "image_write_uncertain");
+    assert.equal(route.calls.updated.length, 1);
     assert.equal(route.calls.removed.length, 0);
     assert.equal(route.calls.audits.length, 0);
   }

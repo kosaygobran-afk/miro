@@ -8,6 +8,7 @@ import {
 } from "@/app/api/management/_shared";
 import {
   PRODUCT_MEDIA_BUCKET,
+  IMAGE_MIME_BY_TYPE,
   buildStorageObjectName,
   parseOwnedStorageObjectName,
 } from "@/lib/image-safety";
@@ -35,11 +36,14 @@ export async function POST(request: Request) {
   if (!existing) return errorResponse("Image not found", 404);
 
   let processed;
+  let sourceBytes: Buffer;
+  let sourceType;
+  const storage = admin.storage.from(PRODUCT_MEDIA_BUCKET);
+  const owned = parseOwnedStorageObjectName(
+    existing.image_url,
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+  );
   try {
-    const owned = parseOwnedStorageObjectName(
-      existing.image_url,
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-    );
     let bytes: Buffer;
     if (owned) {
       const { data, error } = await admin.storage
@@ -53,8 +57,9 @@ export async function POST(request: Request) {
     } else {
       bytes = await downloadProductImage(existing.image_url);
     }
-    const type = await validateProductImage(bytes);
-    processed = await processProductImage(bytes, type, true);
+    sourceBytes = bytes;
+    sourceType = await validateProductImage(bytes);
+    processed = await processProductImage(bytes, sourceType, true);
   } catch {
     return errorResponse("Could not process the saved image", 400);
   }
@@ -80,26 +85,59 @@ export async function POST(request: Request) {
     });
   }
 
+  // Snapshot external sources too: a third-party URL may later change/disappear.
+  // Never replace the first retained source on repeated processing/restoration.
+  let originalUrl = existing.original_image_url || existing.image_url;
+  const newObjects: string[] = [];
+  if (!existing.original_image_url && !owned) {
+    const sourceObject = buildStorageObjectName(
+      existing.product_id,
+      sourceType,
+    );
+    const { error } = await storage.upload(sourceObject, sourceBytes, {
+      contentType: IMAGE_MIME_BY_TYPE[sourceType],
+      upsert: false,
+    });
+    if (error)
+      return errorResponse("Could not preserve the original image", 500);
+    newObjects.push(sourceObject);
+    originalUrl = storage.getPublicUrl(sourceObject).data.publicUrl;
+  }
   // A new URL invalidates browser/image caches. Keep the source object intact.
   const objectName = buildStorageObjectName(existing.product_id, "png");
-  const storage = admin.storage.from(PRODUCT_MEDIA_BUCKET);
   const { error: uploadError } = await storage.upload(
     objectName,
     processed.bytes,
     { contentType: "image/png", upsert: false },
   );
-  if (uploadError)
+  if (uploadError) {
+    if (newObjects.length)
+      await storage.remove(newObjects).catch(() => undefined);
     return errorResponse("Could not save the processed image", 500);
+  }
+  newObjects.push(objectName);
   const {
     data: { publicUrl },
   } = storage.getPublicUrl(objectName);
-  const { data: image, error: updateError } = await admin
-    .from("product_images")
-    .update({ image_url: publicUrl })
-    .eq("id", existing.id)
-    .eq("image_url", existing.image_url)
-    .select()
-    .maybeSingle();
+  let result;
+  try {
+    result = await admin
+      .from("product_images")
+      .update({ image_url: publicUrl, original_image_url: originalUrl })
+      .eq("id", existing.id)
+      .eq("image_url", existing.image_url)
+      .select()
+      .maybeSingle();
+  } catch {
+    return NextResponse.json(
+      {
+        error: "Image save could not be confirmed. Refresh before retrying.",
+        code: "image_write_uncertain",
+      },
+      { status: 503 },
+    );
+  }
+  const { data: image, error: updateError } = result;
   // Only delete the new object after a definite failed write. Unknown outcomes
   // must be reconciled before cleanup/retry, since the row may reference it.
   if (updateError || !image) {
@@ -109,7 +147,15 @@ export async function POST(request: Request) {
         updateError.code ?? "",
       )
     ) {
-      await storage.remove([objectName]).catch(() => undefined);
+      await storage.remove(newObjects).catch(() => undefined);
+    } else {
+      return NextResponse.json(
+        {
+          error: "Image save could not be confirmed. Refresh before retrying.",
+          code: "image_write_uncertain",
+        },
+        { status: 503 },
+      );
     }
     if (updateError) return mapPostgresError(updateError);
     return errorResponse(
@@ -126,6 +172,7 @@ export async function POST(request: Request) {
       product_id: existing.product_id,
       image_id: image.id,
       original_image_url: existing.image_url,
+      retained_original_image_url: originalUrl,
       storage_object: objectName,
       background_removal: processed.backgroundRemoval,
     },

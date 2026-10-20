@@ -1,0 +1,466 @@
+/* Public-surface engineering pass — 2026-10-18.
+   2026-10-20: owner requests management-style bordered rounded rectangles
+   throughout visitor/customer surfaces, superseding the circle/pill pass.
+   Owner-requested systematic refinement across the public pages: centered
+   control labels, uniform collection-filter grid, one rounded-rectangle language for
+   icon-only controls, unified chip metrics, polished icon rows on the
+   services and contact pages.
+
+   Scope:
+   - Version 2 presentation only; Version 1 keeps its protected appearance.
+   - Shared header chrome is guarded with the established management
+     exclusion (:has) so the CEO/admin console shell never changes; public
+     component classes (.sf-*, .experience-*) never render on console pages.
+   - Typography of product cards and previews stays owned by
+     card-refinement.css; this layer owns shared public frame/spacing overrides. */
+
+:root[data-appearance-version="2"] {
+  --public-control-radius: 0.85rem;
+  --public-icon-radius: 0.75rem;
+  --public-small-icon-radius: 0.5rem;
+}
+
+/* ---------- Shared header chrome (management console excluded) ----------
+   These frames keep every header size variant intact: only border-radius,
+   border treatment and hover color change. */
+:root[data-appearance-version="2"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  )
+  :is(.premium-icon-button, .premium-account-trigger, .premium-account-action) {
+  border-radius: var(--public-icon-radius);
+  border-color: var(--border-control);
+}
+
+:root[data-appearance-version="2"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  )
+  .premium-theme-selector
+  > button {
+  border-radius: var(--public-small-icon-radius);
+}
+
+:root[data-appearance-version="2"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  )
+  :is(
+    .premium-icon-button,
+    .premium-theme-selector > button,
+    .premium-account-trigger
+  ):hover {
+  border-color: color-mix(
+    in srgb,
+    var(--accent-text) 55%,
+    var(--border-subtle)
+  );
+  color: var(--accent-text);
+}
+
+:root[data-appearance-version="2"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  )
+  .premium-account-trigger {
+  background: var(--surface-muted);
+}
+
+:root[data-appearance-version="2"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  )
+  .premium-theme-selector {
+  border-radius: 0.8rem;
+  border-color: var(--border-control);
+}
+
+/* ---------- Public action controls read centered ---------- */
+:root[data-appearance-version="2"]
+  :is(
+    .sf-product-actions .sf-product-action,
+    .sf-hover-preview-footer .sf-hover-preview-link,
+    .sf-hover-preview-footer .sf-add-cart-button,
+    .sf-product-actions-detail .miro-button
+  ) {
+  justify-content: center;
+  text-align: center;
+}
+
+/* ---------- Collection filters as one uniform grid ----------
+   Equal-width cells per row (grid, not grown flex items), so the bar reads
+   as a symmetric tile field whether it wraps over one or several rows. Labels
+   wrap at word boundaries and balance across lines instead of breaking
+   mid-word, which made narrow cells unreadable. */
+:root[data-appearance-version="2"] .sf-category-filters {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+:root[data-appearance-version="2"] .sf-category-filters button {
+  padding-inline: 0.9rem;
+}
+
+:root[data-appearance-version="2"]
+  .sf-category-filters
+  .miro-centered-control
+  .miro-control-label {
+  font-size: 0.78rem;
+  overflow-wrap: normal;
+  text-wrap: balance;
+}
+
+/* Subcategory chips match the collection chips exactly in Version 2. */
+:root[data-appearance-version="2"] .sf-subcategory-links a {
+  padding-inline: 0.9rem;
+}
+
+/* ---------- Icon-only controls share the management frame language ---------- */
+/* product-preview-refinement.css declares toolbar/gallery geometry inside a
+   nested :root block; mirror the resolved shapes so the frames win. */
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  .sf-hover-preview-toolbar
+  .sf-hover-preview-close {
+  border-radius: var(--public-control-radius);
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  .sf-hover-preview-arrow {
+  border-radius: var(--public-control-radius);
+}
+
+:root[data-appearance-version="2"] :is(.sf-search button) {
+  border-radius: var(--public-control-radius);
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview-close:hover,
+:root[data-appearance-version="2"] .sf-hover-preview-arrow:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--accent-text) 55%,
+    var(--border-subtle)
+  );
+  color: var(--accent-text);
+}
+
+/* ---------- Store toolbar rhythm ---------- */
+:root[data-appearance-version="2"] .sf-catalog-summary {
+  min-height: 48px;
+}
+
+/* Expand/collapse category control reads as the shared rounded rectangle. */
+:root[data-appearance-version="2"] .sf-departments-controls button {
+  border-radius: var(--public-control-radius);
+  min-height: 42px;
+  padding-inline: 0.95rem;
+}
+
+/* ---------- Services capability strip: bordered icon tiles ---------- */
+:root[data-appearance-version="2"] .experience-capabilities svg {
+  width: 2.6rem;
+  height: 2.6rem;
+  padding: 0.62rem;
+  box-sizing: border-box;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--public-control-radius);
+  background: var(--surface-muted);
+}
+
+/* ---------- Checklist icons as compact bordered frames ---------- */
+:root[data-appearance-version="2"] .experience-checks svg {
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0.24rem;
+  box-sizing: border-box;
+  margin-top: 0.1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--public-control-radius);
+  background: var(--surface-muted);
+}
+
+/* ---------- Contact page: direct methods as symmetric bordered rows ---------- */
+:root[data-appearance-version="2"] .experience-contact-methods {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 24rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+:root[data-appearance-version="2"] .experience-contact-methods a {
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.62rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--public-control-radius);
+  background: var(--surface-muted);
+  text-decoration: none;
+}
+
+:root[data-appearance-version="2"] .experience-contact-methods a:hover {
+  border-color: color-mix(
+    in srgb,
+    var(--accent-text) 55%,
+    var(--border-subtle)
+  );
+  color: var(--accent-text);
+  text-decoration: none;
+}
+
+:root[data-appearance-version="2"] .experience-contact-methods svg {
+  flex-shrink: 0;
+}
+
+:root[data-appearance-version="2"] .experience-contact-prep .experience-note {
+  max-width: 24rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  background: var(--surface);
+  padding: 0.7rem 0.95rem;
+}
+
+:root[data-appearance-version="2"] .experience-contact-prep .experience-note {
+  margin-top: 0.55rem;
+}
+
+/* ---------- Storefront toggle radius completion — 2026-10-19 ----------
+   Updated 2026-10-20 to the owner's management-style frame direction.
+   Catalog buttons and icon-only controls use rounded rectangles while
+   retaining their size variants and glyphs. Version 1 keeps its
+   protected appearance; these classes never render on the console, so no
+   additional guard is needed beyond the Version 2 scope. Selectors mirror
+   the resolved ancestor shapes of product-preview-refinement.css and
+   product-detail-refinement.css nested blocks so they win the documented
+   cascade (public-refinement.css is the final import). */
+
+/* Featured rail footer: details, cart and preview buttons. (The preview
+   button is squared with !important by customer-refinement.css, so the
+   shared frame mirrors that strength; the frozen 44px geometry stays.) */
+:root[data-appearance-version="2"]
+  .sf-moving-rail-actions
+  :is(
+    .sf-add-cart-button,
+    .sf-moving-rail-preview-button,
+    .sf-moving-rail-details-link
+  ) {
+  border-radius: var(--public-control-radius) !important;
+}
+
+/* Detail purchase row: add-to-cart, the contact CTA and the secondary
+   action links. Each is a labeled rectangular control in the card language. */
+:root[data-appearance-version="2"]
+  .sf-product-detail
+  :is(.sf-add-cart-button, .sf-action-contact, .sf-action-link) {
+  border-radius: var(--public-control-radius);
+}
+
+/* Variant choice chips are radio toggles; they share the chip language.
+   (The selected/checked selectors style the same element, so one radius
+   rule covers every state.) */
+:root[data-appearance-version="2"] .sf-product-detail .sf-variant-chip {
+  border-radius: var(--public-control-radius);
+}
+
+/* Detail gallery: the arrows and the counter pill already rendered as
+   circles in the base layer; an older refinement pass squared them with
+   !important, so the shared frames mirror that strength. */
+:root[data-appearance-version="2"]
+  .sf-product-gallery
+  :is(.sf-gallery-arrow, .sf-gallery-position) {
+  border-radius: var(--public-control-radius) !important;
+}
+
+/* The quick-preview counter cell sits outside the product gallery, so it
+   needs the mirrored preview root the toolbar frames already use. */
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  .sf-hover-preview-count {
+  border-radius: var(--public-control-radius) !important;
+}
+
+/* The magnifier toggle is a pressed-state control inside the preview
+   toolbar: it joins the management frame language, ring included. */
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  .sf-image-magnifier-toggle {
+  border-radius: var(--public-control-radius);
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  .sf-image-magnifier-toggle::before {
+  border-radius: var(--public-control-radius);
+}
+
+/* FAQ disclosures: the rotating chevron reads as the checklist frame. */
+:root[data-appearance-version="2"] .experience-faq summary svg {
+  width: 1.9rem;
+  height: 1.9rem;
+  padding: 0.42rem;
+  box-sizing: border-box;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--public-control-radius);
+  background: var(--surface-muted);
+}
+
+/* ---------- Management-style public icon frames — 2026-10-20 ----------
+   These are controls/icon tiles, not status dots, artwork or the magnifier
+   lens. Keep the existing hit areas, media geometry and hover paints. */
+:root[data-appearance-version="2"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  )
+  svg.lucide {
+  stroke-width: 1.8;
+}
+
+:root[data-appearance-version="2"]
+  :is(
+    .sf-product-actions .sf-save-button,
+    .sf-product-actions .sf-product-quick-preview,
+    .sf-product-actions .sf-add-cart-button.is-compact,
+    .sf-product-expand,
+    .sf-product-quick-preview,
+    .sf-dialog-close,
+    .sf-search button,
+    .sf-subcategory-step,
+    .sf-hero-controls button,
+    .sf-company-toggle,
+    .sf-cart-heading-icon,
+    .experience-icon,
+    .experience-capabilities svg,
+    .account-icon
+  ) {
+  border: 1px solid var(--border-control);
+  border-radius: var(--public-icon-radius);
+}
+
+:root[data-appearance-version="2"] .account-dashboard .account-icon {
+  border-color: var(--border-control);
+  border-radius: var(--public-icon-radius);
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  .sf-hover-preview-toolbar
+  .sf-hover-preview-close,
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  :is(.sf-hover-preview-arrow, .sf-image-magnifier-toggle) {
+  border: 1px solid var(--border-control);
+  border-radius: var(--public-icon-radius);
+}
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  .sf-image-magnifier-toggle::before {
+  /* The button now owns the one border; the inset paint must not add a
+     second near-circular frame inside the 44px hit target. */
+  inset: 0;
+  border: 0;
+  border-radius: inherit;
+}
+
+:root[data-appearance-version="2"]
+  :is(.sf-hover-preview, .sf-detail-magnifier)
+  .sf-image-magnifier-toggle:is(:hover, [aria-pressed="true"]) {
+  border-color: var(--accent-text);
+}
+
+/* Existing rail/gallery geometry uses !important; mirror it for radius only. */
+:root[data-appearance-version="2"]
+  .sf-moving-rail-actions
+  :is(.sf-moving-rail-preview-button, .sf-add-cart-button.is-compact),
+:root[data-appearance-version="2"] .sf-product-gallery .sf-gallery-arrow {
+  border-radius: var(--public-icon-radius) !important;
+  border-color: var(--border-control);
+}
+
+:root[data-appearance-version="2"]
+  :is(.experience-checks svg, .experience-faq summary svg) {
+  border-radius: var(--public-small-icon-radius);
+  border-color: var(--border-control);
+}
+
+:root[data-appearance-version="2"]
+  :is(
+    .account-panel-title > svg,
+    .account-panel-heading h2 > svg,
+    .premium-footer-consult > svg
+  ) {
+  inline-size: 2.25rem;
+  block-size: 2.25rem;
+  padding: 0.45rem;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border: 1px solid var(--border-control);
+  border-radius: var(--public-icon-radius);
+  background: var(--surface-muted);
+}
+
+:root[data-appearance-version="2"]
+  :is(
+    .sf-category-filters button,
+    .sf-subcategory-links a,
+    .sf-moving-rail-toggle,
+    .sf-hero-controls,
+    .sf-cart-quantity,
+    .sf-cart-stepper
+  ) {
+  border-radius: var(--public-control-radius);
+}
+
+/* Independent actions need room on wrapped rows as well as across columns. */
+:root[data-appearance-version="2"]
+  :is(.sf-product-actions, .sf-moving-rail-actions, .sf-hover-preview-footer),
+:root[data-appearance-version="2"]
+  .sf-hover-preview[data-preserve-source-actions="true"]
+  .sf-hover-preview-footer {
+  gap: 0.5rem;
+}
+
+:root[data-appearance-version="2"] .account-form label {
+  display: grid;
+  gap: 0.5rem;
+}
+:root[data-appearance-version="2"]
+  .miro-contact-form
+  .block
+  > .experience-form-status {
+  margin-block-start: 0.5rem;
+}
+
+/* ---------- Storefront toggles reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-appearance-version="2"]
+    :is(
+      .sf-moving-rail-actions .sf-add-cart-button,
+      .sf-moving-rail-actions .sf-moving-rail-preview-button,
+      .sf-moving-rail-details-link,
+      .sf-moving-rail-toggle,
+      .sf-product-detail .sf-variant-chip,
+      .sf-product-detail .sf-action-link,
+      .sf-product-gallery .sf-gallery-arrow,
+      .sf-product-gallery .sf-gallery-position
+    ) {
+    transition-duration: 0ms;
+  }
+}
+
+/* ---------- Reduced motion always wins ---------- */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-appearance-version="2"]
+    :is(
+      .sf-product-actions .sf-product-action,
+      .sf-hover-preview-footer .sf-hover-preview-link,
+      .sf-hover-preview-footer .sf-add-cart-button,
+      .sf-product-actions-detail .miro-button,
+      .sf-search button,
+      .sf-hover-preview-close,
+      .sf-hover-preview-arrow,
+      .sf-hover-preview-close:hover,
+      .sf-hover-preview-arrow:hover
+    ) {
+    transition-duration: 0ms;
+  }
+}

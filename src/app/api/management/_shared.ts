@@ -68,6 +68,14 @@ export function errorResponse(
   );
 }
 
+/** 429 carries a machine-readable backoff hint for the 1-minute limiter window. */
+export function tooManyRequests(): NextResponse {
+  return NextResponse.json(
+    { error: "Too many requests", code: "rate_limited" },
+    { status: 429, headers: { "Retry-After": "60" } },
+  );
+}
+
 export function mapPostgresError(error: {
   code?: string;
   message?: string;

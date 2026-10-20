@@ -319,6 +319,11 @@ async function analytics({
           ? { ok: true, admin: db.client }
           : { ok: false, response: { status: 403 } },
       checkManagementRateLimit: async () => rate,
+      tooManyRequests: () => ({
+        body: { error: "Too many requests", code: "rate_limited" },
+        status: 429,
+        headers: { "Retry-After": "60" },
+      }),
       getClientIp: () => "test-ip",
       errorResponse: (error, status) => ({ body: { error }, status }),
       mapPostgresError: (error) => ({

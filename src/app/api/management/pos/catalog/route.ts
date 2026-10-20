@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   commerceFailure,
@@ -11,6 +10,7 @@ import {
   mapPostgresError,
   getClientIp,
   checkManagementRateLimit,
+  tooManyRequests,
 } from "@/app/api/management/_shared";
 
 const catalogQuerySchema = z
@@ -59,10 +59,7 @@ export async function GET(request: Request) {
     return commerceJson({ error: "Unable to process request" }, 503);
   }
   if (rateLimit === "limited") {
-    return NextResponse.json(
-      { error: "Rate limited", code: "rate_limited" },
-      { status: 429 },
-    );
+    return tooManyRequests();
   }
 
   const { searchParams } = new URL(request.url);
@@ -87,6 +84,7 @@ export async function GET(request: Request) {
       sale_price,
       tracking_mode,
       image_url,
+      product_images (image_url),
       categories!products_category_id_fkey!inner (id, slug, name_he, name_en, is_active),
       product_variants!inner (
         id,
@@ -110,6 +108,8 @@ export async function GET(request: Request) {
     .eq("product_variants.is_active", true)
     .eq("product_variants.pos_enabled", true)
     .eq("categories.is_active", true)
+    .order("sort_order", { referencedTable: "product_images" })
+    .limit(1, { referencedTable: "product_images" })
     .order("created_at", { ascending: false });
 
   // Apply category filter
@@ -243,7 +243,12 @@ export async function GET(request: Request) {
       slug: product.slug,
       name_he: product.name_he,
       name_en: product.name_en,
-      image_url: product.image_url,
+      // Match the storefront/editor gallery, including reordered cutouts and
+      // restored originals. The old product field is only a legacy fallback.
+      image_url:
+        product.product_images?.[0]?.image_url?.trim() ||
+        product.image_url?.trim() ||
+        null,
       category: firstCat
         ? {
             id: firstCat.id,

@@ -16,6 +16,7 @@ import {
   CalculatorError,
 } from "@/lib/calculator";
 import { useManagementTools } from "../management-tool-provider";
+import { useConfirmDialog } from "../../ui/use-confirm-dialog";
 import { calculatorCopy as copy } from "./calculator-copy";
 import styles from "./calculator-window.module.css";
 
@@ -27,6 +28,8 @@ interface CalculatorWindowProps {
 export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
   const t = (map: Record<"he" | "en", string>) => map[locale];
   const { saveDraft, clearDraft } = useManagementTools();
+  // Themed, accessible replacement for the clear-history confirm().
+  const { confirm, dialogNode } = useConfirmDialog();
 
   const [display, setDisplay] = useState("0");
   const [pendingInput, setPendingInput] = useState(false);
@@ -329,7 +332,13 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
   };
 
   const handleClearHistory = () => {
-    if (window.confirm(t(copy.clearHistoryConfirm))) {
+    void confirm({
+      title: t(copy.clearHistoryConfirm),
+      confirmLabel: t({ he: "נקה היסטוריה", en: "Clear history" }),
+      cancelLabel: t({ he: "עדיין לא", en: "Not yet" }),
+      tone: "danger",
+    }).then((proceed) => {
+      if (!proceed) return;
       setHistoryMutationError(null);
       fetch("/api/management/calculator-history", {
         method: "DELETE",
@@ -340,7 +349,7 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
           setHistoryStatus("ready");
         })
         .catch(() => setHistoryMutationError("clear"));
-    }
+    });
   };
 
   return (
@@ -349,6 +358,7 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
       dir={locale === "he" ? "rtl" : "ltr"}
       onKeyDown={handleKeyPress}
     >
+      {dialogNode}
       <div className={styles.displayGroup}>
         <div className={styles.displayHeading}>
           <span className={styles.calculatorName}>

@@ -268,10 +268,18 @@ test("remote importer rejects private, mapped, reserved and mixed DNS answers be
 
 async function imageRoute(
   upload,
-  { insertFails = false, authorized = true, found = true } = {},
+  {
+    insertFails = false,
+    authorized = true,
+    found = true,
+    configuredWorker = false,
+  } = {},
 ) {
   const calls = { uploaded: [], removed: [], inserted: [], downloads: 0 };
-  const processing = await processor();
+  const processing = await processor(
+    undefined,
+    configuredWorker ? configured : {},
+  );
   const storage = {
     upload: async (name, bytes, options) => {
       calls.uploaded.push({ name, bytes, options });
@@ -517,4 +525,33 @@ test("explicit keep-original choice bypasses a configured worker", async () => {
   assert.strictEqual(result.bytes, sourceBytes);
   assert.equal(result.backgroundRemoval.status, "original");
   assert.equal(result.backgroundRemoval.reason, "user_requested_original");
+});
+
+test("uploads and URL imports retain original bytes even with a configured worker and an obsolete removal flag", async () => {
+  for (const upload of [true, false]) {
+    const route = await imageRoute(upload, { configuredWorker: true });
+    let req;
+    if (upload) {
+      const form = await uploadRequest().formData();
+      form.set("remove_background", "true");
+      req = new Request(
+        "https://miro.example/api/management/product-images/upload",
+        { method: "POST", body: form },
+      );
+    } else {
+      req = new Request("https://miro.example/api/management/product-images", {
+        method: "POST",
+        body: JSON.stringify({
+          product_id: productId,
+          image_url: "https://external.example/camera.jpg",
+          remove_background: true,
+        }),
+      });
+    }
+    const response = await route.POST(req);
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).background_removal.status, "original");
+    assert.ok(route.calls.uploaded[0].bytes.equals(sourceBytes));
+    assert.equal(route.calls.uploaded.length, 1);
+  }
 });

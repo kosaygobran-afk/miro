@@ -25,7 +25,6 @@ const uploadMetaSchema = z.object({
   alt_en: z.string().max(300).nullish(),
   sort_order: z.coerce.number().int().min(0).default(0),
   is_primary: z.enum(["true", "false"]).optional(),
-  remove_background: z.enum(["true", "false"]).default("true"),
 });
 
 async function revalidateCatalog() {
@@ -58,7 +57,6 @@ export async function POST(request: Request) {
     alt_en: form.get("alt_en") ?? undefined,
     sort_order: form.get("sort_order") ?? undefined,
     is_primary: form.get("is_primary") ?? undefined,
-    remove_background: form.get("remove_background") ?? undefined,
   });
   if (!parsed.success) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
@@ -103,11 +101,7 @@ export async function POST(request: Request) {
     return errorResponse("Product not found", 404);
   }
 
-  const processingResult = await processProductImage(
-    bytes,
-    type,
-    meta.remove_background !== "false",
-  );
+  const processingResult = await processProductImage(bytes, type, false);
   const objectName = buildStorageObjectName(
     meta.product_id,
     processingResult.type,

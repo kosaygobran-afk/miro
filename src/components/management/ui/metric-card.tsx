@@ -57,9 +57,7 @@ export function MetricCard({
         <span className="mgmt-metric-card__icon" aria-hidden="true">
           {icon}
         </span>
-      ) : (
-        <span className="mgmt-metric-card__icon" aria-hidden="true" />
-      )}
+      ) : null}
       <div className="mgmt-metric-card__content">
         {loading ? (
           <>

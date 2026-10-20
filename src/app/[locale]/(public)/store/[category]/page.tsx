@@ -101,7 +101,14 @@ export default async function CategoryPage({
         ariaLabel={copy.category}
         collapsible
       />
-      <section className="sf-collection-section" id="store-items">
+      <section
+        className={
+          subcategories.length
+            ? "sf-collection-section sf-category-collection"
+            : "sf-collection-section"
+        }
+        id="store-items"
+      >
         <div className="miro-container">
           <h2 className="sr-only">
             {selectedSubcategory?.label ?? selected.label}
