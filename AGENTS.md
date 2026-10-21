@@ -6,14 +6,14 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
+<!-- END:nextjs-agent-rules -->
+
 ## Backend ops contract — 2026-10-19
 
-- `/api/commerce/jobs` is the outbox/intent-expiry worker. `vercel.json` runs it every 5 minutes via Vercel Cron, which authenticates with `Authorization: Bearer ${CRON_SECRET}`; external schedulers use `COMMERCE_JOB_AUTH_SECRET`. Both must be ≥32 chars; route logic stays timing-safe and fail-closed (401). Never widen auth beyond these two secrets.
+- `/api/commerce/jobs` is the outbox/intent-expiry worker. **2026-10-21 owner override:** `vercel.json` temporarily runs it once daily (`0 2 * * *`, 02:00–02:59 UTC on Hobby) to fit the free cron limit. This supersedes the previous five-minute schedule. Daily execution is for preview/development: expiry cleanup and payment/refund/document background work are delayed; the worker currently claims only one outbox job per invocation. Restore a monitored five-minute scheduler before live commerce; track the upgrade in `docs/FUTURE_UPGRADES.md`. Vercel authenticates with `Authorization: Bearer ${CRON_SECRET}`; external schedulers use `COMMERCE_JOB_AUTH_SECRET`. Both must be ≥32 chars; route logic stays timing-safe and fail-closed (401). Never widen auth beyond these two secrets.
 - All 429 responses carry `Retry-After: 60` and the closed-code body `rate_limited`. Management routes must return the shared `tooManyRequests()` helper from `api/management/_shared.ts`, commerce paths go through `commerceFailure`, enquiries through its `failureResponse` — do not hand-roll 429 JSON.
 - `GET /api/health` is the readiness surface for schedulers/monitoring: unauthenticated, boolean-only (redacted commerce config, public `catalog_version` ping, 200/503). Do not add credentials, row data or configuration values to it, and do not create a second health endpoint.
 - Remaining backend review items are owner-gated and tracked in `docs/PROJECT_STATUS.md`: MFA for privileged roles, settlement ingest source, outbox alerting channel, EXIF policy on preserved originals.
-
-<!-- END:nextjs-agent-rules -->
 
 ## Two-level catalog categories — 2026-10-17
 

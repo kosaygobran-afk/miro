@@ -22,6 +22,14 @@
 - Keep `/` redirecting to `/he` unless the owner explicitly changes the Hebrew-first routing decision.
 - Keep legacy `/products` URLs redirected to `/store` so old links do not break after the Store rename.
 
+## Temporary daily commerce scheduler — 2026-10-21
+
+- Owner chose a daily schedule to remove the free-plan cron deployment blocker while postponing the hosting/scheduler upgrade. `vercel.json` invokes `GET /api/commerce/jobs` at `0 2 * * *` (02:00 UTC daily). Hobby may invoke it anywhere from 02:00 to 02:59 UTC; this is 05:00–05:59 in Israel during daylight saving and 04:00–04:59 in winter.
+- Configure server-only `CRON_SECRET` with at least 32 characters in Vercel Production. Vercel sends it as a bearer token; missing/invalid credentials must still return 401. External schedulers may use the existing separate `COMMERCE_JOB_AUTH_SECRET`. Never put either value in Git or browser code.
+- This temporary cadence is for preview/development. The worker expires at most 500 intents and claims one outbox job per invocation. Cleanup can wait until the next daily run, and queued payment/refund reconciliation or document work can take multiple days when backlogged. Do not activate live commerce on this schedule. No payment/fiscal settings are enabled by changing cron frequency.
+- Before live commerce, complete the checklist in [Future upgrades](FUTURE_UPGRADES.md): restore a monitored five-minute cadence through a supporting Vercel plan or an authenticated external scheduler and verify capacity/backlog recovery. A daily expression resolves the cron-frequency restriction; Vercel Hobby's personal/noncommercial-use restriction still needs owner review before business launch.
+- After publishing this configuration, verify the exact deployed commit, the production alias and Cron dashboard schedule/authentication. A local build does not confirm a successful Vercel deployment. References: [cron limits and scheduling precision](https://vercel.com/docs/cron-jobs/usage-and-pricing), [Hobby plan eligibility](https://vercel.com/docs/plans/hobby).
+
 ## Database
 
 - Use Supabase managed PostgreSQL
