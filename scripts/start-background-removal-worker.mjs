@@ -2,7 +2,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { createServer } from "node:net";
-import { constants, tmpdir } from "node:os";
+import { constants, homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import nextEnv from "@next/env";
@@ -44,6 +44,15 @@ async function start() {
   const python = process.env.BACKGROUND_REMOVAL_PYTHON
     ? resolve(process.env.BACKGROUND_REMOVAL_PYTHON)
     : [
+        join(
+          homedir(),
+          ".local",
+          "share",
+          "miro-background-removal",
+          "venv",
+          "bin",
+          "python",
+        ),
         join(projectRoot, "python-worker", ".venv", "bin", "python"),
         join(projectRoot, "python-worker", ".venv", "Scripts", "python.exe"),
         join(tmpdir(), "miro-bg-worker", "bin", "python"),

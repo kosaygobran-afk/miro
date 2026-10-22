@@ -280,8 +280,12 @@ for (const locale of ["en", "he"] as const) {
           const tools = element
             .querySelector(".sf-hover-preview-image-tools")!
             .getBoundingClientRect();
-          const toggle = element
-            .querySelector(".sf-image-magnifier-toggle")!
+          const toggleNode = element.querySelector(
+            ".sf-image-magnifier-toggle",
+          )!;
+          const toggle = toggleNode.getBoundingClientRect();
+          const close = element
+            .querySelector(".sf-hover-preview-close")!
             .getBoundingClientRect();
           return {
             counterOutside: counter.top >= stage.bottom + 2,
@@ -289,7 +293,12 @@ for (const locale of ["en", "he"] as const) {
               Math.abs(
                 counter.left + counter.right - tools.left - tools.right,
               ) < 2,
-            magnifierLeft: toggle.left < counter.left,
+            magnifierInToolbar:
+              !!toggleNode.closest(".sf-hover-preview-toolbar-actions") &&
+              Math.abs(
+                toggle.top + toggle.height / 2 - close.top - close.height / 2,
+              ) < 2 &&
+              toggle.bottom <= stage.top + 2,
             aligned: Array.from(identifiers.children).every((row) => {
               const label = row.querySelector("dt")!.getBoundingClientRect();
               const value = row.querySelector("dd")!.getBoundingClientRect();
@@ -308,7 +317,7 @@ for (const locale of ["en", "he"] as const) {
         expect(geometry).toEqual({
           counterOutside: true,
           counterCentered: true,
-          magnifierLeft: true,
+          magnifierInToolbar: true,
           aligned: true,
           fit: "contain",
           position: "50% 50%",

@@ -26,7 +26,9 @@ import {
   priceBeforeVat,
 } from "@/lib/catalog/pricing";
 import { StickerCluster } from "@/features/catalog/product-promo-badge";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 import { ProductHoverPreview } from "@/features/catalog/product-hover-preview";
+import { PRODUCT_PREVIEW_HOVER_ENABLED } from "@/features/catalog/product-preview-triggers";
 import { usePreviewHoverDismissal } from "./use-preview-hover-dismissal";
 import { usePreviewLongPress } from "./use-preview-long-press";
 
@@ -50,7 +52,7 @@ function usePrefersReducedMotion() {
   );
 }
 
-function RailProduct({
+export function RailProduct({
   product,
   locale,
   isDuplicate = false,
@@ -61,6 +63,7 @@ function RailProduct({
   isDuplicate?: boolean;
   onPreviewChange: (id: string, open: boolean) => void;
 }) {
+  const enhancedBadges = useAnimationSettings().appearanceVersion === "2";
   const [showPreview, setShowPreview] = useState(false);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const sourceRef = useRef<HTMLAnchorElement | null>(null);
@@ -108,6 +111,7 @@ function RailProduct({
       ? (primaryImage?.altHe ?? product.name)
       : (primaryImage?.altEn ?? product.name);
   const openOnHover = (event: React.PointerEvent<HTMLElement>) => {
+    if (!PRODUCT_PREVIEW_HOVER_ENABLED) return;
     if (event.pointerType !== "mouse") return;
     if (!event.currentTarget.contains(event.target as Node)) return;
     if (!canHover()) return;
@@ -189,6 +193,15 @@ function RailProduct({
           }
         }}
       >
+        {enhancedBadges &&
+        product.promoBadges &&
+        product.promoBadges.length > 0 ? (
+          <StickerCluster
+            badges={product.promoBadges}
+            locale={locale}
+            maxVisible={2}
+          />
+        ) : null}
         <div className="sf-moving-rail-media" data-product-section="image">
           <ProductMedia
             product={product}
@@ -197,7 +210,9 @@ function RailProduct({
             sizes="(max-width: 600px) 11.5rem, 14.5rem"
             className="sf-moving-rail-image"
           />
-          {product.promoBadges && product.promoBadges.length > 0 ? (
+          {!enhancedBadges &&
+          product.promoBadges &&
+          product.promoBadges.length > 0 ? (
             <StickerCluster
               badges={product.promoBadges}
               locale={locale}

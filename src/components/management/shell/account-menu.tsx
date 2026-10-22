@@ -49,8 +49,20 @@ export function AccountMenu({
         setOpen(false);
       }
     };
+    // Keyboard users can tab from the menu straight into the tools popup.
+    // Close on focus leaving the menu so the two overlays never stack.
+    const onFocusIn = (event: FocusEvent) => {
+      if (
+        rootRef.current &&
+        event.target instanceof Node &&
+        !rootRef.current.contains(event.target)
+      ) {
+        setOpen(false);
+      }
+    };
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("pointerdown", onPointerDown);
+    document.addEventListener("focusin", onFocusIn);
 
     const raf = requestAnimationFrame(() => {
       panelRef.current?.querySelector<HTMLElement>("a, button")?.focus();
@@ -60,6 +72,7 @@ export function AccountMenu({
       cancelAnimationFrame(raf);
       document.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("pointerdown", onPointerDown);
+      document.removeEventListener("focusin", onFocusIn);
     };
   }, [open]);
 

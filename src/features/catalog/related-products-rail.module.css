@@ -1,0 +1,128 @@
+.section {
+  padding-block: 2.5rem 3rem;
+  border-block-start: 1px solid var(--border-subtle);
+  background: var(--surface-muted);
+  min-inline-size: 0;
+}
+.header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+}
+.heading {
+  display: grid;
+  gap: 0.65rem;
+  max-inline-size: 46rem;
+}
+.heading p {
+  margin: 0;
+  color: var(--accent-text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+.heading h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  line-height: 1.35;
+  color: var(--foreground);
+}
+.heading > span,
+.toolbar > span {
+  color: var(--muted-foreground);
+  font-size: 0.85rem;
+  line-height: 1.65;
+}
+.category {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-block-size: 2.75rem;
+  color: var(--accent-text);
+  font-weight: 650;
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block: 1.25rem 0.5rem;
+}
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.controls button {
+  display: grid;
+  place-items: center;
+  inline-size: 2.75rem;
+  block-size: 2.75rem;
+  border: 1px solid var(--border-control);
+  border-radius: 0.75rem;
+  color: var(--foreground);
+  background: var(--surface);
+  cursor: pointer;
+}
+.controls button:hover:not(:disabled) {
+  border-color: var(--accent-text);
+  background: var(--surface-hover);
+}
+.controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.controls button:focus-visible,
+.category:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: 3px;
+}
+.viewport {
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-control) transparent;
+  padding: 0.5rem 0.25rem 1rem;
+}
+.track {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  inline-size: max-content;
+  min-inline-size: 100%;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.track > li {
+  display: flex;
+  flex: 0 0 auto;
+  min-inline-size: 0;
+}
+.track :global(.sf-moving-rail-card-shell) {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.track :global(.sf-moving-rail-card) {
+  width: clamp(15rem, 18vw, 20rem);
+  flex: 1;
+}
+@media (max-width: 600px) {
+  .section {
+    padding-block: 1.75rem 2rem;
+  }
+  .track {
+    gap: 0.75rem;
+  }
+  .track :global(.sf-moving-rail-card) {
+    width: min(72vw, 17rem);
+  }
+  .toolbar > span {
+    font-size: 0.75rem;
+  }
+}

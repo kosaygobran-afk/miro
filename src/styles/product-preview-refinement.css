@@ -27,7 +27,9 @@
   gap: 0.6rem;
 }
 
-.sf-hover-preview-toolbar {
+.sf-hover-preview-toolbar,
+.sf-hover-preview-toolbar-actions,
+.sf-hover-preview-magnifier-slot {
   display: contents;
 }
 
@@ -38,6 +40,8 @@
 :root[data-appearance-version="2"]
   :is(.sf-hover-preview, .sf-detail-magnifier) {
   .sf-hover-preview-toolbar {
+    position: relative;
+    z-index: 4;
     display: flex;
     flex: none;
     align-items: center;
@@ -62,6 +66,26 @@
     height: 44px;
     border-radius: 0.85rem;
     box-shadow: none;
+  }
+
+  /* The magnifier toggle joins the close button in the toolbar. */
+  .sf-hover-preview-toolbar-actions {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sf-hover-preview-magnifier-slot {
+    display: flex;
+  }
+
+  /* The toolbar sits above the gallery, so its tooltip opens downward. */
+  .sf-hover-preview-toolbar-actions .sf-image-magnifier-tooltip {
+    left: auto;
+    inset-inline-end: 0;
+    bottom: auto;
+    top: calc(100% + 0.25rem);
   }
 
   .sf-hover-preview-media {
@@ -308,7 +332,9 @@
 
 :root[data-appearance-version="2"]
   .sf-hover-preview[data-minimal-source-preview="true"] {
-  .sf-hover-preview-toolbar {
+  .sf-hover-preview-toolbar,
+  .sf-hover-preview-toolbar-actions {
+    position: static;
     display: contents;
   }
 
@@ -323,6 +349,14 @@
     top: 2px;
     inset-inline-end: 2px;
   }
+}
+
+/* Without a visible gallery there is nothing to magnify. */
+:root[data-appearance-version="2"]
+  .sf-hover-preview[data-compact-source-preview="true"]
+  .sf-hover-preview-toolbar-actions
+  .sf-image-magnifier-toggle {
+  display: none;
 }
 
 :root[data-appearance-version="2"] .sf-hover-preview .sf-hover-preview-content {

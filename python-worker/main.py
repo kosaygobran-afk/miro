@@ -65,8 +65,13 @@ def get_session():
     global session
     if session is None:
         import rembg
+        import onnxruntime as ort
         logger.info("Loading model %s", MODEL_NAME)
-        session = rembg.new_session(MODEL_NAME, providers=["CPUExecutionProvider"])
+        options = ort.SessionOptions()
+        options.intra_op_num_threads = min(2, os.cpu_count() or 1)
+        options.inter_op_num_threads = 1
+        options.enable_cpu_mem_arena = False
+        session = rembg.new_session(MODEL_NAME, providers=["CPUExecutionProvider"], sess_opts=options)
     return session
 
 
@@ -128,10 +133,10 @@ def remove_background_endpoint(file: UploadFile = File(...), authorization: str 
         raise HTTPException(status_code=503, detail="Worker authentication is not configured")
     if not hmac.compare_digest(authorization or "", f"Bearer {token}"):
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # Do not queue expensive native inference or initialize the session concurrently.
+    # Wait briefly for a single inference slot; never initialize sessions concurrently.
     # Synchronous endpoints run off the event loop, keeping /health responsive.
-    if not inference_lock.acquire(blocking=False):
-        raise HTTPException(status_code=503, detail="Worker busy")
+    if not inference_lock.acquire(timeout=2):
+        raise HTTPException(status_code=503, detail="Worker busy", headers={"Retry-After": "2"})
     try:
         input_bytes = file.file.read(MAX_BYTES + 1)
         detection = detect_transparency(input_bytes)
@@ -148,7 +153,7 @@ def remove_background_endpoint(file: UploadFile = File(...), authorization: str 
         raise HTTPException(status_code=400, detail="Invalid image or unusable cutout") from None
     except Exception:
         logger.error("Background removal failed")
-        raise HTTPException(status_code=503, detail="Image processing unavailable") from None
+        raise HTTPException(status_code=503, detail="Image processing unavailable", headers={"Retry-After": "2"}) from None
     finally:
         file.file.close()
         inference_lock.release()

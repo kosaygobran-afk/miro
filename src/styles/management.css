@@ -537,8 +537,7 @@
 }
 
 .mgmt-shell[data-sidebar="collapsed"] .mgmt-sidebar .mgmt-sidebar__footer {
-  justify-content: center;
-  padding: 0.75rem 0 0;
+  display: none;
 }
 
 /* ---------- Nav (sidebar + drawer) ---------- */
@@ -1272,7 +1271,7 @@
   position: relative;
   display: grid;
   width: 100%;
-  max-height: 90svh;
+  max-height: 100%;
   overflow-y: auto;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl);
@@ -1354,6 +1353,12 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.75rem;
+}
+
+@media (max-width: 40rem) {
+  .mgmt-dialog-root {
+    padding: 4.5rem 1rem 1rem;
+  }
 }
 
 /* ---------- Metric card ---------- */

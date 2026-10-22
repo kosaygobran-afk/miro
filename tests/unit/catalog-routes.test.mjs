@@ -98,6 +98,10 @@ function loadPages(category, { hidden = false, unavailable = false } = {}) {
       getPublicContactConfig: async () => ({}),
       toPublicContactActions: () => ({}),
     },
+    "@/lib/catalog/related-products": { getRelatedProducts: () => [] },
+    "@/features/catalog/related-products-rail": {
+      RelatedProductsRail: placeholder,
+    },
     "@/features/catalog/store-copy": { storeCopy: { he: {}, en: {} } },
     "@/features/catalog/product-visual-kind": {
       getProductVisualKind: () => "camera",

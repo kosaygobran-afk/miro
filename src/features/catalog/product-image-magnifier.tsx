@@ -8,6 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { ZoomIn, ZoomOut } from "lucide-react";
 import { ProductMedia, type ProductImageSubject } from "./product-media";
 
@@ -30,6 +31,7 @@ export function ProductImageMagnifier({
   annotation,
   fetchPriority,
   escapeScope = "document",
+  togglePortalTarget,
 }: {
   product: ProductImageSubject;
   src?: string;
@@ -43,6 +45,11 @@ export function ProductImageMagnifier({
   annotation?: ReactNode;
   fetchPriority?: "high" | "low" | "auto";
   escapeScope?: "document" | "local";
+  /**
+   * Optional toolbar slot. The storefront card preview moves its toggle next to
+   * the close button, while the detail page keeps it in the image tools row.
+   */
+  togglePortalTarget?: HTMLElement | null;
 }) {
   const he = locale === "he";
   const [ready, setReady] = useState(false);
@@ -113,6 +120,43 @@ export function ProductImageMagnifier({
     pointRef.current = point;
     updateLens();
   };
+
+  const magnifierToggle = ready ? (
+    <button
+      ref={buttonRef}
+      type="button"
+      className="sf-image-magnifier-toggle"
+      aria-label={toggleLabel}
+      aria-pressed={zoomed}
+      aria-controls={stageId}
+      onClick={() => {
+        moveTo(50, 50);
+        setEnabled(!zoomed);
+        if (!zoomed) {
+          requestAnimationFrame(() =>
+            stageRef.current?.focus({ preventScroll: true }),
+          );
+        }
+      }}
+    >
+      {zoomed ? (
+        <ZoomOut size={16} aria-hidden="true" />
+      ) : (
+        <ZoomIn size={16} aria-hidden="true" />
+      )}
+      <span
+        className="sf-image-magnifier-tooltip"
+        aria-hidden="true"
+        dir={he ? "rtl" : "ltr"}
+      >
+        {toggleLabel}
+      </span>
+    </button>
+  ) : null;
+  const placedMagnifierToggle =
+    magnifierToggle && togglePortalTarget
+      ? createPortal(magnifierToggle, togglePortalTarget)
+      : magnifierToggle;
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -234,38 +278,7 @@ export function ProductImageMagnifier({
       {ready || counter ? (
         <div ref={toolsRef} className="sf-hover-preview-image-tools">
           {counter}
-          {ready ? (
-            <button
-              ref={buttonRef}
-              type="button"
-              className="sf-image-magnifier-toggle"
-              aria-label={toggleLabel}
-              aria-pressed={zoomed}
-              aria-controls={stageId}
-              onClick={() => {
-                moveTo(50, 50);
-                setEnabled(!zoomed);
-                if (!zoomed) {
-                  requestAnimationFrame(() =>
-                    stageRef.current?.focus({ preventScroll: true }),
-                  );
-                }
-              }}
-            >
-              {zoomed ? (
-                <ZoomOut size={16} aria-hidden="true" />
-              ) : (
-                <ZoomIn size={16} aria-hidden="true" />
-              )}
-              <span
-                className="sf-image-magnifier-tooltip"
-                aria-hidden="true"
-                dir={he ? "rtl" : "ltr"}
-              >
-                {toggleLabel}
-              </span>
-            </button>
-          ) : null}
+          {placedMagnifierToggle}
           {zoomed ? (
             <label
               className="sf-image-magnifier-controls"

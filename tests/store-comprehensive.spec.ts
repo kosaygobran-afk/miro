@@ -119,23 +119,23 @@ test.describe("Storefront - Comprehensive Tests", () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test("Hover preview appears on product card hover", async ({ page }) => {
+  test("hover keeps the preview closed; the eye button opens it", async ({
+    page,
+  }) => {
     await page.goto("/he/store");
     await page.waitForLoadState("networkidle");
 
     const productCard = page.locator(".sf-product-card").first();
     await expect(productCard).toBeVisible();
 
-    // Hover over the product card
+    // Hover-to-preview is temporarily disabled.
     await productCard.hover();
-    await page.waitForTimeout(500); // Wait for hover intent delay
+    await page.waitForTimeout(500);
+    const hoverPreview = page.locator(".sf-hover-preview");
+    await expect(hoverPreview).toHaveCount(0);
 
-    // Check for hover preview portal
-    const hoverPreview = page.locator(
-      "#product-hover-preview-portal .sf-hover-preview",
-    );
-    const isVisible = await hoverPreview.isVisible().catch(() => false);
-    console.log(`Hover preview visible: ${isVisible}`);
+    await productCard.locator(".sf-product-quick-preview").click();
+    await expect(hoverPreview).toBeVisible();
   });
 
   test("Keyboard navigation on product grid", async ({ page }) => {
@@ -152,23 +152,18 @@ test.describe("Storefront - Comprehensive Tests", () => {
     console.log(`Focused element: ${focused}`);
   });
 
-  test("Escape key closes hover preview", async ({ page }) => {
+  test("Escape key closes the product preview", async ({ page }) => {
     await page.goto("/he/store");
     await page.waitForLoadState("networkidle");
 
     const productCard = page.locator(".sf-product-card").first();
-    await productCard.hover();
-    await page.waitForTimeout(500);
+    await productCard.locator(".sf-product-quick-preview").click();
+    const hoverPreview = page.locator(".sf-hover-preview");
+    await expect(hoverPreview).toBeVisible();
 
     // Press Escape
     await page.keyboard.press("Escape");
-    await page.waitForTimeout(200);
-
-    const hoverPreview = page.locator(
-      "#product-hover-preview-portal .sf-hover-preview",
-    );
-    const isVisible = await hoverPreview.isVisible().catch(() => false);
-    console.log(`Hover preview visible after Escape: ${isVisible}`);
+    await expect(hoverPreview).toHaveCount(0);
   });
 
   test("Product detail page loads and passes axe", async ({ page }) => {

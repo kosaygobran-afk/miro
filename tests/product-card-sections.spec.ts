@@ -10,6 +10,7 @@ import {
   DEFAULT_ANIMATION_SETTINGS,
   type AnimationSettings,
 } from "../src/lib/animation-settings";
+import { PRODUCT_PREVIEW_HOVER_ENABLED } from "../src/features/catalog/product-preview-triggers";
 
 type CardKind = "grid" | "rail";
 type Point = { x: number; y: number };
@@ -23,6 +24,12 @@ function productCard(page: Page, kind: CardKind) {
           '.sf-moving-rail-segment:not([aria-hidden="true"]) .sf-moving-rail-card-shell',
         )
         .first();
+}
+
+function previewButton(card: Locator, kind: CardKind) {
+  return kind === "grid"
+    ? card.locator(".sf-product-quick-preview")
+    : card.locator(".sf-moving-rail-preview-button");
 }
 
 async function ready(
@@ -196,25 +203,37 @@ for (const locale of ["en", "he"] as const) {
 }
 
 for (const kind of ["grid", "rail"] as const) {
-  test(`${kind}: hover opens only image, details and pricing sections`, async ({
+  test(`${kind}: hover obeys the preview toggle; the eye button always opens it`, async ({
     page,
     isMobile,
   }) => {
-    test.skip(isMobile, "Touch uses hold or the explicit preview button");
+    test.skip(isMobile, "Desktop hover requires a fine pointer");
     await page.setViewportSize({ width: 1440, height: 1100 });
     await ready(page, "en");
     const card = productCard(page, kind);
     for (const section of ["image", "details", "pricing"] as const) {
       await card.locator(`[data-product-section="${section}"]`).hover();
-      await expect(
-        page.locator('.sf-hover-preview[data-state="open"]'),
-      ).toBeVisible();
-      await page.mouse.move(0, 0);
-      await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
+      await page.waitForTimeout(400);
+      if (PRODUCT_PREVIEW_HOVER_ENABLED) {
+        await expect(
+          page.locator('.sf-hover-preview[data-state="open"]'),
+        ).toBeVisible();
+        await page.mouse.move(0, 0);
+        await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
+      } else {
+        await expect(card).not.toHaveAttribute("data-preview-intent", "true");
+        await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
+      }
     }
     await card.locator('[data-product-section="actions"]').hover();
     await page.waitForTimeout(400);
     await expect(card).not.toHaveAttribute("data-preview-intent", "true");
+    await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
+    await previewButton(card, kind).click();
+    await expect(
+      page.locator('.sf-hover-preview[data-state="open"]'),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
     await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
   });
 
@@ -223,6 +242,10 @@ for (const kind of ["grid", "rail"] as const) {
     isMobile,
   }) => {
     test.skip(isMobile, "Desktop verifies physical hover-to-footer travel");
+    test.skip(
+      !PRODUCT_PREVIEW_HOVER_ENABLED,
+      "Source-action clearance requires the temporarily disabled hover trigger",
+    );
     await page.setViewportSize({ width: 1440, height: 1100 });
     for (const style of [
       "soft-reveal",
@@ -276,6 +299,10 @@ test("a 320×240 fine-pointer viewport keeps compact details, close and original
   isMobile,
 }) => {
   test.skip(isMobile, "This compact layout exercises fine-pointer hover");
+  test.skip(
+    !PRODUCT_PREVIEW_HOVER_ENABLED,
+    "Compact source previews require the temporarily disabled hover trigger",
+  );
   await page.setViewportSize({ width: 320, height: 240 });
   await ready(page, "en");
   const card = productCard(page, "grid");

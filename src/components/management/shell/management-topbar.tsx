@@ -245,7 +245,28 @@ export function ManagementTopbar({
           </p>
         </div>
       </div>
-      <div className="mgmt-topbar__end" ref={endRef}>
+      <div
+        className="mgmt-topbar__end"
+        ref={endRef}
+        onPointerDownCapture={(event) => {
+          // Below 1200px the tools group is a popup; opening the account menu
+          // closes it so the two overlays never stack. Desktop inline tools
+          // stay visible regardless of this state.
+          if (
+            event.target instanceof Element &&
+            event.target.closest(".mgmt-account__trigger")
+          )
+            setControlsOpen(false);
+        }}
+        onClickCapture={(event) => {
+          // Keyboard activation (Enter/Space) fires click without pointerdown.
+          if (
+            event.target instanceof Element &&
+            event.target.closest(".mgmt-account__trigger")
+          )
+            setControlsOpen(false);
+        }}
+      >
         <button
           ref={controlsTrigger}
           type="button"

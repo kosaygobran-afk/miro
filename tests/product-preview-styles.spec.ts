@@ -3,6 +3,7 @@ import {
   DEFAULT_ANIMATION_SETTINGS,
   type AnimationSettings,
 } from "../src/lib/animation-settings";
+import { PRODUCT_PREVIEW_HOVER_ENABLED } from "../src/features/catalog/product-preview-triggers";
 
 async function configure(
   page: Page,
@@ -134,6 +135,10 @@ test("hover after an explicit close keeps focus on the source and Escape stays c
   isMobile,
 }) => {
   test.skip(isMobile, "Desktop hover requires a fine pointer");
+  test.skip(
+    !PRODUCT_PREVIEW_HOVER_ENABLED,
+    "Hover-to-preview is temporarily disabled",
+  );
   await page.setViewportSize({ width: 390, height: 850 });
   await page.goto("/en");
   await configure(page, "3d-pop-up-smooth");
@@ -199,6 +204,10 @@ test("desktop hover opens Soft Reveal without pressing the source card down", as
   isMobile,
 }) => {
   test.skip(isMobile, "Hover applies only to fine-pointer desktop profiles");
+  test.skip(
+    !PRODUCT_PREVIEW_HOVER_ENABLED,
+    "Hover-to-preview is temporarily disabled",
+  );
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto("/en");
   await configure(page, "soft-reveal");
@@ -289,7 +298,7 @@ for (const locale of ["he", "en"]) {
 }
 
 for (const target of [".sf-product-body h3", ".sf-product-price"]) {
-  test(`smooth 3D opens from eligible product sections: ${target}`, async ({
+  test(`smooth 3D eye preview keeps ${target} hover styling and source growth`, async ({
     page,
     isMobile,
   }) => {
@@ -299,15 +308,16 @@ for (const target of [".sf-product-body h3", ".sf-product-price"]) {
     await configure(page, "3d-pop-up-smooth");
     const card = page.locator(".sf-product-card").first();
     await card.locator(target).hover();
+    await expect(card.locator('[data-preview-source="true"]')).toHaveCSS(
+      "transform",
+      "matrix(1, 0, 0, 1, 0, -3)",
+    );
+    await card.locator(".sf-product-quick-preview").click();
     const preview = page.locator(".sf-hover-preview");
     await expect(preview).toBeVisible();
     await expect(preview).toHaveCSS(
       "animation-name",
       "sf-preview-3d-smooth-enter",
-    );
-    await expect(card.locator('[data-preview-source="true"]')).toHaveCSS(
-      "transform",
-      "matrix(1, 0, 0, 1, 0, -3)",
     );
     await expect(card).toHaveCSS("transform", "none");
     const image = card.locator(".sf-product-visual");

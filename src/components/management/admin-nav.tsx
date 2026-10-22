@@ -3,7 +3,13 @@
 import Link from "@/components/motion/motion-link";
 import { usePathname } from "next/navigation";
 import { Lock } from "lucide-react";
-import { useEffect, useState, type FocusEvent, type PointerEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FocusEvent,
+  type PointerEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { withLocale, type Locale } from "@/lib/i18n";
 import type { AppRole } from "@/lib/roles";
@@ -38,6 +44,7 @@ export function AdminNav({
   onNavigate,
 }: AdminNavProps) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
   const activeKey = matchMgmtNav(pathname ?? `/${locale}/admin`, locale).item
     .key;
   const isCeo = role === "ceo";
@@ -60,6 +67,42 @@ export function AdminNav({
     };
   }, []);
 
+  // Keep the active entry inside the visible scrollport on deep pages.
+  // Runs after layout on each navigation and on mount (the mobile drawer is
+  // rendered lazily, so its nav mounts already open). Instant scrolling only,
+  // so reduced-motion preferences are unaffected.
+  useEffect(() => {
+    const nav = navRef.current;
+    if (!nav) return;
+    const scroller = nav.closest<HTMLElement>(
+      ".mgmt-sidebar__nav, .mgmt-drawer__body",
+    );
+    if (!scroller) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      // Closed/hidden drawer has no layout boxes: no-op safely.
+      if (!nav.getClientRects().length) return;
+      const active = nav.querySelector<HTMLElement>('[aria-current="page"]');
+      if (!active) return;
+
+      const margin = 12;
+      const activeRect = active.getBoundingClientRect();
+      const scrollerRect = scroller.getBoundingClientRect();
+      // Positive when the entry is past the margin on each edge.
+      const below = activeRect.bottom - (scrollerRect.bottom - margin);
+      const above = scrollerRect.top + margin - activeRect.top;
+      if (below > 0 && above > 0) {
+        // Entry taller than the scrollport: reveal its top edge.
+        scroller.scrollTop -= above;
+      } else if (below > 0) {
+        scroller.scrollTop += below;
+      } else if (above > 0) {
+        scroller.scrollTop -= above;
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [pathname, collapsed]);
+
   function showTooltip(
     event: FocusEvent<HTMLAnchorElement> | PointerEvent<HTMLAnchorElement>,
     label: string,
@@ -77,6 +120,7 @@ export function AdminNav({
 
   return (
     <nav
+      ref={navRef}
       className={["mgmt-nav", collapsed ? "mgmt-nav--collapsed" : null]
         .filter(Boolean)
         .join(" ")}

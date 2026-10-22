@@ -27,6 +27,8 @@ async function loadSource(path, mocks = {}, globals = {}) {
       URL,
       TextDecoder,
       AbortSignal,
+      setTimeout,
+      clearTimeout,
       FormData,
       Blob,
       File,
@@ -554,4 +556,101 @@ test("uploads and URL imports retain original bytes even with a configured worke
     assert.ok(route.calls.uploaded[0].bytes.equals(sourceBytes));
     assert.equal(route.calls.uploaded.length, 1);
   }
+});
+
+test("busy inference retries once within the same deadline before any write", async () => {
+  const signals = [];
+  const { processProductImage } = await processor(async (_url, init) => {
+    signals.push(init.signal);
+    if (signals.length === 1)
+      return new Response("busy", {
+        status: 503,
+        headers: { "Retry-After": "0" },
+      });
+    return Response.json({
+      skipped: false,
+      reason: null,
+      image_base64: cutout.toString("base64"),
+      mode: "processed",
+    });
+  }, configured);
+  const result = await processProductImage(sourceBytes, "jpeg");
+  assert.equal(result.backgroundRemoval.status, "processed");
+  assert.equal(signals.length, 2);
+  assert.equal(signals[0], signals[1]);
+});
+
+test("long busy waits and missing worker auth never trigger uncontrolled requests", async () => {
+  let requests = 0;
+  const { processProductImage } = await processor(async () => {
+    requests++;
+    return new Response("busy", {
+      status: 503,
+      headers: { "Retry-After": "60" },
+    });
+  }, configured);
+  assert.equal(
+    (await processProductImage(sourceBytes, "jpeg")).backgroundRemoval.status,
+    "original",
+  );
+  assert.equal(requests, 1);
+  const unconfigured = await processor(
+    () => {
+      throw Error("Must not contact an unauthenticated worker");
+    },
+    { BACKGROUND_REMOVAL_WORKER_URL: configured.BACKGROUND_REMOVAL_WORKER_URL },
+  );
+  assert.equal(
+    (await unconfigured.processProductImage(sourceBytes, "jpeg"))
+      .backgroundRemoval.reason,
+    "worker_not_configured",
+  );
+});
+
+test("a false transparency skip or wrong-size cutout preserves the saved original", async () => {
+  const wrongSize = await sharp(cutout).resize(10, 10).png().toBuffer();
+  for (const body of [
+    {
+      skipped: true,
+      reason: "already transparent",
+      image_base64: sourceBytes.toString("base64"),
+      mode: "RGB",
+    },
+    {
+      skipped: false,
+      reason: null,
+      image_base64: wrongSize.toString("base64"),
+      mode: "processed",
+    },
+  ]) {
+    const { processProductImage } = await processor(
+      async () => Response.json(body),
+      configured,
+    );
+    const result = await processProductImage(sourceBytes, "jpeg");
+    assert.equal(result.backgroundRemoval.status, "original");
+    assert.strictEqual(result.bytes, sourceBytes);
+  }
+});
+
+test("busy retry is interrupted by the original deadline", async () => {
+  let requests = 0;
+  const processing = await loadSource(
+    "src/lib/product-image-processing.ts",
+    { "./image-safety": safety },
+    {
+      process: { env: configured },
+      AbortSignal: { timeout: () => AbortSignal.timeout(10) },
+      fetch: async () => {
+        requests++;
+        return new Response("busy", {
+          status: 503,
+          headers: { "Retry-After": "2" },
+        });
+      },
+    },
+  );
+  const result = await processing.processProductImage(sourceBytes, "jpeg");
+  assert.equal(result.backgroundRemoval.status, "original");
+  assert.equal(requests, 1);
 });

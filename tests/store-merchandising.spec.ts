@@ -36,7 +36,7 @@ test.describe("Storefront merchandising interactions", () => {
     await indicator.focus();
     await expect(indicator).toBeFocused();
   });
-  test("card presses before its in-place 3D expansion, stays in the viewport, and closes", async ({
+  test("eye button opens the in-place 3D expansion, stays in the viewport, and closes", async ({
     page,
   }) => {
     await page.goto("/en/store");
@@ -44,11 +44,7 @@ test.describe("Storefront merchandising interactions", () => {
     const media = page.locator(".sf-product-media").first();
     await expect(media).toBeVisible();
 
-    await media.hover();
-    await expect(card).toHaveAttribute("data-preview-intent", "true");
-    await page.waitForTimeout(70);
-    await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
-
+    await card.locator(".sf-product-quick-preview").click();
     await expect(page.locator(".sf-hover-preview")).toBeVisible({
       timeout: 800,
     });
@@ -123,11 +119,9 @@ test.describe("Storefront merchandising interactions", () => {
       .locator('.sf-moving-rail-segment:not([aria-hidden="true"])')
       .locator(".sf-moving-rail-card")
       .first();
-    await firstRailCard.hover();
-    await expect(firstRailCard.locator("..")).toHaveAttribute(
-      "data-preview-intent",
-      "true",
-    );
+    const railShell = firstRailCard.locator("..");
+    await railShell.locator(".sf-moving-rail-preview-button").click();
+    await expect(railShell).toHaveAttribute("data-preview-intent", "true");
     await expect(page.locator(".sf-hover-preview")).toBeVisible({
       timeout: 1_500,
     });

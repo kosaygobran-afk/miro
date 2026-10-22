@@ -287,6 +287,8 @@
   color: var(--foreground-muted);
   font-size: 0.8rem;
   line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 760px) {

@@ -2,6 +2,7 @@ import base64
 import io
 import os
 import unittest
+import threading
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -82,7 +83,9 @@ class WorkerTests(unittest.TestCase):
     def test_busy_worker_and_private_error(self):
         main.inference_lock.acquire()
         try:
-            self.assertEqual(self.post(encoded()).status_code, 503)
+            busy = self.post(encoded())
+            self.assertEqual(busy.status_code, 503)
+            self.assertEqual(busy.headers.get("retry-after"), "2")
             self.assertEqual(self.client.get("/health").status_code, 200)
         finally:
             main.inference_lock.release()
@@ -90,6 +93,17 @@ class WorkerTests(unittest.TestCase):
             response = self.post(encoded())
         self.assertEqual(response.status_code, 503)
         self.assertNotIn("secret", response.text)
+        self.assertFalse(main.inference_lock.locked())
+
+    def test_short_contention_waits_then_processes_without_overlapping_inference(self):
+        main.inference_lock.acquire()
+        timer = threading.Timer(0.05, main.inference_lock.release)
+        timer.start()
+        try:
+            with patch.object(main, "remove_background", return_value=encoded(transparent=15)):
+                self.assertEqual(self.post(encoded(mode="RGB", format="JPEG")).status_code, 200)
+        finally:
+            timer.join()
         self.assertFalse(main.inference_lock.locked())
 
     def test_animation_is_rejected(self):

@@ -405,6 +405,19 @@ header a {
   transform: translateY(1px);
 }
 
+/* Auth screens center their single panel in the space between header and footer
+   instead of hugging the header on tall viewports. */
+.miro-main:has(> .miro-auth-page) {
+  display: flex;
+  flex-direction: column;
+}
+
+.miro-auth-page {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: center;
+}
+
 /* Auth panel - constrained width for login/signup/reset forms */
 .miro-auth-panel {
   inline-size: 100%;

@@ -1,5 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import { DEFAULT_ANIMATION_SETTINGS } from "../src/lib/animation-settings";
+import { PRODUCT_PREVIEW_HOVER_ENABLED } from "../src/features/catalog/product-preview-triggers";
 
 async function openStorefront(page: Page, locale: "he" | "en", path = "") {
   await page.setViewportSize({ width: 1440, height: 1100 });
@@ -44,6 +45,24 @@ async function hoverCard(page: Page, card: Locator) {
   return preview;
 }
 
+async function openCardPreview(page: Page, card: Locator) {
+  await card.locator(".sf-product-quick-preview").click();
+  const preview = page.locator('.sf-hover-preview[data-state="open"]');
+  await expect(preview).toBeVisible();
+  await preview.locator(".sf-hover-preview-title").hover();
+  await preview.evaluate(async (element) => {
+    await Promise.all(
+      element
+        .getAnimations()
+        .map((animation) => animation.finished.catch(() => {})),
+    );
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => resolve()),
+    );
+  });
+  return preview;
+}
+
 test.beforeEach(({ isMobile }) => {
   test.skip(isMobile, "Touch uses the explicit preview control");
 });
@@ -52,6 +71,10 @@ for (const locale of ["en", "he"] as const) {
   test(`${locale}: every hover responds after leaving the previous popup`, async ({
     page,
   }) => {
+    test.skip(
+      !PRODUCT_PREVIEW_HOVER_ENABLED,
+      "Hover-to-preview is temporarily disabled",
+    );
     await openStorefront(page, locale);
     const card = page.locator(".sf-product-card").first();
 
@@ -65,6 +88,10 @@ for (const locale of ["en", "he"] as const) {
   test(`${locale}: a visible moving-rail loop copy responds to hover`, async ({
     page,
   }) => {
+    test.skip(
+      !PRODUCT_PREVIEW_HOVER_ENABLED,
+      "Hover-to-preview is temporarily disabled",
+    );
     await openStorefront(page, locale, process.env.PRODUCT_PREVIEW_RAIL_PATH);
     const rail = page.locator(".sf-moving-rail-section");
     const railItems = rail.locator(
@@ -135,6 +162,10 @@ for (const dismissal of ["Escape", "close button"] as const) {
   test(`explicit ${dismissal} stays closed until a new hover`, async ({
     page,
   }) => {
+    test.skip(
+      !PRODUCT_PREVIEW_HOVER_ENABLED,
+      "Hover-to-preview is temporarily disabled",
+    );
     await openStorefront(page, "en");
     const card = page.locator(".sf-product-card").first();
     const preview = await hoverCard(page, card);
@@ -181,6 +212,10 @@ for (const dismissal of ["Escape", "close button"] as const) {
 test("returning to the exact dismissed pointer position opens the exposed neighbor", async ({
   page,
 }) => {
+  test.skip(
+    !PRODUCT_PREVIEW_HOVER_ENABLED,
+    "Hover-to-preview is temporarily disabled",
+  );
   await openStorefront(page, "en");
   const card = page.locator(".sf-product-card").first();
   const preview = await hoverCard(page, card);
@@ -220,7 +255,7 @@ test("pointer travel from the popup to its source preserves the same open dialog
 }) => {
   await openStorefront(page, "en");
   const card = page.locator(".sf-product-card").first();
-  const preview = await hoverCard(page, card);
+  const preview = await openCardPreview(page, card);
   const sourceElement = card.locator('[data-preview-source="true"]');
   const source = (await sourceElement.boundingBox())!;
   const popup = (await preview.boundingBox())!;
@@ -274,7 +309,7 @@ test("moving focus between popup and source preserves the same open dialog", asy
 }) => {
   await openStorefront(page, "en");
   const card = page.locator(".sf-product-card").first();
-  const preview = await hoverCard(page, card);
+  const preview = await openCardPreview(page, card);
   await preview.evaluate((element) => {
     (element as HTMLElement).dataset.responseIdentity = "same-focus-dialog";
   });
@@ -312,6 +347,10 @@ test("Escape during pointer exit restores focus to the explicit preview button",
 test("dismissal outside the source allows the first direct return hover", async ({
   page,
 }) => {
+  test.skip(
+    !PRODUCT_PREVIEW_HOVER_ENABLED,
+    "Hover-to-preview is temporarily disabled",
+  );
   await openStorefront(page, "en");
   const card = page.locator(".sf-product-card").first();
   const preview = await hoverCard(page, card);
@@ -349,6 +388,10 @@ test("dismissal outside the source allows the first direct return hover", async 
 test("a fresh hover during ordinary exit cancels the close", async ({
   page,
 }) => {
+  test.skip(
+    !PRODUCT_PREVIEW_HOVER_ENABLED,
+    "Hover-to-preview is temporarily disabled",
+  );
   await openStorefront(page, "en");
   const card = page.locator(".sf-product-card").first();
   await hoverCard(page, card);

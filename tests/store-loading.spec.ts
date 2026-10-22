@@ -63,11 +63,11 @@ test("catalog links avoid speculative reads while product navigation still settl
   ).toBe(true);
 });
 
-test("unchanged catalog checks keep the hovered preview and avoid page renders", async ({
+test("unchanged catalog checks keep the open preview and avoid page renders", async ({
   page,
   isMobile,
 }) => {
-  test.skip(isMobile, "Desktop hover requires a fine pointer");
+  test.skip(isMobile, "Desktop preview requires a fine pointer");
   await page.setViewportSize({ width: 1440, height: 1100 });
   let version = 100;
   let checks = 0;
@@ -86,7 +86,7 @@ test("unchanged catalog checks keep the hovered preview and avoid page renders",
     "true",
   );
   await expect.poll(() => checks).toBeGreaterThan(0);
-  await page.locator(".sf-product-card").first().hover();
+  await page.locator(".sf-product-quick-preview").first().click();
   const preview = page.locator('.sf-hover-preview[data-state="open"]');
   await expect(preview).toBeVisible();
   page.on("request", (request) => {

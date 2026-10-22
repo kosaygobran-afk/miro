@@ -471,6 +471,20 @@
   margin-block-start: 0.5rem;
 }
 
+/* ---------- Promotional badge placement — 2026-10-22 ---------- */
+:root[data-appearance-version="2"] .sf-hover-preview-badges {
+  align-items: center;
+  gap: 0.45rem;
+}
+
+:root[data-appearance-version="2"] .sf-hover-preview-badge-more {
+  padding: 0.2rem 0.45rem;
+  border-color: var(--border-control);
+  border-radius: 0.35rem;
+  font-size: 0.65rem;
+  line-height: 1.2;
+}
+
 /* ---------- Storefront toggles reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {
   :root[data-appearance-version="2"]

@@ -45,7 +45,7 @@ export default async function CheckEmailPage({
   const backToLogin = t("checkEmail.backToLogin");
 
   return (
-    <section className="miro-section min-h-[70vh] flex items-center justify-center">
+    <section className="miro-section miro-auth-page">
       <div className="miro-container">
         <div className="miro-auth-panel">
           <CheckEmailClient

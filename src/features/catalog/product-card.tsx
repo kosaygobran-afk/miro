@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "@/components/motion/motion-link";
 import { OverflowLabel } from "./overflow-label";
 import { ProductMedia } from "./product-media";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 import {
   ArrowLeft,
   ArrowRight,
@@ -29,6 +30,7 @@ import {
   shouldHideFromPublic,
 } from "@/lib/catalog/pricing";
 import { ProductHoverPreview } from "@/features/catalog/product-hover-preview";
+import { PRODUCT_PREVIEW_HOVER_ENABLED } from "@/features/catalog/product-preview-triggers";
 import { usePreviewHoverDismissal } from "./use-preview-hover-dismissal";
 import { usePreviewLongPress } from "./use-preview-long-press";
 import { StickerCluster } from "@/features/catalog/product-promo-badge";
@@ -55,6 +57,7 @@ export function ProductCard({
   locale?: "he" | "en";
   isSaved?: boolean;
 }) {
+  const enhancedBadges = useAnimationSettings().appearanceVersion === "2";
   const copy = storeCopy[locale] as StoreCopy;
   const [saved, setSaved] = useState(isSaved);
   const [impressionFired, setImpressionFired] = useState(false);
@@ -188,6 +191,7 @@ export function ProductCard({
 
   const productUrl = `/${locale}/store/${product.category}/${product.slug}`;
   const openOnHover = (event: React.PointerEvent<HTMLElement>) => {
+    if (!PRODUCT_PREVIEW_HOVER_ENABLED) return;
     if (event.pointerType !== "mouse") return;
     // Portals bubble through the card, but are not fresh source-card intent.
     if (!event.currentTarget.contains(event.target as Node)) return;
@@ -265,20 +269,30 @@ export function ProductCard({
         }}
       >
         <div className="sf-product-media-shell" data-product-section="image">
-          <Link
-            href={productUrl}
-            prefetch={false}
-            className="sf-product-media"
-            aria-label={`${copy.details}: ${product.name}`}
-          >
-            {product.promoBadges && product.promoBadges.length > 0 && (
+          {enhancedBadges &&
+            product.promoBadges &&
+            product.promoBadges.length > 0 && (
               <StickerCluster
                 badges={product.promoBadges}
                 locale={locale}
                 maxVisible={2}
               />
             )}
-
+          <Link
+            href={productUrl}
+            prefetch={false}
+            className="sf-product-media"
+            aria-label={`${copy.details}: ${product.name}`}
+          >
+            {!enhancedBadges &&
+              product.promoBadges &&
+              product.promoBadges.length > 0 && (
+                <StickerCluster
+                  badges={product.promoBadges}
+                  locale={locale}
+                  maxVisible={2}
+                />
+              )}
             {product.badge && (
               <span className="sf-product-badge">{product.badge}</span>
             )}

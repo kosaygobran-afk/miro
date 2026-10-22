@@ -32,6 +32,12 @@ Visible loop copies in `ProductMovingRail` support pointer previews, while their
 
 `tests/product-preview-response.spec.ts` covers repeated hover cycles in both locales, source/portal return, fresh hover during exit, explicit dismissal/re-entry and visible loop-copy hit-testing. Loop-copy tests need at least three featured products; `PRODUCT_PREVIEW_RAIL_PATH` can select an isolated synthetic fixture route without editing the live catalog. The suite is included in the cross-browser configuration.
 
+## Hover trigger temporarily disabled — 2026-10-22
+
+- Owner request: hovering a storefront card or moving-rail card must not open the product preview; the eye button stays as the explicit opener. `src/features/catalog/product-preview-triggers.ts` exports `PRODUCT_PREVIEW_HOVER_ENABLED = false`, and `ProductCard`/`RailProduct` check it first inside `openOnHover`. Handlers, intent timing, placement and dismissal remain wired; flipping the constant back to `true` restores hover previews without other code changes.
+- Explicit eye-button and keyboard-focus previews, touch/pen hold, add-to-cart/details actions, portal behavior and rail pause are unchanged.
+- Hover-only assertions in `tests/product-preview-response.spec.ts`, `tests/product-preview-styles.spec.ts` and `tests/product-card-sections.spec.ts` are skipped behind the same constant while the behavior is unreachable. Tests that only need an open popup use the eye button. Re-enable and re-check those expectations when the flag is turned back on.
+
 ## Hover-preview loading recovery — 2026-10-10
 
 `StoreLiveRefresh` checks the existing public `store_catalog_version` row on mount, every 15 seconds and on focus/visibility recovery. The initial read establishes a baseline; a newer version requests a debounced route refresh. Realtime UPDATEs use the same version comparison, including changes received while hidden. Subscription success and unchanged polls must not disturb a hovered popup. Scheduled promotion boundaries and private role-price changes do not all emit that public signal, so an unchanged catalog reconciles after two minutes once no popup/hover intent is active. This avoids permanently stale pricing without a full-page render every 15 seconds. Reads settle within ten seconds, do not overlap, and ignore disposed results. Keep these reads limited to the public version signal; never expose private product or staff rows through Realtime.
@@ -599,3 +605,7 @@ three themes, actual Close clicks, image/arrow/counter separation, scrollbar fit
 keyboard wraparound and selection recovery while resizing an open preview. The
 new 16-case Chromium matrix passed; current cross-engine evidence is recorded in
 `docs/DOCUMENTED_CHANGE_RECONCILIATION.md`, separately from historical Windows QA.
+
+## Storefront preview magnifier placement — 2026-10-22
+
+- The Version 2 card preview renders the magnifier toggle in the toolbar beside Close, not in the image tools row. `ProductImageMagnifier` supports an optional `togglePortalTarget`; the detail page still uses the tools-row control. Preserve the lens/wheel/slider behavior, focus return to the toggle, `aria-controls`, Escape ordering and reduced-motion handling when changing this placement. The toolbar tooltip opens downward and must stay above the gallery.

@@ -102,6 +102,9 @@ export function ProductHoverPreview({
   const exitTimerRef = useRef<number | null>(null);
   const [phase, setPhase] = useState<PreviewPhase>("closed");
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [magnifierSlot, setMagnifierSlot] = useState<HTMLDivElement | null>(
+    null,
+  );
   const [position, setPosition] = useState({
     top: 16,
     left: 16,
@@ -579,15 +582,21 @@ export function ProductHoverPreview({
           <span className="sf-hover-preview-eyebrow">
             {locale === "he" ? "מבט מקרוב" : "A closer look"}
           </span>
-          <button
-            ref={closeButtonRef}
-            type="button"
-            className="sf-hover-preview-close"
-            onClick={() => beginExit(true, true, true)}
-            aria-label={copy.close}
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
+          <div className="sf-hover-preview-toolbar-actions">
+            <div
+              ref={setMagnifierSlot}
+              className="sf-hover-preview-magnifier-slot"
+            />
+            <button
+              ref={closeButtonRef}
+              type="button"
+              className="sf-hover-preview-close"
+              onClick={() => beginExit(true, true, true)}
+              aria-label={copy.close}
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
         <div
@@ -651,6 +660,7 @@ export function ProductHoverPreview({
                 locale={locale}
                 active={phase === "open"}
                 counter={imageCounter}
+                togglePortalTarget={magnifierSlot}
               />
             ) : (
               <ProductMedia

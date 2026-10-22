@@ -24,7 +24,12 @@ import {
   ConfirmationDialog,
   FormField,
 } from "../ui";
-import { PromoBadge } from "@/features/catalog/product-promo-badge";
+import {
+  PromoBadge,
+  PROMO_BADGE_ICONS,
+  getPromoBadgePosition,
+} from "@/features/catalog/product-promo-badge";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 import { RevealImage } from "@/components/ui/reveal-image";
 import type { PromoBadge as StorePromoBadge } from "@/features/catalog/product-data";
 import { storefrontMerchandisingCopy as copy } from "./copy";
@@ -125,6 +130,48 @@ type BadgeForm = Partial<BadgeType> & {
   _errors?: Record<string, string>;
 };
 
+const BADGE_SHAPES = [
+  { value: "tag", en: "Tag", he: "תג" },
+  { value: "burst", en: "Spotlight", he: "חותמת" },
+  { value: "ticket", en: "Ticket", he: "כרטיס" },
+  { value: "ribbon", en: "Ribbon", he: "סרט" },
+  { value: "hex", en: "Hexagon", he: "משושה" },
+] as const;
+
+const BADGE_TONES = [
+  { value: "sale", en: "Red", he: "אדום" },
+  { value: "best", en: "Gold", he: "זהב" },
+  { value: "new", en: "Green", he: "ירוק" },
+  { value: "hot", en: "Orange", he: "כתום" },
+  { value: "limited", en: "Violet", he: "סגול" },
+] as const;
+
+const BADGE_POSITION_LABELS: Record<
+  ReturnType<typeof getPromoBadgePosition>,
+  { en: string; he: string }
+> = {
+  "top-start": { en: "Top left", he: "למעלה מימין" },
+  "top-end": { en: "Top right", he: "למעלה משמאל" },
+  "bottom-start": { en: "Bottom left", he: "למטה מימין" },
+  "bottom-end": { en: "Bottom right", he: "למטה משמאל" },
+  center: { en: "Center", he: "במרכז" },
+};
+
+const BADGE_ICON_LABELS: Record<string, { en: string; he: string }> = {
+  percent: { en: "Percent", he: "אחוזים" },
+  award: { en: "Award", he: "מדליה" },
+  sparkles: { en: "Sparkles", he: "ניצוצות" },
+  flame: { en: "Flame", he: "להבה" },
+  clock: { en: "Clock", he: "שעון" },
+  tag: { en: "Tag", he: "תג" },
+  star: { en: "Star", he: "כוכב" },
+  crown: { en: "Crown", he: "כתר" },
+  bolt: { en: "Bolt", he: "ברק" },
+  gift: { en: "Gift", he: "מתנה" },
+  shield: { en: "Shield", he: "מגן" },
+  "trending-up": { en: "Trending", he: "בעלייה" },
+};
+
 type PromotionForm = Partial<Promotion> & {
   _errors?: Record<string, string>;
 };
@@ -147,6 +194,7 @@ function fromLocalDateTime(value: string) {
 
 export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
   const he = locale === "he";
+  const enhanced = useAnimationSettings().appearanceVersion === "2";
   const [railItems, setRailItems] = useState<RailItemWithDetails[]>([]);
   const [badgeTypes, setBadgeTypes] = useState<BadgeType[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
@@ -734,19 +782,45 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
   );
 
   const renderPreviewBadge = useCallback(
-    (badgeType: BadgeType) => {
+    (
+      badgeType: BadgeType,
+      size: "sm" | "md" | "lg" = "sm",
+      previewLocale: "he" | "en" = locale,
+    ) => {
       const badge: StorePromoBadge = {
         id: badgeType.id,
         key: badgeType.key,
-        label: he ? badgeType.label_he : badgeType.label_en,
+        label: previewLocale === "he" ? badgeType.label_he : badgeType.label_en,
         shape: badgeType.shape,
         tone: badgeType.tone,
         iconName: badgeType.icon_name,
       };
-      return <PromoBadge badge={badge} locale={locale} size="sm" />;
+      return (
+        <PromoBadge
+          key={badgeType.id}
+          badge={badge}
+          locale={previewLocale}
+          size={size}
+        />
+      );
     },
-    [he, locale],
+    [locale],
   );
+
+  const openBadgeEditor = useCallback((badge: BadgeType) => {
+    setEditingBadge(badge);
+    setBadgeForm({
+      key: badge.key,
+      label_he: badge.label_he,
+      label_en: badge.label_en,
+      shape: badge.shape,
+      tone: badge.tone,
+      icon_name: badge.icon_name,
+      sort_order: badge.sort_order,
+      is_active: badge.is_active,
+    });
+    setBadgeDialogOpen(true);
+  }, []);
 
   const sortedRailItems = useMemo(
     () => [...railItems].sort((a, b) => a.sort_order - b.sort_order),
@@ -791,7 +865,12 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         labelEn: "תווית באנגלית",
         shape: "צורה",
         tone: "צבע",
-        icon: "שם אייקון",
+        icon: enhanced ? "אייקון" : "שם אייקון",
+        customIcon: "שם אייקון מותאם (אופציונלי)",
+        iconHint: "השאירו ריק לשימוש באייקון ברירת המחדל של המדבקה.",
+        livePreview: "תצוגה מקדימה חיה",
+        previewHint: "כך הטקסט והאייקון משתלבים בכל שפה.",
+        shapeHint: "בחרו צורה — התוכן נשאר קריא בכל גודל.",
         sortOrder: "סדר",
         promoDescription: "המבצע יחושב על המחיר שנפתר עבור הלקוח והמוצר.",
         promoType: "סוג מבצע",
@@ -831,7 +910,12 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         labelEn: "English label",
         shape: "Shape",
         tone: "Color",
-        icon: "Icon name",
+        icon: enhanced ? "Icon" : "Icon name",
+        customIcon: "Custom icon name (optional)",
+        iconHint: "Leave empty to use the badge's default icon.",
+        livePreview: "Live preview",
+        previewHint: "See how the label and icon fit in each language.",
+        shapeHint: "Choose a shape — the label stays readable at every size.",
         sortOrder: "Order",
         promoDescription:
           "The promotion is calculated from the resolved customer and product price.",
@@ -849,6 +933,29 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
           "The badge type cannot be restored after deletion.",
         confirmDelete: "Delete",
       };
+
+  const draftBadge: BadgeType = {
+    id: editingBadge?.id ?? "preview",
+    key: badgeForm.key ?? "significant_sale",
+    label_he: badgeForm.label_he || "מדבקה לדוגמה",
+    label_en: badgeForm.label_en || "Your badge",
+    shape: badgeForm.shape ?? "tag",
+    tone: badgeForm.tone ?? "sale",
+    icon_name: badgeForm.icon_name || null,
+    sort_order: badgeForm.sort_order ?? 0,
+    is_active: badgeForm.is_active ?? true,
+  };
+  const previewIconName = PROMO_BADGE_ICONS.some(
+    (icon) => icon.name === draftBadge.icon_name,
+  )
+    ? draftBadge.icon_name
+    : {
+        sale: "percent",
+        best: "award",
+        new: "sparkles",
+        hot: "flame",
+        limited: "clock",
+      }[draftBadge.tone];
 
   if (loadState === "loading") {
     return (
@@ -1285,157 +1392,258 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
           {copy[locale].badgeSectionSubtitle}
         </p>
 
-        <DataTable
-          caption={copy[locale].badgeTableCaption}
-          isEmpty={badgeTypes.length === 0}
-          emptyState={
-            <EmptyState
-              icon={<Tag size={20} />}
-              title={copy[locale].badgeEmptyTitle}
-              description={copy[locale].badgeEmptyDescription}
-              action={
-                <button
-                  type="button"
-                  className="mgmt-button mgmt-button--primary"
-                  onClick={() => {
-                    setEditingBadge(null);
-                    setBadgeForm({});
-                    setBadgeDialogOpen(true);
-                  }}
-                >
-                  <Plus size={16} aria-hidden="true" />
-                  {copy[locale].addBadgeType}
-                </button>
-              }
-              compact
-            />
-          }
-          minWidth="64rem"
-          head={
-            <tr>
-              <th scope="col">{copy[locale].badgeColPreview}</th>
-              <th scope="col">{copy[locale].badgeColLabelHe}</th>
-              <th scope="col">{copy[locale].badgeColLabelEn}</th>
-              <th scope="col">{copy[locale].badgeColShape}</th>
-              <th scope="col">{copy[locale].badgeColTone}</th>
-              <th scope="col">{copy[locale].badgeColIcon}</th>
-              <th scope="col">{copy[locale].badgeColStatus}</th>
-              <th scope="col">{copy[locale].badgeColAssigned}</th>
-              <th scope="col">{copy[locale].badgeColActions}</th>
-            </tr>
-          }
-        >
-          {badgeTypes.map((badge) => {
-            const assignedCount = railItems.reduce(
-              (count, item) =>
-                count +
-                item.productBadges.filter((pb) => pb.badge_type_id === badge.id)
-                  .length,
-              0,
-            );
-            const canDelete = assignedCount === 0;
-            return (
-              <tr key={badge.id}>
-                <td>{renderPreviewBadge(badge)}</td>
-                <td dir="auto">{badge.label_he}</td>
-                <td dir="ltr">{badge.label_en}</td>
-                <td>
-                  <StatusBadge
-                    status={
-                      badge.shape === "tag"
-                        ? "active"
-                        : badge.shape === "burst"
-                          ? "pending"
-                          : "info"
-                    }
-                    size="sm"
-                  >
-                    {badge.shape}
-                  </StatusBadge>
-                </td>
-                <td>
-                  <StatusBadge
-                    status={
-                      badge.tone === "sale"
-                        ? "active"
-                        : badge.tone === "best"
-                          ? "pending"
-                          : badge.tone === "hot"
-                            ? "danger"
-                            : badge.tone === "new"
-                              ? "info"
-                              : badge.tone === "limited"
-                                ? "pending"
-                                : "neutral"
-                    }
-                    size="sm"
-                  >
-                    {badge.tone}
-                  </StatusBadge>
-                </td>
-                <td dir="ltr">{badge.icon_name || "—"}</td>
-                <td>
-                  <StatusBadge
-                    status={badge.is_active ? "active" : "archived"}
-                    size="sm"
-                  >
-                    {badge.is_active
-                      ? copy[locale].statusActive
-                      : copy[locale].statusInactive}
-                  </StatusBadge>
-                </td>
-                <td>
-                  <span className={styles.assignedCount}>
-                    {assignedCount} {copy[locale].badgeAssignedCount}
-                  </span>
-                </td>
-                <td>
-                  <div className={styles.badgeActions}>
-                    <button
-                      type="button"
-                      className="mgmt-button mgmt-button--secondary mgmt-button--sm"
-                      onClick={() => {
-                        setEditingBadge(badge);
-                        setBadgeForm({
-                          key: badge.key,
-                          label_he: badge.label_he,
-                          label_en: badge.label_en,
-                          shape: badge.shape,
-                          tone: badge.tone,
-                          icon_name: badge.icon_name,
-                          sort_order: badge.sort_order,
-                          is_active: badge.is_active,
-                        });
-                        setBadgeDialogOpen(true);
-                      }}
-                    >
-                      {copy[locale].edit}
-                    </button>
-                    {canDelete ? (
-                      <button
-                        type="button"
-                        className="mgmt-button mgmt-button--danger mgmt-button--sm"
-                        onClick={() => setPendingDeleteBadge(badge)}
-                        aria-label={copy[locale].delete}
+        {enhanced && badgeTypes.length > 0 ? (
+          <ul
+            className={styles.badgeLibrary}
+            aria-label={copy[locale].badgeTableCaption}
+          >
+            {badgeTypes.map((badge) => {
+              const assignedCount = railItems.reduce(
+                (count, item) =>
+                  count +
+                  item.productBadges.filter(
+                    (assigned) => assigned.badge_type_id === badge.id,
+                  ).length,
+                0,
+              );
+              const shape = BADGE_SHAPES.find(
+                (option) => option.value === badge.shape,
+              );
+              const tone = BADGE_TONES.find(
+                (option) => option.value === badge.tone,
+              );
+              return (
+                <li key={badge.id} className={styles.badgeLibraryCard}>
+                  <div className={styles.badgeLibraryPreview}>
+                    {renderPreviewBadge(badge, "lg")}
+                  </div>
+                  <div className={styles.badgeLibraryBody}>
+                    <div className={styles.badgeLibraryHeading}>
+                      <h3 dir={locale === "he" ? "rtl" : "ltr"}>
+                        {he ? badge.label_he : badge.label_en}
+                      </h3>
+                      <StatusBadge
+                        status={badge.is_active ? "active" : "archived"}
+                        size="sm"
                       >
-                        <Trash2 size={14} aria-hidden="true" />
-                      </button>
-                    ) : (
+                        {badge.is_active
+                          ? copy[locale].statusActive
+                          : copy[locale].statusInactive}
+                      </StatusBadge>
+                    </div>
+                    <p
+                      className={styles.badgeTranslation}
+                      dir={he ? "ltr" : "rtl"}
+                      lang={he ? "en" : "he"}
+                    >
+                      {he ? badge.label_en : badge.label_he}
+                    </p>
+                    <p className={styles.badgePositionCaption}>
+                      {he ? "מיקום:" : "Position:"}{" "}
+                      {
+                        BADGE_POSITION_LABELS[getPromoBadgePosition(badge)][
+                          locale
+                        ]
+                      }
+                    </p>
+                    <dl className={styles.badgeMetadata}>
+                      <div>
+                        <dt>{copy[locale].badgeColShape}</dt>
+                        <dd>{shape?.[locale] ?? badge.shape}</dd>
+                      </div>
+                      <div>
+                        <dt>{copy[locale].badgeColTone}</dt>
+                        <dd>
+                          <span
+                            className={styles.toneDot}
+                            data-tone={badge.tone}
+                            aria-hidden="true"
+                          />
+                          {tone?.[locale] ?? badge.tone}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{copy[locale].badgeColIcon}</dt>
+                        <dd dir="ltr">
+                          {badge.icon_name || (he ? "ברירת מחדל" : "Default")}
+                        </dd>
+                      </div>
+                    </dl>
+                    <div className={styles.badgeLibraryFooter}>
+                      <span className={styles.assignedCount}>
+                        {assignedCount} {copy[locale].badgeAssignedCount}
+                      </span>
+                      <div className={styles.badgeActions}>
+                        <button
+                          type="button"
+                          className="mgmt-button mgmt-button--secondary mgmt-button--sm"
+                          onClick={() => openBadgeEditor(badge)}
+                          aria-label={`${copy[locale].edit}: ${he ? badge.label_he : badge.label_en}`}
+                        >
+                          {copy[locale].edit}
+                        </button>
+                        <button
+                          type="button"
+                          className={`mgmt-button mgmt-button--${assignedCount === 0 ? "danger" : "secondary"} mgmt-button--sm`}
+                          onClick={() => setPendingDeleteBadge(badge)}
+                          disabled={assignedCount > 0}
+                          title={
+                            assignedCount > 0
+                              ? copy[locale].badgeDeleteBlocked
+                              : undefined
+                          }
+                          aria-label={`${copy[locale].delete}: ${he ? badge.label_he : badge.label_en}`}
+                        >
+                          <Trash2 size={15} aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <DataTable
+            caption={copy[locale].badgeTableCaption}
+            isEmpty={badgeTypes.length === 0}
+            emptyState={
+              <EmptyState
+                icon={<Tag size={20} />}
+                title={copy[locale].badgeEmptyTitle}
+                description={copy[locale].badgeEmptyDescription}
+                action={
+                  <button
+                    type="button"
+                    className="mgmt-button mgmt-button--primary"
+                    onClick={() => {
+                      setEditingBadge(null);
+                      setBadgeForm({});
+                      setBadgeDialogOpen(true);
+                    }}
+                  >
+                    <Plus size={16} aria-hidden="true" />
+                    {copy[locale].addBadgeType}
+                  </button>
+                }
+                compact
+              />
+            }
+            minWidth="64rem"
+            head={
+              <tr>
+                <th scope="col">{copy[locale].badgeColPreview}</th>
+                <th scope="col">{copy[locale].badgeColLabelHe}</th>
+                <th scope="col">{copy[locale].badgeColLabelEn}</th>
+                <th scope="col">{copy[locale].badgeColShape}</th>
+                <th scope="col">{copy[locale].badgeColTone}</th>
+                <th scope="col">{copy[locale].badgeColIcon}</th>
+                <th scope="col">{copy[locale].badgeColStatus}</th>
+                <th scope="col">{copy[locale].badgeColAssigned}</th>
+                <th scope="col">{copy[locale].badgeColActions}</th>
+              </tr>
+            }
+          >
+            {badgeTypes.map((badge) => {
+              const assignedCount = railItems.reduce(
+                (count, item) =>
+                  count +
+                  item.productBadges.filter(
+                    (pb) => pb.badge_type_id === badge.id,
+                  ).length,
+                0,
+              );
+              const canDelete = assignedCount === 0;
+              return (
+                <tr key={badge.id}>
+                  <td>{renderPreviewBadge(badge)}</td>
+                  <td dir="auto">{badge.label_he}</td>
+                  <td dir="ltr">{badge.label_en}</td>
+                  <td>
+                    <StatusBadge
+                      status={
+                        badge.shape === "tag"
+                          ? "active"
+                          : badge.shape === "burst"
+                            ? "pending"
+                            : "info"
+                      }
+                      size="sm"
+                    >
+                      {badge.shape}
+                    </StatusBadge>
+                  </td>
+                  <td>
+                    <StatusBadge
+                      status={
+                        badge.tone === "sale"
+                          ? "active"
+                          : badge.tone === "best"
+                            ? "pending"
+                            : badge.tone === "hot"
+                              ? "danger"
+                              : badge.tone === "new"
+                                ? "info"
+                                : badge.tone === "limited"
+                                  ? "pending"
+                                  : "neutral"
+                      }
+                      size="sm"
+                    >
+                      {badge.tone}
+                    </StatusBadge>
+                  </td>
+                  <td dir="ltr">{badge.icon_name || "—"}</td>
+                  <td>
+                    <StatusBadge
+                      status={badge.is_active ? "active" : "archived"}
+                      size="sm"
+                    >
+                      {badge.is_active
+                        ? copy[locale].statusActive
+                        : copy[locale].statusInactive}
+                    </StatusBadge>
+                  </td>
+                  <td>
+                    <span className={styles.assignedCount}>
+                      {assignedCount} {copy[locale].badgeAssignedCount}
+                    </span>
+                  </td>
+                  <td>
+                    <div className={styles.badgeActions}>
                       <button
                         type="button"
                         className="mgmt-button mgmt-button--secondary mgmt-button--sm"
-                        disabled
-                        title={copy[locale].badgeDeleteBlocked}
+                        onClick={() => openBadgeEditor(badge)}
                       >
-                        <Trash2 size={14} aria-hidden="true" />
+                        {copy[locale].edit}
                       </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </DataTable>
+                      {canDelete ? (
+                        <button
+                          type="button"
+                          className="mgmt-button mgmt-button--danger mgmt-button--sm"
+                          onClick={() => setPendingDeleteBadge(badge)}
+                          aria-label={copy[locale].delete}
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="mgmt-button mgmt-button--secondary mgmt-button--sm"
+                          disabled
+                          title={copy[locale].badgeDeleteBlocked}
+                        >
+                          <Trash2 size={14} aria-hidden="true" />
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </DataTable>
+        )}
       </section>
 
       <Dialog
@@ -1707,7 +1915,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         onClose={() => setBadgeDialogOpen(false)}
         title={ui.badgeTitle}
         description={ui.badgeDescription}
-        size="md"
+        size={enhanced ? "lg" : "md"}
         closeLabel={copy[locale].closeDialog}
         footer={
           <div className="mgmt-dialog__actions">
@@ -1731,19 +1939,52 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         }
       >
         <div className={styles.dialogStack}>
-          <div className={styles.badgePreviewStage}>
-            {renderPreviewBadge({
-              id: editingBadge?.id ?? "preview",
-              key: badgeForm.key ?? "significant_sale",
-              label_he: badgeForm.label_he || "מדבקה",
-              label_en: badgeForm.label_en || "Badge",
-              shape: badgeForm.shape ?? "tag",
-              tone: badgeForm.tone ?? "sale",
-              icon_name: badgeForm.icon_name ?? "percent",
-              sort_order: badgeForm.sort_order ?? 0,
-              is_active: badgeForm.is_active ?? true,
-            })}
-          </div>
+          {enhanced ? (
+            <section
+              className={styles.badgePreviewPanel}
+              aria-label={ui.livePreview}
+            >
+              <div className={styles.badgePreviewHeading}>
+                <strong>{ui.livePreview}</strong>
+                <span>{ui.previewHint}</span>
+              </div>
+              <div className={styles.badgePreviewLanguages}>
+                {(["he", "en"] as const).map((previewLocale) => (
+                  <div
+                    key={previewLocale}
+                    className={styles.badgeLanguagePreview}
+                    dir={previewLocale === "he" ? "rtl" : "ltr"}
+                    lang={previewLocale}
+                  >
+                    <div className={styles.badgeLanguageLabel}>
+                      <span>
+                        {previewLocale === "he" ? "עברית" : "English"}
+                      </span>
+                      <span>
+                        {
+                          BADGE_POSITION_LABELS[
+                            getPromoBadgePosition(draftBadge)
+                          ][previewLocale]
+                        }
+                      </span>
+                    </div>
+                    <div className={styles.badgePreviewCanvas}>
+                      {renderPreviewBadge(draftBadge, "lg", previewLocale)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <div className={styles.badgePreviewStage}>
+              {renderPreviewBadge({
+                ...draftBadge,
+                label_he: badgeForm.label_he || "מדבקה",
+                label_en: badgeForm.label_en || "Badge",
+                icon_name: badgeForm.icon_name ?? "percent",
+              })}
+            </div>
+          )}
           <div className={styles.formGrid}>
             <FormField label={ui.key} required error={badgeForm._errors?.key}>
               {(control) => (
@@ -1815,59 +2056,65 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
                 />
               )}
             </FormField>
-            <FormField label={ui.shape}>
-              {(control) => (
-                <select
-                  {...control}
-                  className={styles.fieldControl}
-                  value={badgeForm.shape ?? "tag"}
-                  onChange={(event) =>
-                    handleBadgeFormChange("shape", event.target.value)
-                  }
-                >
-                  {(["tag", "burst", "ticket", "ribbon", "hex"] as const).map(
-                    (shape) => (
-                      <option key={shape} value={shape}>
-                        {shape}
-                      </option>
-                    ),
-                  )}
-                </select>
-              )}
-            </FormField>
-            <FormField label={ui.tone}>
-              {(control) => (
-                <select
-                  {...control}
-                  className={styles.fieldControl}
-                  value={badgeForm.tone ?? "sale"}
-                  onChange={(event) =>
-                    handleBadgeFormChange("tone", event.target.value)
-                  }
-                >
-                  {(["sale", "best", "new", "hot", "limited"] as const).map(
-                    (tone) => (
-                      <option key={tone} value={tone}>
-                        {tone}
-                      </option>
-                    ),
-                  )}
-                </select>
-              )}
-            </FormField>
-            <FormField label={ui.icon}>
-              {(control) => (
-                <input
-                  {...control}
-                  className={styles.fieldControl}
-                  dir="ltr"
-                  value={badgeForm.icon_name ?? ""}
-                  onChange={(event) =>
-                    handleBadgeFormChange("icon_name", event.target.value)
-                  }
-                />
-              )}
-            </FormField>
+            {!enhanced ? (
+              <FormField label={ui.shape}>
+                {(control) => (
+                  <select
+                    {...control}
+                    className={styles.fieldControl}
+                    value={badgeForm.shape ?? "tag"}
+                    onChange={(event) =>
+                      handleBadgeFormChange("shape", event.target.value)
+                    }
+                  >
+                    {(["tag", "burst", "ticket", "ribbon", "hex"] as const).map(
+                      (shape) => (
+                        <option key={shape} value={shape}>
+                          {shape}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                )}
+              </FormField>
+            ) : null}
+            {!enhanced ? (
+              <FormField label={ui.tone}>
+                {(control) => (
+                  <select
+                    {...control}
+                    className={styles.fieldControl}
+                    value={badgeForm.tone ?? "sale"}
+                    onChange={(event) =>
+                      handleBadgeFormChange("tone", event.target.value)
+                    }
+                  >
+                    {(["sale", "best", "new", "hot", "limited"] as const).map(
+                      (tone) => (
+                        <option key={tone} value={tone}>
+                          {tone}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                )}
+              </FormField>
+            ) : null}
+            {!enhanced ? (
+              <FormField label={ui.icon}>
+                {(control) => (
+                  <input
+                    {...control}
+                    className={styles.fieldControl}
+                    dir="ltr"
+                    value={badgeForm.icon_name ?? ""}
+                    onChange={(event) =>
+                      handleBadgeFormChange("icon_name", event.target.value)
+                    }
+                  />
+                )}
+              </FormField>
+            ) : null}
             <label className={styles.switchRow}>
               <input
                 type="checkbox"
@@ -1879,6 +2126,115 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
               <span>{ui.active}</span>
             </label>
           </div>
+          {enhanced ? (
+            <>
+              <fieldset className={styles.badgeChoiceGroup}>
+                <legend>{ui.shape}</legend>
+                <p className={styles.badgeChoiceHint}>{ui.shapeHint}</p>
+                <div className={styles.badgeShapeChoices}>
+                  {BADGE_SHAPES.map((shape) => (
+                    <label key={shape.value} className={styles.badgeChoice}>
+                      <input
+                        className={styles.badgeChoiceInput}
+                        type="radio"
+                        name="badge-shape"
+                        value={shape.value}
+                        checked={draftBadge.shape === shape.value}
+                        onChange={() =>
+                          handleBadgeFormChange("shape", shape.value)
+                        }
+                      />
+                      <span className={styles.badgeShapeFace}>
+                        <span className={styles.badgeChoiceLabel}>
+                          {shape[locale]}
+                        </span>
+                        <span
+                          className={styles.badgeShapeSample}
+                          aria-hidden="true"
+                        >
+                          {renderPreviewBadge(
+                            {
+                              ...draftBadge,
+                              shape: shape.value,
+                              label_he: "מדבקה",
+                              label_en: "Badge",
+                            },
+                            "md",
+                          )}
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className={styles.badgeChoiceGroup}>
+                <legend>{ui.tone}</legend>
+                <div className={styles.badgeToneChoices}>
+                  {BADGE_TONES.map((tone) => (
+                    <label key={tone.value} className={styles.badgeChoice}>
+                      <input
+                        className={styles.badgeChoiceInput}
+                        type="radio"
+                        name="badge-tone"
+                        value={tone.value}
+                        checked={draftBadge.tone === tone.value}
+                        onChange={() =>
+                          handleBadgeFormChange("tone", tone.value)
+                        }
+                      />
+                      <span className={styles.badgeToneFace}>
+                        <span
+                          className={styles.toneDot}
+                          data-tone={tone.value}
+                          aria-hidden="true"
+                        />
+                        <span>{tone[locale]}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className={styles.badgeChoiceGroup}>
+                <legend>{ui.icon}</legend>
+                <div className={styles.badgeIconChoices}>
+                  {PROMO_BADGE_ICONS.map(({ name, Icon }) => (
+                    <label key={name} className={styles.badgeChoice}>
+                      <input
+                        className={styles.badgeChoiceInput}
+                        type="radio"
+                        name="badge-icon"
+                        value={name}
+                        checked={previewIconName === name}
+                        onChange={() =>
+                          handleBadgeFormChange("icon_name", name)
+                        }
+                      />
+                      <span className={styles.badgeIconFace}>
+                        <Icon size={20} strokeWidth={1.8} aria-hidden="true" />
+                        <span>{BADGE_ICON_LABELS[name]?.[locale] ?? name}</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <FormField label={ui.customIcon} description={ui.iconHint}>
+                  {(control) => (
+                    <input
+                      {...control}
+                      className={styles.fieldControl}
+                      dir="ltr"
+                      value={badgeForm.icon_name ?? ""}
+                      onChange={(event) =>
+                        handleBadgeFormChange(
+                          "icon_name",
+                          event.target.value || null,
+                        )
+                      }
+                    />
+                  )}
+                </FormField>
+              </fieldset>
+            </>
+          ) : null}
         </div>
       </Dialog>
 

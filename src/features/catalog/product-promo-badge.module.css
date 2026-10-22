@@ -1,0 +1,293 @@
+.badge {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 2rem;
+  padding: 0.3rem 0.85rem 0.3rem 0.5rem;
+  color: var(--promo-ink);
+  font-size: 0.72rem;
+  font-weight: 750;
+  line-height: 1.3;
+  letter-spacing: 0;
+  vertical-align: middle;
+  white-space: normal;
+  filter: drop-shadow(0 2px 3px #00000014);
+}
+
+.badge.badge {
+  font-weight: 750;
+  line-height: 1.3;
+  letter-spacing: 0;
+  white-space: normal;
+}
+
+.badge[dir="rtl"] {
+  padding-inline: 0.5rem 0.85rem;
+}
+
+.silhouette {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: visible;
+  fill: var(--promo-fill);
+  stroke: var(--promo-edge);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.keyline {
+  fill: none;
+  stroke: var(--promo-ink);
+  stroke-width: 0.6;
+  opacity: 0.2;
+}
+
+.badge[dir="rtl"] .silhouette {
+  transform: scaleX(-1);
+}
+
+.content {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-inline-size: 0;
+  inline-size: 100%;
+}
+
+.icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--promo-icon-size);
+  inline-size: var(--promo-icon-size);
+  block-size: var(--promo-icon-size);
+  border: 1px solid color-mix(in srgb, var(--promo-ink) 22%, transparent);
+  border-radius: 0.35rem;
+  background: color-mix(in srgb, var(--promo-ink) 9%, transparent);
+}
+
+.icon svg {
+  inline-size: 70%;
+  block-size: 70%;
+}
+
+.label {
+  min-inline-size: 0;
+  max-inline-size: 22ch;
+  overflow-wrap: anywhere;
+  text-align: start;
+  text-wrap: pretty;
+}
+
+/* Each silhouette has its own small emblem, rather than a repeated icon box. */
+.badge[data-promo-shape="tag"] .icon {
+  border-radius: 50%;
+  border-color: transparent;
+  background: var(--promo-ink);
+  color: var(--promo-fill);
+}
+
+.badge[data-promo-shape="burst"] .icon {
+  position: relative;
+  isolation: isolate;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.badge[data-promo-shape="burst"] .icon::before {
+  position: absolute;
+  inset: -0.12rem;
+  z-index: -1;
+  border: 1px solid var(--promo-edge);
+  background: color-mix(in srgb, var(--promo-ink) 15%, var(--promo-fill));
+  clip-path: polygon(
+    50% 0,
+    63% 10%,
+    80% 5%,
+    85% 23%,
+    100% 30%,
+    93% 50%,
+    100% 70%,
+    85% 77%,
+    80% 95%,
+    63% 90%,
+    50% 100%,
+    37% 90%,
+    20% 95%,
+    15% 77%,
+    0 70%,
+    7% 50%,
+    0 30%,
+    15% 23%,
+    20% 5%,
+    37% 10%
+  );
+  content: "";
+}
+
+.badge[data-promo-shape="ticket"] .icon {
+  border: 0;
+  border-radius: 0.2rem;
+  background: color-mix(in srgb, var(--promo-ink) 18%, var(--promo-fill));
+  box-shadow: inset 0 -2px 0
+    color-mix(in srgb, var(--promo-ink) 35%, transparent);
+}
+
+.badge[data-promo-shape="ribbon"] .icon {
+  border: 0;
+  border-radius: 0.3rem 0.3rem 0.5rem 0.5rem;
+  background: color-mix(in srgb, var(--promo-ink) 18%, var(--promo-fill));
+}
+
+.badge[data-promo-shape="hex"] .icon {
+  border: 0;
+  border-radius: 0;
+  background: var(--promo-ink);
+  color: var(--promo-fill);
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+
+.sizeSm {
+  --promo-icon-size: 1.1rem;
+  min-block-size: 1.6rem;
+  padding: 0.22rem 0.7rem 0.22rem 0.38rem;
+  font-size: 0.65rem;
+}
+
+.sizeSm[dir="rtl"] {
+  padding-inline: 0.38rem 0.7rem;
+}
+
+.sizeSm .content {
+  gap: 0.3rem;
+}
+
+.sizeMd {
+  --promo-icon-size: 1.35rem;
+}
+
+.sizeLg {
+  --promo-icon-size: 1.6rem;
+  min-block-size: 2.5rem;
+  padding: 0.4rem 1rem 0.4rem 0.6rem;
+  font-size: 0.82rem;
+}
+
+.sizeLg[dir="rtl"] {
+  padding-inline: 0.6rem 1rem;
+}
+
+.toneSale {
+  --promo-fill: #4b1d25;
+  --promo-ink: #ffc3cc;
+  --promo-edge: #cf6278;
+}
+
+.toneBest {
+  --promo-fill: #413216;
+  --promo-ink: #ffe1a0;
+  --promo-edge: #aa8541;
+}
+
+.toneNew {
+  --promo-fill: #163a2d;
+  --promo-ink: #a8ebc9;
+  --promo-edge: #4e9c74;
+}
+
+.toneHot {
+  --promo-fill: #452c17;
+  --promo-ink: #ffd0a0;
+  --promo-edge: #c08542;
+}
+
+.toneLimited {
+  --promo-fill: #312143;
+  --promo-ink: #e0c5ff;
+  --promo-edge: #9d77c4;
+}
+
+:global([data-theme="light"]) .toneSale {
+  --promo-fill: #fff0f2;
+  --promo-ink: #a52342;
+  --promo-edge: #d9a4b2;
+}
+
+:global([data-theme="light"]) .toneBest {
+  --promo-fill: #fff6dc;
+  --promo-ink: #795207;
+  --promo-edge: #c7aa64;
+}
+
+:global([data-theme="light"]) .toneNew {
+  --promo-fill: #e7f8ee;
+  --promo-ink: #1b6841;
+  --promo-edge: #8abda0;
+}
+
+:global([data-theme="light"]) .toneHot {
+  --promo-fill: #fff0e4;
+  --promo-ink: #94440b;
+  --promo-edge: #d7ac8b;
+}
+
+:global([data-theme="light"]) .toneLimited {
+  --promo-fill: #f3edfc;
+  --promo-ink: #654196;
+  --promo-edge: #b7a1d4;
+}
+
+:global(:root[data-appearance-version="2"]) .cluster {
+  position: relative;
+  inset: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  margin: 0.6rem;
+  min-block-size: 4.5rem;
+  max-inline-size: calc(100% - 1.2rem);
+  text-align: start;
+}
+
+.positionRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-inline-size: 0;
+  gap: 0.4rem;
+}
+
+.positionRow > .badge[data-promo-position$="end"] {
+  margin-inline-start: auto;
+}
+
+.positionRow > .badge[data-promo-position="center"] {
+  margin-inline: auto;
+}
+
+.positionRow[data-promo-row="center"] {
+  margin-block: auto;
+}
+
+.positionRow[data-promo-row="bottom"] {
+  margin-block-start: auto;
+}
+
+:global(:root[data-appearance-version="2"]) .more {
+  align-self: start;
+  padding: 0.2rem 0.45rem;
+  border: 1px solid var(--border-control);
+  border-radius: 0.35rem;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 0.65rem;
+  line-height: 1.2;
+}

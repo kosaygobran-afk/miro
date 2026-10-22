@@ -90,7 +90,7 @@ export function ResetPasswordClient({
 
   if (loading) {
     return (
-      <section className="miro-section">
+      <section className="miro-section miro-auth-page">
         <div className="miro-container">
           <div className="miro-auth-panel miro-card p-6 text-center">
             <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
@@ -106,7 +106,7 @@ export function ResetPasswordClient({
   const finalEmail = userEmail || email;
 
   return (
-    <section className="miro-section">
+    <section className="miro-section miro-auth-page">
       <div className="miro-container">
         <div className="miro-auth-panel miro-card p-6">
           <p className="mb-3 text-sm font-black uppercase tracking-[0.24em] text-accent-text">

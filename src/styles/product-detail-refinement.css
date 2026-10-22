@@ -447,3 +447,43 @@
   .sf-product-stock {
   border-radius: 0.6rem 0 0 0.6rem;
 }
+
+/* Wide product workspaces — 2026-10-23. Compact layouts retain their geometry. */
+@media (min-width: 1280px) {
+  :root[data-appearance-version="2"] .sf-product-detail {
+    .sf-product-detail-layout {
+      grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+      align-items: start;
+      gap: clamp(1.5rem, 2vw, 2.5rem);
+    }
+    .sf-product-gallery {
+      min-block-size: 0;
+      block-size: clamp(30rem, 32vw, 38rem);
+      aspect-ratio: auto;
+      align-self: start;
+    }
+    .sf-product-info {
+      padding: 1.5rem;
+      gap: 1rem;
+      align-self: start;
+    }
+    .sf-detail-purchase {
+      margin-block-start: 0;
+    }
+    .sf-product-description-section > .miro-container {
+      display: grid;
+      grid-template-columns: minmax(12rem, 0.3fr) minmax(0, 1fr);
+      gap: 2rem;
+      align-items: start;
+    }
+    .sf-product-description-section h2 {
+      margin: 0;
+    }
+    .sf-description-content {
+      max-inline-size: none;
+    }
+    .sf-description-content p:first-child {
+      margin-block-start: 0;
+    }
+  }
+}

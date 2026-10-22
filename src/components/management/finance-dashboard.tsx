@@ -273,7 +273,7 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
         />
       ) : data ? (
         <div className={`${s.contentStack} motion-content-reveal`}>
-          <div className={s.metrics}>
+          <div className={`${s.metrics} ${s.metricsFinance}`}>
             {cards.map((card) => {
               const change =
                 totals && data && card.key !== "inventoryValue"
@@ -669,7 +669,7 @@ export function FinanceDashboard({ locale }: { locale: "he" | "en" }) {
                   </button>
                 </section>
               </div>
-              <div className={s.metrics}>
+              <div className={`${s.metrics} ${s.metricsFinance}`}>
                 {details.map((item) => (
                   <MetricCard
                     key={item.key}

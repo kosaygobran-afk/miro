@@ -157,6 +157,18 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1rem;
 }
+/* Long RTL currency strings can exceed a narrow metric column. Measure the
+   card, not the viewport, so 4/2/1-column layouts all keep the value inside. */
+.metricsFinance > :global(.mgmt-metric-card) {
+  container-type: inline-size;
+}
+.workspace
+  .metricsFinance
+  > :global(.mgmt-metric-card)
+  :global(.mgmt-metric-card__value) {
+  font-size: clamp(1.3rem, 2.2vw, 2.3rem);
+  font-size: clamp(1.3rem, 14.5cqi, 2.3rem);
+}
 .workspace :global(.mgmt-metric-card) {
   border-radius: 1.1rem;
   background:

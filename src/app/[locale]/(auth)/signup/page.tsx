@@ -30,7 +30,7 @@ export default async function SignupPage({
   const t = await getTranslations({ locale, namespace: "pages.auth" });
 
   return (
-    <section className="miro-section">
+    <section className="miro-section miro-auth-page">
       <div className="miro-container">
         <div className="miro-auth-panel miro-card p-6">
           <p className="mb-3 text-sm font-black uppercase tracking-[0.24em] text-accent-text">

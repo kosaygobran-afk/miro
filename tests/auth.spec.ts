@@ -60,3 +60,21 @@ test("reset password without a session offers a fresh link", async ({
   ).toHaveAttribute("href", "/en/forgot-password");
   await expect(page.locator('input[name="password"]')).toHaveCount(0);
 });
+test("auth panel stays centered between header and footer on tall viewports", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1080, height: 1600 });
+  await page.goto("/en/login");
+  const gaps = await page.evaluate(() => {
+    const section = document.querySelector("main > .miro-auth-page");
+    const panel = document.querySelector(".miro-auth-panel");
+    if (!section || !panel) {
+      throw new Error("Auth page shell is missing");
+    }
+    const shell = section.getBoundingClientRect();
+    const card = panel.getBoundingClientRect();
+    return { above: card.top - shell.top, below: shell.bottom - card.bottom };
+  });
+  expect(gaps.above).toBeGreaterThan(40);
+  expect(Math.abs(gaps.above - gaps.below)).toBeLessThanOrEqual(2);
+});
