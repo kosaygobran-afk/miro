@@ -398,6 +398,47 @@
   background: var(--surface-muted);
 }
 
+/* ---------- Icon centering inside bordered frames ----------
+   SVGs are inline by default, so inside a bordered icon frame they sit on
+   the text baseline and look off-center, especially once the window collapses
+   and the frame shrinks. Center the icon in every bordered icon tile and make
+   the SVG a block so no baseline whitespace remains. */
+:root[data-appearance-version="2"]
+  :is(
+    .sf-product-actions .sf-save-button,
+    .sf-product-actions .sf-product-quick-preview,
+    .sf-product-actions .sf-add-cart-button.is-compact,
+    .sf-product-expand,
+    .sf-product-quick-preview,
+    .sf-dialog-close,
+    .sf-search button,
+    .sf-subcategory-step,
+    .sf-hero-controls button,
+    .sf-company-toggle,
+    .sf-cart-heading-icon,
+    .experience-icon,
+    .account-icon,
+    .sf-hover-preview-close,
+    .sf-hover-preview-arrow,
+    .sf-image-magnifier-toggle
+  ) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+:root[data-appearance-version="2"]
+  :is(
+    .experience-capabilities svg,
+    .experience-checks svg,
+    .experience-faq summary svg,
+    .account-panel-title > svg,
+    .account-panel-heading h2 > svg,
+    .premium-footer-consult > svg
+  ) {
+  display: block;
+}
+
 :root[data-appearance-version="2"]
   :is(
     .sf-category-filters button,
