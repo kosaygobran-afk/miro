@@ -50,7 +50,7 @@ const pageSources = await Promise.all(
   ),
 );
 
-function loadPages(category, { hidden = false } = {}) {
+function loadPages(category, { hidden = false, unavailable = false } = {}) {
   const product = {
     id: "product",
     slug: "5586793",
@@ -67,6 +67,9 @@ function loadPages(category, { hidden = false } = {}) {
   const catalog = {
     products: [product],
     categories: [{ id: "category", key: category, label: "Fixture category" }],
+    ...(unavailable
+      ? { products: [], categories: [], error: "unavailable" }
+      : {}),
   };
   const placeholder = () => null;
   const imports = {
@@ -173,4 +176,20 @@ test("route normalization retains wrong-category and hidden-product 404 protecti
     loadPages("accessories", { hidden: true })[1].default(props),
     /NOT_FOUND/,
   );
+});
+
+test("catalog outages render a localized retry state before category or product 404 checks", async () => {
+  for (const locale of ["he", "en"]) {
+    for (const page of loadPages("cameras", { unavailable: true })) {
+      const result = await page.default({
+        params: Promise.resolve({
+          locale,
+          category: "cameras",
+          slug: "5586793",
+        }),
+        searchParams: Promise.resolve({}),
+      });
+      assert.equal(result.props.locale, locale);
+    }
+  }
 });

@@ -4,7 +4,11 @@ import Link from "@/components/motion/motion-link";
 import { getTranslations } from "next-intl/server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
-import { getPublishedServices } from "@/lib/public-services";
+import {
+  getPublishedServices,
+  PublishedServicesUnavailable,
+} from "@/lib/public-services";
+import { ServicesUnavailable } from "@/components/public/services-unavailable";
 import {
   CapabilityStrip,
   ConnectedSystem,
@@ -177,7 +181,22 @@ async function PublishedServiceGrid({
   locale: Locale;
   services: ReturnType<typeof getPublishedServices>;
 }) {
-  const published = await services;
+  let published;
+  try {
+    published = await services;
+  } catch (error) {
+    if (error instanceof PublishedServicesUnavailable)
+      return <ServicesUnavailable locale={locale} />;
+    throw error;
+  }
+  if (published.length === 0)
+    return (
+      <p role="status">
+        {locale === "he"
+          ? "אין שירותים שפורסמו להצגה כרגע."
+          : "No published services are available to display yet."}
+      </p>
+    );
   return (
     <div className="motion-content-reveal">
       <ServiceCategoryGrid locale={locale} services={published} />

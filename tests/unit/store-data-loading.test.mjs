@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import { z } from "zod";
+import { createClient } from "@supabase/supabase-js";
 
 const compile = (source) =>
   ts.transpileModule(source, {
@@ -46,7 +47,7 @@ const deferred = () => {
   return { promise, resolve, reject };
 };
 
-function harness() {
+function harness({ publicClient, timeout = AbortSignal.timeout } = {}) {
   const context = new AsyncLocalStorage();
   const exports = {};
   const entries = new Map();
@@ -96,11 +97,17 @@ function harness() {
         return { data: { user: await request.user } };
       },
     },
-    async rpc(name) {
-      request.events.push(`rpc:${name}`);
+    rpc(name) {
       return {
-        data: { out_of_stock_policy: "keep_visible_contact" },
-        error: null,
+        abortSignal: async (signal) => {
+          request.signals ??= [];
+          request.signals.push(signal);
+          request.events.push(`rpc:${name}`);
+          return {
+            data: { out_of_stock_policy: "keep_visible_contact" },
+            error: null,
+          };
+        },
       };
     },
     from(table) {
@@ -121,6 +128,11 @@ function harness() {
           return query;
         },
         order() {
+          return query;
+        },
+        abortSignal(signal) {
+          request.signals ??= [];
+          request.signals.push(signal);
           return query;
         },
         maybeSingle() {
@@ -182,7 +194,13 @@ function harness() {
                 ),
                 error: request.navigationError ?? null,
               };
-            return { data: rows[table] ?? [], error: null };
+            return {
+              data: rows[table] ?? [],
+              error:
+                request.failedTable === table
+                  ? { message: "TypeError: fetch failed", code: "" }
+                  : null,
+            };
           });
           return result.then(resolve, reject);
         },
@@ -192,7 +210,8 @@ function harness() {
   });
   runInNewContext(compiled, {
     exports,
-    console: { error() {} },
+    console: { error() {}, warn() {} },
+    AbortSignal: { timeout },
     require(name) {
       if (name === "react") return react;
       if (name === "zod") return { z };
@@ -200,7 +219,8 @@ function harness() {
       if (name === "@/lib/public-presentation-cache") return presentationCache;
       if (name === "@/lib/supabase/public-server")
         return {
-          createPublicServerClient: () => client(context.getStore(), true),
+          createPublicServerClient: () =>
+            publicClient ?? client(context.getStore(), true),
         };
       if (name === "@/lib/supabase/server")
         return {
@@ -426,6 +446,105 @@ test("an early catalog preload failure still settles through the existing fallba
   assert.equal(viewer.role, null);
   assert.equal(catalog.products.length, 0);
   assert.equal(catalog.categories.length, 0);
+  assert.equal(catalog.error, "unavailable");
+});
+
+for (const table of [
+  "categories",
+  "products",
+  "product_variants",
+  "product_images",
+]) {
+  test(`a failed ${table} read reports unavailable and a fresh request can recover`, async () => {
+    const h = harness();
+    const failed = await h.run(visitor({ failedTable: table }), () =>
+      h.exports.getStorePageData("en"),
+    );
+    assert.equal(failed.catalog.error, "unavailable");
+    assert.equal(failed.catalog.products.length, 0);
+    assert.equal(h.entries.size, 0, "outages must not enter the shared cache");
+    const recovered = await h.run(visitor(), () =>
+      h.exports.getStorePageData("en"),
+    );
+    assert.equal(recovered.catalog.error, undefined);
+    assert.equal(recovered.catalog.products.length, 1);
+  });
+}
+
+test("the installed SDK cancels catalog projections and retries within one shared deadline", async () => {
+  const controller = new AbortController();
+  const deadlines = [];
+  const signals = [];
+  const publicClient = createClient(
+    "https://deadline.example.test",
+    "test-key",
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: async (_url, { signal }) => {
+          signal.throwIfAborted();
+          signals.push(signal);
+          return new Promise((_resolve, reject) => {
+            signal.addEventListener("abort", () => reject(signal.reason), {
+              once: true,
+            });
+          });
+        },
+      },
+    },
+  );
+  const h = harness({
+    publicClient,
+    timeout(ms) {
+      deadlines.push(ms);
+      return controller.signal;
+    },
+  });
+  const pending = h.run(visitor(), () =>
+    h.exports.getStoreCatalog("en", null, true),
+  );
+  await flush();
+  assert.equal(signals.length, 9);
+  assert.ok(signals.every((signal) => signal === controller.signal));
+  controller.abort(
+    new DOMException("Catalog deadline elapsed", "TimeoutError"),
+  );
+  const catalog = await pending;
+  assert.equal(catalog.error, "unavailable");
+  assert.deepEqual(
+    deadlines,
+    [12_000],
+    "SDK retries must not restart the budget",
+  );
+});
+
+test("the installed SDK still recovers a transient catalog read without extra retry layers", async () => {
+  let productReads = 0;
+  const publicClient = createClient(
+    "https://recovery.example.test",
+    "test-key",
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: {
+        fetch: async (url) => {
+          if (
+            new URL(url).pathname === "/rest/v1/products" &&
+            productReads++ === 0
+          )
+            throw new TypeError("fetch failed");
+          return new Response("[]", {
+            headers: { "Content-Type": "application/json" },
+          });
+        },
+      },
+    },
+  );
+  const h = harness({ publicClient });
+  const catalog = await h.run(visitor(), () =>
+    h.exports.getStoreCatalog("en", null, true),
+  );
+  assert.equal(catalog.error, undefined);
+  assert.equal(productReads, 2);
 });
 
 const categoryRoute = compile(

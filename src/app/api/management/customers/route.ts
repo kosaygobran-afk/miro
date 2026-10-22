@@ -86,12 +86,19 @@ export async function GET(request: Request) {
   const { admin } = auth;
 
   if (customerId) {
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        customerId,
+      )
+    ) {
+      return errorResponse("Invalid customer id", 400);
+    }
     const [
       { data: profile, error: profileError },
-      { data: roleRow },
-      { data: orders },
-      { data: requests },
-      { data: events },
+      { data: roleRow, error: roleError },
+      { data: orders, error: ordersError },
+      { data: requests, error: requestsError },
+      { data: events, error: eventsError },
     ] = await Promise.all([
       admin
         .from("profiles")
@@ -125,7 +132,17 @@ export async function GET(request: Request) {
         .limit(100),
     ]);
 
-    if (profileError || !profile) {
+    if (
+      profileError ||
+      roleError ||
+      ordersError ||
+      requestsError ||
+      eventsError
+    ) {
+      return errorResponse("Unable to load customer details", 503);
+    }
+
+    if (!profile) {
       return NextResponse.json(
         { error: "Customer not found" },
         { status: 404 },
@@ -228,15 +245,10 @@ export async function GET(request: Request) {
     const results = await Promise.all(
       pageIds.map((id) => admin.auth.admin.getUserById(id)),
     );
-    results.forEach(({ data, error }, index) => {
-      if (error) {
-        console.error(
-          "customers GET getUserById failed:",
-          pageIds[index],
-          error.message,
-        );
-        return;
-      }
+    if (results.some(({ error }) => error)) {
+      return errorResponse("Unable to load customer contact information", 503);
+    }
+    results.forEach(({ data }, index) => {
       emailByUser!.set(pageIds[index], data.user?.email ?? "");
       lastSeenByUser!.set(pageIds[index], data.user?.last_sign_in_at ?? null);
     });

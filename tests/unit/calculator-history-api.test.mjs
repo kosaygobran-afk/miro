@@ -94,3 +94,18 @@ test("calculator history read failures remain errors instead of empty history", 
     /private database diagnostic/,
   );
 });
+
+test("a missing calculator RPC is unavailable rather than empty history or leaked schema details", async () => {
+  const route = load({
+    error: { code: "PGRST202", message: "private schema detail" },
+  });
+  const response = await route.GET(
+    new Request("http://localhost/api/management/calculator-history?limit=20"),
+  );
+  assert.equal(response.status, 503);
+  assert.equal(response.body.history, undefined);
+  assert.doesNotMatch(
+    JSON.stringify(response.body),
+    /private schema detail|PGRST202/,
+  );
+});

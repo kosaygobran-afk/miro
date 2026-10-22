@@ -3,7 +3,11 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
-import { getPublishedServiceBySlug } from "@/lib/public-services";
+import {
+  getPublishedServiceBySlug,
+  PublishedServicesUnavailable,
+} from "@/lib/public-services";
+import { ServicesUnavailable } from "@/components/public/services-unavailable";
 import { serviceIcons } from "@/lib/service-content";
 import {
   ConsultationBand,
@@ -19,7 +23,21 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { locale, slug } = await params;
-  const service = await getPublishedServiceBySlug(slug);
+  let service;
+  try {
+    service = await getPublishedServiceBySlug(slug);
+  } catch (error) {
+    if (!(error instanceof PublishedServicesUnavailable)) throw error;
+    return pageMetadata({
+      locale,
+      path: `services/${slug}`,
+      title:
+        locale === "he"
+          ? "השירותים אינם זמינים כרגע"
+          : "Services temporarily unavailable",
+      noIndex: true,
+    });
+  }
 
   if (!service) {
     return pageMetadata({
@@ -59,7 +77,14 @@ export default async function ServiceDetailPage({
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
   const he = locale === "he";
 
-  const service = await getPublishedServiceBySlug(slug);
+  let service;
+  try {
+    service = await getPublishedServiceBySlug(slug);
+  } catch (error) {
+    if (error instanceof PublishedServicesUnavailable)
+      return <ServicesUnavailable locale={locale} detail />;
+    throw error;
+  }
 
   if (!service) notFound();
 

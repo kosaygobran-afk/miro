@@ -18,6 +18,7 @@ import { getCategoryKeyFromSlug } from "@/lib/catalog/routes";
 import { withLocale, isLocale } from "@/lib/i18n";
 import { ProductViewTracker } from "@/components/analytics/ProductViewTracker";
 import { ProductDetailInteractive } from "@/components/products/ProductDetailInteractive";
+import { CatalogUnavailable } from "@/components/products/catalog-unavailable";
 import {
   getPublicContactConfig,
   toPublicContactActions,
@@ -133,6 +134,7 @@ export default async function ProductDetailPage({
     getStorePageData(locale),
     getPublicContactConfig(),
   ]);
+  if (catalog.error) return <CatalogUnavailable locale={locale} />;
   const product = catalog.products.find(
     (p) => p.slug === slug && p.category === category,
   );

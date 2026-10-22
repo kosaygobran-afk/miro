@@ -174,6 +174,26 @@ export async function GET(request: Request) {
   const payload = result as unknown as InventoryListResult;
   const trim = offset % limit;
   const items = (payload?.items ?? []).slice(trim);
+  if (
+    trim > 0 &&
+    items.length < limit &&
+    offset + items.length < (payload?.total_count ?? 0)
+  ) {
+    // An arbitrary offset can straddle two RPC pages. Fill the requested slice
+    // with one more bounded, identically filtered actor-context read.
+    const { data: next, error: nextError } = await client.rpc(
+      "management_inventory_list",
+      {
+        p_search: search || null,
+        p_status: rpcStatus,
+        p_page: page + 1,
+        p_page_size: limit,
+      },
+    );
+    if (nextError) return mapPostgresError(nextError);
+    const nextPayload = next as unknown as InventoryListResult;
+    items.push(...(nextPayload?.items ?? []).slice(0, limit - items.length));
+  }
 
   return NextResponse.json({
     items: items.map((item) => ({

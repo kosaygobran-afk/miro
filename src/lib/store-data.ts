@@ -75,7 +75,17 @@ export type StoreCatalog = {
   categories: StoreCategory[];
   subcategories?: StoreCategory[];
   products: Product[];
+  error?: "unavailable";
 };
+
+const CATALOG_TIMEOUT_MS = 12_000;
+
+function unavailableCatalog(): StoreCatalog {
+  // An upstream outage is an expected availability state, not a render error.
+  // Keep raw database/transport details out of the browser's RSC console.
+  console.warn("Supabase catalog unavailable; retry the catalog.");
+  return { categories: [], products: [], error: "unavailable" };
+}
 
 export type UserRole = "customer" | "worker" | "admin" | "ceo" | null;
 
@@ -84,11 +94,13 @@ export type StoreViewer = {
   savedProductIds: string[];
 };
 
-async function getInventoryDefaults(): Promise<InventoryDefaults> {
+async function getInventoryDefaults(
+  signal: AbortSignal,
+): Promise<InventoryDefaults> {
   try {
-    const { data, error } = await createPublicServerClient().rpc(
-      "get_public_inventory_defaults",
-    );
+    const { data, error } = await createPublicServerClient()
+      .rpc("get_public_inventory_defaults")
+      .abortSignal(signal);
     if (error || !data) {
       return {
         low_stock_threshold: 3,
@@ -214,6 +226,9 @@ const getCatalogRows = cache(async (anonymous: boolean) => {
   const supabase = anonymous
     ? createPublicServerClient()
     : await createServerSupabaseClient();
+  // The SDK already retries safe reads. Share one deadline across attempts
+  // and projections so an outage cannot restart a 15s timeout on each retry.
+  const signal = AbortSignal.timeout(CATALOG_TIMEOUT_MS);
   const [
     categoriesResult,
     categoryIconsResult,
@@ -229,11 +244,15 @@ const getCatalogRows = cache(async (anonymous: boolean) => {
       .from("categories")
       .select("id, slug, name_he, name_en, sort_order, parent_id")
       .eq("is_active", true)
-      .order("sort_order", { ascending: true }),
+      .order("sort_order", { ascending: true })
+      .abortSignal(signal),
     // Storefront merchandising is deployed independently of the core
     // catalog. Keep this projection optional so an older database can still
     // serve products while the additive migration is being rolled out.
-    supabase.from("categories").select("id, icon_image_url"),
+    supabase
+      .from("categories")
+      .select("id, icon_image_url")
+      .abortSignal(signal),
     supabase
       .from("products")
       .select(
@@ -242,32 +261,38 @@ const getCatalogRows = cache(async (anonymous: boolean) => {
       .eq("status", "active")
       .order("is_featured", { ascending: false })
       .order("sort_order", { ascending: true })
-      .order("created_at", { ascending: false }),
+      .order("created_at", { ascending: false })
+      .abortSignal(signal),
     supabase
       .from("product_variants")
       .select(
         "id, product_id, sku, barcode, color_he, color_en, color_hex, price_override, is_default, is_active, stock_qty, low_stock_threshold",
       )
-      .eq("is_active", true),
+      .eq("is_active", true)
+      .abortSignal(signal),
     supabase
       .from("product_images")
       .select("id, product_id, image_url, alt_he, alt_en, sort_order")
-      .order("sort_order", { ascending: true }),
+      .order("sort_order", { ascending: true })
+      .abortSignal(signal),
     supabase
       .from("product_promo_badges")
       .select(
         "id, product_id, badge_type_id, priority, scheduled_from, scheduled_until, promo_badge_types(key, label_he, label_en, shape, tone, icon_name, is_active)",
-      ),
+      )
+      .abortSignal(signal),
     supabase
       .from("product_public_promotions")
       .select(
         "id, product_id, promotion_type, value, compare_at_price, is_active, scheduled_from, scheduled_until",
-      ),
+      )
+      .abortSignal(signal),
     supabase
       .from("storefront_rail_items")
       .select("product_id, sort_order")
-      .order("sort_order", { ascending: true }),
-    getInventoryDefaults(),
+      .order("sort_order", { ascending: true })
+      .abortSignal(signal),
+    getInventoryDefaults(signal),
   ]);
 
   return {
@@ -291,7 +316,8 @@ const getRolePrices = cache(async (role: UserRole, anonymous: boolean) => {
   const { data } = await supabase
     .from("product_prices")
     .select("product_id, price")
-    .eq("role", role);
+    .eq("role", role)
+    .abortSignal(AbortSignal.timeout(CATALOG_TIMEOUT_MS));
   return new Map<string, number>(
     (data ?? []).map((price) => [price.product_id, Number(price.price)]),
   );
@@ -336,13 +362,7 @@ export async function getStoreCatalog(
       variantsResult.error ||
       imagesResult.error
     ) {
-      throw new Error(
-        categoriesResult.error?.message ??
-          productsResult.error?.message ??
-          variantsResult.error?.message ??
-          imagesResult.error?.message ??
-          "Catalog fetch failed.",
-      );
+      return unavailableCatalog();
     }
 
     const variantsByProduct = new Map<string, ProductVariant[]>();
@@ -686,8 +706,15 @@ export async function getStoreCatalog(
 
     return { categories, subcategories, products };
   } catch (error) {
-    console.error("Supabase catalog read failed.", error);
-    return { categories: [], products: [] };
+    // Preserve diagnostics for unexpected mapping/programming failures.
+    // PostgREST normally returns transport failures above as error values.
+    const name = (error as Error | null)?.name;
+    const transportFailure =
+      name === "AbortError" ||
+      name === "TimeoutError" ||
+      (name === "TypeError" && /fetch failed/i.test((error as Error).message));
+    if (!transportFailure) console.error("Unexpected catalog failure.", error);
+    return unavailableCatalog();
   }
 }
 

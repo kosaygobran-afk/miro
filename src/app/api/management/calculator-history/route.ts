@@ -56,7 +56,10 @@ export async function GET(request: Request) {
     >();
 
   if (error) {
-    return errorResponse("Unable to load calculator history", 500);
+    return errorResponse(
+      "Unable to load calculator history",
+      error.code === "PGRST202" ? 503 : 500,
+    );
   }
 
   return NextResponse.json({

@@ -400,3 +400,49 @@ test("proxy retains the installed remote-user verification fallback for symmetri
   await api.default(proxyRequest(sessionCookie(token, origin)));
   assert.deepEqual(paths, ["/auth/v1/user"]);
 });
+
+test("proxy clears rejected expired refresh cookies and the next request stays anonymous", async (t) => {
+  const errors = t.mock.method(console, "error", () => {});
+  const warnings = t.mock.method(console, "warn", () => {});
+  const { token } = await signedJwt();
+  const origin = `https://expired-${randomUUID()}.supabase.co`;
+  const cookie = sessionCookie(token, origin);
+  const session = JSON.parse(
+    Buffer.from(cookie.value.slice(7), "base64url").toString(),
+  );
+  session.expires_at = Math.floor(Date.now() / 1000) - 120;
+  cookie.value = `base64-${Buffer.from(JSON.stringify(session)).toString("base64url")}`;
+  let refreshes = 0;
+  const api = await proxyModule(origin, async (url) => {
+    assert.equal(new URL(url).pathname, "/auth/v1/token");
+    refreshes++;
+    return new Response(
+      JSON.stringify({
+        code: "refresh_token_not_found",
+        message: "Invalid Refresh Token: Refresh Token Not Found",
+      }),
+      {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Supabase-Api-Version": "2024-01-01",
+        },
+      },
+    );
+  });
+  const request = proxyRequest(cookie);
+  const result = await api.default(request);
+  assert.equal(result.cookieValues.get(cookie.name), "");
+  assert.equal(request.cookies.getAll()[0].value, "");
+  assert.equal(result.headers.get("Cache-Control"), "private, no-store");
+  assert.equal(result.headers.get("Content-Security-Policy"), "test-csp");
+  await api.default(request);
+  assert.equal(refreshes, 1, "cleared credentials must not refresh again");
+  assert.equal(
+    errors.mock.callCount(),
+    0,
+    errors.mock.calls.map(({ arguments: args }) => String(args[0])).join("; "),
+  );
+  for (const { arguments: args } of warnings.mock.calls)
+    assert.equal(args[0].code, "refresh_token_not_found");
+});

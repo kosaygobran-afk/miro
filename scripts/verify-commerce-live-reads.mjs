@@ -70,6 +70,7 @@ try {
     ],
     ["finance", (body) => body?.totals != null],
     ["settings", (body) => Array.isArray(body?.settings)],
+    ["calculator-history?limit=20", (body) => Array.isArray(body?.history)],
     [
       "settings/animation",
       (body) => body?.settings != null && typeof body?.revision === "string",

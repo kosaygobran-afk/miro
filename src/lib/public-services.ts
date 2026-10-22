@@ -1,6 +1,20 @@
 import { cache } from "react";
 import { createPublicServerClient } from "@/lib/supabase/public-server";
 
+/** Availability failures are distinct from a successful empty or missing read. */
+export class PublishedServicesUnavailable extends Error {
+  constructor() {
+    super("Published services are temporarily unavailable.");
+    this.name = "PublishedServicesUnavailable";
+  }
+}
+
+function unavailable(): never {
+  // Never expose transport details, database payloads or credentials to visitors.
+  console.warn("Published services unavailable; retry the services page.");
+  throw new PublishedServicesUnavailable();
+}
+
 /**
  * Public-facing DTO for a published service.
  * Only active services are returned to the public storefront.
@@ -71,23 +85,27 @@ export type RelatedProductItem = {
  */
 export const getPublishedServices = cache(
   async (): Promise<PublishedService[]> => {
-    const supabase = createPublicServerClient();
+    try {
+      const supabase = createPublicServerClient();
 
-    const { data, error } = await supabase
-      .from("services")
-      .select(
-        "id, slug, name_he, name_en, short_description_he, short_description_en, description_he, description_en, visual_kind, image_url, sort_order, seo_title_he, seo_title_en, seo_description_he, seo_description_en, content, created_at, updated_at",
-      )
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .order("slug", { ascending: true });
+      const { data, error } = await supabase
+        .from("services")
+        .select(
+          "id, slug, name_he, name_en, short_description_he, short_description_en, description_he, description_en, visual_kind, image_url, sort_order, seo_title_he, seo_title_en, seo_description_he, seo_description_en, content, created_at, updated_at",
+        )
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .order("slug", { ascending: true });
 
-    if (error) {
-      console.error("Failed to fetch published services:", error);
-      return [];
+      if (error) {
+        return unavailable();
+      }
+
+      return (data ?? []).map(mapServiceRow);
+    } catch (error) {
+      if (error instanceof PublishedServicesUnavailable) throw error;
+      return unavailable();
     }
-
-    return (data ?? []).map(mapServiceRow);
   },
 );
 
@@ -98,25 +116,29 @@ export const getPublishedServices = cache(
  */
 export const getPublishedServiceBySlug = cache(
   async (slug: string): Promise<PublishedService | null> => {
-    const supabase = createPublicServerClient();
+    try {
+      const supabase = createPublicServerClient();
 
-    const { data, error } = await supabase
-      .from("services")
-      .select(
-        "id, slug, name_he, name_en, short_description_he, short_description_en, description_he, description_en, visual_kind, image_url, sort_order, seo_title_he, seo_title_en, seo_description_he, seo_description_en, content, created_at, updated_at",
-      )
-      .eq("slug", slug)
-      .eq("is_active", true)
-      .maybeSingle();
+      const { data, error } = await supabase
+        .from("services")
+        .select(
+          "id, slug, name_he, name_en, short_description_he, short_description_en, description_he, description_en, visual_kind, image_url, sort_order, seo_title_he, seo_title_en, seo_description_he, seo_description_en, content, created_at, updated_at",
+        )
+        .eq("slug", slug)
+        .eq("is_active", true)
+        .maybeSingle();
 
-    if (error) {
-      console.error(`Failed to fetch published service ${slug}:`, error);
-      return null;
+      if (error) {
+        return unavailable();
+      }
+
+      if (!data) return null;
+
+      return mapServiceRow(data);
+    } catch (error) {
+      if (error instanceof PublishedServicesUnavailable) throw error;
+      return unavailable();
     }
-
-    if (!data) return null;
-
-    return mapServiceRow(data);
   },
 );
 

@@ -258,6 +258,24 @@ end $$;
 -- ============================================================
 -- 8. get_calculator_history returns correct data and order
 -- ============================================================
+-- Exercise limits before clearing the 100-row retention fixture. A two-row
+-- fixture cannot prove the maximum limit or the default/null behavior.
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000252',true);
+do $$
+declare
+  v_count integer;
+begin
+  select count(*) into v_count from public.get_calculator_history(100);
+  if v_count <> 50 then raise exception 'Upper clamp expected 50 rows, got %', v_count; end if;
+  select count(*) into v_count from public.get_calculator_history(null);
+  if v_count <> 20 then raise exception 'Null limit expected 20 rows, got %', v_count; end if;
+  select count(*) into v_count from public.get_calculator_history();
+  if v_count <> 20 then raise exception 'Omitted limit expected 20 rows, got %', v_count; end if;
+  select count(*) into v_count from public.get_calculator_history(-1);
+  if v_count <> 1 then raise exception 'Negative limit expected 1 row, got %', v_count; end if;
+end $$;
+
 set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000252',true); -- Admin
 do $$
@@ -331,13 +349,81 @@ begin
     raise exception 'Limit 0 should be clamped to 1, got %', v_count;
   end if;
 
-  -- Test limit > 50 (should be clamped to 50)
-  select coalesce(jsonb_agg(h.value), '[]'::jsonb) into v_history
-  from public.get_calculator_history(100) as h(value);
-  select count(*) into v_count from jsonb_array_elements(v_history) as h(value);
-  if v_count > 50 then
-    raise exception 'Limit 100 should be clamped to 50, got %', v_count;
-  end if;
+end $$;
+
+-- ============================================================
+-- 10. Read authorization and actor isolation
+-- ============================================================
+-- Restored getter is restricted to active management roles and own-user rows.
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000253',true);
+do $$
+declare
+  v_count integer;
+begin
+  perform public.record_calculator_history('CEO-only calculation', 3, 'read-isolation');
+  select count(*) into v_count from public.get_calculator_history(20);
+  if v_count <> 1 then raise exception 'CEO history crossed actor boundary'; end if;
+end $$;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000252',true);
+do $$
+declare
+  v_count integer;
+begin
+  select count(*) into v_count from public.get_calculator_history(20);
+  if v_count <> 2 then raise exception 'Admin history crossed actor boundary'; end if;
+  begin
+    perform id from public.calculator_history limit 1;
+    raise exception 'Direct authenticated table read should be forbidden';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+
+reset role;
+update public.profiles set account_status='suspended'
+where id='00000000-0000-0000-0000-000000000252';
+set local role authenticated;
+do $$
+begin
+  begin
+    perform public.get_calculator_history(20);
+    raise exception 'Suspended manager read should be forbidden';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+reset role;
+update public.profiles set account_status='active'
+where id='00000000-0000-0000-0000-000000000252';
+set local role authenticated;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000250',true);
+do $$
+begin
+  begin
+    perform public.get_calculator_history(20);
+    raise exception 'Customer read should be forbidden';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000251',true);
+do $$
+begin
+  begin
+    perform public.get_calculator_history(20);
+    raise exception 'Worker read should be forbidden';
+  exception when insufficient_privilege then null;
+  end;
+end $$;
+
+set local role anon;
+do $$
+begin
+  begin
+    perform public.get_calculator_history(20);
+    raise exception 'Anonymous execute should be forbidden';
+  exception when insufficient_privilege then null;
+  end;
 end $$;
 
 -- ============================================================

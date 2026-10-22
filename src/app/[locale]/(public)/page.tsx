@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { ProductsClient } from "@/components/products/ProductsClient";
+import { CatalogUnavailable } from "@/components/products/catalog-unavailable";
 import { ProductSubNav } from "@/components/products/ProductSubNav";
 import { ProductMovingRail } from "@/features/catalog/product-moving-rail";
 import { SecurityComposition } from "@/components/products/ProductVisual";
@@ -54,6 +55,7 @@ export default async function ProductsPage({
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
 
   const { viewer, catalog } = await getStorePageData(locale);
+  if (catalog.error) return <CatalogUnavailable locale={locale} />;
   const savedProductIds = new Set(viewer.savedProductIds);
 
   const categories = catalog.categories.map((category) => ({

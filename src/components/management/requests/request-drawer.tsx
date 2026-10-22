@@ -1,8 +1,20 @@
 "use client";
 
-import { useState } from "react";
-import { Mail, MessageCircle, Phone } from "lucide-react";
+import { useId, useState } from "react";
+import {
+  ArrowUpRight,
+  Check,
+  ClipboardList,
+  FileText,
+  Mail,
+  MessageCircle,
+  Package,
+  Phone,
+  SlidersHorizontal,
+  UserRound,
+} from "lucide-react";
 import { DetailPanel, Drawer, Notice, StatusBadge, OverflowText } from "../ui";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 import { requestDrawerCopy as copy, requestStatusLabels } from "./copy";
 import {
   REQUEST_STATUSES,
@@ -12,6 +24,7 @@ import {
 } from "./types";
 import styles from "./requests-queue.module.css";
 import { reportingStyles } from "../ui/reporting-workspace";
+import detailStyles from "./request-details.module.css";
 
 function isRequestStatus(status: string): status is RequestStatus {
   return (REQUEST_STATUSES as readonly string[]).includes(status);
@@ -67,6 +80,8 @@ export function RequestDrawer({
   onClose,
   onUpdated,
 }: RequestDrawerProps) {
+  const appearanceVersion = useAnimationSettings().appearanceVersion;
+  const headingId = useId();
   const he = locale === "he";
   const t = (map: Record<"he" | "en", string>) => map[locale];
   const copyMap = copy;
@@ -154,187 +169,504 @@ export function RequestDrawer({
       : request.product.name_en
     : null;
 
+  // Restoring Version 1 also restores its original content layout.
+  if (appearanceVersion === "1") {
+    return (
+      <Drawer
+        open={open}
+        onClose={onClose}
+        className={reportingStyles.drawer}
+        title={
+          <OverflowText
+            text={request.customer.name || t(copyMap.detailsTitle)}
+          />
+        }
+        side="start"
+        closeLabel={t(copyMap.closeLabel)}
+      >
+        <div data-request-workspace data-request-appearance="1">
+          <div className={styles.drawerSection}>
+            <h3 className={styles.drawerSectionTitle}>
+              {t(copyMap.contactTitle)}
+            </h3>
+            <div className={styles.contactCard}>
+              <span className={styles.contactName} dir="auto">
+                <OverflowText text={request.customer.name} />
+              </span>
+              {request.customer.phone ? (
+                <OverflowText text={request.customer.phone} dir="ltr" />
+              ) : null}
+              <OverflowText text={request.customer.email} dir="ltr" />
+              <div className={styles.contactActions}>
+                {request.customer.phone ? (
+                  <a
+                    className={styles.contactAction}
+                    href={`tel:${request.customer.phone}`}
+                  >
+                    <Phone size={14} aria-hidden="true" />
+                    {t(copyMap.callAction)}
+                  </a>
+                ) : null}
+                <a
+                  className={styles.contactAction}
+                  href={`mailto:${request.customer.email}`}
+                >
+                  <Mail size={14} aria-hidden="true" />
+                  {t(copyMap.emailAction)}
+                </a>
+                {request.customer.phone ? (
+                  <a
+                    className={styles.contactAction}
+                    href={whatsappHref(request.customer.phone)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <MessageCircle size={14} aria-hidden="true" />
+                    {t(copyMap.whatsappAction)}
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          <div className={styles.drawerSection}>
+            <DetailPanel
+              title={t(copyMap.detailsTitle)}
+              rows={[
+                {
+                  label: t(copyMap.receivedRow),
+                  value: (
+                    <time dateTime={received.dateTime} dir="ltr">
+                      {received.text}
+                    </time>
+                  ),
+                },
+                { label: t(copyMap.sourceRow), value: request.source || "—" },
+                { label: t(copyMap.localeRow), value: request.locale ?? "—" },
+                {
+                  label: t(copyMap.requestIdRow),
+                  value: (
+                    <span dir="ltr" className={styles.productMeta}>
+                      <OverflowText text={request.id} dir="ltr" />
+                    </span>
+                  ),
+                },
+                {
+                  label: t(copyMap.customerAccountRow),
+                  value: request.customer.id
+                    ? t(copyMap.linkedYes)
+                    : t(copyMap.linkedNo),
+                },
+              ]}
+            />
+          </div>
+
+          {request.product ? (
+            <div className={styles.drawerSection}>
+              <h3 className={styles.drawerSectionTitle}>
+                {t(copyMap.productTitle)}
+              </h3>
+              <div className={styles.productCard}>
+                <span className={styles.productName} dir="auto">
+                  <OverflowText text={productName ?? ""} />
+                </span>
+                {request.variant ? (
+                  <span className={styles.productMeta}>
+                    <span dir="ltr">SKU: {request.variant.sku}</span>
+                    {request.variant.color_he || request.variant.color_en
+                      ? ` · ${he ? request.variant.color_he : request.variant.color_en}`
+                      : ""}
+                  </span>
+                ) : null}
+                <a
+                  className={styles.productLink}
+                  href={`/${locale}/admin/products/${request.product.id}`}
+                >
+                  {t(copyMap.openProductEditor)} →
+                </a>
+              </div>
+            </div>
+          ) : null}
+
+          <div className={styles.drawerSection}>
+            <h3 className={styles.drawerSectionTitle}>
+              {t(copyMap.messageTitle)}
+            </h3>
+            <p className={styles.messageBox} dir="auto">
+              {request.message}
+            </p>
+          </div>
+
+          <div className={styles.drawerSection}>
+            <h3 className={styles.drawerSectionTitle}>
+              {t(copyMap.assignmentTitle)}
+            </h3>
+            <div className={styles.selectWrap}>
+              <label className={styles.selectLabel} htmlFor="request-assignee">
+                {t(copyMap.assignmentLabel)}
+              </label>
+              <select
+                id="request-assignee"
+                className={styles.select}
+                value={assignedToId}
+                disabled={busy}
+                onChange={(event) => {
+                  void patch({ assignedTo: event.target.value });
+                }}
+              >
+                <option value="">{t(copyMap.unassignedOption)}</option>
+                <option
+                  value={selfId}
+                >{`${selfName || t(copyMap.unassignedOption)} (${t(copyMap.meSuffix)})`}</option>
+                {staff
+                  .filter((member) => member.id !== selfId)
+                  .map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          <div className={styles.drawerSection}>
+            <h3 className={styles.drawerSectionTitle}>
+              {t(copyMap.statusActionsTitle)}
+            </h3>
+            <div className={styles.statusActions} role="group">
+              {REQUEST_STATUSES.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className={styles.statusAction}
+                  data-active={request.status === status || undefined}
+                  disabled={busy || request.status === status}
+                  onClick={() => void patch({ status })}
+                >
+                  {statusLabel(status)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {notice ? (
+            <Notice tone={notice.tone === "danger" ? "danger" : "success"}>
+              {notice.text}
+            </Notice>
+          ) : null}
+
+          <div className={styles.drawerSection}>
+            <StatusBadge status={request.status}>
+              {statusLabel(request.status)}
+            </StatusBadge>
+          </div>
+        </div>
+      </Drawer>
+    );
+  }
+
   return (
     <Drawer
       open={open}
       onClose={onClose}
-      className={reportingStyles.drawer}
+      className={`${reportingStyles.drawer} ${detailStyles.drawer}`}
       title={
-        <OverflowText text={request.customer.name || t(copyMap.detailsTitle)} />
+        <span className={detailStyles.windowTitle}>
+          <FileText size={20} aria-hidden="true" />
+          {t(copyMap.detailsTitle)}
+        </span>
       }
       side="start"
       closeLabel={t(copyMap.closeLabel)}
     >
-      <div className={styles.drawerSection}>
-        <h3 className={styles.drawerSectionTitle}>{t(copyMap.contactTitle)}</h3>
-        <div className={styles.contactCard}>
-          <span className={styles.contactName} dir="auto">
-            <OverflowText text={request.customer.name} />
-          </span>
-          {request.customer.phone ? (
-            <OverflowText text={request.customer.phone} dir="ltr" />
-          ) : null}
-          <OverflowText text={request.customer.email} dir="ltr" />
-          <div className={styles.contactActions}>
-            {request.customer.phone ? (
-              <a
-                className={styles.contactAction}
-                href={`tel:${request.customer.phone}`}
-              >
-                <Phone size={14} aria-hidden="true" />
-                {t(copyMap.callAction)}
-              </a>
-            ) : null}
-            <a
-              className={styles.contactAction}
-              href={`mailto:${request.customer.email}`}
-            >
-              <Mail size={14} aria-hidden="true" />
-              {t(copyMap.emailAction)}
-            </a>
-            {request.customer.phone ? (
-              <a
-                className={styles.contactAction}
-                href={whatsappHref(request.customer.phone)}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <MessageCircle size={14} aria-hidden="true" />
-                {t(copyMap.whatsappAction)}
-              </a>
-            ) : null}
-          </div>
-        </div>
-      </div>
-
-      <div className={styles.drawerSection}>
-        <DetailPanel
-          title={t(copyMap.detailsTitle)}
-          rows={[
-            {
-              label: t(copyMap.receivedRow),
-              value: (
+      <div className={detailStyles.content} data-request-workspace>
+        <div className={detailStyles.overview}>
+          <div className={detailStyles.identity}>
+            <span className={detailStyles.avatar} aria-hidden="true">
+              <UserRound size={26} />
+            </span>
+            <div className={detailStyles.identityText}>
+              <h3 className={detailStyles.customerName}>
+                <OverflowText
+                  text={request.customer.name || t(copyMap.contactTitle)}
+                />
+              </h3>
+              <p className={detailStyles.received}>
+                <span>{t(copyMap.receivedRow)}</span>
                 <time dateTime={received.dateTime} dir="ltr">
                   {received.text}
                 </time>
-              ),
-            },
-            { label: t(copyMap.sourceRow), value: request.source || "—" },
-            { label: t(copyMap.localeRow), value: request.locale ?? "—" },
-            {
-              label: t(copyMap.requestIdRow),
-              value: (
-                <span dir="ltr" className={styles.productMeta}>
-                  <OverflowText text={request.id} dir="ltr" />
-                </span>
-              ),
-            },
-            {
-              label: t(copyMap.customerAccountRow),
-              value: request.customer.id
-                ? t(copyMap.linkedYes)
-                : t(copyMap.linkedNo),
-            },
-          ]}
-        />
-      </div>
+              </p>
+            </div>
+          </div>
+          <StatusBadge status={request.status}>
+            {statusLabel(request.status)}
+          </StatusBadge>
+        </div>
 
-      {request.product ? (
-        <div className={styles.drawerSection}>
-          <h3 className={styles.drawerSectionTitle}>
-            {t(copyMap.productTitle)}
-          </h3>
-          <div className={styles.productCard}>
-            <span className={styles.productName} dir="auto">
-              <OverflowText text={productName ?? ""} />
-            </span>
-            {request.variant ? (
-              <span className={styles.productMeta}>
-                <span dir="ltr">SKU: {request.variant.sku}</span>
-                {request.variant.color_he || request.variant.color_en
-                  ? ` · ${he ? request.variant.color_he : request.variant.color_en}`
-                  : ""}
-              </span>
-            ) : null}
-            <a
-              className={styles.productLink}
-              href={`/${locale}/admin/products/${request.product.id}`}
+        <div className={detailStyles.workspace}>
+          <div className={detailStyles.mainColumn}>
+            <section
+              className={`${styles.drawerSection} ${detailStyles.panel}`}
             >
-              {t(copyMap.openProductEditor)} →
-            </a>
+              <h3
+                className={`${styles.drawerSectionTitle} ${detailStyles.panelTitle}`}
+              >
+                <MessageCircle size={18} aria-hidden="true" />
+                {t(copyMap.messageTitle)}
+              </h3>
+              <p
+                className={`${styles.messageBox} ${detailStyles.message}`}
+                dir="auto"
+              >
+                {request.message || t(copyMap.emptyMessage)}
+              </p>
+            </section>
+
+            {request.product ? (
+              <section
+                className={`${styles.drawerSection} ${detailStyles.panel}`}
+              >
+                <h3
+                  className={`${styles.drawerSectionTitle} ${detailStyles.panelTitle}`}
+                >
+                  <Package size={18} aria-hidden="true" />
+                  {t(copyMap.productTitle)}
+                </h3>
+                <div
+                  className={`${styles.productCard} ${detailStyles.product}`}
+                >
+                  <div className={detailStyles.productInfo}>
+                    <span className={styles.productName} dir="auto">
+                      <OverflowText text={productName ?? ""} />
+                    </span>
+                    {request.variant ? (
+                      <span
+                        className={`${styles.productMeta} ${detailStyles.variant}`}
+                      >
+                        <span dir="ltr">SKU: {request.variant.sku}</span>
+                        {he
+                          ? request.variant.color_he
+                          : request.variant.color_en}
+                      </span>
+                    ) : null}
+                  </div>
+                  <a
+                    className={`${styles.productLink} ${detailStyles.productLink}`}
+                    href={`/${locale}/admin/products/${request.product.id}`}
+                  >
+                    {t(copyMap.openProductEditor)}
+                    <ArrowUpRight size={16} aria-hidden="true" />
+                  </a>
+                </div>
+              </section>
+            ) : null}
+
+            <section
+              className={`${styles.drawerSection} ${detailStyles.panel}`}
+            >
+              <h3
+                className={`${styles.drawerSectionTitle} ${detailStyles.panelTitle}`}
+              >
+                <ClipboardList size={18} aria-hidden="true" />
+                {t(copyMap.detailsTitle)}
+              </h3>
+              <dl className={detailStyles.metadata}>
+                <div>
+                  <dt>{t(copyMap.sourceRow)}</dt>
+                  <dd dir="auto">{request.source || "—"}</dd>
+                </div>
+                <div>
+                  <dt>{t(copyMap.localeRow)}</dt>
+                  <dd>
+                    {request.locale === "he"
+                      ? t(copyMap.hebrewLocale)
+                      : request.locale === "en"
+                        ? t(copyMap.englishLocale)
+                        : request.locale || "—"}
+                  </dd>
+                </div>
+                <div>
+                  <dt>{t(copyMap.customerAccountRow)}</dt>
+                  <dd>
+                    {request.customer.id
+                      ? t(copyMap.linkedYes)
+                      : t(copyMap.linkedNo)}
+                  </dd>
+                </div>
+                <div className={detailStyles.requestId}>
+                  <dt>{t(copyMap.requestIdRow)}</dt>
+                  <dd>
+                    <OverflowText text={request.id} dir="ltr" />
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+
+          <div className={detailStyles.sideColumn}>
+            <section
+              className={`${styles.drawerSection} ${detailStyles.panel}`}
+            >
+              <h3
+                className={`${styles.drawerSectionTitle} ${detailStyles.panelTitle}`}
+              >
+                <UserRound size={18} aria-hidden="true" />
+                {t(copyMap.contactTitle)}
+              </h3>
+              <div className={`${styles.contactCard} ${detailStyles.contact}`}>
+                <dl className={detailStyles.contactDetails}>
+                  {request.customer.phone ? (
+                    <div>
+                      <dt>{t(copyMap.phoneLabel)}</dt>
+                      <dd>
+                        <a href={`tel:${request.customer.phone}`}>
+                          <OverflowText
+                            text={request.customer.phone}
+                            dir="ltr"
+                            focusable={false}
+                          />
+                        </a>
+                      </dd>
+                    </div>
+                  ) : null}
+                  {request.customer.email ? (
+                    <div>
+                      <dt>{t(copyMap.emailAction)}</dt>
+                      <dd>
+                        <a href={`mailto:${request.customer.email}`}>
+                          <OverflowText
+                            text={request.customer.email}
+                            dir="ltr"
+                            focusable={false}
+                          />
+                        </a>
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+                {!request.customer.phone && !request.customer.email ? (
+                  <p className={detailStyles.emptyContact}>
+                    {t(copyMap.emptyContact)}
+                  </p>
+                ) : null}
+                <div
+                  className={`${styles.contactActions} ${detailStyles.contactActions}`}
+                >
+                  {request.customer.phone ? (
+                    <a
+                      className={styles.contactAction}
+                      href={`tel:${request.customer.phone}`}
+                    >
+                      <Phone size={16} aria-hidden="true" />
+                      {t(copyMap.callAction)}
+                    </a>
+                  ) : null}
+                  {request.customer.email ? (
+                    <a
+                      className={styles.contactAction}
+                      href={`mailto:${request.customer.email}`}
+                    >
+                      <Mail size={16} aria-hidden="true" />
+                      {t(copyMap.emailAction)}
+                    </a>
+                  ) : null}
+                  {request.customer.phone ? (
+                    <a
+                      className={styles.contactAction}
+                      href={whatsappHref(request.customer.phone)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      <MessageCircle size={16} aria-hidden="true" />
+                      {t(copyMap.whatsappAction)}
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </section>
+
+            <section
+              className={`${styles.drawerSection} ${detailStyles.panel}`}
+            >
+              <h3
+                className={`${styles.drawerSectionTitle} ${detailStyles.panelTitle}`}
+              >
+                <SlidersHorizontal size={18} aria-hidden="true" />
+                {t(copyMap.handlingTitle)}
+              </h3>
+              <div className={detailStyles.handling}>
+                <div className={styles.selectWrap}>
+                  <label
+                    className={styles.selectLabel}
+                    htmlFor="request-assignee"
+                  >
+                    {t(copyMap.assignmentLabel)}
+                  </label>
+                  <select
+                    id="request-assignee"
+                    className={styles.select}
+                    value={assignedToId}
+                    disabled={busy}
+                    onChange={(event) => {
+                      void patch({ assignedTo: event.target.value });
+                    }}
+                  >
+                    <option value="">{t(copyMap.unassignedOption)}</option>
+                    <option
+                      value={selfId}
+                    >{`${selfName || t(copyMap.unassignedOption)} (${t(copyMap.meSuffix)})`}</option>
+                    {staff
+                      .filter((member) => member.id !== selfId)
+                      .map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className={detailStyles.statusField}>
+                  <p id={headingId} className={styles.selectLabel}>
+                    {t(copyMap.statusActionsTitle)}
+                  </p>
+                  <div
+                    className={styles.statusActions}
+                    role="group"
+                    aria-labelledby={headingId}
+                  >
+                    {REQUEST_STATUSES.map((status) => (
+                      <button
+                        key={status}
+                        type="button"
+                        className={styles.statusAction}
+                        data-active={request.status === status || undefined}
+                        aria-pressed={request.status === status}
+                        disabled={busy || request.status === status}
+                        onClick={() => void patch({ status })}
+                      >
+                        <span
+                          className={detailStyles.statusMark}
+                          aria-hidden="true"
+                        >
+                          {request.status === status ? (
+                            <Check size={14} />
+                          ) : null}
+                        </span>
+                        {statusLabel(status)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div role="status" className={detailStyles.saving}>
+                  {busy ? t(copyMap.saving) : ""}
+                </div>
+                {notice ? (
+                  <Notice tone={notice.tone}>{notice.text}</Notice>
+                ) : null}
+              </div>
+            </section>
           </div>
         </div>
-      ) : null}
-
-      <div className={styles.drawerSection}>
-        <h3 className={styles.drawerSectionTitle}>{t(copyMap.messageTitle)}</h3>
-        <p className={styles.messageBox} dir="auto">
-          {request.message}
-        </p>
-      </div>
-
-      <div className={styles.drawerSection}>
-        <h3 className={styles.drawerSectionTitle}>
-          {t(copyMap.assignmentTitle)}
-        </h3>
-        <div className={styles.selectWrap}>
-          <label className={styles.selectLabel} htmlFor="request-assignee">
-            {t(copyMap.assignmentLabel)}
-          </label>
-          <select
-            id="request-assignee"
-            className={styles.select}
-            value={assignedToId}
-            disabled={busy}
-            onChange={(event) => {
-              void patch({ assignedTo: event.target.value });
-            }}
-          >
-            <option value="">{t(copyMap.unassignedOption)}</option>
-            <option
-              value={selfId}
-            >{`${selfName || t(copyMap.unassignedOption)} (${t(copyMap.meSuffix)})`}</option>
-            {staff
-              .filter((member) => member.id !== selfId)
-              .map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name}
-                </option>
-              ))}
-          </select>
-        </div>
-      </div>
-
-      <div className={styles.drawerSection}>
-        <h3 className={styles.drawerSectionTitle}>
-          {t(copyMap.statusActionsTitle)}
-        </h3>
-        <div className={styles.statusActions} role="group">
-          {REQUEST_STATUSES.map((status) => (
-            <button
-              key={status}
-              type="button"
-              className={styles.statusAction}
-              data-active={request.status === status || undefined}
-              disabled={busy || request.status === status}
-              onClick={() => void patch({ status })}
-            >
-              {statusLabel(status)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {notice ? (
-        <Notice tone={notice.tone === "danger" ? "danger" : "success"}>
-          {notice.text}
-        </Notice>
-      ) : null}
-
-      <div className={styles.drawerSection}>
-        <StatusBadge status={request.status}>
-          {statusLabel(request.status)}
-        </StatusBadge>
       </div>
     </Drawer>
   );

@@ -48,10 +48,17 @@ export function RequestList({
     }
   }
   const statuses: Record<string, string> = he
-    ? { new: "חדש", in_progress: "בטיפול", closed: "סגור", spam: "דואר זבל" }
+    ? {
+        new: "חדש",
+        in_progress: "בטיפול",
+        waiting_customer: "ממתין ללקוח",
+        closed: "סגור",
+        spam: "דואר זבל",
+      }
     : {
         new: "New",
         in_progress: "In progress",
+        waiting_customer: "Waiting for customer",
         closed: "Closed",
         spam: "Spam",
       };
@@ -79,14 +86,15 @@ export function RequestList({
               defaultValue={
                 manager
                   ? item.status
-                  : item.status === "closed"
-                    ? "closed"
+                  : item.status === "closed" ||
+                      item.status === "waiting_customer"
+                    ? item.status
                     : "in_progress"
               }
             >
               {(manager
                 ? Object.keys(statuses)
-                : ["in_progress", "closed"]
+                : ["in_progress", "waiting_customer", "closed"]
               ).map((status) => (
                 <option key={status} value={status}>
                   {statuses[status]}

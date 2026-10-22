@@ -143,6 +143,9 @@ function loadStore({
         order() {
           return builder;
         },
+        abortSignal() {
+          return builder;
+        },
         limit(value) {
           query.limit = value;
           return builder;
@@ -164,15 +167,19 @@ function loadStore({
       };
       return builder;
     },
-    async rpc(name) {
-      started.push(`${mode}:${name}`);
-      if (defaultsGate) await defaultsGate.promise;
+    rpc(name) {
       return {
-        data: {
-          low_stock_threshold: 3,
-          out_of_stock_policy: "keep_visible_contact",
+        abortSignal: async () => {
+          started.push(`${mode}:${name}`);
+          if (defaultsGate) await defaultsGate.promise;
+          return {
+            data: {
+              low_stock_threshold: 3,
+              out_of_stock_policy: "keep_visible_contact",
+            },
+            error: null,
+          };
         },
-        error: null,
       };
     },
   });
@@ -204,6 +211,7 @@ function loadStore({
       return imports[name];
     },
     console,
+    AbortSignal,
   });
   return { ...exports, started, queries };
 }

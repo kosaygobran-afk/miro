@@ -80,6 +80,15 @@ export const requestsQueueCopy = {
 export const requestDrawerCopy = {
   closeLabel: { he: "סגירה", en: "Close" },
   contactTitle: { he: "פרטי קשר", en: "Contact" },
+  phoneLabel: { he: "טלפון", en: "Phone" },
+  emptyContact: { he: "לא נמסרו פרטי קשר", en: "No contact details provided" },
+  emptyMessage: {
+    he: "לא צורפה הודעה לפנייה",
+    en: "No message included with this request",
+  },
+  hebrewLocale: { he: "עברית", en: "Hebrew" },
+  englishLocale: { he: "אנגלית", en: "English" },
+  handlingTitle: { he: "טיפול בפנייה", en: "Manage request" },
   callAction: requestsQueueCopy.callAction,
   emailAction: requestsQueueCopy.emailAction,
   whatsappAction: requestsQueueCopy.whatsappAction,

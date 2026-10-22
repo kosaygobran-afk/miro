@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { CategoryClient } from "@/components/products/CategoryClient";
+import { CatalogUnavailable } from "@/components/products/catalog-unavailable";
 import { ProductSubNav } from "@/components/products/ProductSubNav";
 import { ProductVisual } from "@/components/products/ProductVisual";
 import { getProductVisualKind } from "@/features/catalog/product-visual-kind";
@@ -52,6 +53,7 @@ export default async function CategoryPage({
   const locale = rawLocale === "en" ? "en" : "he";
   const category = getCategoryKeyFromSlug(rawCategory);
   const { viewer, catalog } = await getStorePageData(locale);
+  if (catalog.error) return <CatalogUnavailable locale={locale} />;
   const selected = catalog.categories.find((item) => item.key === category);
   if (!selected) notFound();
   const subcategories = (catalog.subcategories ?? []).filter(
