@@ -38,6 +38,12 @@ const navigationCategoriesSchema = z.array(
   }),
 );
 
+type NavigationCategory = z.infer<typeof navigationCategoriesSchema>[number];
+
+// Public bilingual labels are safe to reuse across requests while an outage
+// prevents revalidation. Products, stock and prices are never kept here.
+let lastKnownNavigation: NavigationCategory[] | null = null;
+
 // Only public bilingual labels are shared. The live catalog below still uses
 // request-only reads, including its category visibility, prices and stock.
 const readStoreNavigationCategories = cachePublicPresentation(
@@ -54,6 +60,16 @@ const readStoreNavigationCategories = cachePublicPresentation(
   },
 );
 
+function mapNavigationCategories(
+  locale: "he" | "en",
+  categories: NavigationCategory[],
+): Array<Pick<StoreCategory, "key" | "label">> {
+  return categories.map((category) => ({
+    key: getCategoryKeyFromSlug(category.slug),
+    label: mapCategoryLabel(locale, category),
+  }));
+}
+
 /** Small public projection for the global Store menu. */
 export const getStoreNavigationCategories = cache(
   async (
@@ -61,12 +77,14 @@ export const getStoreNavigationCategories = cache(
   ): Promise<Array<Pick<StoreCategory, "key" | "label">>> => {
     try {
       const categories = await readStoreNavigationCategories();
-      return categories.map((category) => ({
-        key: getCategoryKeyFromSlug(category.slug),
-        label: mapCategoryLabel(locale, category),
-      }));
+      lastKnownNavigation = categories;
+      return mapNavigationCategories(locale, categories);
     } catch {
-      return [];
+      // Keeping the failed loader throwing means Next never persists a
+      // fallback; serving the last known-good labels keeps the menu usable.
+      return lastKnownNavigation
+        ? mapNavigationCategories(locale, lastKnownNavigation)
+        : [];
     }
   },
 );

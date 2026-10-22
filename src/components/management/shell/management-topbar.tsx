@@ -30,7 +30,7 @@ import {
   mgmtNavSectionLabel,
   mgmtShellCopy,
 } from "./nav-config";
-import { IconAction } from "../ui/icon-action";
+import { IconAction, IconLink } from "../ui/icon-action";
 import { AccountMenu } from "./account-menu";
 import { WorkspaceTools } from "./workspace-tools";
 
@@ -275,16 +275,14 @@ export function ManagementTopbar({
           }}
         >
           <WorkspaceTools locale={locale} role={role} />
-          <Link
+          <IconLink
             href={withLocale(locale, "store")}
             className="mgmt-topbar__storefront-link"
+            label={mgmtShellCopy.storefrontLink[locale]}
             aria-label={mgmtShellCopy.storefrontLink[locale]}
           >
             <Store size={18} aria-hidden="true" />
-            <span className="mgmt-topbar__storefront-text">
-              {mgmtShellCopy.storefrontLink[locale]}
-            </span>
-          </Link>
+          </IconLink>
           <div
             className="mgmt-topbar__theme-selector"
             role="group"

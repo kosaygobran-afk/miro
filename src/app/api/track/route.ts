@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createFastServerSupabaseClient } from "@/lib/supabase/server";
+import { isSupabaseUnavailable } from "@/lib/supabase/fetch";
 import { hasSameOrigin } from "@/lib/request-origin";
 import { getAuthContext } from "@/lib/auth";
 
@@ -28,26 +30,39 @@ const trackSchema = z.object({
 
 // Per-session/IP rate limiting for analytics tracking (tiered: 100/min, 500/hour)
 async function checkTrackingRateLimit(
-  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  supabase: SupabaseClient,
   key: string,
 ): Promise<"ok" | "limited" | "error"> {
   const buckets = [
     { key: `track:${key}:1m`, limit: 100, window: "1 minute" },
     { key: `track:${key}:1h`, limit: 500, window: "1 hour" },
   ] as const;
-  for (const bucket of buckets) {
-    const { data: allowed, error } = await supabase.rpc("check_rate_limit", {
-      p_key: bucket.key,
-      p_limit: bucket.limit,
-      p_window: bucket.window,
-    });
-    if (error) {
-      console.error("check_rate_limit failed:", error.code, error.message);
-      return "error";
-    }
-    if (allowed !== true) return "limited";
+
+  // Evaluate both windows together. The previous sequential loop doubled the
+  // outage penalty and skipped the hourly budget whenever the minute denied.
+  const checks = await Promise.all(
+    buckets.map(async (bucket) => {
+      const { data: allowed, error } = await supabase.rpc("check_rate_limit", {
+        p_key: bucket.key,
+        p_limit: bucket.limit,
+        p_window: bucket.window,
+      });
+      if (error) return { status: "error" as const, code: error.code };
+      return {
+        status: allowed === true ? ("ok" as const) : ("limited" as const),
+      };
+    }),
+  );
+
+  const failure = checks.find(
+    (check): check is { status: "error"; code: string } =>
+      check.status === "error",
+  );
+  if (failure) {
+    console.error("check_rate_limit failed:", failure.code || "transport");
+    return "error";
   }
-  return "ok";
+  return checks.some((check) => check.status === "limited") ? "limited" : "ok";
 }
 
 function getTrackingKey(
@@ -87,31 +102,43 @@ export async function POST(request: NextRequest) {
   const { type, productId, categoryId, searchQuery, resultsCount, locale } =
     parsed.data;
 
+  // Analytics is non-critical. During an upstream outage, answer immediately
+  // instead of holding beacons open and piling more work onto the transport.
+  if (isSupabaseUnavailable()) {
+    return NextResponse.json({ ok: true });
+  }
+
   // Get session ID from header or cookie
   const sessionId =
     request.headers.get("x-miro-sid") ??
     request.cookies.get("miro-sid")?.value ??
     null;
 
-  // Get user context if authenticated
-  let userId: string | null = null;
-  try {
-    const authContext = await getAuthContext();
-    if (authContext) userId = authContext.user.id;
-  } catch {
-    // Ignore auth errors, proceed as anonymous
-  }
-
-  // Rate limit tracking events per session/IP
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createFastServerSupabaseClient();
   const trackingKey = getTrackingKey(request, sessionId);
-  const rateLimit = await checkTrackingRateLimit(supabase, trackingKey);
+  const hasAuthCookie = request.cookies
+    .getAll()
+    .some(({ name }) => name.startsWith("sb-"));
+
+  // Auth attribution and rate limiting are independent. Resolve them together
+  // and only verify the session when the browser actually sent one.
+  const [rateLimit, userId] = await Promise.all([
+    checkTrackingRateLimit(supabase, trackingKey),
+    hasAuthCookie
+      ? getAuthContext(supabase)
+          .then((actor) => actor?.user.id ?? null)
+          .catch(() => null)
+      : Promise.resolve(null),
+  ]);
+
   if (rateLimit === "error" || rateLimit === "limited") {
     // Silently drop rate-limited tracking events - never block UI
     return NextResponse.json({ ok: true });
   }
 
   try {
+    // Analytics writes are best-effort; never surface storage failures to the
+    // storefront or log once per event.
     await supabase.from("analytics_events").insert({
       event_type: type,
       product_id: productId ?? null,

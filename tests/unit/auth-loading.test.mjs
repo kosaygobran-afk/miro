@@ -255,7 +255,10 @@ async function proxyModule(origin, fetcher) {
       "next/server": { NextResponse: { next: response } },
       "@/i18n/routing": { routing: {} },
       "@/lib/password-recovery": { authRequestUrl: () => {} },
-      "@/lib/supabase/fetch": { supabaseFetch: fetcher },
+      "@/lib/supabase/fetch": {
+        supabaseFetch: fetcher,
+        supabaseFetchFast: fetcher,
+      },
       "@/lib/security-policy": { contentSecurityPolicy: () => "test-csp" },
     },
     {

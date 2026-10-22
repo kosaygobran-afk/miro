@@ -8,6 +8,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Supabase transport resilience — 2026-10-22
+
+- Route every server-side Supabase client through `src/lib/supabase/fetch.ts`: `supabaseFetch` (15s, critical writes), `supabaseFetchPublic` (6s, anonymous catalog/navigation), `supabaseFetchFast` (4s, analytics/session/proxy). Two consecutive transport failures open a process-local 30s circuit; any HTTP response closes it. Breaker/deadline errors are deliberately abort-shaped (`SUPABASE_UNAVAILABLE` / `SUPABASE_TIMEOUT`) so the installed SDK stops retrying idempotent reads immediately. Do not rename them back to plain errors without rechecking the SDK retry loop.
+- `/api/track` must stay fail-open and must return immediately while the circuit is open; only verify a session when an `sb-*` cookie exists, and keep both rate-limit windows parallel. `/api/auth/session` must skip the network for anonymous visitors. Global Store navigation may serve its last-known-good bilingual labels, but never stale-serve products, prices or stock.
+- `fetch failed` / `ConnectTimeoutError` means upstream transport (or a paused project), not a database permission failure. Check `.env.local` host/key presence and the Supabase dashboard before changing authorization code. Analytics gaps during a circuit-open period are incomplete reporting, not financial records.
+
 ## Backend ops contract — 2026-10-19
 
 - `/api/commerce/jobs` is the outbox/intent-expiry worker. **2026-10-21 owner override:** `vercel.json` temporarily runs it once daily (`0 2 * * *`, 02:00–02:59 UTC on Hobby) to fit the free cron limit. This supersedes the previous five-minute schedule. Daily execution is for preview/development: expiry cleanup and payment/refund/document background work are delayed; the worker currently claims only one outbox job per invocation. Restore a monitored five-minute scheduler before live commerce; track the upgrade in `docs/FUTURE_UPGRADES.md`. Vercel authenticates with `Authorization: Bearer ${CRON_SECRET}`; external schedulers use `COMMERCE_JOB_AUTH_SECRET`. Both must be ≥32 chars; route logic stays timing-safe and fail-closed (401). Never widen auth beyond these two secrets.

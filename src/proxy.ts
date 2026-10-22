@@ -3,7 +3,7 @@ import createMiddleware from "next-intl/middleware";
 import { NextResponse, type NextRequest } from "next/server";
 import { routing } from "@/i18n/routing";
 import { authRequestUrl } from "@/lib/password-recovery";
-import { supabaseFetch } from "@/lib/supabase/fetch";
+import { supabaseFetchFast } from "@/lib/supabase/fetch";
 import { contentSecurityPolicy } from "@/lib/security-policy";
 
 const intlMiddleware = createMiddleware(routing);
@@ -54,7 +54,7 @@ export default async function proxy(request: NextRequest) {
     request.cookies.getAll().some(({ name }) => name.startsWith("sb-"))
   ) {
     const supabase = createServerClient(url, key, {
-      global: { fetch: supabaseFetch },
+      global: { fetch: supabaseFetchFast },
       cookies: {
         getAll: () => request.cookies.getAll(),
         setAll(cookies) {
@@ -72,7 +72,12 @@ export default async function proxy(request: NextRequest) {
     // getClaims falls back to a remote user check for symmetric signing keys.
     // Protected data still performs a fresh getUser + database role/status
     // check in the DAL; proxy claims are never trusted for authorization.
-    await supabase.auth.getClaims();
+    try {
+      await supabase.auth.getClaims();
+    } catch {
+      // An auth-refresh outage must not break public navigation. Protected data
+      // still verifies the session in the data layer before authorizing.
+    }
     response.headers.set("Cache-Control", "private, no-store");
   }
   // Preserve next-intl's locale override and refreshed cookies while forwarding

@@ -99,6 +99,9 @@
     .mgmt-topbar__lang-btn,
     .mgmt-topbar__storefront-link
   ) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 0.85rem;
   min-block-size: 2.7rem;
   line-height: 1.4;

@@ -383,6 +383,33 @@ test("global navigation never persists outage or invalid-payload fallbacks", asy
   assert.equal(h.entries.size, 1);
 });
 
+test("global navigation serves the last known-good labels during an outage", async () => {
+  const h = harness();
+  const initial = await h.run(visitor(), () =>
+    h.exports.getStoreNavigationCategories("en"),
+  );
+  assert.equal(initial[0].label, "Cameras");
+
+  h.entries.clear();
+  const outage = await h.run(
+    visitor({ navigationError: { code: "outage" } }),
+    () => h.exports.getStoreNavigationCategories("en"),
+  );
+  assert.equal(outage[0].label, "Cameras");
+  assert.equal(h.entries.size, 0, "the failed read is never persisted");
+
+  h.entries.clear();
+  const invalid = await h.run(
+    visitor({ navigationRows: [{ slug: "cameras", name_en: "Cameras" }] }),
+    () => h.exports.getStoreNavigationCategories("he"),
+  );
+  assert.deepEqual(
+    Array.from(invalid, ({ key, label }) => ({ key, label })),
+    [{ key: "cameras", label: "מצלמות" }],
+    "stale bilingual labels keep the requested locale",
+  );
+});
+
 test("global navigation filters internal categories at the anonymous query boundary", async () => {
   const h = harness();
   const request = visitor({

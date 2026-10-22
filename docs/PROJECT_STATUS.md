@@ -1,6 +1,42 @@
 # Project Status
 
-Last updated: 2026-10-22 (full-screen request details workspace)
+Last updated: 2026-10-22 (Supabase transport resilience + management topbar fixes)
+
+## Supabase transport resilience and management topbar fixes — 2026-10-22
+
+### Management console topbar/overlay fixes (Version 2)
+
+- Centered lucide glyphs inside the bordered topbar frames at every compact breakpoint: controls toggle, theme selector/buttons, workspace search, storefront link, language button, role badge and icon actions (`management-navbar.css`, `console-evolution.css`). Version 1 public styling is untouched.
+- Replaced the storefront link's visible inline text with the shared `IconLink` tooltip pattern so no text can escape the icon frame; removed the unused `.mgmt-topbar__storefront-text` rules from `management-navbar.css` and `management.css`.
+- Moved navbar dropdowns to a 1.25rem offset and dialog roots to `align-items: start` with 6rem top padding, so the navbar border/animation can no longer overhide them.
+
+### Supabase root cause
+
+- Dev logs showed `ConnectTimeoutError ... ffzemicpwwxmxptuwevo.supabase.co:443, timeout: 10000ms`, `check_rate_limit failed: TypeError: fetch failed`, 60–67s `/api/track` beacons and 10–12s page renders. `.env.local` points at the same host and the key is present. A live probe now returns HTTP 401 but takes 1.2–2.0s just to connect, so this was a degraded/intermittent network path or a paused/waking project, not a missing key and not the older PostgreSQL `42501` permission failure.
+- Why it cascaded: `/api/track` made four sequential round trips (auth, two rate-limit RPCs, insert) at up to 15s each; every page render waited out the catalog/nav deadline; `/api/auth/session` re-verified the user remotely and the proxy refreshed claims on navigation. The tracking retry storm saturated the dev server and made unrelated pages slow.
+
+### Resilience changes
+
+- `src/lib/supabase/fetch.ts` now owns three budgets: 15s for critical requests, 6s for anonymous public reads, 4s for analytics/session/proxy. Two consecutive `TypeError`/`TimeoutError` transport failures open a process-local 30s circuit; any HTTP response closes it. Breaker and deadline errors are abort-shaped so the installed Supabase SDK stops retrying idempotent reads immediately, while their `code` values (`SUPABASE_UNAVAILABLE`, `SUPABASE_TIMEOUT`) remain distinguishable from caller cancellation.
+- `/api/track` returns `{ ok: true }` immediately while the circuit is open, skips remote auth unless an `sb-*` cookie is present, evaluates both rate-limit windows in parallel and uses the fast cookie client. `/api/auth/session` skips the network entirely for anonymous visitors or an open circuit and fails closed on verification errors. The proxy bounds `getClaims()` with the fast fetcher and swallows refresh failure so protected navigation is not broken.
+- Global Store navigation keeps a process-local last-known-good bilingual label snapshot. Failed or invalid revalidations serve those labels instead of an empty menu, while the failed loader still throws so the Next data cache never persists a fallback. Products, stock and prices remain request-only and are never served stale.
+- Verification: `node --test --test-concurrency=2 tests/unit/*.test.mjs` — 358 passed (including 12 new resilience cases); `npm run lint` — 0 warnings; `npm run typecheck` — passed; `npm run build` — passed (Next.js 16.3.8, 148 static/dynamic routes); Prettier — passed on every touched source/test file.
+- Not run: a sustained synthetic outage against a live dev server. The breaker/deadline behavior is unit-tested with fake transports; real first-hit bounds are 6s for public reads and 4s per fast stage before the circuit opens.
+
+### Owner actions and reporting caveat
+
+- Owner: check the Supabase dashboard for project pause/region health and the local network path. The 1.2–2.0s TCP connect is still abnormal; the code changes make the app degrade quickly but cannot repair the route.
+- Analytics events are intentionally dropped while the circuit is open. Treat those gaps as incomplete analytics, not reconciled financial records; the storefront and checkout never wait on tracking.
+- No new legal, privacy or accessibility blocker was introduced. Re-run the manual bilingual keyboard/screen-reader pass for the management topbar tooltips before launch as part of the existing accessibility gate.
+
+## NVIDIA CLI bridge Linux systemd service — 2026-10-22
+
+- The NVIDIA compatibility bridge (`scripts/nvidia-cli-bridge.mjs`) was only configured for macOS via a LaunchAgent. On Linux the bridge had no persistent service, causing intermittent "connection refused" errors when Kimi Code or OpenCode tried to reach `http://127.0.0.1:19119/v1`.
+- Installed the bridge to `~/.local/share/kimi-nvidia-compat/bridge.mjs` and created a systemd user service (`~/.config/systemd/user/nvidia-cli-bridge.service`) that starts on login, restarts on failure, and logs to `~/.local/state/kimi-nvidia-compat/`.
+- Verified: `systemctl --user enable --now nvidia-cli-bridge.service` brings the bridge up; health endpoint returns `{"service":"miro-nvidia-cli-bridge","version":2,"maxAttempts":20}`; models endpoint proxies NVIDIA's model list; all 20 unit tests pass; `npm run lint`, `npm run typecheck`, `npm run build` all pass.
+- The bridge retains all Version 2 behavior: strips `prompt_cache_key`, applies Ultra reasoning settings, buffers SSE`delimiter, retries transient 429/502/503/504 up to 20 attempts with`Retry-After`/exponential backoff, honors `X-Miro-Retry-Owner: client` for caller-owned retries, and never logs prompts/responses/credentials.
+- OpenCode's `opencode.json` already points to `http://127.0.0.1:19119/v1` with model `nvidia/nemotron-ultra` (mapped to `nvidia/nemotron-3-ultra-550b-a55b`) and GPT-OSS 20B workers — no configuration change needed.
+- Owner actions: ensure a valid NVIDIA API key is configured in each CLI's private configuration (the bridge forwards the `Authorization` header). For boot-time startup (not just login), run `loginctl enable-linger $USER`.
 
 ## Full-screen request details redesign — 2026-10-22
 
@@ -2869,7 +2905,6 @@ Final verification for reversible backgrounds:
 - Publication checks: `npm run lint`, `npm run typecheck`, `npm run build` and `git diff --check` passed. Node unit suite initially exposed three stale management rate-limit mocks; added the shared helper response to those mocks without changing route behavior or assertions. Rerun `node --test --test-concurrency=2 tests/unit/*.test.mjs` passed 295/295. Staged-file credential/private-artifact pattern scan passed with zero findings. Browser/live SQL/worker checks were not rerun for this Git handoff; prior entries retain their documented scope.
 - Legal/privacy/accessibility and launch owners remain unchanged: business/privacy owner approves retained-original access/retention and media rights; QA owner completes manual bilingual screen-reader/physical-device review; business/accountant/provider owners complete merchant/fiscal readiness. Git publication does not activate payments, issue fiscal documents or certify hosting readiness. Git push/merge results are reported in the final handoff.
 
-
 ## 2026-10-21 — Local repository synchronized with origin/main
 
 - Owner requested the latest repository updates. Fetched origin (including new release/feature branches) and fast-forwarded clean local `main` from `1071dea` to `6c275c2` (`Merge branch '0.1.2'`) without conflicts or discarded work. Package version remains `0.1.1`; the numbered integration branch does not bump it.
@@ -2909,7 +2944,6 @@ Final verification for reversible backgrounds:
 - Final verification: focused executable regressions PASS **31/31** and full `node --test --test-concurrency=2 tests/unit/*.test.mjs` PASS **305/305**, including real installed-SDK transient recovery/shared-deadline cancellation, per-table failures and subsequent recovery, request isolation, category/detail outage states and both localized retry controls. `npm run lint`, `npm run typecheck`, `npm run build` (148 routes/pages), scoped Prettier and `git diff --check` PASS. Read-only live `/he` and `/en` requests returned HTTP 200 with real product-card markup, no outage state and no old catalog-error text; timings were about 12.7/12.3 seconds and include independent layout/optional-data work. Simulated outage/retry behavior was verified in executable SDK/page/component tests, not by disabling the owner's live database. Unrelated concurrent scheduler/future-upgrade edits were preserved and were not part of this catalog fix. No deployment was performed.
 - Legal/privacy/accessibility: public messages expose no backend details; no data collection, credential change or database write was added. Semantic headings, polite status, native keyboard controls and existing theme/layout styles are used. QA owner retains manual bilingual screen-reader/device approval; engineering owner retains investigation of recurring upstream/network outages; deployment owner retains the previously identified Vercel cron plan mismatch. This source change does not deploy or repair an unreachable upstream network.
 
-
 ## 2026-10-21 — Owner-approved temporary daily cron and future upgrade checklist
 
 - Owner explicitly requested stopping/reducing the scheduler to fit the free plan, unblock deployment and retain a reminder to upgrade later. Changed only the Vercel cron expression from `*/5 * * * *` to `0 2 * * *` (daily at 02:00 UTC; Hobby may execute within that hour). This explicit owner decision supersedes the earlier recommendation against silently reducing the cadence. Worker behavior and authentication remain unchanged.
@@ -2918,7 +2952,6 @@ Final verification for reversible backgrounds:
 - Verified the exact single daily route/schedule and preserved install/build commands using a Node assertion. Scoped Prettier and `git diff --check` passed. Isolated worktree based on `origin/main` passed `npm ci --no-audit --no-fund`, `npm run lint` and `npm run build` (148 routes/pages, including TypeScript); it excludes unrelated in-progress catalog changes and their runbook edits. Separate `npm run typecheck` also passed. Publication results are checked after this entry. No new application behavior or database migration was introduced.
 - Deployment owner action: publish this scoped configuration and verify the production commit/alias and Cron settings. Vercel must have a server-only `CRON_SECRET` of at least 32 characters; keep unauthenticated requests denied. Initial Git push preflight found the configured temporary GitHub CLI credential-helper executable missing. Restored that temporary CLI from the Ubuntu package after verifying its repository SHA-512, and verified the existing owner keyring login; no new login, token disclosure or repository credentials were introduced. Publication is verified separately.
 - Legal/privacy/accessibility: no new collection or interface changes. Business owner must resolve commercial hosting eligibility before launch; existing privacy/media-retention, merchant/provider/accountant and manual bilingual accessibility approvals remain with their documented owners. Scheduler frequency/capacity upgrade is tracked in `docs/FUTURE_UPGRADES.md`.
-
 
 ### Daily cron publication verified — 2026-10-21
 
