@@ -160,7 +160,9 @@ test("a stalled preview image settles to an illustration and Escape still works"
     "eager",
   );
   await page.clock.fastForward(8_500);
-  await expect(preview.locator(".sf-hover-preview-media > svg")).toBeVisible();
+  await expect(
+    preview.locator(".sf-hover-preview-media .sf-product-visual"),
+  ).toBeVisible();
   await expect(preview.locator(".sf-hover-preview-title")).toBeVisible();
   await page.keyboard.press("Escape");
   await page.clock.fastForward(500);

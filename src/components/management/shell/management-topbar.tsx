@@ -19,7 +19,7 @@ import {
   Store,
   Pause,
   Play,
-  SlidersHorizontal,
+  Ellipsis,
 } from "lucide-react";
 import { roleLabel, type AppRole } from "@/lib/roles";
 import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
@@ -32,7 +32,7 @@ import {
 } from "./nav-config";
 import { IconAction, IconLink } from "../ui/icon-action";
 import { AccountMenu } from "./account-menu";
-import { WorkspaceTools } from "./workspace-tools";
+import { WorkspaceDisplay, WorkspaceTools } from "./workspace-tools";
 
 import {
   transitionTheme,
@@ -272,11 +272,12 @@ export function ManagementTopbar({
           type="button"
           className="mgmt-topbar__controls-toggle"
           aria-label={he ? "כלים ותצוגה" : "Tools and display"}
+          title={he ? "כלים ותצוגה" : "Tools and display"}
           aria-expanded={controlsOpen}
           aria-controls={controlsId}
           onClick={() => setControlsOpen((open) => !open)}
         >
-          <SlidersHorizontal size={19} aria-hidden="true" />
+          <Ellipsis size={19} aria-hidden="true" />
         </button>
         <div
           id={controlsId}
@@ -295,99 +296,130 @@ export function ManagementTopbar({
             setControlsOpen(true);
           }}
         >
-          <WorkspaceTools locale={locale} role={role} />
-          <IconLink
-            href={withLocale(locale, "store")}
-            className="mgmt-topbar__storefront-link"
-            label={mgmtShellCopy.storefrontLink[locale]}
-            aria-label={mgmtShellCopy.storefrontLink[locale]}
-          >
-            <Store size={18} aria-hidden="true" />
-          </IconLink>
           <div
-            className="mgmt-topbar__theme-selector"
+            className="mgmt-topbar__control-group mgmt-topbar__control-group--work"
             role="group"
-            aria-label={he ? "בחירת ערכת נושא" : "Select theme"}
+            aria-label={he ? "ניווט וכלי עבודה" : "Navigation and work tools"}
           >
-            <button
-              type="button"
-              className="mgmt-topbar__theme-btn"
-              data-theme-option="dark"
-              aria-label={themeLabels.dark}
-              aria-pressed={themeMode === "dark"}
-              onClick={(event) =>
-                transitionTheme("dark", event.currentTarget, animationSettings)
-              }
+            <WorkspaceTools locale={locale} role={role} />
+            <IconLink
+              href={withLocale(locale, "store")}
+              className="mgmt-topbar__storefront-link"
+              label={mgmtShellCopy.storefrontLink[locale]}
+              aria-label={mgmtShellCopy.storefrontLink[locale]}
             >
-              <Moon size={18} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className="mgmt-topbar__theme-btn"
-              data-theme-option="medium"
-              aria-label={themeLabels.medium}
-              aria-pressed={themeMode === "medium"}
-              onClick={(event) =>
-                transitionTheme(
-                  "medium",
-                  event.currentTarget,
-                  animationSettings,
-                )
-              }
-            >
-              <SunMoon size={18} aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              className="mgmt-topbar__theme-btn"
-              data-theme-option="light"
-              aria-label={themeLabels.light}
-              aria-pressed={themeMode === "light"}
-              onClick={(event) =>
-                transitionTheme("light", event.currentTarget, animationSettings)
-              }
-            >
-              <Sun size={18} aria-hidden="true" />
-            </button>
+              <Store size={18} aria-hidden="true" />
+            </IconLink>
           </div>
-          <IconAction
-            label={
-              textPaused
-                ? he
-                  ? "הפעלת תנועת טקסט"
-                  : "Resume scrolling text"
-                : he
-                  ? "עצירת תנועת טקסט"
-                  : "Pause scrolling text"
-            }
-            aria-pressed={textPaused}
-            onClick={() => {
-              document.documentElement.dataset.textMotion = textPaused
-                ? "running"
-                : "paused";
-              window.dispatchEvent(new Event("miro-text-motion"));
-            }}
+          <div
+            className="mgmt-topbar__control-group mgmt-topbar__control-group--display"
+            role="group"
+            aria-label={he ? "תצוגה ותנועה" : "Display and motion"}
           >
-            {textPaused ? (
-              <Play size={18} aria-hidden="true" />
-            ) : (
-              <Pause size={18} aria-hidden="true" />
-            )}
-          </IconAction>
-          <button
-            type="button"
-            className="mgmt-topbar__lang-btn"
-            onClick={handleLocaleChange}
-            aria-label={he ? "Switch to English" : "מעבר לעברית"}
+            <WorkspaceDisplay locale={locale} />
+            <div
+              className="mgmt-topbar__theme-selector"
+              role="group"
+              aria-label={he ? "בחירת ערכת נושא" : "Select theme"}
+            >
+              <button
+                type="button"
+                className="mgmt-topbar__theme-btn"
+                data-theme-option="dark"
+                aria-label={themeLabels.dark}
+                title={themeLabels.dark}
+                aria-pressed={themeMode === "dark"}
+                onClick={(event) =>
+                  transitionTheme(
+                    "dark",
+                    event.currentTarget,
+                    animationSettings,
+                  )
+                }
+              >
+                <Moon size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="mgmt-topbar__theme-btn"
+                data-theme-option="medium"
+                aria-label={themeLabels.medium}
+                title={themeLabels.medium}
+                aria-pressed={themeMode === "medium"}
+                onClick={(event) =>
+                  transitionTheme(
+                    "medium",
+                    event.currentTarget,
+                    animationSettings,
+                  )
+                }
+              >
+                <SunMoon size={18} aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                className="mgmt-topbar__theme-btn"
+                data-theme-option="light"
+                aria-label={themeLabels.light}
+                title={themeLabels.light}
+                aria-pressed={themeMode === "light"}
+                onClick={(event) =>
+                  transitionTheme(
+                    "light",
+                    event.currentTarget,
+                    animationSettings,
+                  )
+                }
+              >
+                <Sun size={18} aria-hidden="true" />
+              </button>
+            </div>
+            <IconAction
+              label={
+                textPaused
+                  ? he
+                    ? "הפעלת תנועת טקסט"
+                    : "Resume scrolling text"
+                  : he
+                    ? "עצירת תנועת טקסט"
+                    : "Pause scrolling text"
+              }
+              aria-pressed={textPaused}
+              onClick={() => {
+                document.documentElement.dataset.textMotion = textPaused
+                  ? "running"
+                  : "paused";
+                window.dispatchEvent(new Event("miro-text-motion"));
+              }}
+            >
+              {textPaused ? (
+                <Play size={18} aria-hidden="true" />
+              ) : (
+                <Pause size={18} aria-hidden="true" />
+              )}
+            </IconAction>
+          </div>
+          <div
+            className="mgmt-topbar__control-group mgmt-topbar__control-group--identity"
+            role="group"
+            aria-label={he ? "שפה ותפקיד" : "Language and role"}
           >
-            {he ? "EN" : "עב"}
-          </button>
-          <span
-            className={`mgmt-role-badge mgmt-role-badge--${role}`}
-            title={roleLabel(role, locale)}
-          >
-            {roleLabel(role, locale)}
-          </span>
+            <button
+              type="button"
+              className="mgmt-topbar__lang-btn"
+              onClick={handleLocaleChange}
+              aria-label={he ? "Switch to English" : "מעבר לעברית"}
+              title={he ? "Switch to English" : "מעבר לעברית"}
+            >
+              {he ? "EN" : "עב"}
+            </button>
+            <span
+              className={`mgmt-role-badge mgmt-role-badge--${role}`}
+              title={roleLabel(role, locale)}
+            >
+              {roleLabel(role, locale)}
+            </span>
+          </div>
         </div>
         <AccountMenu
           locale={locale}

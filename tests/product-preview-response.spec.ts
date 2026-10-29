@@ -262,7 +262,7 @@ test("pointer travel from the popup to its source preserves the same open dialog
   // Natural card content can extend below the viewport. Return to its visible
   // edge so this checks pointer intent rather than hit-testing offscreen.
   const viewportHeight = page.viewportSize()!.height;
-  const returnPoint = [
+  const candidates = [
     {
       x: source.x + source.width / 2,
       y: Math.min(source.y + source.height - 2, viewportHeight - 2),
@@ -270,16 +270,28 @@ test("pointer travel from the popup to its source preserves the same open dialog
     { x: source.x + source.width / 2, y: source.y + 2 },
     { x: source.x + 2, y: source.y + source.height / 2 },
     { x: source.x + source.width - 2, y: source.y + source.height / 2 },
-  ].find(
+  ].filter(
     ({ x, y }) =>
-      x < popup.x ||
-      x > popup.x + popup.width ||
-      y < popup.y ||
-      y > popup.y + popup.height,
+      x >= 0 &&
+      x < page.viewportSize()!.width &&
+      y >= 0 &&
+      y < viewportHeight &&
+      (x < popup.x ||
+        x > popup.x + popup.width ||
+        y < popup.y ||
+        y > popup.y + popup.height),
+  );
+  const returnPoint = await sourceElement.evaluate(
+    (element, points) =>
+      points.find(({ x, y }) => {
+        const hit = document.elementFromPoint(x, y);
+        return hit !== null && element.contains(hit);
+      }),
+    candidates,
   );
   test.skip(
     !returnPoint,
-    "The expanded popup fully covers its source at this viewport",
+    "No visible source point is reachable outside the popup at this viewport",
   );
   await preview.evaluate((element) => {
     (element as HTMLElement).dataset.responseIdentity = "same-dialog";

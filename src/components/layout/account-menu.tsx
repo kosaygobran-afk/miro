@@ -8,6 +8,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { roleLabel, type AppRole } from "@/lib/roles";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 
 type SessionData = {
   authenticated: boolean;
@@ -38,6 +39,7 @@ export function AccountMenu({
   compact?: boolean;
   onNavigate?: () => void;
 }) {
+  const animationSettings = useAnimationSettings();
   const pathname = usePathname();
   const router = useRouter();
   const [session, setSession] = useState<SessionData>({
@@ -58,13 +60,22 @@ export function AccountMenu({
     if (!button || !dropdown) return;
     const place = () => {
       const anchor = button.getBoundingClientRect();
-      const width = Math.min(280, window.innerWidth - 32);
+      const viewport = window.visualViewport;
+      const viewportWidth = viewport?.width ?? window.innerWidth;
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const leftEdge = viewport?.offsetLeft ?? 0;
+      const topEdge = viewport?.offsetTop ?? 0;
+      const width = Math.min(
+        animationSettings.appearanceVersion === "2" ? 320 : 280,
+        viewportWidth - 32,
+      );
+      dropdown.style.maxHeight = `${Math.max(0, viewportHeight - 32)}px`;
       dropdown.style.width = `${width}px`;
       const preferredLeft =
         locale === "he" ? anchor.left : anchor.right - width;
-      dropdown.style.left = `${Math.max(16, Math.min(preferredLeft, window.innerWidth - width - 16))}px`;
+      dropdown.style.left = `${Math.max(leftEdge + 16, Math.min(preferredLeft, leftEdge + viewportWidth - width - 16))}px`;
       // Reserve the entrance's 4px translation inside the lower gutter too.
-      dropdown.style.top = `${Math.max(16, Math.min(anchor.bottom + 8, window.innerHeight - dropdown.offsetHeight - 20))}px`;
+      dropdown.style.top = `${Math.max(topEdge + 16, Math.min(anchor.bottom + 10, topEdge + viewportHeight - dropdown.offsetHeight - 20))}px`;
     };
     place();
     const observer = new ResizeObserver(place);
@@ -72,6 +83,8 @@ export function AccountMenu({
     observer.observe(dropdown);
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
+    window.visualViewport?.addEventListener("resize", place);
+    window.visualViewport?.addEventListener("scroll", place);
     dropdown
       .querySelector<HTMLElement>('[role="menuitem"]')
       ?.focus({ preventScroll: true });
@@ -79,8 +92,10 @@ export function AccountMenu({
       observer.disconnect();
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
+      window.visualViewport?.removeEventListener("resize", place);
+      window.visualViewport?.removeEventListener("scroll", place);
     };
-  }, [open, locale]);
+  }, [open, locale, animationSettings.appearanceVersion]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -247,6 +262,11 @@ export function AccountMenu({
             role="menu"
             aria-label={labels.userMenu}
             onKeyDown={(event) => {
+              if (event.key === "Tab") {
+                setOpen(false);
+                buttonRef.current?.focus();
+                return;
+              }
               if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key))
                 return;
               event.preventDefault();
@@ -275,8 +295,8 @@ export function AccountMenu({
                 <UserRound size={24} />
               </div>
               <div className="premium-account-info">
-                <p className="premium-account-display-name">
-                  {session.name ?? "User"}
+                <p className="premium-account-display-name" dir="auto">
+                  {session.name || (locale === "he" ? "משתמש" : "User")}
                 </p>
                 {role && (
                   <span className="premium-account-role">

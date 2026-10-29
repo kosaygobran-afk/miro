@@ -1,5 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+
+async function openProduct(page: Page, locale: "he" | "en") {
+  await page.goto(`/${locale}/store`);
+  const link = page.locator(".sf-product-card .sf-product-title-link").first();
+  await expect(link).toBeVisible();
+  const href = await link.getAttribute("href");
+  expect(href).toBeTruthy();
+  return page.goto(href!);
+}
 
 test.describe("Storefront - Comprehensive Tests", () => {
   test.beforeEach(async ({ page }) => {
@@ -167,13 +176,10 @@ test.describe("Storefront - Comprehensive Tests", () => {
   });
 
   test("Product detail page loads and passes axe", async ({ page }) => {
-    await page.goto("/he/store/cameras/miro-4k-pro");
-    await page.waitForLoadState("networkidle");
-
-    // Check if page loads (not 404)
-    const response = await page.goto("/he/store/cameras/miro-4k-pro");
+    const response = await openProduct(page, "he");
     console.log(`Product detail page status: ${response?.status()}`);
     expect(response?.status()).toBe(200);
+    await expect(page.locator(".sf-product-detail")).toBeVisible();
 
     if (response?.status() === 200) {
       const results = await new AxeBuilder({ page })
@@ -197,10 +203,7 @@ test.describe("Storefront - Comprehensive Tests", () => {
   test("Product detail page has image gallery with thumbnails", async ({
     page,
   }) => {
-    await page.goto("/he/store/cameras/miro-4k-pro");
-    await page.waitForLoadState("networkidle");
-
-    const response = await page.goto("/he/store/cameras/miro-4k-pro");
+    const response = await openProduct(page, "he");
     expect(response?.status()).toBe(200);
 
     if (response?.status() === 200) {

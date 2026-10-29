@@ -1,5 +1,11 @@
 # MIRO animation, loading and appearance system
 
+## Category and account menu refinement — 2026-10-23
+
+Version 2 root-category and account panels retain the existing opaque `motion-menu-in` entrance, governed by Menus and its saved duration/easing. Category rows animate their border/background and move the decorative arrow 3px in reading direction on hover or keyboard focus. Account action icons lift 1px. These local hover effects use the existing Micro-interactions switch and duration/easing; master-off and reduced motion remove the movement. Do not add row entrance delays, animate label text, fade menu copy or delay clicks.
+
+`StoreCategoryMenu` owns the new category list markup; the original appearance renders the prior markup. The public and management account components preserve their original sign-out flows. The management Version 2 account panel portals to the existing theme-aware management host; viewport placement is measured independently of the blurred sticky header. Public and management panels observe resize/scroll/visual viewport changes and keep native scrolling for short windows. Initial account focus runs in the layout phase before paint; a delayed animation frame can lose an immediate arrow/Home/End key. Category collapse restores the visible mobile opener, while account Escape restores its trigger and Tab leaves the popup. See the newest `docs/DESIGN_SYSTEM.md` contract and `tests/navbar-panels.spec.ts` / `scripts/verify-management-navbar.mjs` for coverage.
+
 ## Preview magnifier interaction — 2026-10-17
 
 The same interaction now applies to every Version 2 product-detail gallery through `ProductImageMagnifier`, not only card/rail previews. Each selected photo has its own keyed instance. Page gallery arrows/thumbnails remain independent of lens/slider keyboard input. On product pages, Escape is scoped to the image/controls; account menus and other overlays keep their own Escape priority. Preview dialogs retain their document-level first-Escape zoom exit. The detail wrapper preserves panel geometry and image priority, shares the exact base/lens media inset and disables the previous image hover-scale effect. Version 1 keeps its original gallery.

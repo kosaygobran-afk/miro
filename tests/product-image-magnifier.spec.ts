@@ -122,8 +122,13 @@ for (const locale of ["en", "he"] as const) {
             overflow: document.documentElement.scrollWidth > innerWidth + 1,
             balanced:
               innerWidth <= 1100 ||
-              (Math.abs(gallery.width - info.width) < 2 &&
-                Math.abs(gallery.height - info.height) < 2),
+              (innerWidth < 1280
+                ? Math.abs(gallery.width - info.width) < 2 &&
+                  Math.abs(gallery.height - info.height) < 2
+                : Math.abs(gallery.width / info.width - 1.05 / 0.95) < 0.01 &&
+                  Math.abs(gallery.top - info.top) < 2 &&
+                  gallery.height >= 479 &&
+                  gallery.height <= 609),
             fullWidthMobile:
               innerWidth > 600 || Math.abs(main.width - gallery.width) < 2,
             renderedImage:

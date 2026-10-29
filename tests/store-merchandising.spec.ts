@@ -36,7 +36,7 @@ test.describe("Storefront merchandising interactions", () => {
     await indicator.focus();
     await expect(indicator).toBeFocused();
   });
-  test("eye button opens the in-place 3D expansion, stays in the viewport, and closes", async ({
+  test("eye button opens a viewport-bounded preview and closes", async ({
     page,
   }) => {
     await page.goto("/en/store");
@@ -48,20 +48,21 @@ test.describe("Storefront merchandising interactions", () => {
     await expect(page.locator(".sf-hover-preview")).toBeVisible({
       timeout: 800,
     });
+    await page.locator(".sf-hover-preview").evaluate(async (element) => {
+      await Promise.all(
+        element
+          .getAnimations()
+          .map((animation) => animation.finished.catch(() => {})),
+      );
+    });
     const bounds = await page.locator(".sf-hover-preview").boundingBox();
-    const mediaBounds = await media.boundingBox();
     const viewport = page.viewportSize();
     expect(bounds).not.toBeNull();
-    expect(mediaBounds).not.toBeNull();
     expect(viewport).not.toBeNull();
     expect(bounds!.x).toBeGreaterThanOrEqual(0);
     expect(bounds!.y).toBeGreaterThanOrEqual(0);
     expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport!.width);
     expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(viewport!.height);
-    expect(bounds!.y).toBeLessThan(mediaBounds!.y + mediaBounds!.height);
-    expect(bounds!.y + bounds!.height).toBeGreaterThan(mediaBounds!.y);
-    expect(bounds!.x).toBeLessThan(mediaBounds!.x + mediaBounds!.width);
-    expect(bounds!.x + bounds!.width).toBeGreaterThan(mediaBounds!.x);
 
     const thumbnails = page.locator(".sf-hover-preview-thumbnail");
     const thumbnailCount = await thumbnails.count();
@@ -147,7 +148,14 @@ test.describe("Storefront merchandising interactions", () => {
   test("product page gallery exposes side thumbnails and circular arrow navigation", async ({
     page,
   }) => {
-    const response = await page.goto("/en/store/cameras/miro-4k-pro");
+    await page.goto("/en/store");
+    const link = page
+      .locator(".sf-product-card .sf-product-title-link")
+      .first();
+    await expect(link).toBeVisible();
+    const href = await link.getAttribute("href");
+    expect(href).toBeTruthy();
+    const response = await page.goto(href!);
     expect(response?.status()).toBe(200);
     await expect(page.locator(".sf-main-image")).toBeVisible();
     const thumbnails = page.locator(".sf-thumbnail");

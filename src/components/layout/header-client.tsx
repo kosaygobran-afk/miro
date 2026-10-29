@@ -26,6 +26,7 @@ import {
 import { createPortal } from "react-dom";
 import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
 import { Brand } from "@/components/layout/brand";
+import { StoreCategoryMenu } from "@/components/layout/store-category-menu";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { HeaderCartLink } from "@/features/cart/header-cart-link";
 
@@ -218,6 +219,19 @@ export function HeaderClient({
     };
   }, [open, productsOpen]);
 
+  // A desktop dropdown must not retain hidden focus after the hamburger breakpoint.
+  useEffect(() => {
+    if (!productsOpen) return;
+    const compact = window.matchMedia("(max-width: 1199px)");
+    const collapse = () => {
+      if (!compact.matches) return;
+      setProductsOpen(false);
+      menuButton.current?.focus({ preventScroll: true });
+    };
+    compact.addEventListener("change", collapse);
+    return () => compact.removeEventListener("change", collapse);
+  }, [productsOpen]);
+
   function closeNavigation() {
     setOpen(false);
     setProductsOpen(false);
@@ -283,42 +297,66 @@ export function HeaderClient({
             aria-expanded={productsOpen}
             aria-controls="store-navigation"
             onClick={() => setProductsOpen(!productsOpen)}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowDown") return;
+              event.preventDefault();
+              setProductsOpen(true);
+              requestAnimationFrame(() =>
+                productsMenu.current
+                  ?.querySelector<HTMLElement>("#store-navigation a")
+                  ?.focus(),
+              );
+            }}
           >
             <ChevronDown size={13} aria-hidden="true" />
           </button>
           {productsOpen && (
-            <div id="store-navigation" className="premium-dropdown">
-              <p>{he ? "לכל צורך, הפתרון שלו" : "Find the right fit"}</p>
-              {categories.map(({ key, label }) => (
-                <Link
-                  key={key}
-                  href={withLocale(locale, `store/${key}`)}
-                  prefetch={false}
-                  onClick={closeNavigation}
-                  className="miro-centered-control"
-                >
-                  <span className="miro-control-label">{label}</span>
-                  <Arrow
-                    className="miro-control-end"
-                    size={15}
-                    aria-hidden="true"
-                  />
-                </Link>
-              ))}
-              <Link
-                href={productsHref}
-                onClick={closeNavigation}
-                className="premium-dropdown-all miro-centered-control"
-              >
-                <span className="miro-control-label">
-                  {he ? "לכל המוצרים" : "Explore the store"}
-                </span>
-                <Arrow
-                  className="miro-control-end"
-                  size={15}
-                  aria-hidden="true"
+            <div
+              id="store-navigation"
+              className={`premium-dropdown${animationSettings.appearanceVersion === "2" ? " premium-category-menu" : ""}`}
+            >
+              {animationSettings.appearanceVersion === "2" ? (
+                <StoreCategoryMenu
+                  locale={locale}
+                  categories={categories}
+                  pathname={pathname}
+                  onNavigate={closeNavigation}
                 />
-              </Link>
+              ) : (
+                <>
+                  <p>{he ? "לכל צורך, הפתרון שלו" : "Find the right fit"}</p>
+                  {categories.map(({ key, label }) => (
+                    <Link
+                      key={key}
+                      href={withLocale(locale, `store/${key}`)}
+                      prefetch={false}
+                      onClick={closeNavigation}
+                      className="miro-centered-control"
+                    >
+                      <span className="miro-control-label">{label}</span>
+                      <Arrow
+                        className="miro-control-end"
+                        size={15}
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  ))}
+                  <Link
+                    href={productsHref}
+                    onClick={closeNavigation}
+                    className="premium-dropdown-all miro-centered-control"
+                  >
+                    <span className="miro-control-label">
+                      {he ? "לכל המוצרים" : "Explore the store"}
+                    </span>
+                    <Arrow
+                      className="miro-control-end"
+                      size={15}
+                      aria-hidden="true"
+                    />
+                  </Link>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -369,68 +407,73 @@ export function HeaderClient({
           </nav>
           {searchForm("premium-header-search")}
           <div className="premium-header-actions">
-            <HeaderCartLink locale={locale} />
-            <Link
-              href={withLocale(locale, "contact")}
-              className="miro-button miro-button-primary premium-quote-action"
-            >
-              {labels.actions.requestQuote}
-              <Arrow size={16} aria-hidden="true" />
-            </Link>
-            <AccountMenu
-              locale={locale}
-              labels={{
-                account: labels.actions.account,
-                logout: labels.actions.logout,
-                switchToStorefront: labels.actions.switchToStorefront,
-                manageAccount: labels.actions.manageAccount,
-                workerArea: labels.actions.workerArea,
-                adminConsole: labels.actions.adminConsole,
-                myAccount: labels.actions.myAccount,
-                userMenu: labels.actions.userMenu,
-                roleBadge: labels.actions.roleBadge,
-              }}
-              compact
-            />
-            <button
-              type="button"
-              className="premium-language premium-icon-button"
-              onClick={() => {
-                closeNavigation();
-                router.push(
-                  `${switchLocalePath(pathname, he ? "en" : "he")}${window.location.search}${window.location.hash}`,
-                );
-              }}
-              aria-label={he ? "Switch to English" : "מעבר לעברית"}
-            >
-              {he ? "EN" : "עב"}
-            </button>
-            <div
-              className="premium-theme-selector"
-              role="group"
-              aria-label={labels.actions.themeToggle}
-              dir="ltr"
-              suppressHydrationWarning
-            >
-              {modes.map(({ value, icon: Icon, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  data-theme-option={value}
-                  aria-label={label}
-                  title={label}
-                  aria-pressed={themeMode === value}
-                  onClick={(event) =>
-                    transitionTheme(
-                      value,
-                      event.currentTarget,
-                      animationSettings,
-                    )
-                  }
-                >
-                  <Icon size={16} aria-hidden="true" />
-                </button>
-              ))}
+            <div className="premium-header-action-group premium-header-action-group--shopping">
+              <HeaderCartLink locale={locale} />
+              <Link
+                href={withLocale(locale, "contact")}
+                className="miro-button miro-button-primary premium-quote-action"
+              >
+                {labels.actions.requestQuote}
+                <Arrow size={16} aria-hidden="true" />
+              </Link>
+            </div>
+            <div className="premium-header-action-group premium-header-action-group--personal">
+              <AccountMenu
+                locale={locale}
+                labels={{
+                  account: labels.actions.account,
+                  logout: labels.actions.logout,
+                  switchToStorefront: labels.actions.switchToStorefront,
+                  manageAccount: labels.actions.manageAccount,
+                  workerArea: labels.actions.workerArea,
+                  adminConsole: labels.actions.adminConsole,
+                  myAccount: labels.actions.myAccount,
+                  userMenu: labels.actions.userMenu,
+                  roleBadge: labels.actions.roleBadge,
+                }}
+                compact
+              />
+              <button
+                type="button"
+                className="premium-language premium-icon-button"
+                onClick={() => {
+                  closeNavigation();
+                  router.push(
+                    `${switchLocalePath(pathname, he ? "en" : "he")}${window.location.search}${window.location.hash}`,
+                  );
+                }}
+                aria-label={he ? "Switch to English" : "מעבר לעברית"}
+                title={he ? "Switch to English" : "מעבר לעברית"}
+              >
+                {he ? "EN" : "עב"}
+              </button>
+              <div
+                className="premium-theme-selector"
+                role="group"
+                aria-label={labels.actions.themeToggle}
+                dir="ltr"
+                suppressHydrationWarning
+              >
+                {modes.map(({ value, icon: Icon, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    data-theme-option={value}
+                    aria-label={label}
+                    title={label}
+                    aria-pressed={themeMode === value}
+                    onClick={(event) =>
+                      transitionTheme(
+                        value,
+                        event.currentTarget,
+                        animationSettings,
+                      )
+                    }
+                  >
+                    <Icon size={16} aria-hidden="true" />
+                  </button>
+                ))}
+              </div>
             </div>
             <button
               ref={menuButton}

@@ -22,7 +22,7 @@
     "bidi-js": "^1.1.0",
     "clsx": "^2.1.1",
     "lucide-react": "^1.47.0",
-    "next": "16.3.8",
+    "next": "16.4.3",
     "next-intl": "^4.14.5",
     "next-themes": "^0.4.6",
     "pdfkit": "^0.20.2",
@@ -32,7 +32,7 @@
     "sharp": "0.35.5",
     "tailwind-merge": "^3.7.0",
     "uuid": "^14.0.2",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
@@ -43,7 +43,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.8",
+    "eslint-config-next": "16.4.3",
     "prettier": "^3.9.8",
     "supabase": "^2.121.0",
     "tailwindcss": "^4",

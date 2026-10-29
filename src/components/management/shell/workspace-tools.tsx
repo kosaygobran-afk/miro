@@ -66,20 +66,10 @@ export function WorkspaceTools({
 }) {
   const he = locale === "he";
   const [searchOpen, setSearchOpen] = useState(false);
-  const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const density = useSyncExternalStore(
-    subscribe,
-    readDensity,
-    () => "comfortable",
-  );
   const { toggleTool, getToolState, getLabels } = useManagementTools();
   const posState = getToolState("pos");
   const calcState = getToolState("calculator");
-  useEffect(() => {
-    const shell = document.querySelector<HTMLElement>(".mgmt-shell");
-    if (shell) shell.dataset.density = density;
-  }, [density]);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
@@ -118,12 +108,6 @@ export function WorkspaceTools({
         <span>{he ? "מעבר לעמוד…" : "Go to a page…"}</span>
         <kbd>⌘ K</kbd>
       </button>
-      <IconAction
-        label={he ? "תצוגת סביבת העבודה" : "Workspace display"}
-        onClick={() => setPreferencesOpen(true)}
-      >
-        <SlidersHorizontal size={18} aria-hidden="true" />
-      </IconAction>
       {/* POS and Calculator buttons */}
       <IconAction
         label={getLabels("pos").open}
@@ -203,6 +187,32 @@ export function WorkspaceTools({
           </div>
         </div>
       </Dialog>
+    </>
+  );
+}
+
+/** Display preferences stay with the theme and motion controls in the topbar. */
+export function WorkspaceDisplay({ locale }: { locale: Locale }) {
+  const he = locale === "he";
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const density = useSyncExternalStore(
+    subscribe,
+    readDensity,
+    () => "comfortable",
+  );
+  useEffect(() => {
+    const shell = document.querySelector<HTMLElement>(".mgmt-shell");
+    if (shell) shell.dataset.density = density;
+  }, [density]);
+
+  return (
+    <>
+      <IconAction
+        label={he ? "תצוגת סביבת העבודה" : "Workspace display"}
+        onClick={() => setPreferencesOpen(true)}
+      >
+        <SlidersHorizontal size={18} aria-hidden="true" />
+      </IconAction>
       <Drawer
         open={preferencesOpen}
         onClose={() => setPreferencesOpen(false)}
