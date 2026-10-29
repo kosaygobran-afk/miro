@@ -40,8 +40,8 @@ export const servicesCopy = {
   dialogCreateTitle: { he: "שירות חדש", en: "New service" },
   dialogEditTitle: { he: "עריכת שירות", en: "Edit service" },
   dialogDescription: {
-    he: "השירות נשמר דרך רכיב upsert_service המאמת והמתעד בעל כתוב; עמודים לא פעילים מוסתרים מהאתר הציבורי.",
-    en: "Saved via the validated upsert_service routine; inactive pages are hidden from the public site.",
+    he: "עדכנו את פרטי השירות ואת התוכן שיוצג באתר. שירות לא פעיל לא יוצג באתר הציבורי.",
+    en: "Edit the service details and website content. Inactive services stay hidden from the public site.",
   },
 
   sectionBasics: { he: "יסודות", en: "Basics" },

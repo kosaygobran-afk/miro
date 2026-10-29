@@ -50,6 +50,36 @@
   gap: 0.4rem;
 }
 
+.actionsCell button,
+.badgeActions button {
+  align-self: center;
+}
+
+.positionControls {
+  display: contents;
+}
+
+:global(:root[data-appearance-version="2"]) {
+  .positionCell {
+    display: table-cell;
+  }
+  .positionControls {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+  }
+  .badgeChips,
+  .actionsCell,
+  .productCell {
+    justify-content: center;
+  }
+  .badgeChips,
+  .actionsCell {
+    flex-wrap: wrap;
+  }
+}
+
 .positionValue {
   min-width: 1.4rem;
   font-variant-numeric: tabular-nums;
@@ -98,6 +128,10 @@
   border-radius: 0.55rem;
 }
 
+.previewImage {
+  height: 2.75rem;
+}
+
 .productInfo,
 .promoCell,
 .scheduleCell,
@@ -142,7 +176,9 @@
 
 .badgeChips {
   flex-wrap: wrap;
-  min-width: 9rem;
+  min-width: 0;
+  flex-basis: max-content;
+  align-items: flex-start;
 }
 
 .badgeChip {
@@ -168,6 +204,7 @@
 
 .previewTitle {
   font-size: 0.95rem;
+  line-height: 1;
 }
 
 .previewRail {
@@ -467,6 +504,12 @@
   background: var(--surface);
   border-color: var(--border-subtle);
   scroll-margin-block-start: calc(var(--mgmt-topbar-height) + 1rem);
+}
+:global(:root[data-appearance-version="2"]) .section > :global(.mgmt-table) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .sectionTitle,
 .previewTitle {

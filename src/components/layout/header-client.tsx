@@ -9,25 +9,23 @@ import {
   Check,
   ChevronDown,
   Menu,
-  Moon,
+  Store,
+  Wrench,
+  House,
+  Info,
+  Phone,
   Search,
   ShieldCheck,
-  Sun,
-  SunMoon,
   X,
 } from "lucide-react";
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
+import { withLocale, type Locale } from "@/lib/i18n";
+import { switchNavigationLocale } from "./switch-navigation-locale";
 import { Brand } from "@/components/layout/brand";
 import { StoreCategoryMenu } from "@/components/layout/store-category-menu";
 import { AccountMenu } from "@/components/layout/account-menu";
+import { NavigationThemeSelector } from "./navigation-theme-selector";
 import { HeaderCartLink } from "@/features/cart/header-cart-link";
 
 export type HeaderLabels = {
@@ -62,27 +60,7 @@ export type HeaderLabels = {
   };
 };
 
-import {
-  transitionTheme,
-  type ThemeMode,
-} from "@/components/motion/theme-transition";
 import { useAnimationSettings } from "@/components/motion/animation-provider";
-
-function subscribeTheme(callback: () => void) {
-  if (typeof window === "undefined") return () => {};
-  window.addEventListener("miro-theme-change", callback);
-  window.addEventListener("storage", callback);
-  return () => {
-    window.removeEventListener("miro-theme-change", callback);
-    window.removeEventListener("storage", callback);
-  };
-}
-function readTheme(): ThemeMode {
-  if (typeof document === "undefined") return "dark";
-  const theme = document.documentElement.dataset.theme;
-  return theme === "light" || theme === "medium" ? theme : "dark";
-}
-const serverTheme = (): ThemeMode => "dark";
 
 export function HeaderClient({
   locale,
@@ -103,39 +81,24 @@ export function HeaderClient({
   const productsMenu = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const mobileNavigationRef = useRef<HTMLDivElement>(null);
-  const themeMode = useSyncExternalStore(
-    subscribeTheme,
-    readTheme,
-    serverTheme,
-  );
   const he = locale === "he";
   const Arrow = he ? ArrowLeft : ArrowRight;
   const productsHref = withLocale(locale);
   const navLinks = [
-    { href: productsHref, label: labels.nav.products },
-    { href: withLocale(locale, "services"), label: labels.nav.services },
-    { href: withLocale(locale, "home"), label: labels.nav.home },
-    { href: withLocale(locale, "about"), label: labels.nav.about },
-    { href: withLocale(locale, "contact"), label: labels.nav.contact },
-  ];
-  const modes = [
+    { href: productsHref, label: labels.nav.products, icon: Store },
     {
-      value: "dark" as const,
-      icon: Moon,
-      label: he ? "מצב כהה — ניגודיות גבוהה" : "Dark theme — high contrast",
+      href: withLocale(locale, "services"),
+      label: labels.nav.services,
+      icon: Wrench,
     },
+    { href: withLocale(locale, "home"), label: labels.nav.home, icon: House },
+    { href: withLocale(locale, "about"), label: labels.nav.about, icon: Info },
     {
-      value: "medium" as const,
-      icon: SunMoon,
-      label: he ? "מצב ביניים" : "Mid theme",
-    },
-    {
-      value: "light" as const,
-      icon: Sun,
-      label: he ? "מצב בהיר" : "Light theme",
+      href: withLocale(locale, "contact"),
+      label: labels.nav.contact,
+      icon: Phone,
     },
   ];
-
   // The floating panel scrolls with the document, outside the sticky header.
   // It never creates a second scroll container or expands the header offset.
   useLayoutEffect(() => {
@@ -208,8 +171,19 @@ export function HeaderClient({
       }
     }
     function onPointerDown(event: PointerEvent) {
-      if (productsOpen && !productsMenu.current?.contains(event.target as Node))
+      const target = event.target as Node;
+      if (productsOpen && !productsMenu.current?.contains(target))
         setProductsOpen(false);
+      if (
+        open &&
+        !mobileNavigationRef.current?.contains(target) &&
+        !headerRef.current?.contains(target) &&
+        !(
+          event.target instanceof Element &&
+          event.target.closest(".premium-account-dropdown")
+        )
+      )
+        setOpen(false);
     }
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("pointerdown", onPointerDown);
@@ -231,6 +205,32 @@ export function HeaderClient({
     compact.addEventListener("change", collapse);
     return () => compact.removeEventListener("change", collapse);
   }, [productsOpen]);
+
+  useEffect(() => {
+    if (!open && !productsOpen) return;
+    const desktop = window.matchMedia("(min-width: 1200px)");
+    const collapse = () => {
+      if (!desktop.matches) return;
+      const focusWasInside = mobileNavigationRef.current?.contains(
+        document.activeElement,
+      );
+      setOpen(false);
+      if (focusWasInside)
+        headerRef.current
+          ?.querySelector<HTMLElement>(".premium-desktop-nav .premium-nav-link")
+          ?.focus({ preventScroll: true });
+    };
+    const leave = () => {
+      setOpen(false);
+      setProductsOpen(false);
+    };
+    desktop.addEventListener("change", collapse);
+    window.addEventListener("popstate", leave);
+    return () => {
+      desktop.removeEventListener("change", collapse);
+      window.removeEventListener("popstate", leave);
+    };
+  }, [open, productsOpen]);
 
   function closeNavigation() {
     setOpen(false);
@@ -266,6 +266,7 @@ export function HeaderClient({
         (link.href === productsHref
           ? pathname.startsWith(`${productsHref}/store/`)
           : pathname.startsWith(`${link.href}/`));
+      const Icon = link.icon;
       const linkElement = (
         <Link
           href={link.href}
@@ -273,7 +274,10 @@ export function HeaderClient({
           onClick={closeNavigation}
           className={`premium-nav-link ${active ? "is-active" : ""}`}
         >
-          {link.label}
+          {animationSettings.appearanceVersion === "2" && (
+            <Icon className="premium-nav-icon" size={17} aria-hidden="true" />
+          )}
+          <span>{link.label}</span>
         </Link>
       );
       if (link.href !== productsHref || mobile)
@@ -296,7 +300,7 @@ export function HeaderClient({
             aria-label={he ? "קטגוריות החנות" : "Store categories"}
             aria-expanded={productsOpen}
             aria-controls="store-navigation"
-            onClick={() => setProductsOpen(!productsOpen)}
+            onClick={() => setProductsOpen((current) => !current)}
             onKeyDown={(event) => {
               if (event.key !== "ArrowDown") return;
               event.preventDefault();
@@ -420,6 +424,7 @@ export function HeaderClient({
             <div className="premium-header-action-group premium-header-action-group--personal">
               <AccountMenu
                 locale={locale}
+                onNavigate={closeNavigation}
                 labels={{
                   account: labels.actions.account,
                   logout: labels.actions.logout,
@@ -438,42 +443,17 @@ export function HeaderClient({
                 className="premium-language premium-icon-button"
                 onClick={() => {
                   closeNavigation();
-                  router.push(
-                    `${switchLocalePath(pathname, he ? "en" : "he")}${window.location.search}${window.location.hash}`,
-                  );
+                  switchNavigationLocale(pathname, he ? "en" : "he", router);
                 }}
                 aria-label={he ? "Switch to English" : "מעבר לעברית"}
                 title={he ? "Switch to English" : "מעבר לעברית"}
               >
                 {he ? "EN" : "עב"}
               </button>
-              <div
-                className="premium-theme-selector"
-                role="group"
-                aria-label={labels.actions.themeToggle}
-                dir="ltr"
-                suppressHydrationWarning
-              >
-                {modes.map(({ value, icon: Icon, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    data-theme-option={value}
-                    aria-label={label}
-                    title={label}
-                    aria-pressed={themeMode === value}
-                    onClick={(event) =>
-                      transitionTheme(
-                        value,
-                        event.currentTarget,
-                        animationSettings,
-                      )
-                    }
-                  >
-                    <Icon size={16} aria-hidden="true" />
-                  </button>
-                ))}
-              </div>
+              <NavigationThemeSelector
+                locale={locale}
+                label={labels.actions.themeToggle}
+              />
             </div>
             <button
               ref={menuButton}
@@ -484,7 +464,19 @@ export function HeaderClient({
               }
               aria-expanded={open}
               aria-controls="mobile-navigation"
-              onClick={() => setOpen(!open)}
+              onClick={() => setOpen((current) => !current)}
+              onKeyDown={(event) => {
+                if (
+                  !open ||
+                  !["ArrowDown", "Tab"].includes(event.key) ||
+                  event.shiftKey
+                )
+                  return;
+                event.preventDefault();
+                mobileNavigationRef.current
+                  ?.querySelector<HTMLElement>("input, a, button")
+                  ?.focus();
+              }}
             >
               {open ? (
                 <X size={22} aria-hidden="true" />
@@ -501,6 +493,36 @@ export function HeaderClient({
               ref={mobileNavigationRef}
               className="premium-mobile-navigation"
               suppressHydrationWarning
+              onKeyDown={(event) => {
+                if (event.key !== "Tab") return;
+                const controls =
+                  event.currentTarget.querySelectorAll<HTMLElement>(
+                    "input, a[href], button",
+                  );
+                if (event.shiftKey && document.activeElement === controls[0]) {
+                  event.preventDefault();
+                  menuButton.current?.focus();
+                } else if (
+                  !event.shiftKey &&
+                  document.activeElement === controls[controls.length - 1]
+                ) {
+                  event.preventDefault();
+                  setOpen(false);
+                  document
+                    .getElementById("main-content")
+                    ?.focus({ preventScroll: true });
+                }
+              }}
+              onBlur={(event) => {
+                const next = event.relatedTarget;
+                if (
+                  next instanceof Element &&
+                  !event.currentTarget.contains(next) &&
+                  !headerRef.current?.contains(next) &&
+                  !next.closest(".premium-account-dropdown")
+                )
+                  setOpen(false);
+              }}
             >
               <div className="miro-container">
                 {searchForm("premium-mobile-search")}

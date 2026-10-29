@@ -30,8 +30,10 @@ const service = createClient(
 );
 const roles = (process.env.NAVBAR_ROLES || "ceo,admin").split(",");
 const locales = (process.env.NAVBAR_LOCALES || "en,he").split(",");
+const iconsOnly = process.env.NAVBAR_ICONS_ONLY === "1";
 const widths = (
-  process.env.NAVBAR_WIDTHS || "320,390,768,1024,1199,1200,1599,1600,1920,2560"
+  process.env.NAVBAR_WIDTHS ||
+  "320,390,768,1024,1199,1200,1440,1599,1600,1920,2560"
 )
   .split(",")
   .map(Number);
@@ -53,6 +55,35 @@ const beamOffset = (page) =>
       Math.abs(beam.left - header.left),
       Math.abs(beam.right - header.right),
       Math.abs(beam.top - header.bottom),
+    );
+  });
+const sidebarIconContrast = (link) =>
+  link.locator(".mgmt-nav__icon").evaluate((icon) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const ctx = canvas.getContext("2d");
+    const sample = (color) => {
+      ctx.clearRect(0, 0, 1, 1);
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, 1, 1);
+      return [...ctx.getImageData(0, 0, 1, 1).data].slice(0, 3);
+    };
+    const luminance = (rgb) =>
+      rgb
+        .map((value) => {
+          const c = value / 255;
+          return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+        })
+        .reduce(
+          (sum, c, index) => sum + c * [0.2126, 0.7152, 0.0722][index],
+          0,
+        );
+    const style = getComputedStyle(icon);
+    const foreground = luminance(sample(style.color));
+    const background = luminance(sample(style.backgroundColor));
+    return (
+      (Math.max(foreground, background) + 0.05) /
+      (Math.min(foreground, background) + 0.05)
     );
   });
 let browser;
@@ -146,6 +177,95 @@ try {
       await page.evaluate(() => {
         document.documentElement.dataset.appearanceVersion = "2";
       });
+      // The sidebar has its own scroll rail between the fixed brand and
+      // identity. Check actual content bounds rather than assuming that
+      // native scrollbars consume space (overlay scrollbars do not).
+      await page.setViewportSize({ width: 1440, height: 600 });
+      await page.evaluate(() => {
+        document.documentElement.dataset.theme = "dark";
+      });
+      for (const sidebar of ["expanded", "collapsed"]) {
+        const shell = page.locator(".mgmt-shell");
+        if ((await shell.getAttribute("data-sidebar")) !== sidebar)
+          await page.locator(".mgmt-sidebar__collapse").click();
+        const rail = page.locator(".mgmt-sidebar__nav");
+        const links = rail.locator(".mgmt-nav__link");
+        await page.mouse.move(0, 0);
+        await rail.evaluate((node) => {
+          node.scrollTop = 0;
+        });
+        const topGeometry = await rail.evaluate((node) => {
+          const brand = document.querySelector(".mgmt-sidebar__brand");
+          const first = node.querySelector(".mgmt-nav__link");
+          const navBox = node.getBoundingClientRect();
+          const clientLeft = navBox.left + node.clientLeft;
+          const clientRight = clientLeft + node.clientWidth;
+          const boxes = [...node.querySelectorAll(".mgmt-nav__link")].map(
+            (link) => link.getBoundingClientRect(),
+          );
+          return {
+            scrollable: node.scrollHeight > node.clientHeight,
+            topGap:
+              first.getBoundingClientRect().top -
+              brand.getBoundingClientRect().bottom,
+            leftGap: Math.min(...boxes.map((box) => box.left - clientLeft)),
+            rightGap: Math.min(...boxes.map((box) => clientRight - box.right)),
+            minWidth: Math.min(...boxes.map((box) => box.width)),
+            minHeight: Math.min(...boxes.map((box) => box.height)),
+          };
+        });
+        assert.ok(
+          topGeometry.scrollable,
+          `${role}/${locale}/${sidebar}: rail must overflow`,
+        );
+        assert.ok(
+          topGeometry.topGap >= 16,
+          `${role}/${locale}/${sidebar}: brand clearance ${topGeometry.topGap}px`,
+        );
+        assert.ok(
+          topGeometry.leftGap >= 4 && topGeometry.rightGap >= 4,
+          `${role}/${locale}/${sidebar}: content/scrollbar clearance ${JSON.stringify(topGeometry)}`,
+        );
+        assert.ok(
+          topGeometry.minHeight >= 46 &&
+            (sidebar !== "collapsed" || topGeometry.minWidth >= 46),
+          `${role}/${locale}/${sidebar}: link target size ${JSON.stringify(topGeometry)}`,
+        );
+        await rail.hover();
+        await page.mouse.wheel(0, 10000);
+        await expect
+          .poll(() => rail.evaluate((node) => node.scrollTop))
+          .toBeGreaterThan(0);
+        await links.last().focus();
+        await expect(links.last()).toBeFocused();
+        const bottomGeometry = await rail.evaluate((node) => {
+          const railBox = node.getBoundingClientRect();
+          const links = node.querySelectorAll(".mgmt-nav__link");
+          const lastBox = links[links.length - 1].getBoundingClientRect();
+          const footerBox = document
+            .querySelector(".mgmt-sidebar__footer")
+            .getBoundingClientRect();
+          return {
+            lastVisible:
+              lastBox.top >= railBox.top && lastBox.bottom <= railBox.bottom,
+            footerGap: footerBox.top - lastBox.bottom,
+          };
+        });
+        assert.ok(
+          bottomGeometry.lastVisible,
+          `${role}/${locale}/${sidebar}: final link reachable`,
+        );
+        assert.ok(
+          bottomGeometry.footerGap >= 16,
+          `${role}/${locale}/${sidebar}: footer clearance ${bottomGeometry.footerGap}px`,
+        );
+        await page.locator(".mgmt-sidebar").screenshot({
+          path: join(output, `${role}-${locale}-sidebar-${sidebar}.png`),
+        });
+        checks.push(
+          `${role}/${locale}/${sidebar}: sidebar scroll, clearance and 46px targets`,
+        );
+      }
       for (const width of widths) {
         await page.setViewportSize({ width, height: 1000 });
         for (const theme of ["dark", "medium", "light"]) {
@@ -165,6 +285,21 @@ try {
             ),
             `${role}/${locale}/${width}/${theme} overflow`,
           );
+          if (width === 390) {
+            await page.locator(".mgmt-topbar__menu-button").click();
+            const drawer = page.locator(".mgmt-drawer--nav");
+            const link = drawer.locator(".mgmt-nav__link").first();
+            await expect(link).toBeVisible();
+            assert.ok(
+              (await sidebarIconContrast(link)) >= 4.5,
+              `${role}/${locale}/${theme}: mobile navigation icon contrast`,
+            );
+            await page.keyboard.press("Escape");
+            await expect(drawer).toBeHidden();
+            checks.push(
+              `${role}/${locale}/${theme}: mobile navigation icon contrast`,
+            );
+          }
           // Exercise the real beam lifecycle and sidebar toggle, including RTL.
           for (const sidebar of ["expanded", "collapsed"]) {
             if (sidebar === "collapsed" && width < 1024) continue;
@@ -172,7 +307,62 @@ try {
               const shell = page.locator(".mgmt-shell");
               if ((await shell.getAttribute("data-sidebar")) !== sidebar)
                 await page.locator(".mgmt-sidebar__collapse").click();
+              if (width === 1440) {
+                const targets = [
+                  page.locator(
+                    ".mgmt-sidebar .mgmt-nav__link[aria-current='page']",
+                  ),
+                  page
+                    .locator(
+                      ".mgmt-sidebar .mgmt-nav__link:not([aria-current]):not(.mgmt-nav__link--restricted)",
+                    )
+                    .first(),
+                ];
+                if (role === "admin")
+                  targets.push(
+                    page
+                      .locator(".mgmt-sidebar .mgmt-nav__link--restricted")
+                      .first(),
+                  );
+                for (const link of targets) {
+                  await link.scrollIntoViewIfNeeded();
+                  await page.mouse.move(0, 0);
+                  await link.blur();
+                  for (const state of ["rest", "hover", "focus"]) {
+                    if (state === "hover") await link.hover();
+                    if (
+                      state === "hover" &&
+                      role === "ceo" &&
+                      locale === "he" &&
+                      !(await link.getAttribute("aria-current"))
+                    ) {
+                      await page.locator(".mgmt-sidebar").screenshot({
+                        path: join(
+                          output,
+                          `sidebar-${theme}-${sidebar}-hover.png`,
+                        ),
+                      });
+                    }
+                    if (state === "focus") {
+                      await page.mouse.move(0, 0);
+                      await page.keyboard.press("Tab");
+                      await link.focus();
+                      await expect(link).toHaveCSS("outline-style", "solid");
+                    }
+                    const contrast = await sidebarIconContrast(link);
+                    assert.ok(
+                      contrast >= 4.5,
+                      `${role}/${locale}/${theme}/${sidebar}/${state}: sidebar icon contrast ${contrast.toFixed(2)}`,
+                    );
+                  }
+                  await link.blur();
+                }
+                checks.push(
+                  `${role}/${locale}/${theme}/${sidebar}: sidebar icon rest, hover and focus contrast`,
+                );
+              }
             }
+            if (iconsOnly) continue;
             await page.evaluate(() => {
               window.dispatchEvent(
                 new CustomEvent("miro-navigation-start", {
@@ -225,6 +415,7 @@ try {
               page.locator(".motion-navigation-progress"),
             ).toHaveAttribute("data-state", "idle");
           }
+          if (iconsOnly) continue;
           if (width >= 1024)
             await page.locator(".mgmt-sidebar__collapse").click();
           const controls = page.locator(".mgmt-topbar__controls");
@@ -486,6 +677,7 @@ try {
           );
         }
       }
+      if (iconsOnly) continue;
       await page.setViewportSize({ width: 390, height: 280 });
       const compactToggle = page.locator(".mgmt-topbar__controls-toggle");
       const compactControls = page.locator(".mgmt-topbar__controls");
@@ -552,6 +744,19 @@ try {
       await expect(page.locator(".mgmt-topbar__controls")).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(page.locator(".mgmt-topbar__controls")).toBeHidden();
+      // Keyboard entry and tab exit should not strand focus in hidden tools.
+      const toolsToggle = page.locator(".mgmt-topbar__controls-toggle");
+      await toolsToggle.focus();
+      await toolsToggle.press("ArrowDown");
+      await expect(page.locator(".mgmt-workspace-search")).toBeFocused();
+      await page.locator(".mgmt-shell__main").evaluate((node) => {
+        node.tabIndex = -1;
+        node.focus();
+      });
+      await expect(page.locator(".mgmt-topbar__controls")).toBeHidden();
+      checks.push(
+        `${role}/${locale}: keyboard tools entry and focus-leave dismissal`,
+      );
       // The account panel is independent of sticky-header/sidebar containing blocks.
       for (const viewport of [
         { width: 320, height: 700 },
@@ -723,7 +928,116 @@ try {
           }
         }
       }
+      // Storage changes from another tab must override the in-memory preference.
+      const previousSidebar = await page
+        .locator(".mgmt-shell")
+        .getAttribute("data-sidebar");
+      for (const collapsed of [
+        previousSidebar !== "collapsed",
+        previousSidebar === "collapsed",
+      ]) {
+        await page.evaluate((collapsed) => {
+          const key = "miro.mgmt.sidebar-collapsed";
+          localStorage.setItem(key, collapsed ? "1" : "0");
+          window.dispatchEvent(
+            new StorageEvent("storage", {
+              key,
+              newValue: collapsed ? "1" : "0",
+              storageArea: localStorage,
+            }),
+          );
+        }, collapsed);
+        await expect(page.locator(".mgmt-shell")).toHaveAttribute(
+          "data-sidebar",
+          collapsed ? "collapsed" : "expanded",
+        );
+      }
+      checks.push(
+        `${role}/${locale}: sidebar cross-tab preference synchronization`,
+      );
+      // POS chrome only: synthetic empty catalog, no sale or payment writes.
+      await context.route("**/api/management/pos/catalog?**", (route) =>
+        route.fulfill({
+          json: { products: [], categories: [], totalPages: 1, total: 0 },
+        }),
+      );
+      await page.setViewportSize({ width: 1440, height: 900 });
+      await page
+        .getByRole("button", {
+          name: locale === "he" ? "פתיחת קופה" : "Open POS",
+          exact: true,
+        })
+        .click();
+      const pos = page.locator('[data-pos-shell="true"]');
+      await expect(pos).toBeVisible();
+      for (const width of [320, 390, 1440]) {
+        await page.setViewportSize({ width, height: 900 });
+        const header = pos.locator("header").first();
+        const actions = header.locator("button");
+        await expect(actions).toHaveCount(2);
+        const boxes = await actions.evaluateAll((nodes) =>
+          nodes.map((node) => node.getBoundingClientRect().toJSON()),
+        );
+        assert.ok(
+          boxes.every(
+            (box) =>
+              box.width >= 44 &&
+              box.height >= 44 &&
+              box.x >= 0 &&
+              box.right <= width + 1,
+          ),
+          "POS header actions stay reachable",
+        );
+        const menu = header.getByRole("button", {
+          name: locale === "he" ? "תפריט הקופה" : "POS menu",
+          exact: true,
+        });
+        await menu.click();
+        await expect(menu).toHaveAttribute("aria-pressed", "true");
+        await expect(pos.getByRole("navigation")).toBeVisible();
+        await menu.click();
+        await expect(menu).toHaveAttribute("aria-pressed", "false");
+        if (width === 320)
+          await header.screenshot({
+            path: join(output, `${role}-${locale}-pos-phone.png`),
+          });
+        checks.push(
+          `${role}/${locale}/${width}: POS header targets and menu state`,
+        );
+      }
+      await page
+        .getByRole("button", {
+          name: locale === "he" ? "סגירת קופה" : "Close POS",
+          exact: true,
+        })
+        .click();
+      await expect(pos).toHaveCount(0);
+      // Locale round trips preserve exactly one fragment in the installed router.
+      await page.evaluate(() =>
+        history.replaceState(
+          history.state,
+          "",
+          `${location.pathname}?navbar-qa=locale#main-content`,
+        ),
+      );
+      for (const target of [locale === "he" ? "en" : "he", locale]) {
+        await page.locator(".mgmt-topbar__lang-btn").click();
+        await page.waitForURL(
+          (url) =>
+            url.pathname === `/${target}/admin/products` &&
+            url.search === "?navbar-qa=locale" &&
+            url.hash === "#main-content",
+        );
+        await expect(page.locator("html")).toHaveAttribute("lang", target);
+      }
+      checks.push(
+        `${role}/${locale}: language round trip retains query and one anchor`,
+      );
       console.log(`PASS ${role}/${locale} chrome checks`);
+    }
+    if (iconsOnly) {
+      await context.close();
+      continue;
     }
     let logoutRequests = 0;
     await page.route("**/api/auth/logout**", (route) => {

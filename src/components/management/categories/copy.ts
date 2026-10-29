@@ -123,8 +123,8 @@ export const categoriesCopy = {
 
   deactivateTitle: { he: "השבתת קטגוריה", en: "Deactivate category" },
   deactivateWarning: {
-    he: "מוצרים שפורסמו בקטגוריה זו יוסתרו ולא יהיו זמינים לפי חוק הפרסום של מסד הנתונים.",
-    en: "Products currently published in this category will become hidden/unavailable by the database publication invariant.",
+    he: "מוצרים שפורסמו בקטגוריה זו יוסתרו מהחנות. הפעלה מחדש של הקטגוריה לא תפרסם אותם אוטומטית.",
+    en: "Published products in this category will be hidden from the store. Reactivating the category will not automatically republish them.",
   },
   deactivateConfirm: { he: "השבתה", en: "Deactivate" },
   reactivated: { he: "הקטגוריה הופעלה מחדש", en: "Category reactivated" },

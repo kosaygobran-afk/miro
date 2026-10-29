@@ -1078,6 +1078,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
 
         <DataTable
           caption={copy[locale].railTableCaption}
+          captionHidden
           isEmpty={sortedRailItems.length === 0}
           emptyState={
             <EmptyState
@@ -1114,27 +1115,32 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
           {sortedRailItems.map((item, index) => (
             <tr key={item.id} className={styles.railRow}>
               <td className={styles.positionCell}>
-                <span className={styles.positionValue}>{index + 1}</span>
-                <button
-                  type="button"
-                  className={styles.stepperButton}
-                  onClick={() => index > 0 && moveRailItem(item, -1)}
-                  aria-label={copy[locale].moveUp}
-                  disabled={index === 0 || reordering}
-                >
-                  <ChevronUp size={14} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className={styles.stepperButton}
-                  onClick={() =>
-                    index < sortedRailItems.length - 1 && moveRailItem(item, 1)
-                  }
-                  aria-label={copy[locale].moveDown}
-                  disabled={index === sortedRailItems.length - 1 || reordering}
-                >
-                  <ChevronDown size={14} aria-hidden="true" />
-                </button>
+                <span className={styles.positionControls}>
+                  <span className={styles.positionValue}>{index + 1}</span>
+                  <button
+                    type="button"
+                    className={styles.stepperButton}
+                    onClick={() => index > 0 && moveRailItem(item, -1)}
+                    aria-label={copy[locale].moveUp}
+                    disabled={index === 0 || reordering}
+                  >
+                    <ChevronUp size={14} aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.stepperButton}
+                    onClick={() =>
+                      index < sortedRailItems.length - 1 &&
+                      moveRailItem(item, 1)
+                    }
+                    aria-label={copy[locale].moveDown}
+                    disabled={
+                      index === sortedRailItems.length - 1 || reordering
+                    }
+                  >
+                    <ChevronDown size={14} aria-hidden="true" />
+                  </button>
+                </span>
               </td>
               <td>
                 <div className={styles.productCell}>
@@ -1506,6 +1512,7 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
         ) : (
           <DataTable
             caption={copy[locale].badgeTableCaption}
+            captionHidden
             isEmpty={badgeTypes.length === 0}
             emptyState={
               <EmptyState

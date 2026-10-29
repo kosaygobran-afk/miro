@@ -11,18 +11,10 @@ import {
 import Link from "@/components/motion/motion-link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "@/components/motion/use-motion-router";
-import {
-  Menu,
-  Moon,
-  Sun,
-  SunMoon,
-  Store,
-  Pause,
-  Play,
-  Ellipsis,
-} from "lucide-react";
+import { Menu, Store, Pause, Play, Ellipsis } from "lucide-react";
 import { roleLabel, type AppRole } from "@/lib/roles";
-import { switchLocalePath, withLocale, type Locale } from "@/lib/i18n";
+import { withLocale, type Locale } from "@/lib/i18n";
+import { switchNavigationLocale } from "@/components/layout/switch-navigation-locale";
 import {
   matchMgmtNav,
   mgmtNavItemLabel,
@@ -34,27 +26,7 @@ import { IconAction, IconLink } from "../ui/icon-action";
 import { AccountMenu } from "./account-menu";
 import { WorkspaceDisplay, WorkspaceTools } from "./workspace-tools";
 
-import {
-  transitionTheme,
-  type ThemeMode,
-} from "@/components/motion/theme-transition";
-import { useAnimationSettings } from "@/components/motion/animation-provider";
-
-function subscribeTheme(callback: () => void) {
-  if (typeof window === "undefined") return () => {};
-  window.addEventListener("miro-theme-change", callback);
-  window.addEventListener("storage", callback);
-  return () => {
-    window.removeEventListener("miro-theme-change", callback);
-    window.removeEventListener("storage", callback);
-  };
-}
-function readTheme(): ThemeMode {
-  if (typeof document === "undefined") return "dark";
-  const theme = document.documentElement.dataset.theme;
-  return theme === "light" || theme === "medium" ? theme : "dark";
-}
-const serverTheme = (): ThemeMode => "dark";
+import { NavigationThemeSelector } from "@/components/layout/navigation-theme-selector";
 
 function subscribeTextMotion(callback: () => void) {
   window.addEventListener("miro-text-motion", callback);
@@ -88,12 +60,33 @@ export function ManagementTopbar({
 }: ManagementTopbarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const animationSettings = useAnimationSettings();
   const topbarRef = useRef<HTMLElement>(null);
   const controlsTrigger = useRef<HTMLButtonElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const controlsId = useId();
   const [controlsOpen, setControlsOpen] = useState(false);
+  const controlsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1200px)");
+    const reconcile = () => {
+      const focused = document.activeElement;
+      // An open tool restores focus to its mounted opener after closing.
+      setControlsOpen(
+        !desktop.matches &&
+          Array.from(document.querySelectorAll('[role="dialog"]')).some(
+            (dialog) => dialog.getClientRects().length > 0,
+          ),
+      );
+      if (desktop.matches && focused === controlsTrigger.current)
+        controlsRef.current
+          ?.querySelector<HTMLElement>("button, a")
+          ?.focus({ preventScroll: true });
+      else if (!desktop.matches && controlsRef.current?.contains(focused))
+        controlsTrigger.current?.focus({ preventScroll: true });
+    };
+    desktop.addEventListener("change", reconcile);
+    return () => desktop.removeEventListener("change", reconcile);
+  }, []);
   useEffect(() => {
     if (!controlsOpen) return;
     const dismiss = (event: PointerEvent) => {
@@ -132,12 +125,6 @@ export function ManagementTopbar({
     readTextMotion,
     () => false,
   );
-  const themeMode = useSyncExternalStore(
-    subscribeTheme,
-    readTheme,
-    serverTheme,
-  );
-
   // Keep sticky content and the navigation beam within the actual workspace.
   useLayoutEffect(() => {
     const element = topbarRef.current;
@@ -170,16 +157,8 @@ export function ManagementTopbar({
 
   function handleLocaleChange() {
     const newLocale = locale === "he" ? "en" : "he";
-    router.push(
-      `${switchLocalePath(pathname, newLocale)}${window.location.search}${window.location.hash}`,
-    );
+    switchNavigationLocale(pathname, newLocale, router);
   }
-
-  const themeLabels = {
-    dark: he ? "מצב כהה — ניגודיות גבוהה" : "Dark theme — high contrast",
-    medium: he ? "מצב ביניים" : "Mid theme",
-    light: he ? "מצב בהיר" : "Light theme",
-  };
 
   return (
     <header ref={topbarRef} className="mgmt-topbar">
@@ -187,7 +166,10 @@ export function ManagementTopbar({
         <button
           type="button"
           className="mgmt-topbar__menu-button"
-          onClick={onOpenNav}
+          onClick={() => {
+            setControlsOpen(false);
+            onOpenNav();
+          }}
           aria-label={mgmtShellCopy.openNavigation[locale]}
         >
           <Menu size={20} aria-hidden="true" />
@@ -276,15 +258,35 @@ export function ManagementTopbar({
           aria-expanded={controlsOpen}
           aria-controls={controlsId}
           onClick={() => setControlsOpen((open) => !open)}
+          onKeyDown={(event) => {
+            if (event.key !== "ArrowDown") return;
+            event.preventDefault();
+            setControlsOpen(true);
+            requestAnimationFrame(() =>
+              controlsRef.current
+                ?.querySelector<HTMLElement>("button, a")
+                ?.focus(),
+            );
+          }}
         >
           <Ellipsis size={19} aria-hidden="true" />
         </button>
         <div
           id={controlsId}
+          ref={controlsRef}
           className="mgmt-topbar__controls"
           data-open={controlsOpen}
           role="group"
           aria-label={he ? "כלים ותצוגה" : "Tools and display"}
+          onBlur={(event) => {
+            const next = event.relatedTarget;
+            if (
+              next instanceof Element &&
+              !endRef.current?.contains(next) &&
+              !next.closest('[role="dialog"], #mgmt-overlay-portal-host')
+            )
+              setControlsOpen(false);
+          }}
           onClickCapture={(event) => {
             if (
               !(event.target instanceof Element) ||
@@ -317,63 +319,11 @@ export function ManagementTopbar({
             aria-label={he ? "תצוגה ותנועה" : "Display and motion"}
           >
             <WorkspaceDisplay locale={locale} />
-            <div
-              className="mgmt-topbar__theme-selector"
-              role="group"
-              aria-label={he ? "בחירת ערכת נושא" : "Select theme"}
-            >
-              <button
-                type="button"
-                className="mgmt-topbar__theme-btn"
-                data-theme-option="dark"
-                aria-label={themeLabels.dark}
-                title={themeLabels.dark}
-                aria-pressed={themeMode === "dark"}
-                onClick={(event) =>
-                  transitionTheme(
-                    "dark",
-                    event.currentTarget,
-                    animationSettings,
-                  )
-                }
-              >
-                <Moon size={18} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="mgmt-topbar__theme-btn"
-                data-theme-option="medium"
-                aria-label={themeLabels.medium}
-                title={themeLabels.medium}
-                aria-pressed={themeMode === "medium"}
-                onClick={(event) =>
-                  transitionTheme(
-                    "medium",
-                    event.currentTarget,
-                    animationSettings,
-                  )
-                }
-              >
-                <SunMoon size={18} aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                className="mgmt-topbar__theme-btn"
-                data-theme-option="light"
-                aria-label={themeLabels.light}
-                title={themeLabels.light}
-                aria-pressed={themeMode === "light"}
-                onClick={(event) =>
-                  transitionTheme(
-                    "light",
-                    event.currentTarget,
-                    animationSettings,
-                  )
-                }
-              >
-                <Sun size={18} aria-hidden="true" />
-              </button>
-            </div>
+            <NavigationThemeSelector
+              locale={locale}
+              label={he ? "בחירת ערכת נושא" : "Select theme"}
+              management
+            />
             <IconAction
               label={
                 textPaused

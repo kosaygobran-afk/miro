@@ -49,6 +49,30 @@
   outline-offset: 2px;
 }
 
+:global(:root[data-appearance-version="2"]) {
+  .statusTabs {
+    border-radius: 0.875rem;
+    gap: 0.5rem;
+    background: var(--surface-muted);
+    border-color: var(--border-subtle);
+  }
+  .statusTab,
+  .toggleButton {
+    min-block-size: 44px;
+    border-radius: 0.65rem;
+  }
+  .statusTab {
+    color: var(--muted-foreground);
+  }
+  .statusTab[aria-pressed="true"] {
+    background: var(--primary);
+    color: var(--primary-foreground);
+  }
+  .selectWrap {
+    gap: 0.5rem;
+  }
+}
+
 .selectWrap {
   display: inline-flex;
   align-items: center;

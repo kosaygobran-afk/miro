@@ -64,6 +64,20 @@
   gap: 6px;
   margin-inline-start: auto;
 }
+:global(:root[data-appearance-version="2"]) .topActions {
+  gap: 0.5rem;
+}
+:global(:root[data-appearance-version="2"]) .topActions > .iconButton {
+  border-radius: 0.75rem;
+  flex: 0 0 44px;
+}
+:global(:root[data-appearance-version="2"])
+  .topActions
+  > .iconButton:is(:hover, [aria-pressed="true"]) {
+  border-color: var(--accent-text);
+  background: var(--surface-hover);
+  color: var(--accent-text);
+}
 .iconButton {
   display: inline-flex;
   align-items: center;

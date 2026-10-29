@@ -7,13 +7,16 @@ import { mkdir, readdir, writeFile } from "node:fs/promises";
 import nextEnv from "@next/env";
 import { createClient } from "@supabase/supabase-js";
 import { chromium, expect } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 nextEnv.loadEnvConfig(process.cwd());
 const base = process.env.SPACING_BASE_URL || "http://127.0.0.1:3000";
 const output = process.env.SPACING_OUTPUT_DIR || "/tmp/miro-management-spacing";
 const baseline = process.argv.includes("--baseline");
 const initialRole = process.env.SPACING_ROLE === "admin" ? "admin" : "ceo";
+const accessibility = process.env.SPACING_AXE === "1";
 const reportingFixtures = process.env.SPACING_REPORT_FIXTURES === "1";
+const appearance = process.env.SPACING_APPEARANCE === "1" ? "1" : "2";
 const widths = (process.env.SPACING_WIDTHS || "1440,1024,390,320")
   .split(",")
   .map(Number);
@@ -402,10 +405,7 @@ async function inspect(page) {
           )
         )
           continue;
-        if (
-          parent.matches('[class*="calculator-window"][class*="__container"]')
-        )
-          continue;
+        if (parent.matches('[data-calculator-shell="true"]')) continue;
         const children = [...parent.children].filter(
           (e) =>
             visible(e) &&
@@ -794,11 +794,100 @@ try {
     for (const width of widths) {
       await page.setViewportSize({ width, height });
       for (const theme of themes) {
-        await page.evaluate((theme) => {
-          document.documentElement.dataset.appearanceVersion = "2";
-          document.documentElement.dataset.theme = theme;
-        }, theme);
+        await page.evaluate(
+          ({ theme, appearance }) => {
+            document.documentElement.dataset.appearanceVersion = appearance;
+            document.documentElement.dataset.theme = theme;
+          },
+          { theme, appearance },
+        );
         const result = await inspect(page);
+        if (appearance === "2" && state === "page" && width >= 1440) {
+          const alignment = await page.evaluate((path) => {
+            const bottom = (element) => element.getBoundingClientRect().bottom;
+            const nearBottom = (elements) =>
+              elements.length < 2 ||
+              Math.max(...elements.map(bottom)) -
+                Math.min(...elements.map(bottom)) <
+                2;
+            if (path === "accounts") {
+              const row = document.querySelector(".accounts-filter-row");
+              const controls = row
+                ? [
+                    ...row.querySelectorAll(
+                      ":scope > .mgmt-date-range, :scope > div > select, :scope > div > input",
+                    ),
+                  ]
+                : [];
+              return {
+                label: "accounts filter baselines",
+                ok: nearBottom(controls),
+              };
+            }
+            if (path === "inventory") {
+              const controls = [
+                ...document.querySelectorAll(
+                  ".inventory-manager__header-right > *",
+                ),
+              ];
+              return {
+                label: "inventory header row",
+                ok: nearBottom(controls),
+              };
+            }
+            if (path === "commerce-reports") {
+              const row = document.querySelector('[class*="reportRange"]');
+              const controls = row
+                ? [...row.querySelectorAll("input, button")]
+                : [];
+              return {
+                label: "report range baselines",
+                ok: nearBottom(controls),
+              };
+            }
+            if (path === "storefront-merchandising") {
+              const cell = document.querySelector('td[class*="positionCell"]');
+              if (!cell)
+                return { label: "merchandising position cell", ok: true };
+              const header = cell.closest("table")?.querySelector("th");
+              const cellBox = cell.getBoundingClientRect();
+              const headerBox = header?.getBoundingClientRect();
+              return {
+                label: "merchandising position column",
+                ok:
+                  getComputedStyle(cell).display === "table-cell" &&
+                  !!headerBox &&
+                  Math.abs(
+                    cellBox.left +
+                      cellBox.right -
+                      (headerBox.left + headerBox.right),
+                  ) < 2,
+              };
+            }
+            return { label: "not applicable", ok: true };
+          }, path);
+          assert.ok(alignment.ok, `${locale}/${path}: ${alignment.label}`);
+        }
+        if (
+          accessibility &&
+          width === 1440 &&
+          ["page", "admin-page"].includes(state)
+        ) {
+          const scan = await new AxeBuilder({ page })
+            .include(".mgmt-shell__main")
+            .include(".mgmt-sidebar")
+            .analyze();
+          result.accessibility = scan.violations.map(
+            ({ id, impact, nodes }) => ({
+              id,
+              impact,
+              nodes: nodes.map(({ target, failureSummary }) => ({
+                target,
+                failureSummary,
+              })),
+            }),
+          );
+        }
         reports.push({ path, locale, state, width, height, theme, ...result });
         if (
           theme === themes[0] &&
@@ -806,7 +895,7 @@ try {
         )
           await page.screenshot({
             path: `${output}/${locale}-${path.replaceAll("/", "-") || "overview"}-${state}-${width}.png`,
-            fullPage: true,
+            fullPage: (await page.getByRole("dialog").count()) === 0,
           });
       }
     }
@@ -845,6 +934,36 @@ try {
         initialRole === "admin" ? "admin-page" : "page",
       );
       if (initialRole === "admin") continue;
+      if (path === "products") {
+        const search = page
+          .locator(".mgmt-toolbar .mgmt-search-field input")
+          .first();
+        await search.fill("Synthetic search focus QA");
+        await search.locator("..").getByRole("button").click();
+        await expect(search).toHaveValue("");
+        await expect(search).toBeFocused();
+        await page.waitForLoadState("networkidle");
+      }
+      if (path === "settings") {
+        const switches = page.locator(
+          '.mgmt-shell__main button[role="switch"]',
+        );
+        const total = await switches.count();
+        for (let index = 0; index < total; index++) {
+          const control = switches.nth(index);
+          if (!(await control.isEnabled())) continue;
+          const original = await control.getAttribute("aria-checked");
+          await control.focus();
+          await page.keyboard.press("Space");
+          await expect(control).toHaveAttribute(
+            "aria-checked",
+            original === "true" ? "false" : "true",
+          );
+          await review(path, locale, `draft-switch-${index}`);
+          await page.keyboard.press("Space");
+          await expect(control).toHaveAttribute("aria-checked", original);
+        }
+      }
       if (path === "accounts" || path === "customers") {
         accountFixture = path === "accounts";
         customerFixture = path === "customers";
@@ -941,6 +1060,55 @@ try {
         await opener.click();
         await expect(page.getByRole("dialog").last()).toBeVisible();
         await review(path, locale, `dialog-${index}`);
+        if (["categories", "services", "suppliers"].includes(path)) {
+          const dialog = page.getByRole("dialog").last();
+          const radios = dialog.locator('input[type="radio"]');
+          const originals = await radios.evaluateAll((nodes) =>
+            nodes
+              .filter((node) => node.checked)
+              .map((node) => ({ name: node.name, id: node.id })),
+          );
+          for (let choice = 0; choice < (await radios.count()); choice++) {
+            const radio = radios.nth(choice);
+            const name = await radio.getAttribute("name");
+            const original = originals.find((entry) => entry.name === name);
+            if (
+              !original ||
+              !(await radio.isEnabled()) ||
+              (await radio.isChecked())
+            )
+              continue;
+            await radio.focus();
+            await page.keyboard.press("Space");
+            await expect(radio).toBeChecked();
+            await review(path, locale, `dialog-${index}-radio-${choice}`);
+            const restore = dialog.locator(`[id="${original.id}"]`);
+            await restore.focus();
+            await page.keyboard.press("Space");
+            await expect(restore).toBeChecked();
+          }
+          const checkboxes = dialog.locator('input[type="checkbox"]');
+          for (let choice = 0; choice < (await checkboxes.count()); choice++) {
+            const checkbox = checkboxes.nth(choice);
+            if (!(await checkbox.isEnabled())) continue;
+            const original = await checkbox.isChecked();
+            await checkbox.focus();
+            await page.keyboard.press("Space");
+            await expect(checkbox).toBeChecked({ checked: !original });
+            await review(path, locale, `dialog-${index}-checkbox-${choice}`);
+            await page.keyboard.press("Space");
+            await expect(checkbox).toBeChecked({ checked: original });
+          }
+        }
+        if (path === "categories") {
+          const dialog = page.getByRole("dialog").last();
+          await dialog.locator(".mgmt-dialog__footer button").last().click();
+          await expect(
+            dialog.locator('[aria-invalid="true"]').first(),
+          ).toBeVisible();
+          await expect(dialog.getByRole("alert").first()).toBeVisible();
+          await review(path, locale, `dialog-${index}-validation`);
+        }
         if (path === "services") {
           const add = page.getByRole("dialog").getByRole("button", {
             name: locale === "he" ? "הוספת פריט" : "Add item",
@@ -1108,7 +1276,12 @@ try {
             name: locale === "he" ? "הוספת אמצעי תשלום" : "Add payment method",
             exact: true,
           });
-          await paymentMethods.getByRole("button").last().click();
+          const method = paymentMethods.getByRole("button").last();
+          // The synthetic draft survives locale navigation; an already-selected
+          // method is correctly disabled and must not be added twice.
+          if ((await method.getAttribute("aria-pressed")) !== "true")
+            await method.click();
+          await expect(method).toHaveAttribute("aria-pressed", "true");
           await review(path, locale, "split-payment-fields");
         }
         await page
@@ -1411,6 +1584,14 @@ try {
   );
   assert.deepEqual(errors, [], "No browser runtime errors");
   if (!baseline) {
+    assert.equal(
+      reports.reduce(
+        (sum, report) => sum + (report.accessibility?.length || 0),
+        0,
+      ),
+      0,
+      "Scoped accessibility findings need review",
+    );
     assert.equal(total, 0, "Component spacing findings need review");
     assert.equal(
       reports.filter((r) => r.overflow > 1).length,

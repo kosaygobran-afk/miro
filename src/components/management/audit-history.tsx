@@ -18,6 +18,7 @@ import {
   StatusBadge,
 } from "./ui";
 import { CollectionSummary } from "./ui/collection-summary";
+import { Pager } from "./pager";
 import { useDebouncedValue } from "./use-debounced-value";
 
 type AuditEvent = {
@@ -352,6 +353,7 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
         <DateRangePicker
           value={range}
           labels={dateRangeLabels(locale)}
+          label={he ? "טווח תאריכים" : "Date range"}
           onChange={(next) => {
             setRange(next);
             setOffset(0);
@@ -479,46 +481,18 @@ export function AuditHistory({ locale }: { locale: "he" | "en" }) {
           </DataTable>
         </div>
       )}
-      <div className="mgmt-list-footer">
-        <p aria-live="polite">
-          {totalCount
-            ? `${offset + 1}–${Math.min(offset + events.length, totalCount)} / ${totalCount}`
-            : "0 / 0"}
-        </p>
-        <label className="mgmt-filter-field">
-          <span>{he ? "רשומות בעמוד" : "Rows per page"}</span>
-          <select
-            className="miro-input"
-            value={limit}
-            onChange={(event) => {
-              setLimit(Number(event.target.value));
-              setOffset(0);
-            }}
-          >
-            {[25, 50, 100].map((size) => (
-              <option key={size}>{size}</option>
-            ))}
-          </select>
-        </label>
-        <div className="mgmt-row-actions">
-          <button
-            type="button"
-            className="mgmt-button mgmt-button--ghost"
-            disabled={loading || offset === 0}
-            onClick={() => setOffset(Math.max(0, offset - limit))}
-          >
-            {he ? "הקודם" : "Previous"}
-          </button>
-          <button
-            type="button"
-            className="mgmt-button mgmt-button--ghost"
-            disabled={loading || offset + limit >= totalCount}
-            onClick={() => setOffset(offset + limit)}
-          >
-            {he ? "הבא" : "Next"}
-          </button>
-        </div>
-      </div>
+      <Pager
+        totalCount={totalCount}
+        limit={limit}
+        offset={offset}
+        onOffsetChange={setOffset}
+        onLimitChange={(nextLimit) => {
+          setLimit(nextLimit);
+          setOffset(0);
+        }}
+        locale={locale}
+        busy={loading}
+      />
       <Dialog
         open={selected !== null}
         onClose={() => setSelected(null)}

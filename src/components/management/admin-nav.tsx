@@ -163,7 +163,7 @@ export function AdminNav({
                           ? `${label} · ${mgmtShellCopy.ceoOnlyBadge[locale]}`
                           : label
                         : restricted
-                          ? mgmtShellCopy.ceoOnlyHint[locale]
+                          ? `${label} · ${mgmtShellCopy.ceoOnlyHint[locale]}`
                           : undefined
                     }
                   >

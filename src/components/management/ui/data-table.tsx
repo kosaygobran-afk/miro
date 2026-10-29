@@ -13,6 +13,11 @@ export type DataTableProps = {
   emptyState?: ReactNode;
   /** Accessible <caption> for the table. */
   caption?: ReactNode;
+  /**
+   * Keep the caption available to assistive technology while hiding it when a
+   * nearby section heading already provides the visible label.
+   */
+  captionHidden?: boolean;
   /** Sticky header while scrolling the page/container. Default true. */
   stickyHeader?: boolean;
   /** Minimum table width before the horizontal scroll container kicks in. */
@@ -36,6 +41,7 @@ export function DataTable({
   isEmpty = false,
   emptyState,
   caption,
+  captionHidden = false,
   stickyHeader = true,
   minWidth = "40rem",
   className,
@@ -71,7 +77,11 @@ export function DataTable({
           }}
         >
           {caption ? (
-            <caption className="mgmt-table__caption">{caption}</caption>
+            <caption
+              className={captionHidden ? "sr-only" : "mgmt-table__caption"}
+            >
+              {caption}
+            </caption>
           ) : null}
           {columnWidths ? (
             <colgroup>

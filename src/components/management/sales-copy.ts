@@ -142,7 +142,7 @@ export const salesHistoryCopy = {
     he: "הזמנות שנרשמו במערכת הניהול",
     en: "Orders recorded from the management console",
   },
-  tableCaption: { he: "היסטוריית מכירות", en: "Sales history table" },
+  tableCaption: { he: "טבלת היסטוריית מכירות", en: "Sales history table" },
   colOrder: { he: "הזמנה", en: "Order" },
   colDate: { he: "תאריך", en: "Date" },
   colCustomer: { he: "לקוח", en: "Customer" },

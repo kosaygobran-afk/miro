@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { Dialog } from "./dialog";
 import { CalendarDays, ChevronDown } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
@@ -121,6 +121,12 @@ export type DateRangePickerProps = {
    * Hebrew wiring when messages keys are not yet available.
    */
   labels?: DateRangeLabels;
+  /**
+   * Optional external label shown above the trigger. Use it inside filter rows
+   * where every other control carries a visible label; the trigger then shows
+   * the selected range on a single line.
+   */
+  label?: string;
   /** Extra content rendered after the preset row. */
   trailing?: ReactNode;
   className?: string;
@@ -143,9 +149,11 @@ export function DateRangePicker({
   value,
   onChange,
   labels = dateRangeLabels("en"),
+  label,
   trailing,
   className,
 }: DateRangePickerProps) {
+  const triggerId = useId();
   const [open, setOpen] = useState(false);
   const he = labels.fromLabel !== "From";
   const presetText: Record<Exclude<DateRangePreset, "custom">, string> = {
@@ -175,8 +183,22 @@ export function DateRangePicker({
       ? [value.from, value.to].filter(Boolean).join(" — ") || labels.custom
       : presetText[value.preset];
   return (
-    <div className={["mgmt-date-range", className].filter(Boolean).join(" ")}>
+    <div
+      className={[
+        "mgmt-date-range",
+        label ? "mgmt-date-range--labelled" : null,
+        className,
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      {label ? (
+        <label className="mgmt-date-range__label" htmlFor={triggerId}>
+          {label}
+        </label>
+      ) : null}
       <button
+        id={triggerId}
         type="button"
         className="mgmt-date-range__trigger"
         onClick={() => setOpen(true)}
@@ -185,7 +207,7 @@ export function DateRangePicker({
       >
         <CalendarDays size={18} aria-hidden="true" />
         <span className="mgmt-date-range__trigger-text">
-          <span>{labels.groupLabel}</span>
+          {label ? null : <span>{labels.groupLabel}</span>}
           <strong>{summary}</strong>
         </span>
         <ChevronDown size={16} aria-hidden="true" />

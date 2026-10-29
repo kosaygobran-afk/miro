@@ -201,6 +201,7 @@ export function IconLink({
 export function ActivationSwitch({
   active,
   label,
+  className,
   ...props
 }: Omit<IconActionProps, "children"> & { active: boolean }) {
   return (
@@ -209,7 +210,9 @@ export function ActivationSwitch({
       label={label}
       role="switch"
       aria-checked={active}
-      className="mgmt-activation-switch"
+      className={["mgmt-activation-switch", className]
+        .filter(Boolean)
+        .join(" ")}
     >
       <span className="mgmt-activation-switch__track" aria-hidden="true">
         <span className="mgmt-activation-switch__thumb">

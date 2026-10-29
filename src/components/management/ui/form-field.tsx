@@ -54,23 +54,29 @@ export function FormField({
       .join(" ") || undefined;
 
   return (
-    <div className={["w-full", className].filter(Boolean).join(" ")}>
-      <label
-        htmlFor={fieldId}
-        className={[
-          "mb-1 block text-sm font-medium",
-          disabled && "text-muted-foreground/60",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        {label}
-        {required ? (
-          <span className="ms-1 text-destructive" aria-hidden="true">
-            *
-          </span>
-        ) : null}
-      </label>
+    <div
+      className={["mgmt-field w-full", className].filter(Boolean).join(" ")}
+      data-invalid={error ? "true" : undefined}
+      data-disabled={disabled || undefined}
+    >
+      {label ? (
+        <label
+          htmlFor={fieldId}
+          className={[
+            "mgmt-field__label mb-1 block text-sm font-medium",
+            disabled && "text-muted-foreground/60",
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        >
+          {label}
+          {required ? (
+            <span className="ms-1 text-destructive" aria-hidden="true">
+              *
+            </span>
+          ) : null}
+        </label>
+      ) : null}
       {children({
         id: fieldId,
         required,
@@ -79,12 +85,19 @@ export function FormField({
         "aria-describedby": describedBy,
       })}
       {description ? (
-        <p id={descriptionId} className="mt-1 text-xs text-muted-foreground">
+        <p
+          id={descriptionId}
+          className="mgmt-field__description mt-1 text-xs text-muted-foreground"
+        >
           {description}
         </p>
       ) : null}
       {error ? (
-        <p id={errorId} role="alert" className="mt-1 text-xs text-destructive">
+        <p
+          id={errorId}
+          role="alert"
+          className="mgmt-field__error mt-1 text-xs text-destructive"
+        >
           {error}
         </p>
       ) : null}

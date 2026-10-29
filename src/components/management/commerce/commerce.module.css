@@ -16,7 +16,8 @@
 
 .sectionLink {
   flex: 0 0 auto;
-  min-height: 2.5rem;
+  min-height: 44px;
+  min-block-size: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -38,6 +39,104 @@
   outline: 2px solid transparent;
 }
 
+:global(:root[data-appearance-version="2"]) {
+  .page {
+    gap: 1.5rem;
+  }
+  .sectionNav {
+    gap: 0.5rem;
+    scroll-padding-inline: 0.25rem;
+  }
+  .sectionLink {
+    min-block-size: 44px;
+    border-radius: 0.75rem;
+    color: var(--muted-foreground);
+  }
+  .sectionLink[aria-current="page"] {
+    border-color: var(--accent-text);
+    color: var(--accent-text);
+    background: color-mix(in srgb, var(--primary) 8%, var(--surface));
+  }
+  .sectionLink:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -3px;
+  }
+  .card {
+    border-radius: 1.25rem;
+    box-shadow: none;
+    gap: 0.85rem;
+  }
+  .grid2,
+  .grid3,
+  .grid4 {
+    gap: 1rem;
+  }
+  .reportRange {
+    align-items: end;
+    grid-template-columns:
+      minmax(0, 1fr) minmax(0, 1fr)
+      minmax(8rem, max-content);
+  }
+  .formActionGrid {
+    align-items: end;
+    grid-template-columns:
+      minmax(10rem, 0.8fr) minmax(0, 1.4fr)
+      minmax(10rem, max-content);
+  }
+  .reportTabs {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-self: start;
+    align-self: flex-start;
+    gap: 0.3rem;
+    max-inline-size: 100%;
+    padding: 0.3rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.9rem;
+    background: var(--surface-muted);
+  }
+  .reportRange > :global(.mgmt-button),
+  .formActionGrid > :global(.mgmt-button) {
+    min-block-size: 2.875rem;
+  }
+  .reportTabs > button {
+    min-block-size: 2.875rem;
+    padding: 0.5rem 0.9rem;
+    border-color: transparent;
+    border-radius: 0.65rem;
+    background: transparent;
+    color: var(--muted-foreground);
+    box-shadow: none;
+  }
+  .reportTabs > :global(.mgmt-button) + :global(.mgmt-button) {
+    margin-inline-start: 0;
+  }
+  .reportTabs > button:hover {
+    background: var(--surface);
+    color: var(--foreground);
+  }
+  .reportTabs > button[aria-selected="true"] {
+    border-color: color-mix(in srgb, var(--primary) 32%, var(--border-subtle));
+    background: var(--surface);
+    color: var(--accent-text);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
+  }
+  .reportTabs > button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+  .card > :global(.mgmt-table) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .metric {
+    border-radius: 0.875rem;
+  }
+}
+
 .card {
   min-width: 0;
   padding: clamp(0.9rem, 2.4vw, 1.35rem);
@@ -52,7 +151,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-block-end: 1rem;
+  margin-block-end: 0;
 }
 
 .cardHeader h2 {
@@ -62,7 +161,7 @@
 }
 
 .cardHeader p {
-  margin: 0.35rem 0 0;
+  margin: 0;
   max-width: 72ch;
   color: var(--foreground-muted);
   font-size: 0.82rem;
@@ -111,7 +210,7 @@
 .grid3,
 .grid4 {
   display: grid;
-  gap: 0.85rem;
+  gap: 1rem;
   min-width: 0;
 }
 
@@ -159,7 +258,7 @@
   align-items: end;
   flex-wrap: wrap;
   gap: 0.65rem;
-  margin-block-end: 1rem;
+  margin-block-end: 0.85rem;
 }
 
 .toolbarField {
@@ -171,7 +270,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
   gap: 0.75rem;
-  margin-block-end: 1rem;
+  margin-block-end: 0;
 }
 
 .metric {
@@ -296,6 +395,18 @@
   .grid4 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  :global(:root[data-appearance-version="2"]) {
+    .reportRange,
+    .formActionGrid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .reportRange > :global(.mgmt-button),
+    .formActionGrid > :global(.mgmt-button) {
+      grid-column: 1 / -1;
+      justify-self: start;
+      min-inline-size: 0;
+    }
+  }
   .cardHeader {
     flex-direction: column;
   }
@@ -307,6 +418,15 @@
   .grid4,
   .detailGrid {
     grid-template-columns: minmax(0, 1fr);
+  }
+  :global(:root[data-appearance-version="2"]) {
+    .reportRange,
+    .formActionGrid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .reportTabs > button {
+      flex: 1 1 auto;
+    }
   }
   .toolbarField {
     min-width: 100%;

@@ -583,3 +583,27 @@
 :global([data-motion-content-reveal="false"]) .mediaSaved {
   animation: none;
 }
+
+:global(:root[data-appearance-version="2"]) {
+  .sectionNav {
+    gap: 0.5rem;
+    border-radius: 1rem;
+  }
+  .sectionNavItem {
+    min-block-size: 44px;
+    justify-content: center;
+    text-align: center;
+    border: 1px solid transparent;
+    border-radius: 0.75rem;
+  }
+  .sectionNavItemActive {
+    border-color: color-mix(
+      in srgb,
+      var(--report-cyan) 35%,
+      var(--border-subtle)
+    );
+  }
+  .headerActions {
+    gap: 0.75rem;
+  }
+}

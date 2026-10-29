@@ -96,6 +96,15 @@ export function PosTopbar({
             void (isFullscreen ? onExitFullscreen() : onEnterFullscreen())
           }
           aria-pressed={isFullscreen}
+          title={
+            isFullscreen
+              ? he
+                ? "יציאה ממסך מלא"
+                : "Exit fullscreen"
+              : he
+                ? "מסך מלא"
+                : "Fullscreen"
+          }
           aria-label={
             isFullscreen
               ? he

@@ -26,12 +26,17 @@ let memoryCollapsed: boolean | null = null;
 const collapseListeners = new Set<() => void>();
 
 function subscribeCollapsed(onStoreChange: () => void) {
+  const onStorage = (event: StorageEvent) => {
+    if (event.key !== COLLAPSE_STORAGE_KEY && event.key !== null) return;
+    memoryCollapsed = event.newValue === "1";
+    onStoreChange();
+  };
   collapseListeners.add(onStoreChange);
-  window.addEventListener("storage", onStoreChange);
+  window.addEventListener("storage", onStorage);
   window.addEventListener(COLLAPSE_CHANGE_EVENT, onStoreChange);
   return () => {
     collapseListeners.delete(onStoreChange);
-    window.removeEventListener("storage", onStoreChange);
+    window.removeEventListener("storage", onStorage);
     window.removeEventListener(COLLAPSE_CHANGE_EVENT, onStoreChange);
   };
 }
@@ -168,7 +173,12 @@ export function ManagementShell({
               <div className="mgmt-sidebar__nav">
                 <AdminNav locale={locale} role={role} collapsed={collapsed} />
               </div>
-              <div className="mgmt-sidebar__footer">
+              <div
+                className="mgmt-sidebar__footer"
+                role="group"
+                aria-label={`${userName || userEmail} · ${roleLabel(role, locale)}`}
+                title={`${userName || userEmail} · ${roleLabel(role, locale)}`}
+              >
                 <span className="mgmt-sidebar__avatar" aria-hidden="true">
                   {initials}
                 </span>

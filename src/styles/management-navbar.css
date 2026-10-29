@@ -482,24 +482,34 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     scroll-padding-block: 0.75rem;
-    gap: 0.75rem;
+    gap: 0.5rem;
     padding: 0.75rem;
     border-color: var(--border-control);
     border-radius: 1.1rem;
+    background: var(--surface);
+    box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 22%);
   }
   .mgmt-account__identity {
     grid-template-columns: 2.75rem minmax(0, 1fr);
     align-items: start;
-    gap: 0.875rem;
-    padding: 0.5rem 0.4rem 1rem;
+    gap: 0.75rem;
+    padding: 0.875rem;
     margin: 0;
+    border: 1px solid var(--border-subtle);
+    border-radius: 0.85rem;
+    background: linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--primary) 5%, var(--surface-muted)),
+      var(--surface-muted)
+    );
   }
   .mgmt-account__identity-avatar {
     display: grid;
     place-items: center;
     inline-size: 2.75rem;
     block-size: 2.75rem;
-    border: 1px solid var(--border-control);
+    border: 1px solid
+      color-mix(in srgb, var(--primary) 35%, var(--border-control));
     border-radius: 0.8rem;
     background: color-mix(in srgb, var(--primary) 10%, var(--surface));
     color: var(--accent-text);
@@ -509,30 +519,40 @@
   .mgmt-account__identity-copy {
     display: grid;
     min-inline-size: 0;
-    gap: 0.3rem;
+    gap: 0.2rem;
+    text-align: start;
   }
   :is(.mgmt-account__identity-name, .mgmt-account__identity-email) {
     overflow-wrap: anywhere;
     white-space: normal;
     line-height: 1.45;
+    text-align: left;
+  }
+  .mgmt-account__identity-label {
+    letter-spacing: 0.04em;
+  }
+  .mgmt-account__identity-name {
+    font-size: 0.9rem;
   }
   .mgmt-account__role {
-    border: 1px solid var(--border-subtle);
+    margin-block-start: 0.4rem;
     border-radius: 0.4rem;
   }
   .mgmt-account__current-area {
-    padding: 0 0.4rem 0.75rem;
+    margin: 0;
+    padding: 0.45rem 0.875rem;
+    border: 0;
     font-size: 0.75rem;
     line-height: 1.5;
     overflow-wrap: anywhere;
   }
   .mgmt-account__item {
-    min-block-size: 3rem;
+    min-block-size: 3.25rem;
     gap: 0.75rem;
     padding: 0.65rem 0.75rem;
     border: 1px solid var(--border-subtle);
     border-radius: 0.75rem;
-    background: var(--surface);
+    background: color-mix(in srgb, var(--surface-muted) 55%, var(--surface));
     color: var(--foreground);
     line-height: 1.45;
   }
@@ -572,6 +592,10 @@
     color: var(--error-text);
     background: color-mix(in srgb, var(--error-text) 8%, var(--surface));
   }
+}
+:root[data-appearance-version="2"][dir="rtl"]
+  :is(.mgmt-account__identity-name, .mgmt-account__identity-email) {
+  text-align: right;
 }
 :root[data-appearance-version="2"][data-motion-micro-interactions="true"]
   .mgmt-account__item:is(:hover, :focus-visible)

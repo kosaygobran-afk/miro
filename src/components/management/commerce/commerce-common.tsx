@@ -8,6 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { ScrollRegion } from "../ui/scroll-region";
 import { useWorkspace } from "../shell/workspace-context";
 import { can, type Capability } from "@/lib/permissions";
 import { PageHeader } from "../ui/page-header";
@@ -260,6 +262,7 @@ const routeLinks = [
 ] as const;
 
 export function CommerceNav({ locale }: { locale: "he" | "en" }) {
+  const pathname = usePathname();
   return (
     <nav
       className={styles.sectionNav}
@@ -269,6 +272,9 @@ export function CommerceNav({ locale }: { locale: "he" | "en" }) {
         <Link
           key={path}
           href={`/${locale}/admin/${path}`}
+          aria-current={
+            pathname === `/${locale}/admin/${path}` ? "page" : undefined
+          }
           className={styles.sectionLink}
         >
           {labels[locale]}
@@ -351,11 +357,9 @@ export function RecordTable({
     value == null || value === "" ? "—" : String(value);
   return (
     <div className="mgmt-table">
-      <div
+      <ScrollRegion
         className="mgmt-table__scroll"
-        role="region"
-        tabIndex={0}
-        aria-label={locale === "he" ? "רשומות" : "Records"}
+        label={locale === "he" ? "רשומות" : "Records"}
       >
         <table className="mgmt-table__table" style={{ minWidth: "40rem" }}>
           <thead className="mgmt-table__head">
@@ -406,7 +410,7 @@ export function RecordTable({
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollRegion>
     </div>
   );
 }

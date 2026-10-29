@@ -355,6 +355,7 @@ export function CalculatorWindow({ locale, userId }: CalculatorWindowProps) {
   return (
     <div
       className={styles.container}
+      data-calculator-shell="true"
       dir={locale === "he" ? "rtl" : "ltr"}
       onKeyDown={handleKeyPress}
     >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type InputHTMLAttributes } from "react";
+import { useRef, useState, type InputHTMLAttributes } from "react";
 import { Search, X } from "lucide-react";
 import { OverflowText } from "./overflow-text";
 
@@ -21,9 +21,12 @@ export function SearchField({
   clearLabel = "Clear search",
   placeholder = "",
   className,
+  onFocus,
+  onBlur,
   ...props
 }: SearchFieldProps) {
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
     <div className={["mgmt-search-field", className].filter(Boolean).join(" ")}>
       <Search
@@ -33,14 +36,21 @@ export function SearchField({
       />
       <input
         {...props}
+        ref={inputRef}
         type="search"
         value={value}
         aria-label={label}
         placeholder={placeholder}
         data-placeholder-overlay={(!value && !focused) || undefined}
         onChange={(event) => onValueChange(event.target.value)}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onFocus={(event) => {
+          setFocused(true);
+          onFocus?.(event);
+        }}
+        onBlur={(event) => {
+          setFocused(false);
+          onBlur?.(event);
+        }}
       />
       {!value && !focused ? (
         <span className="mgmt-search-field__placeholder" aria-hidden="true">
@@ -52,7 +62,11 @@ export function SearchField({
           type="button"
           className="mgmt-search-field__clear"
           aria-label={clearLabel}
-          onClick={() => onValueChange("")}
+          disabled={props.disabled || props.readOnly}
+          onClick={() => {
+            onValueChange("");
+            inputRef.current?.focus();
+          }}
         >
           <X size={16} aria-hidden="true" />
         </button>

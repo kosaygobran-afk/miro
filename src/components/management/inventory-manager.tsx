@@ -723,7 +723,7 @@ export function InventoryManager({
               <span>{he ? "מלאי נמוך בלבד" : "Low stock only"}</span>
             </label>
             <button
-              className="miro-button miro-button-secondary"
+              className="mgmt-button mgmt-button--secondary"
               onClick={() => {
                 fetchVariants();
                 fetchReplenishment();

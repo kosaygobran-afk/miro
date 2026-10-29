@@ -681,7 +681,7 @@ export function CommerceReadWorkspace({
       <SectionFeedback notice={notice} setNotice={setNotice} locale={locale} />
       {variant === "reports" ? (
         <div
-          className={styles.actionRow}
+          className={styles.reportTabs}
           role="tablist"
           aria-label={he ? "תצוגת דוח" : "Report view"}
         >
@@ -724,7 +724,7 @@ export function CommerceReadWorkspace({
           <div className={styles.stack}>
             {variant === "reports" ? (
               <SectionCard title={he ? "טווח הדוח" : "Report range"}>
-                <div className={styles.grid3}>
+                <div className={`${styles.grid3} ${styles.reportRange}`}>
                   <FormField label={he ? "מתאריך" : "From"}>
                     {(p) => (
                       <input
@@ -842,7 +842,7 @@ export function CommerceReadWorkspace({
                     : "This screen does not assign numbers. Drafts can only be created from an existing order or sales intent."
                 }
               >
-                <div className={styles.grid3}>
+                <div className={`${styles.grid3} ${styles.formActionGrid}`}>
                   <FormField label={he ? "סוג מסמך" : "Document type"}>
                     {(p) => (
                       <select

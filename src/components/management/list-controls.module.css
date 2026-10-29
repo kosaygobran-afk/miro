@@ -90,3 +90,49 @@
 :global([dir="rtl"]) .pagerIcon {
   transform: scaleX(-1);
 }
+
+:global(:root[data-appearance-version="2"]) {
+  .pager {
+    padding: 1rem;
+    gap: 1rem;
+  }
+  .pagerControls {
+    gap: 0.625rem;
+  }
+  .selectField {
+    gap: 0.625rem;
+    line-height: 1.5;
+  }
+  .select,
+  .pagerButton {
+    min-block-size: 44px;
+    border-radius: 0.75rem;
+  }
+  .pagerButton {
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .pagerInfo {
+    margin: 0;
+    font-variant-numeric: tabular-nums;
+  }
+}
+@media (max-width: 480px) {
+  :global(:root[data-appearance-version="2"]) {
+    .pager {
+      justify-content: center;
+    }
+    .pagerControls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      inline-size: 100%;
+    }
+    .selectField {
+      grid-column: 1 / -1;
+      justify-content: center;
+    }
+    .pagerInfo {
+      text-align: center;
+    }
+  }
+}

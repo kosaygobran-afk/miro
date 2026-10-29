@@ -16,6 +16,7 @@ import {
   type DateRangeValue,
 } from "@/components/management/ui/date-range-picker";
 import { Drawer } from "@/components/management/ui/drawer";
+import { Pager } from "@/components/management/pager";
 import { useManagementReport } from "@/components/management/ui/use-management-report";
 import {
   ReportingHeader,
@@ -26,6 +27,7 @@ import {
   Banknote,
   Package,
   RefreshCw,
+  RotateCcw,
   ShoppingBag,
   TrendingUp,
 } from "lucide-react";
@@ -140,7 +142,7 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
   const [cashiersError, setCashiersError] = useState(false);
   const [cashiersRetry, setCashiersRetry] = useState(0);
   const [generalSearch, setGeneralSearch] = useState("");
-  const [limit] = useState(25);
+  const [limit, setLimit] = useState(25);
   const [offset, setOffset] = useState(0);
   const detailController = useRef<AbortController | null>(null);
   const [detailOrderId, setDetailOrderId] = useState<string | null>(null);
@@ -279,8 +281,6 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
   const totals = data?.summary ?? null;
   const orders = data?.orders ?? [];
   const totalCount = data?.total_count ?? 0;
-  const firstItem = orders.length ? offset + 1 : 0;
-  const lastItem = orders.length ? offset + orders.length : 0;
 
   // Prepare data for the table
   const tableData = orders.map((order) => ({
@@ -419,7 +419,7 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
                 setOffset(0);
               }}
             >
-              <RefreshCw size={17} aria-hidden="true" />
+              <RotateCcw size={17} aria-hidden="true" />
               {he ? "איפוס" : "Reset"}
             </button>
             <button
@@ -435,7 +435,7 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
         }
       />
       <div className={report.toolbar}>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="accounts-filter-row">
           <DateRangePicker
             value={range}
             onChange={(value) => {
@@ -443,14 +443,13 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
               setOffset(0);
             }}
             labels={dateRangeLabels(locale)}
+            label={dateRangeLabels(locale).groupLabel}
           />
-          <div className="relative">
-            <label
-              htmlFor="accounts-payment-method"
-              className="block text-xs font-medium mb-1"
-            >
-              {t(locale, accountsCopy.paymentMethodFilter)}
-            </label>
+          <label
+            className="mgmt-filter-field"
+            htmlFor="accounts-payment-method"
+          >
+            <span>{t(locale, accountsCopy.paymentMethodFilter)}</span>
             <select
               id="accounts-payment-method"
               className="mgmt-select"
@@ -466,14 +465,12 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="relative">
-            <label
-              htmlFor="accounts-payment-status"
-              className="block text-xs font-medium mb-1"
-            >
-              {t(locale, accountsCopy.paymentStatusFilter)}
-            </label>
+          </label>
+          <label
+            className="mgmt-filter-field"
+            htmlFor="accounts-payment-status"
+          >
+            <span>{t(locale, accountsCopy.paymentStatusFilter)}</span>
             <select
               id="accounts-payment-status"
               className="mgmt-select"
@@ -489,14 +486,9 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
                 </option>
               ))}
             </select>
-          </div>
-          <div className="relative">
-            <label
-              htmlFor="accounts-cashier"
-              className="block text-xs font-medium mb-1"
-            >
-              {t(locale, accountsCopy.cashier)}
-            </label>
+          </label>
+          <label className="mgmt-filter-field" htmlFor="accounts-cashier">
+            <span>{t(locale, accountsCopy.cashier)}</span>
             <select
               id="accounts-cashier"
               className="mgmt-select"
@@ -526,14 +518,9 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
                 </button>
               </p>
             )}
-          </div>
-          <div className="relative">
-            <label
-              htmlFor="accounts-search"
-              className="block text-xs font-medium mb-1"
-            >
-              {t(locale, accountsCopy.generalSearch)}
-            </label>
+          </label>
+          <label className="mgmt-filter-field" htmlFor="accounts-search">
+            <span>{t(locale, accountsCopy.generalSearch)}</span>
             <input
               id="accounts-search"
               type="text"
@@ -545,7 +532,7 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
               }}
               placeholder={t(locale, accountsCopy.generalSearch)}
             />
-          </div>
+          </label>
         </div>
       </div>
       <p className={report.muted} role="status">
@@ -724,33 +711,18 @@ export function AccountsDashboard({ locale }: { locale: Locale }) {
           </div>
 
           {/* Pagination controls */}
-          <div className={report.toolbar} style={{ justifyContent: "center" }}>
-            <button
-              type="button"
-              disabled={offset === 0 || loading}
-              onClick={() => {
-                setOffset(Math.max(0, offset - limit));
-              }}
-              className="mgmt-button mgmt-button--secondary"
-            >
-              {he ? "הקודם" : "Previous"}
-            </button>
-            <span className={report.muted} style={{ margin: "0 1rem" }}>
-              {he
-                ? `הצגת ${firstItem}-${lastItem} מתוך ${totalCount}`
-                : `Showing ${firstItem}-${lastItem} of ${totalCount}`}
-            </span>
-            <button
-              type="button"
-              disabled={offset + limit >= totalCount || loading}
-              onClick={() => {
-                setOffset(offset + limit);
-              }}
-              className="mgmt-button mgmt-button--secondary"
-            >
-              {he ? "הבא" : "Next"}
-            </button>
-          </div>
+          <Pager
+            totalCount={totalCount}
+            limit={limit}
+            offset={offset}
+            onOffsetChange={setOffset}
+            onLimitChange={(nextLimit) => {
+              setLimit(nextLimit);
+              setOffset(0);
+            }}
+            locale={locale}
+            busy={loading}
+          />
         </>
       ) : null}
 

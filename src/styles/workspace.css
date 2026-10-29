@@ -1063,7 +1063,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  min-height: 44px;
+  min-height: 2.875rem;
   padding: 0.5rem 1rem;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);

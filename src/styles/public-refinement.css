@@ -1097,3 +1097,55 @@
     }
   }
 }
+
+/* Navigation cues — 2026-10-29. Keep desktop labels in their centered track;
+   reserve icon space only once a wide header can comfortably carry it. */
+:root[data-appearance-version="2"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  ) {
+  .premium-desktop-nav .premium-nav-icon {
+    display: none;
+  }
+  .premium-nav-icon {
+    flex: 0 0 auto;
+    stroke-width: 1.75;
+  }
+  .premium-nav-link:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 3px;
+  }
+  .premium-mobile-navigation nav {
+    gap: 0.5rem;
+  }
+  .premium-mobile-navigation .premium-nav-link {
+    gap: 0.625rem;
+    min-block-size: 3.25rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--public-icon-radius);
+    background: var(--surface);
+    white-space: normal;
+  }
+  .premium-mobile-navigation .premium-nav-link > span {
+    min-inline-size: 0;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+  }
+  .premium-mobile-navigation .premium-nav-link.is-active {
+    color: var(--accent-text);
+    border-color: var(--accent-text);
+    background: color-mix(in srgb, var(--primary) 10%, var(--surface));
+  }
+}
+@media (min-width: 1920px) {
+  :root[data-appearance-version="2"]:not(
+      :has(.mgmt-shell-root, [data-management-surface="true"])
+    ) {
+    .premium-desktop-nav .premium-nav-icon {
+      display: block;
+    }
+    .premium-desktop-nav .premium-nav-link {
+      gap: 0.5rem;
+    }
+  }
+}

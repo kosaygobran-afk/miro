@@ -283,9 +283,10 @@
   display: none;
 }
 
-/* Center the inner grouping while leaving actions and responsive controls free to wrap. */
+/* Keep related-workspace links on the reading-start edge so they line up with
+   the page title instead of floating in the middle of the hero. */
 :global(html[data-appearance-version="2"]) .connections {
-  justify-content: center;
+  justify-content: flex-start;
   gap: 0.65rem;
 }
 :global(html[data-appearance-version="2"]) .connection {
@@ -295,6 +296,12 @@
 :global(html[data-appearance-version="2"]) .panel {
   gap: 1.4rem;
   border-radius: 1.35rem;
+}
+:global(html[data-appearance-version="2"]) .panel > :global(.mgmt-table) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 :global(html[data-appearance-version="2"]) .toolbar {
   gap: 1rem;

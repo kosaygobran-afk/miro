@@ -16,6 +16,30 @@
   flex-shrink: 0;
 }
 
+:global(:root[data-appearance-version="2"]) {
+  .switchRow {
+    align-items: center;
+    padding: 1.125rem;
+    background: var(--surface);
+    border-radius: 0.875rem;
+  }
+  .switchRow:has(button:focus-visible) {
+    border-color: var(--accent-text);
+  }
+  .field {
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 650;
+  }
+  .featureGrid,
+  .durationGrid {
+    gap: 1rem;
+  }
+  .actions {
+    gap: 0.75rem;
+  }
+}
+
 .backupCard {
   display: grid;
   gap: 0.85rem;

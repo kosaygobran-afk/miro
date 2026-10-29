@@ -144,6 +144,51 @@ for (const locale of ["he", "en"] as const) {
     await expect(page.locator(".premium-mobile-toggle")).toBeFocused();
   });
 
+  test(`${locale}: mobile navigation has icon cues and recovers focus across breakpoints`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/${locale}`);
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-motion-ready",
+      "true",
+    );
+    const toggle = page.locator(".premium-mobile-toggle");
+    const panel = page.locator("#mobile-navigation");
+    await toggle.click();
+    await expect(panel.locator(".premium-nav-icon")).toHaveCount(5);
+    await toggle.press("Tab");
+    await expect(panel.getByRole("searchbox")).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(toggle).toBeFocused();
+    await toggle.press("Tab");
+    await expect(panel.getByRole("searchbox")).toBeFocused();
+    await expect(panel.locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(
+      panel.locator("nav .premium-nav-link").first(),
+    ).toHaveAccessibleName(
+      (
+        await page
+          .locator(".premium-desktop-nav .premium-nav-link")
+          .first()
+          .innerText()
+      ).trim(),
+    );
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await expect(panel).toHaveCount(0);
+    await expect(
+      page.locator(".premium-desktop-nav .premium-nav-link").first(),
+    ).toBeFocused();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await toggle.click();
+    await page.locator("#main-content").click({ position: { x: 5, y: 650 } });
+    await expect(panel).toHaveCount(0);
+    await toggle.click();
+    await page.keyboard.press("Escape");
+    await expect(toggle).toBeFocused();
+  });
+
   test(`${locale}: account panel contains long identity, supports keyboard and preserves logout`, async ({
     page,
   }) => {
@@ -211,3 +256,19 @@ for (const locale of ["he", "en"] as const) {
     await expect(panel).toHaveCount(0);
   });
 }
+
+test("language round trip retains a query and one anchor fragment", async ({
+  page,
+}) => {
+  await page.goto("/en/about?navigation=review#main-content");
+  for (const locale of ["he", "en"]) {
+    await page.locator(".premium-language").click();
+    await page.waitForURL(
+      (url) =>
+        url.pathname === `/${locale}/about` &&
+        url.search === "?navigation=review" &&
+        url.hash === "#main-content",
+    );
+    await expect(page.locator("html")).toHaveAttribute("lang", locale);
+  }
+});
