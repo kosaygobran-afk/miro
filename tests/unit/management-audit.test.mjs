@@ -131,6 +131,8 @@ async function loadRoute(allowed = true) {
           ? { ok: true, admin }
           : { ok: false, response: { status: 403 } },
       errorResponse: (error, status = 500) => ({ body: { error }, status }),
+      checkManagementRateLimit: async () => "ok",
+      getClientIp: () => "fixture",
     },
   };
   runInNewContext(

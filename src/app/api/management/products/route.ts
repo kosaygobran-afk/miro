@@ -13,6 +13,7 @@ import { getCategoryWriteError } from "@/lib/catalog/category-errors";
 // List query schema
 const listQuerySchema = z.object({
   id: z.string().uuid().optional(), // For single product lookup (backward compat)
+  view: z.enum(["summary"]).optional(),
   q: z.string().trim().max(200).optional(),
   status: z
     .enum(["draft", "active", "hidden", "archived", "all"])
@@ -36,6 +37,15 @@ const listQuerySchema = z.object({
   page: z.coerce.number().int().positive().optional().default(1),
   limit: z.coerce.number().int().positive().max(100).optional().default(25),
 });
+
+// Lists need current stock and default-variant pricing, but not editor-only
+// descriptions, specifications, SEO, costs or role-price rows. Keep the full
+// response as the default for existing callers and all single-product reads.
+const PRODUCT_SUMMARY_SELECT = `
+  id, slug, category_id, name_he, name_en, price, is_featured, updated_at, status,
+  product_images (id, image_url, alt_he, alt_en, sort_order),
+  product_variants (id, sku, price_override, is_default, is_active, stock_qty)
+`;
 
 // Product creation schema
 const productSchema = z
@@ -137,6 +147,7 @@ export async function GET(request: Request) {
 
   const {
     id,
+    view,
     q,
     status,
     category,
@@ -184,7 +195,9 @@ export async function GET(request: Request) {
   let query = admin
     .from("products")
     .select(
-      `
+      view === "summary"
+        ? PRODUCT_SUMMARY_SELECT
+        : `
       id, slug, category_id, subcategory_id, name_he, name_en, short_description_he, short_description_en,
       description_he, description_en, price, compare_at_price, sale_price, inventory_count,
       is_active, is_featured, image_url, metadata, created_at, updated_at,

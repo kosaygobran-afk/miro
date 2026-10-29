@@ -35,6 +35,7 @@ const deferred = () => {
 
 function loadApi({ authorized = true, errorTable } = {}) {
   const started = [];
+  const selected = {};
   const gates = { products: deferred(), categories: deferred() };
   const rows = {
     products: [{ id: "product" }],
@@ -42,15 +43,24 @@ function loadApi({ authorized = true, errorTable } = {}) {
   };
   const admin = {
     from(table) {
+      let single = false;
       const builder = {
-        select: () => builder,
+        select: (projection) => {
+          selected[table] = projection;
+          return builder;
+        },
+        eq: () => builder,
+        maybeSingle: () => {
+          single = true;
+          return builder;
+        },
         order: () => builder,
         range: () => builder,
         then(resolve, reject) {
           started.push(table);
           return gates[table].promise
             .then(() => ({
-              data: rows[table],
+              data: single ? rows[table][0] : rows[table],
               count: 1,
               error: errorTable === table ? { code: "database_error" } : null,
             }))
@@ -84,7 +94,7 @@ function loadApi({ authorized = true, errorTable } = {}) {
     URL,
     require: (name) => imports[name],
   });
-  return { GET: exports.GET, started, gates, rows };
+  return { GET: exports.GET, started, gates, rows, selected };
 }
 
 test("management products and categories start together and share one response", async () => {
@@ -101,6 +111,44 @@ test("management products and categories start together and share one response",
   assert.equal(result.body.products, api.rows.products);
   assert.equal(result.body.categories, api.rows.categories);
   assert.equal(result.body.totalCount, 1);
+});
+
+test("summary product reads omit editor data while full and single-product callers retain it", async () => {
+  for (const query of [
+    "?view=summary",
+    "",
+    "?view=summary&id=11111111-1111-4111-8111-111111111111",
+  ]) {
+    const api = loadApi();
+    const response = api.GET(
+      new Request(`http://localhost/api/management/products${query}`),
+    );
+    api.gates.products.resolve();
+    api.gates.categories.resolve();
+    assert.equal((await response).status, 200);
+    const projection = api.selected.products;
+    if (query === "?view=summary") {
+      assert.doesNotMatch(
+        projection,
+        /description|specifications|seo_|purchase_cost|cost_override|product_prices|suppliers/,
+      );
+      for (const field of [
+        "category_id",
+        "price_override",
+        "is_default",
+        "is_active",
+        "stock_qty",
+        "alt_he",
+        "alt_en",
+        "sort_order",
+      ])
+        assert.ok(projection.includes(field), `Missing list field: ${field}`);
+    } else {
+      assert.match(projection, /description_he/);
+      assert.match(projection, /product_prices/);
+      assert.match(projection, /cost_override/);
+    }
+  }
 });
 
 test("management products deny unauthorized reads before querying", async () => {
@@ -195,6 +243,7 @@ test("product management loads embedded categories with one read and retries fai
   assert.equal(client.render().props.className, "mgmt-products-page");
   assert.equal(calls.length, 2);
   assert.ok(calls.every((url) => url.startsWith("/api/management/products?")));
+  assert.ok(calls.every((url) => url.includes("view=summary")));
 });
 
 test("product management rejects incomplete data and aborts reads on unmount", async () => {
@@ -233,6 +282,100 @@ function findElement(element, predicate) {
   }
   return null;
 }
+
+test("summary-only product rows retain default price, active stock and gallery count", async () => {
+  const client = loadClient(async () => ({
+    ok: true,
+    json: async () => ({
+      products: [
+        {
+          id: "product",
+          slug: "camera",
+          name_en: "Camera",
+          name_he: "מצלמה",
+          category_id: "category",
+          price: 100,
+          is_featured: true,
+          updated_at: "2026-10-29T00:00:00Z",
+          status: "active",
+          product_variants: [
+            {
+              id: "other",
+              sku: "ALT",
+              is_default: false,
+              is_active: true,
+              stock_qty: 4,
+              price_override: 90,
+            },
+            {
+              id: "default",
+              sku: "CAM1",
+              is_default: true,
+              is_active: true,
+              stock_qty: 3,
+              price_override: 80,
+            },
+            {
+              id: "inactive",
+              sku: "OLD",
+              is_default: false,
+              is_active: false,
+              stock_qty: 99,
+              price_override: null,
+            },
+          ],
+          product_images: [
+            {
+              id: "second",
+              image_url: "https://media.example/second.jpg",
+              alt_he: null,
+              alt_en: "Second",
+              sort_order: 1,
+            },
+            {
+              id: "first",
+              image_url: "https://media.example/first.jpg",
+              alt_he: null,
+              alt_en: "First",
+              sort_order: 0,
+            },
+          ],
+        },
+      ],
+      categories: [{ id: "category", name_en: "Cameras" }],
+    }),
+  }));
+  client.mount();
+  await tick();
+  const content = client.render();
+  assert.equal(
+    findElement(
+      content,
+      (element) => element.props.className === "font-mono font-medium",
+    ).props.children,
+    7,
+  );
+  assert.match(
+    findElement(content, (element) => element.props.className === "font-medium")
+      .props.children,
+    /80/,
+  );
+  assert.equal(
+    findElement(
+      content,
+      (element) =>
+        element.props.className === "product-management__image-count",
+    ).props.children[1],
+    2,
+  );
+  assert.ok(
+    findElement(
+      content,
+      (element) => element.props.src === "https://media.example/first.jpg",
+    ),
+  );
+  assert.ok(findElement(content, (element) => element.props.text === "CAM1"));
+});
 
 test("a product status update refreshes products and categories with one read", async () => {
   const calls = [];

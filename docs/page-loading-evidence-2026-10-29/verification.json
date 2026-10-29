@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-29",
+  "lint": "pass",
+  "typecheck": "pass",
+  "productionBuild": "pass; isolated source snapshot with unchanged Next config and installed dependencies",
+  "unit": {
+    "total": 394,
+    "passed": 390,
+    "failed": 4,
+    "baselineReproduced": true,
+    "failureFile": "tests/unit/pos-accounts-dashboard.test.mjs",
+    "reason": "Existing VM harness lacks @/components/management/pager; reproduced with HEAD-only tests and source inputs."
+  },
+  "browser": {
+    "passed": 37,
+    "failed": 0,
+    "engine": "Chromium",
+    "suites": [
+      "tests/motion.spec.ts",
+      "tests/store-loading.spec.ts",
+      "tests/store-overlays.spec.ts"
+    ],
+    "excluded": "Previously documented stalled-preview-image case; unrelated image fallback, not exercised."
+  },
+  "anonymousNavigations": {
+    "before": 36,
+    "after": 36,
+    "all200AndContentReady": true,
+    "consoleAndRuntimeErrors": 0
+  },
+  "protectedReads": {
+    "checksPassed": 18,
+    "disposableActorDeleted": true,
+    "businessWrites": false
+  },
+  "catalogPipelineSynthetic": {
+    "savedReadDelayMs": 100,
+    "rolePriceDelayMs": 120,
+    "beforeMs": [224, 223, 222],
+    "afterMs": [121, 122, 122],
+    "priceRequestsBefore": 1,
+    "priceRequestsAfter": 1,
+    "scope": "Actual baseline/current DAL with controlled verified-worker mock; this is dependency-order evidence, not live browser latency."
+  }
+}

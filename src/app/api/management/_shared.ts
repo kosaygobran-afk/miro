@@ -154,12 +154,18 @@ export async function checkManagementRateLimit(
     { key: `mgmt:read:ip:1m:${ip}`, limit: 60, window: "1 minute" },
     { key: `mgmt:read:ip:1h:${ip}`, limit: 300, window: "1 hour" },
   ] as const;
-  for (const bucket of buckets) {
-    const { data: allowed, error } = await admin.rpc("check_rate_limit", {
-      p_key: bucket.key,
-      p_limit: bucket.limit,
-      p_window: bucket.window,
-    });
+  // The independent windows both apply to every attempt. Checking them in one
+  // wave avoids an extra database round trip before each management read.
+  const results = await Promise.all(
+    buckets.map((bucket) =>
+      admin.rpc("check_rate_limit", {
+        p_key: bucket.key,
+        p_limit: bucket.limit,
+        p_window: bucket.window,
+      }),
+    ),
+  );
+  for (const { data: allowed, error } of results) {
     if (error) {
       console.error("check_rate_limit failed:", error.code, error.message);
       return "error";

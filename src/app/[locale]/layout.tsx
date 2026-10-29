@@ -23,6 +23,8 @@ import { AnimationProvider } from "@/components/motion/animation-provider";
 import { NavigationProgress } from "@/components/motion/navigation-progress";
 import { PageReveal } from "@/components/motion/page-reveal";
 import { getPublicAnimationSettings } from "@/lib/animation-settings-server";
+import { getPublicGlassSettings } from "@/lib/glass-settings-server";
+import { getStoreNavigationCategories } from "@/lib/store-data";
 import { motionAttributes, motionStyle } from "@/lib/motion";
 import "@/styles/motion.css";
 import "@/styles/product-card-sections.css";
@@ -32,6 +34,7 @@ import "@/styles/product-preview-refinement.css";
 import "@/styles/navigation-refinements.css";
 import "@/styles/category-hierarchy.css";
 import "@/styles/card-refinement.css";
+import "@/styles/deep-glass.css";
 import "@/styles/public-refinement.css";
 import {
   getDirection,
@@ -91,17 +94,24 @@ export default async function LocaleLayout({
   }
 
   const locale: Locale = rawLocale;
-  const nonce = (await headers()).get("x-nonce") ?? undefined;
-  const [storeDesign, animationSettings] = await Promise.all([
-    getPublicStorefrontDesign(),
-    getPublicAnimationSettings(),
-  ]);
+  // Header's request-cached public labels can load during the appearance reads
+  // rather than starting another network wave after the layout is ready.
+  void getStoreNavigationCategories(locale);
+  const [requestHeaders, storeDesign, animationSettings, glassSettings] =
+    await Promise.all([
+      headers(),
+      getPublicStorefrontDesign(),
+      getPublicAnimationSettings(),
+      getPublicGlassSettings(),
+    ]);
+  const nonce = requestHeaders.get("x-nonce") ?? undefined;
   return (
     <html
       lang={locale}
       dir={getDirection(locale)}
       className={heebo.variable}
       data-theme="dark"
+      data-glass={glassSettings.enabled ? "on" : "off"}
       suppressHydrationWarning
       {...motionAttributes(animationSettings)}
       style={motionStyle(animationSettings)}

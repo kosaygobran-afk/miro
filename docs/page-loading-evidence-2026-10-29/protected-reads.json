@@ -1,0 +1,503 @@
+{
+  "startedAt": "2026-10-29T20:46:13.838Z",
+  "environment": "local production, same live Supabase; disposable active CEO; no business writes",
+  "checks": [
+    {
+      "label": "products full: baseline/optimized data parity",
+      "passed": true
+    },
+    {
+      "label": "products summary: baseline/optimized data parity",
+      "passed": true
+    },
+    {
+      "label": "products summary omits editor payload",
+      "passed": true
+    },
+    {
+      "label": "products summary reduces response bytes",
+      "passed": true,
+      "fullBytes": 66715,
+      "summaryBytes": 39970
+    },
+    {
+      "label": "POS catalog: baseline/optimized data parity",
+      "passed": true
+    },
+    {
+      "label": "requests: baseline/optimized data parity",
+      "passed": true
+    },
+    {
+      "label": "customers: baseline/optimized data parity",
+      "passed": true
+    },
+    {
+      "label": "users: baseline/optimized data parity",
+      "passed": true
+    },
+    {
+      "label": "audit: baseline/optimized data parity",
+      "passed": true
+    },
+    {
+      "label": "baseline browser /en/admin/products",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "label": "baseline browser /en/admin/requests",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "label": "baseline browser /en/account",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "label": "baseline browser no runtime exceptions",
+      "passed": true,
+      "errorNames": []
+    },
+    {
+      "label": "optimized browser /en/admin/products",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "label": "optimized browser /en/admin/requests",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "label": "optimized browser /en/account",
+      "passed": true,
+      "status": 200
+    },
+    {
+      "label": "optimized browser no runtime exceptions",
+      "passed": true,
+      "errorNames": []
+    },
+    {
+      "label": "disposable actor cleanup",
+      "passed": true
+    }
+  ],
+  "api": [
+    {
+      "name": "products full",
+      "route": "/api/management/products?limit=20&sort=sort_order&order=asc",
+      "samples": {
+        "baseline": [
+          {
+            "status": 200,
+            "elapsedMs": 795,
+            "bytes": 66715,
+            "rows": 20
+          },
+          {
+            "status": 200,
+            "elapsedMs": 422,
+            "bytes": 66715,
+            "rows": 20
+          },
+          {
+            "status": 200,
+            "elapsedMs": 420,
+            "bytes": 66715,
+            "rows": 20
+          }
+        ],
+        "optimized": [
+          {
+            "status": 200,
+            "elapsedMs": 431,
+            "bytes": 66715,
+            "rows": 20
+          },
+          {
+            "status": 200,
+            "elapsedMs": 393,
+            "bytes": 66715,
+            "rows": 20
+          },
+          {
+            "status": 200,
+            "elapsedMs": 490,
+            "bytes": 66715,
+            "rows": 20
+          }
+        ]
+      },
+      "medianMs": {
+        "baseline": 422,
+        "optimized": 431
+      },
+      "dtoParity": true
+    },
+    {
+      "name": "products summary",
+      "route": "/api/management/products?view=summary&limit=20&sort=sort_order&order=asc",
+      "samples": {
+        "baseline": [
+          {
+            "status": 200,
+            "elapsedMs": 436,
+            "bytes": 66715,
+            "rows": 20
+          },
+          {
+            "status": 200,
+            "elapsedMs": 394,
+            "bytes": 66715,
+            "rows": 20
+          },
+          {
+            "status": 200,
+            "elapsedMs": 430,
+            "bytes": 66715,
+            "rows": 20
+          }
+        ],
+        "optimized": [
+          {
+            "status": 200,
+            "elapsedMs": 356,
+            "bytes": 39970,
+            "rows": 20
+          },
+          {
+            "status": 200,
+            "elapsedMs": 414,
+            "bytes": 39970,
+            "rows": 20
+          },
+          {
+            "status": 200,
+            "elapsedMs": 397,
+            "bytes": 39970,
+            "rows": 20
+          }
+        ]
+      },
+      "medianMs": {
+        "baseline": 430,
+        "optimized": 397
+      },
+      "dtoParity": true
+    },
+    {
+      "name": "POS catalog",
+      "route": "/api/management/pos/catalog?limit=5",
+      "samples": {
+        "baseline": [
+          {
+            "status": 200,
+            "elapsedMs": 899,
+            "bytes": 8809,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 875,
+            "bytes": 8809,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 803,
+            "bytes": 8809,
+            "rows": 5
+          }
+        ],
+        "optimized": [
+          {
+            "status": 200,
+            "elapsedMs": 584,
+            "bytes": 8809,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 584,
+            "bytes": 8809,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 685,
+            "bytes": 8809,
+            "rows": 5
+          }
+        ]
+      },
+      "medianMs": {
+        "baseline": 875,
+        "optimized": 584
+      },
+      "dtoParity": true
+    },
+    {
+      "name": "requests",
+      "route": "/api/management/requests?limit=5",
+      "samples": {
+        "baseline": [
+          {
+            "status": 200,
+            "elapsedMs": 882,
+            "bytes": 3133,
+            "rows": 4
+          },
+          {
+            "status": 200,
+            "elapsedMs": 790,
+            "bytes": 3133,
+            "rows": 4
+          },
+          {
+            "status": 200,
+            "elapsedMs": 720,
+            "bytes": 3133,
+            "rows": 4
+          }
+        ],
+        "optimized": [
+          {
+            "status": 200,
+            "elapsedMs": 750,
+            "bytes": 3133,
+            "rows": 4
+          },
+          {
+            "status": 200,
+            "elapsedMs": 596,
+            "bytes": 3133,
+            "rows": 4
+          },
+          {
+            "status": 200,
+            "elapsedMs": 596,
+            "bytes": 3133,
+            "rows": 4
+          }
+        ]
+      },
+      "medianMs": {
+        "baseline": 790,
+        "optimized": 596
+      },
+      "dtoParity": true
+    },
+    {
+      "name": "customers",
+      "route": "/api/management/customers?limit=5",
+      "samples": {
+        "baseline": [
+          {
+            "status": 200,
+            "elapsedMs": 1059,
+            "bytes": 1366,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 898,
+            "bytes": 1366,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 833,
+            "bytes": 1366,
+            "rows": 5
+          }
+        ],
+        "optimized": [
+          {
+            "status": 200,
+            "elapsedMs": 714,
+            "bytes": 1366,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 743,
+            "bytes": 1366,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 685,
+            "bytes": 1366,
+            "rows": 5
+          }
+        ]
+      },
+      "medianMs": {
+        "baseline": 898,
+        "optimized": 714
+      },
+      "dtoParity": true
+    },
+    {
+      "name": "users",
+      "route": "/api/management/users?limit=5",
+      "samples": {
+        "baseline": [
+          {
+            "status": 200,
+            "elapsedMs": 794,
+            "bytes": 1162,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 818,
+            "bytes": 1162,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 871,
+            "bytes": 1162,
+            "rows": 5
+          }
+        ],
+        "optimized": [
+          {
+            "status": 200,
+            "elapsedMs": 684,
+            "bytes": 1162,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 736,
+            "bytes": 1162,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 734,
+            "bytes": 1162,
+            "rows": 5
+          }
+        ]
+      },
+      "medianMs": {
+        "baseline": 818,
+        "optimized": 734
+      },
+      "dtoParity": true
+    },
+    {
+      "name": "audit",
+      "route": "/api/management/audit?limit=5",
+      "samples": {
+        "baseline": [
+          {
+            "status": 200,
+            "elapsedMs": 750,
+            "bytes": 4330,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 732,
+            "bytes": 4330,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 730,
+            "bytes": 4330,
+            "rows": 5
+          }
+        ],
+        "optimized": [
+          {
+            "status": 200,
+            "elapsedMs": 567,
+            "bytes": 4330,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 597,
+            "bytes": 4330,
+            "rows": 5
+          },
+          {
+            "status": 200,
+            "elapsedMs": 652,
+            "bytes": 4330,
+            "rows": 5
+          }
+        ]
+      },
+      "medianMs": {
+        "baseline": 732,
+        "optimized": 597
+      },
+      "dtoParity": true
+    }
+  ],
+  "browser": [
+    {
+      "target": "baseline",
+      "route": "/en/admin/products",
+      "status": 200,
+      "readyMs": 1399,
+      "apiStatuses": [200],
+      "rendered": true
+    },
+    {
+      "target": "baseline",
+      "route": "/en/admin/requests",
+      "status": 200,
+      "readyMs": 1314,
+      "apiStatuses": [200],
+      "rendered": true
+    },
+    {
+      "target": "baseline",
+      "route": "/en/account",
+      "status": 200,
+      "readyMs": 402,
+      "apiStatuses": [],
+      "rendered": true
+    },
+    {
+      "target": "optimized",
+      "route": "/en/admin/products",
+      "status": 200,
+      "readyMs": 1272,
+      "apiStatuses": [200],
+      "rendered": true
+    },
+    {
+      "target": "optimized",
+      "route": "/en/admin/requests",
+      "status": 200,
+      "readyMs": 1045,
+      "apiStatuses": [200],
+      "rendered": true
+    },
+    {
+      "target": "optimized",
+      "route": "/en/account",
+      "status": 200,
+      "readyMs": 748,
+      "apiStatuses": [],
+      "rendered": true
+    }
+  ],
+  "cleanup": [
+    {
+      "disposableActorDeleted": true
+    }
+  ],
+  "finishedAt": "2026-10-29T20:47:34.869Z"
+}

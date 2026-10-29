@@ -8,6 +8,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Shared enhanced themes and glass — 2026-10-29
+
+- Read `docs/THEME_GLASS.md` before changing theme/glass. Every new paint in `deep-glass.css` requires Version 2, `data-glass="on"` and `data-theme="dark"`; off restores baseline, and Medium/Light stay exactly unchanged even when enabled. Preserve management Dark/semantic tokens, Version 1, geometry and final `public-refinement.css` import. The owner softened glass (12px blur, short shadows), requested selective nested sheen and all-side card hover/focus; public Dark now uses neutral near-black/charcoal, warm gold actions, pale gold reading accents and muted sage-mint with high-contrast text (owner color-harmony refinement, 2026-10-29). Keep neutral downward shadows and subtle top highlights instead of saturated yellow halos. Nested tiles must not accumulate blur or obscure text.
+- **Enhanced glass** is one global Settings switch, default on, writable only by active CEO AND admin in both API and `update_glass_settings`. This owner override applies only to this new setting; animation and other settings permissions stay unchanged. Public reads use the limited flag/revision RPC. Keep strict validation, same-origin/revision/audit and generic-setter protection, and never retry uncertain saves automatically. No public/localStorage override; other users receive saves on refresh/next visit. Verify SQL/route permissions plus exact-off/hover/contrast/responsive regressions with disposable actors.
+
 ## Supabase transport resilience — 2026-10-22
 
 - Route every server-side Supabase client through `src/lib/supabase/fetch.ts`: `supabaseFetch` (15s, critical writes), `supabaseFetchPublic` (6s, anonymous catalog/navigation), `supabaseFetchFast` (4s, analytics/session/proxy). Two consecutive transport failures open a process-local 30s circuit; any HTTP response closes it. Breaker/deadline errors are deliberately abort-shaped (`SUPABASE_UNAVAILABLE` / `SUPABASE_TIMEOUT`) so the installed SDK stops retrying idempotent reads immediately. Do not rename them back to plain errors without rechecking the SDK retry loop.

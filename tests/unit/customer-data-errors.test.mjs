@@ -96,6 +96,8 @@ function harness({
           status,
         }),
         tooManyRequests: () => ({ status: 429 }),
+        checkManagementRateLimit: async () => "ok",
+        getClientIp: () => "fixture",
       };
     },
   });

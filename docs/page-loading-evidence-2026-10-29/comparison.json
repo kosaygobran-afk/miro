@@ -1,0 +1,211 @@
+{
+  "scope": "Anonymous Chromium, 1440x1000, reduced motion, unthrottled. Every route is warmed before measurement; initial is a fresh browser context, reload reuses its context. Playwright request interception disables the browser HTTP cache. Server cold-start and development compilation are not claimed. Images and networkidle are not awaited. Request counts cover the browser only, not server-to-database calls. Analytics writes are suppressed; private sessions and payloads are never recorded.",
+  "comparison": [
+    {
+      "route": "/en",
+      "initial": {
+        "before": {
+          "readyMs": 486.2,
+          "ttfbMs": 278.4,
+          "requests": 55,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 532.7,
+          "ttfbMs": 324.1,
+          "requests": 55,
+          "sessionRequests": 1
+        }
+      },
+      "reload": {
+        "before": {
+          "readyMs": 520.9,
+          "ttfbMs": 314.6,
+          "requests": 65,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 546.8,
+          "ttfbMs": 316.3,
+          "requests": 69,
+          "sessionRequests": 1
+        }
+      }
+    },
+    {
+      "route": "/he",
+      "initial": {
+        "before": {
+          "readyMs": 507.4,
+          "ttfbMs": 296.4,
+          "requests": 59,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 535.3,
+          "ttfbMs": 312.4,
+          "requests": 55,
+          "sessionRequests": 1
+        }
+      },
+      "reload": {
+        "before": {
+          "readyMs": 542.5,
+          "ttfbMs": 334.3,
+          "requests": 66,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 527.7,
+          "ttfbMs": 318.3,
+          "requests": 68,
+          "sessionRequests": 1
+        }
+      }
+    },
+    {
+      "route": "/en/contact",
+      "initial": {
+        "before": {
+          "readyMs": 111.3,
+          "ttfbMs": 6.3,
+          "requests": 34,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 111.1,
+          "ttfbMs": 6.1,
+          "requests": 34,
+          "sessionRequests": 1
+        }
+      },
+      "reload": {
+        "before": {
+          "readyMs": 111.5,
+          "ttfbMs": 5.7,
+          "requests": 34,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 110.7,
+          "ttfbMs": 5.5,
+          "requests": 34,
+          "sessionRequests": 1
+        }
+      }
+    },
+    {
+      "route": "/en/services",
+      "initial": {
+        "before": {
+          "readyMs": 346.3,
+          "ttfbMs": 7.5,
+          "requests": 43,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 348.9,
+          "ttfbMs": 8.5,
+          "requests": 43,
+          "sessionRequests": 1
+        }
+      },
+      "reload": {
+        "before": {
+          "readyMs": 349.9,
+          "ttfbMs": 8.7,
+          "requests": 43,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 348.3,
+          "ttfbMs": 7.1,
+          "requests": 43,
+          "sessionRequests": 1
+        }
+      }
+    },
+    {
+      "route": "/en/login",
+      "initial": {
+        "before": {
+          "readyMs": 112.5,
+          "ttfbMs": 5.5,
+          "requests": 41,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 110,
+          "ttfbMs": 5.7,
+          "requests": 45,
+          "sessionRequests": 1
+        }
+      },
+      "reload": {
+        "before": {
+          "readyMs": 126.1,
+          "ttfbMs": 11.4,
+          "requests": 45,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 116.9,
+          "ttfbMs": 8.3,
+          "requests": 45,
+          "sessionRequests": 1
+        }
+      }
+    },
+    {
+      "route": "/en/store/networkGear/ubiquiti-usw-lite-8-poe",
+      "initial": {
+        "before": {
+          "readyMs": 414.7,
+          "ttfbMs": 9,
+          "requests": 64,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 430.1,
+          "ttfbMs": 7.6,
+          "requests": 64,
+          "sessionRequests": 1
+        }
+      },
+      "reload": {
+        "before": {
+          "readyMs": 453.6,
+          "ttfbMs": 10.7,
+          "requests": 64,
+          "sessionRequests": 1
+        },
+        "after": {
+          "readyMs": 483.5,
+          "ttfbMs": 7.5,
+          "requests": 65,
+          "sessionRequests": 1
+        }
+      }
+    }
+  ],
+  "session": {
+    "before": {
+      "synthetic": true,
+      "overlappingRequests": 12,
+      "freshFocusRequests": 2,
+      "peakInflight": 12,
+      "passed": false
+    },
+    "after": {
+      "synthetic": true,
+      "overlappingRequests": 1,
+      "freshFocusRequests": 1,
+      "peakInflight": 1,
+      "passed": true
+    }
+  },
+  "beforeSampleCount": 36,
+  "afterSampleCount": 36,
+  "afterPassed": true,
+  "afterErrors": 0
+}

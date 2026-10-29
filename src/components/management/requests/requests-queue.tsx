@@ -98,9 +98,12 @@ function ProductFilter({ locale, value, onChange }: ProductFilterProps) {
         return;
       }
       setFetching(true);
-      fetch(`/api/management/products?q=${encodeURIComponent(term)}&limit=20`, {
-        cache: "no-store",
-      })
+      fetch(
+        `/api/management/products?view=summary&q=${encodeURIComponent(term)}&limit=20`,
+        {
+          cache: "no-store",
+        },
+      )
         .then((res) => (res.ok ? res.json() : { products: [] }))
         .then((data) => {
           const needle = term.toLowerCase();

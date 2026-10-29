@@ -35,31 +35,11 @@ import { TextHint } from "./ui/icon-action";
 
 type ProductVariant = {
   id: string;
-  product_id: string;
   sku: string;
-  barcode: string | null;
-  color_he: string | null;
-  color_en: string | null;
-  color_hex: string | null;
   price_override: number | null;
-  cost_override: number | null;
-  supplier_id: string | null;
-  supplier_sku: string | null;
   is_default: boolean;
   is_active: boolean;
-  low_stock_threshold: number;
-  reorder_point: number | null;
-  reorder_qty: number | null;
   stock_qty: number;
-  created_at: string;
-  updated_at: string;
-  suppliers?: { id: string; company_name: string } | null;
-};
-
-type RolePrice = {
-  product_id: string;
-  role: string;
-  price: number;
 };
 
 type Category = {
@@ -70,8 +50,6 @@ type Category = {
   sort_order: number;
   is_active: boolean;
 };
-
-type Supplier = { id: string; company_name: string; is_active?: boolean };
 
 type ProductImage = {
   id: string;
@@ -87,48 +65,12 @@ type Product = {
   category_id: string | null;
   name_he: string;
   name_en: string;
-  short_description_he: string | null;
-  short_description_en: string | null;
-  description_he: string | null;
-  description_en: string | null;
   price: number | null;
-  compare_at_price: number | null;
-  sale_price: number | null;
-  inventory_count: number;
-  is_active: boolean;
   is_featured: boolean;
-  image_url: string | null;
-  metadata: Record<string, unknown>;
-  created_at: string;
   updated_at: string;
-  brand: string | null;
-  model_number: string | null;
-  tags: string[];
-  specifications: Record<string, unknown>;
-  warranty_he: string | null;
-  warranty_en: string | null;
-  seo_title_he: string | null;
-  seo_title_en: string | null;
-  seo_description_he: string | null;
-  seo_description_en: string | null;
-  sort_order: number;
-  currency: string;
-  purchase_cost: number | null;
-  recommended_price: number | null;
-  out_of_stock_policy:
-    | "inherit"
-    | "keep_visible_contact"
-    | "keep_visible_restock"
-    | "hide_from_public";
-  expected_restock_date: string | null;
-  tracking_mode: "none" | "serial" | "lot";
-  supplier_id: string | null;
   status: "draft" | "active" | "hidden" | "archived";
-  categories: Category | null;
-  product_prices: RolePrice[];
   product_variants: ProductVariant[];
   product_images: ProductImage[];
-  suppliers: Supplier | null;
 };
 
 function statusLabel(status: string, he: boolean) {
@@ -179,7 +121,7 @@ export function ProductManagement({
     loadController.current = controller;
     try {
       const response = await fetch(
-        "/api/management/products?limit=100&sort=sort_order&order=asc",
+        "/api/management/products?view=summary&limit=100&sort=sort_order&order=asc",
         {
           cache: "no-store",
           signal: controller.signal,

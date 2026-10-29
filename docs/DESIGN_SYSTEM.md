@@ -1,5 +1,11 @@
 # Design System
 
+## Enhanced themes and shared glass — 2026-10-29
+
+- Read `docs/THEME_GLASS.md` for behavior, the file map and restoration. Owner feedback softened the glass to 12px blur/shorter shadows, added restrained nested reflections and all-four-side card hover/focus. The latest public Dark direction is neutral charcoal/warm gold with pale gold reading accents, muted sage-mint and high-contrast text (see the color-harmony entry below). `data-glass="on"` plus Version 2 and `data-theme="dark"` gate every paint; Medium/Light remain exactly baseline. Public palettes exclude management roots. Keep console Dark and semantic tones, Version 1 and existing geometry intact.
+- One **Enhanced glass** switch at management Settings → Glass appearance controls the Dark-mode enhancement for every user. Only active CEO/admin may save, enforced in API and SQL with revision/audit. This explicit owner scope permits admin for this new setting only; existing animation permissions remain CEO-only. No footer/drawer/localStorage glass override. Shared values apply after confirmed Save and to other visits/refreshes.
+- Use selected chrome/feature glass and nested solid-fill sheen, without stacking blur on every child. Keep product imagery/prices, fields, primary actions, statuses and financial data solid. OS transparency/forced-colors overrides remain opaque. `public-refinement.css` stays last, immediately after the optional layer. Off reveals baseline styles; run exact restoration, actual all-side hover, global authorization and responsive contrast checks.
+
 ## Management sidebar icon colors — 2026-10-29
 
 - Version 2 sidebar and mobile-drawer icons use a restrained mix of `--report-cyan` and muted text on lightly tinted theme surfaces. The current destination uses the cyan accent, while hover and focus use gold. Each state sets its own icon color: the collapsed navigation's yellow hover background otherwise gives it dark inherited text against a dark tile. Preserve the keyboard outline, theme-specific tokens and Version 1 appearance. `verify-management-navbar.mjs` checks icon-to-tile contrast across themes, roles and directions, including collapsed and expanded states. `NAVBAR_ICONS_ONLY=1 NAVBAR_WIDTHS=390,1440` runs that focused matrix; 1440 is also in the full default width set.
@@ -468,3 +474,9 @@ This entry supersedes the earlier admin table wrapping and cosmetic-control note
 ## Management sidebar scroll spacing — 2026-10-29
 
 - The desktop sidebar keeps breathing room between its fixed brand, native scrolling navigation and identity footer. Expanded navigation has extra inline clearance from the scrollbar; collapsed navigation retains its compact padding and 46px targets. Keep the stable gutters, logical direction, native wheel and keyboard access, and the separate fixed footer. `verify-management-navbar.mjs` checks the short-window scroll boundaries and content clearance in both sidebar states.
+
+## Public Dark color harmony — 2026-10-29
+
+- Owner-requested refinement replaces the initial enhanced neon yellow/blue-black combination with neutral charcoal, warm gold actions, pale gold reading accents and muted sage-mint. The authoritative scale and shadow roles are in `docs/THEME_GLASS.md`.
+- Keep changes in the public-only Version 2 + Dark + shared glass-on gate in `deep-glass.css`. Preserve management/semantic colors, baseline restoration, Medium/Light, geometry, image fitting and the final `public-refinement.css` import.
+- Use neutral downward shadows and subtle top-edge reflection for depth. Do not restore the baseline saturated gold halo in enhanced public Dark, add nested backdrop filters, or use structural-divider colors as interactive control outlines.

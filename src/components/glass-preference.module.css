@@ -1,0 +1,109 @@
+.preference {
+  inline-size: 100%;
+  max-inline-size: 36rem;
+  min-inline-size: 0;
+  margin-block: 1rem;
+  color: var(--foreground);
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  inline-size: 100%;
+  min-block-size: 2.75rem;
+  border: 1px solid var(--border-control);
+  border-radius: 0.85rem;
+  background: var(--surface);
+  color: var(--foreground);
+  padding: 0.75rem 1rem;
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+
+.toggle strong {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.toggle:hover {
+  background: var(--surface-hover);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+  font-size: 0.8125rem;
+  font-weight: 650;
+}
+
+.track {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  inline-size: 2.5rem;
+  block-size: 1.5rem;
+  border: 1px solid var(--border-control);
+  border-radius: 0.5rem;
+  padding: 0.1875rem;
+  background: var(--surface-muted);
+}
+
+.thumb {
+  inline-size: 1rem;
+  block-size: 1rem;
+  border-radius: 0.25rem;
+  background: var(--muted-foreground);
+}
+
+.toggle[aria-checked="true"] .track {
+  justify-content: flex-end;
+  border-color: var(--accent-text);
+  background: var(--primary);
+}
+
+.toggle[aria-checked="true"] .thumb {
+  background: var(--primary-foreground);
+}
+
+.help {
+  margin: 0.5rem 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block-start: 1rem;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.toggle:disabled {
+  cursor: default;
+}
+
+@media (forced-colors: active) {
+  .track,
+  .thumb {
+    border: 1px solid ButtonText;
+  }
+}

@@ -159,23 +159,25 @@ export async function GET(request: Request) {
   const to = from + limit - 1;
   query = query.range(from, to);
 
-  const {
-    data: products,
-    error: productsError,
-    count,
-  } = exactNoMatches ? { data: [], error: null, count: 0 } : await query;
+  // Navigation labels are independent of the filtered product result. Start
+  // both reads together instead of adding a category round trip to every POS
+  // browse/search/scan. Availability below remains live and product-scoped.
+  const [
+    { data: products, error: productsError, count },
+    { data: categories, error: categoriesError },
+  ] = await Promise.all([
+    exactNoMatches ? { data: [], error: null, count: 0 } : query,
+    admin
+      .from("categories")
+      .select("id, slug, name_he, name_en, sort_order, is_active")
+      .eq("is_active", true)
+      .is("parent_id", null)
+      .order("sort_order"),
+  ]);
 
   if (productsError) {
     return mapPostgresError(productsError);
   }
-
-  // Fetch categories for navigation
-  const { data: categories, error: categoriesError } = await admin
-    .from("categories")
-    .select("id, slug, name_he, name_en, sort_order, is_active")
-    .eq("is_active", true)
-    .is("parent_id", null)
-    .order("sort_order");
 
   if (categoriesError) {
     return mapPostgresError(categoriesError);

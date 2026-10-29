@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "@/components/motion/use-motion-router";
 import { createClient } from "@/lib/supabase/client";
+import { invalidateAccountSession } from "@/lib/account-session";
 
 export function LogoutButton({
   label,
@@ -21,6 +22,7 @@ export function LogoutButton({
       setIsLoading(false);
       return;
     }
+    invalidateAccountSession();
     router.push(`/${locale}/login`);
     router.refresh();
   }

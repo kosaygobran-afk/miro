@@ -1,0 +1,279 @@
+/* Optional Dark-mode enhancement. Every paint requires the shared setting,
+   Version 2 AND Dark. Medium/Light retain their exact baseline appearance.
+   No geometry, text opacity, imagery or motion changes.
+   Removing data-glass="on" reveals the untouched checkpoint appearance. */
+:root[data-appearance-version="2"][data-glass="on"][data-theme="dark"] {
+  --glass-fill: var(--surface);
+  --glass-menu-fill: var(--surface);
+  --glass-filter: none;
+  --glass-edge: color-mix(
+    in srgb,
+    var(--accent-text) 24%,
+    var(--border-subtle)
+  );
+  --glass-sheen: color-mix(in srgb, var(--foreground) 3%, transparent);
+  --glass-inner-sheen: color-mix(in srgb, var(--foreground) 4%, transparent);
+  --glass-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent),
+    0 8px 24px rgb(0 0 0 / 14%);
+}
+
+/* The console's semantic high-contrast Dark palette stays authoritative.
+   Public Dark pairs neutral charcoal with warm gold and restrained sage-mint. */
+:root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  ) {
+  --background: #070809;
+  --surface: #101214;
+  --surface-muted: #191c1f;
+  --surface-hover: #252a2e;
+  --foreground: #f5f5f2;
+  --muted-foreground: #bfc6cc;
+  --border-subtle: #42494f;
+  --border-control: #7e8993;
+  --primary: #e8c55b;
+  --primary-hover: #f2d67e;
+  --primary-foreground: #17140b;
+  --accent-text: #f3d989;
+  --secondary-accent: #9bcdbd;
+  --header-surface: #101214;
+  --focus-ring: #f3d989;
+  /* One light source above; neutral shadows below. Keep gold in the control
+     itself instead of inheriting the baseline's saturated yellow halo. */
+  --shadow-soft: 0 4px 14px rgb(0 0 0 / 24%);
+  --shadow-lift: 0 8px 24px rgb(0 0 0 / 32%);
+  --shadow-glow:
+    inset 0 1px 0 rgb(255 255 255 / 14%), 0 4px 12px rgb(0 0 0 / 24%);
+  --glass-edge: color-mix(
+    in srgb,
+    var(--accent-text) 10%,
+    var(--border-subtle)
+  );
+  --glass-sheen: color-mix(in srgb, var(--foreground) 2.5%, transparent);
+  --glass-inner-sheen: color-mix(in srgb, var(--foreground) 3.5%, transparent);
+  --glass-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--foreground) 6%, transparent),
+    var(--shadow-soft);
+}
+
+/* Opaque by default. Only browsers with backdrop support get transparency;
+   text is never filtered or faded, and the 94% fill bounds backdrop contrast. */
+@supports (
+  (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))
+) {
+  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"] {
+    --glass-fill: color-mix(in srgb, var(--surface) 94%, transparent);
+    --glass-menu-fill: color-mix(in srgb, var(--surface) 98%, transparent);
+    --glass-filter: blur(12px) saturate(112%);
+  }
+}
+
+:root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
+    :has(.mgmt-shell-root, [data-management-surface="true"])
+  ) {
+  body {
+    background:
+      radial-gradient(
+        ellipse at 8% 0,
+        color-mix(in srgb, var(--primary) 4%, transparent),
+        transparent 36rem
+      ),
+      radial-gradient(
+        ellipse at 100% 24rem,
+        color-mix(in srgb, var(--secondary-accent) 2%, transparent),
+        transparent 40rem
+      ),
+      var(--background);
+  }
+
+  /* A few elevated reading surfaces, not every product in the catalog. */
+  :is(
+    .premium-header,
+    .premium-category-menu,
+    .premium-mobile-navigation,
+    .premium-account-dropdown,
+    .experience-consultation,
+    .sf-bundle,
+    .sf-departments,
+    .sf-company-rail
+  ),
+  .experience-category-grid:not(.experience-category-grid-compact)
+    .experience-category-card {
+    background:
+      linear-gradient(145deg, var(--glass-sheen), transparent 48%),
+      var(--glass-fill);
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+    -webkit-backdrop-filter: var(--glass-filter);
+    backdrop-filter: var(--glass-filter);
+  }
+
+  /* Near-opaque menus keep underlying headings from competing with labels,
+     including dropdowns inside an already-filtered sticky header. */
+  :is(
+    .premium-category-menu,
+    .premium-mobile-navigation,
+    .premium-account-dropdown
+  ) {
+    background:
+      linear-gradient(145deg, var(--glass-sheen), transparent 48%),
+      var(--glass-menu-fill);
+    border-color: var(--border-control);
+  }
+
+  /* Solid product surfaces gain depth without filtering their images, prices,
+     footer buttons or magnifier portals. Existing bitmap clipping is untouched. */
+  :is(
+    .sf-product-card,
+    .sf-moving-rail-card-shell:has(> .sf-moving-rail-card[data-preview-source])
+  ) {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--foreground) 5%, transparent),
+      var(--shadow-soft);
+  }
+
+  /* Nested surfaces reflect light without adding another blur/stacking context.
+     Preserve their solid fill, text colors and selected/hover state semantics. */
+  :is(
+    .experience-icon,
+    .experience-tags > span,
+    .sf-department-icon,
+    .sf-bundle-tags > span,
+    .premium-category-menu__number,
+    .premium-account-avatar,
+    .premium-theme-selector
+  ) {
+    background-image: linear-gradient(
+      145deg,
+      var(--glass-inner-sheen),
+      transparent 65%
+    );
+    box-shadow: inset 0 1px 0 var(--glass-inner-sheen);
+  }
+
+  :is(.sf-product-actions, .sf-moving-rail-actions, .sf-catalog-toolbar) {
+    background-image: linear-gradient(
+      180deg,
+      var(--glass-inner-sheen),
+      transparent 72%
+    );
+  }
+
+  /* Account, auth, contact and request summaries use the same reflection while
+     keeping their existing opaque surfaces behind fields and financial text. */
+  :is(
+    .miro-auth-panel,
+    .miro-page-panel,
+    .miro-contact-form,
+    .sf-cart-item,
+    .sf-cart-summary,
+    .sf-checkout-summary,
+    .sf-checkout-form fieldset
+  ) {
+    background-image: linear-gradient(
+      145deg,
+      var(--glass-sheen),
+      transparent 60%
+    );
+  }
+
+  /* Border-color addresses all four sides; an inset ring also stays visible in
+     clipped rails. Hover and keyboard focus share the same gold edge. */
+  :is(
+    .sf-product-card,
+    .sf-moving-rail-card-shell:has(> .sf-moving-rail-card[data-preview-source]),
+    .experience-category-card,
+    .experience-solution-card,
+    .sf-department,
+    .sf-guide-card
+  ):is(:hover, :focus-within) {
+    border-color: var(--accent-text);
+    box-shadow:
+      inset 0 0 0 1px var(--accent-text),
+      var(--shadow-lift);
+  }
+}
+
+/* Management receives restrained chrome depth only. No sidebar, data/table,
+   financial-status, input or palette overrides. Portaled account panels share
+   the same root preference without entering the sticky header's blur context. */
+:root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]
+  :is(.mgmt-topbar, .mgmt-account__popover) {
+  background:
+    linear-gradient(145deg, var(--glass-sheen), transparent 48%),
+    var(--glass-fill);
+  border-color: var(--border-control);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+}
+
+:root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]
+  .mgmt-account__popover {
+  background:
+    linear-gradient(145deg, var(--glass-sheen), transparent 48%),
+    var(--glass-menu-fill);
+}
+
+/* Shared management panels retain opaque data backgrounds and semantic tones.
+   Nested header/icon tiles get a lighter reflection rather than layered blur. */
+:root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]
+  :is(.mgmt-shell-root, #mgmt-overlay-portal-host) {
+  :is(.mgmt-card, .mgmt-form-section, .mgmt-workspace-header, .mgmt-toolbar) {
+    background-image: linear-gradient(
+      145deg,
+      var(--glass-sheen),
+      transparent 55%
+    );
+    box-shadow: var(--glass-shadow);
+  }
+
+  :is(
+    .mgmt-form-section__header,
+    .mgmt-workspace-header__icon,
+    .mgmt-section-icon,
+    .mgmt-metric-card__icon
+  ) {
+    background-image: linear-gradient(
+      145deg,
+      var(--glass-inner-sheen),
+      transparent 65%
+    );
+    box-shadow: inset 0 1px 0 var(--glass-inner-sheen);
+  }
+
+  :is(a.mgmt-card, button.mgmt-card):is(:hover, :focus-visible) {
+    border-color: var(--accent-text);
+    box-shadow: inset 0 0 0 1px var(--accent-text);
+  }
+}
+
+/* OS accessibility wins over the saved preference. Palette improvements remain
+   readable, while the enhanced panels become fully opaque and unfiltered. */
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"],
+  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
+      :has(.mgmt-shell-root, [data-management-surface="true"])
+    ) {
+    --glass-fill: var(--surface);
+    --glass-menu-fill: var(--surface);
+    --glass-filter: none;
+    --glass-sheen: transparent;
+    --glass-inner-sheen: transparent;
+  }
+}
+
+@media (forced-colors: active) {
+  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"],
+  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
+      :has(.mgmt-shell-root, [data-management-surface="true"])
+    ) {
+    --glass-fill: Canvas;
+    --glass-menu-fill: Canvas;
+    --glass-filter: none;
+    --glass-sheen: transparent;
+    --glass-inner-sheen: transparent;
+    --glass-shadow: none;
+    --glass-edge: CanvasText;
+  }
+}

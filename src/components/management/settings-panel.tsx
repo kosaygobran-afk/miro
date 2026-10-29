@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimationSettings } from "./animation-settings";
+import { GlobalGlassSettings } from "@/components/glass-preference";
 import {
   RotateCcw,
   ShieldCheck,
@@ -685,8 +686,8 @@ export function SettingsPanel({
         title={he ? "הגדרות" : "Settings"}
         subtitle={
           he
-            ? "ניהול מס, מלאי, תצוגת מחירים, פרטי קשר והנפשות"
-            : "Manage tax, inventory, price display, contact details and animations"
+            ? "ניהול מס, מלאי, תצוגת מחירים, פרטי קשר, מראה והנפשות"
+            : "Manage tax, inventory, price display, contact details, appearance and animations"
         }
       />
 
@@ -698,6 +699,7 @@ export function SettingsPanel({
         <a href="#settings-inventory">{he ? "מלאי" : "Inventory"}</a>
         <a href="#settings-finance">{he ? "כספים" : "Finance"}</a>
         <a href="#settings-contact">{he ? "פרטי קשר" : "Contact details"}</a>
+        <a href="#settings-glass">{he ? "מראה זכוכית" : "Glass appearance"}</a>
         <a href="#settings-animation">{he ? "הנפשות" : "Animations"}</a>
       </nav>
 
@@ -719,6 +721,7 @@ export function SettingsPanel({
         </Notice>
       )}
 
+      <GlobalGlassSettings locale={locale} />
       <AnimationSettings locale={locale} isCeo={isCeo} />
 
       {/* Tax Section */}

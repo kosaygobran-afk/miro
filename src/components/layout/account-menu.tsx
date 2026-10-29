@@ -7,14 +7,15 @@ import { ChevronDown, LayoutDashboard, LogOut, UserRound } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { withLocale, type Locale } from "@/lib/i18n";
-import { roleLabel, type AppRole } from "@/lib/roles";
+import { roleLabel } from "@/lib/roles";
 import { useAnimationSettings } from "@/components/motion/animation-provider";
-
-type SessionData = {
-  authenticated: boolean;
-  role: AppRole | null;
-  name: string | null;
-};
+import {
+  ACCOUNT_SESSION_REFRESH_EVENT,
+  ANONYMOUS_ACCOUNT_SESSION,
+  invalidateAccountSession,
+  readAccountSession,
+  type AccountSession,
+} from "@/lib/account-session";
 
 type AccountMenuLabels = {
   account: string;
@@ -42,11 +43,9 @@ export function AccountMenu({
   const animationSettings = useAnimationSettings();
   const pathname = usePathname();
   const router = useRouter();
-  const [session, setSession] = useState<SessionData>({
-    authenticated: false,
-    role: null,
-    name: null,
-  });
+  const [session, setSession] = useState<AccountSession>(
+    ANONYMOUS_ACCOUNT_SESSION,
+  );
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -100,30 +99,19 @@ export function AccountMenu({
   useEffect(() => {
     if (typeof window === "undefined") return;
     let active = true;
+    let latestRead = 0;
     const refresh = async () => {
-      try {
-        const response = await fetch("/api/auth/session", {
-          cache: "no-store",
-        });
-        const data = await response.json();
-        if (active)
-          setSession({
-            authenticated: data.authenticated ?? false,
-            role: ["ceo", "admin", "worker", "customer"].includes(data.role)
-              ? data.role
-              : null,
-            name: data.name ?? null,
-          });
-      } catch {
-        if (active)
-          setSession({ authenticated: false, role: null, name: null });
-      }
+      const read = ++latestRead;
+      const data = await readAccountSession(pathname ?? "");
+      if (active && read === latestRead) setSession(data);
     };
     void refresh();
     window.addEventListener("focus", refresh);
+    window.addEventListener(ACCOUNT_SESSION_REFRESH_EVENT, refresh);
     return () => {
       active = false;
       window.removeEventListener("focus", refresh);
+      window.removeEventListener(ACCOUNT_SESSION_REFRESH_EVENT, refresh);
     };
   }, [pathname]);
 
@@ -153,11 +141,15 @@ export function AccountMenu({
 
   async function handleLogout() {
     try {
-      await fetch("/api/auth/logout", {
+      const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),
       });
+      if (response.ok) {
+        setSession(ANONYMOUS_ACCOUNT_SESSION);
+        invalidateAccountSession();
+      }
     } catch {
       /* ignore */
     }

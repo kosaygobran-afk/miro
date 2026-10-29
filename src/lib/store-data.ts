@@ -173,39 +173,54 @@ function shouldHideFromPublic(
   return policy === "hide_from_public" && stockQty <= 0;
 }
 
-export const getStoreViewer = cache(async (): Promise<StoreViewer> => {
+// Keep the role read available before the saved-products read settles. Both
+// promises belong to this render's verified actor and never enter a shared cache.
+const getStoreViewerRead = cache(async () => {
   const empty: StoreViewer = { role: null, savedProductIds: [] };
+  const emptyRead = () => ({
+    role: Promise.resolve<UserRole>(null),
+    viewer: Promise.resolve(empty),
+  });
   try {
     const supabase = await createServerSupabaseClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) return empty;
+    if (!user) return emptyRead();
 
-    const [roleResult, savedResult] = await Promise.all([
+    const role = Promise.resolve(
       supabase
         .from("user_roles")
         .select("role")
         .eq("user_id", user.id)
         .maybeSingle(),
+    ).then((result): UserRole => {
+      const rawRole = result.data?.role;
+      return rawRole && ["customer", "worker", "admin", "ceo"].includes(rawRole)
+        ? rawRole
+        : null;
+    });
+    const viewer = Promise.all([
+      role,
       supabase
         .from("saved_products")
         .select("product_id")
         .eq("user_id", user.id),
-    ]);
+    ])
+      .then(([role, savedResult]): StoreViewer => ({
+        role,
+        savedProductIds: (savedResult.data ?? []).map((row) => row.product_id),
+      }))
+      .catch(() => empty);
 
-    const rawRole = roleResult.data?.role;
-    const role: UserRole =
-      rawRole && ["customer", "worker", "admin", "ceo"].includes(rawRole)
-        ? rawRole
-        : null;
-    return {
-      role,
-      savedProductIds: (savedResult.data ?? []).map((row) => row.product_id),
-    };
+    return { role, viewer };
   } catch {
-    return empty;
+    return emptyRead();
   }
+});
+
+export const getStoreViewer = cache(async (): Promise<StoreViewer> => {
+  return (await getStoreViewerRead()).viewer;
 });
 
 function normalizePrice(
@@ -347,7 +362,14 @@ export const getStorePageData = cache(async (locale: "he" | "en") => {
   // stock and role pricing outside persistent/shared caches. Handle an early
   // preload rejection here; getStoreCatalog still reports the read failure.
   void getCatalogRows(false).catch(() => undefined);
-  const viewer = await getStoreViewer();
+  const viewerRead = await getStoreViewerRead();
+  // A slow saved-products read must not delay independent role pricing. Only
+  // this page pipeline preloads it; route-handler callers of getStoreViewer
+  // keep one explicit catalog read even outside React render memoization.
+  void viewerRead.role
+    .then((role) => getRolePrices(role, false))
+    .catch(() => undefined);
+  const viewer = await viewerRead.viewer;
   const catalog = await getStoreCatalog(locale, viewer.role);
   return { viewer, catalog };
 });

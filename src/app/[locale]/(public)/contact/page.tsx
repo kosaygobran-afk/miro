@@ -4,7 +4,7 @@ import { z } from "zod";
 import { ContactForm } from "@/components/contact/contact-form";
 import { FeatureCheck } from "@/components/public/experience-sections";
 import { getPublicContactConfig } from "@/lib/contact-config";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createPublicServerClient } from "@/lib/supabase/public-server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
 import { Mail, MessageCircle, Phone } from "lucide-react";
@@ -36,7 +36,7 @@ async function getProductDisplayName(
   locale: Locale,
 ): Promise<string | null> {
   try {
-    const supabase = await createServerSupabaseClient();
+    const supabase = createPublicServerClient();
     const { data, error } = await supabase
       .from("products")
       .select("name_he, name_en")
@@ -68,7 +68,6 @@ export default async function ContactPage({
   ]);
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
   const he = locale === "he";
-  const t = await getTranslations({ locale, namespace: "pages.contact" });
 
   const productRaw = firstParam(query.product);
   const variantRaw = firstParam(query.variant);
@@ -78,7 +77,8 @@ export default async function ContactPage({
   const productId = productParsed.success ? productParsed.data : null;
   const variantId = variantParsed.success ? variantParsed.data : null;
 
-  const [contactConfig, productName] = await Promise.all([
+  const [t, contactConfig, productName] = await Promise.all([
+    getTranslations({ locale, namespace: "pages.contact" }),
     getPublicContactConfig(),
     productId ? getProductDisplayName(productId, locale) : null,
   ]);

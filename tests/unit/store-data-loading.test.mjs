@@ -47,13 +47,18 @@ const deferred = () => {
   return { promise, resolve, reject };
 };
 
-function harness({ publicClient, timeout = AbortSignal.timeout } = {}) {
+function harness({
+  publicClient,
+  timeout = AbortSignal.timeout,
+  renderCache = true,
+} = {}) {
   const context = new AsyncLocalStorage();
   const exports = {};
   const entries = new Map();
   const registrations = [];
   const react = {
     cache(fn) {
+      if (!renderCache) return fn;
       const requests = new WeakMap();
       return (...args) => {
         const request = context.getStore();
@@ -145,6 +150,11 @@ function harness({ publicClient, timeout = AbortSignal.timeout } = {}) {
             );
             if (table === "products" && request.productsReady)
               await request.productsReady;
+            if (table === "saved_products" && request.savedReady)
+              await request.savedReady;
+            if (table === "product_prices" && request.pricesReady)
+              await request.pricesReady;
+            if (table === request.throwTable) throw new Error("read failed");
             const rows = {
               categories: [
                 {
@@ -293,6 +303,73 @@ test("catalog reads overlap auth, and role prices start before a slow catalog se
     request.events.filter((event) => event === "session:products").length,
     1,
   );
+});
+
+test("role prices overlap saved products and are reused by the final page", async () => {
+  const h = harness();
+  const saves = deferred();
+  const prices = deferred();
+  const request = visitor({
+    user: { id: "worker" },
+    role: "worker",
+    rolePrice: 60,
+    savedReady: saves.promise,
+    pricesReady: prices.promise,
+  });
+  const pending = h.run(request, () =>
+    Promise.all([h.exports.getStorePageData("en"), h.exports.getStoreViewer()]),
+  );
+  await flush();
+  assert.ok(request.events.includes("session:saved_products"));
+  assert.ok(
+    request.events.includes("session:product_prices"),
+    "role pricing starts before the saved-products read resolves",
+  );
+  prices.resolve();
+  await flush();
+  saves.resolve();
+  const [page, viewer] = await pending;
+  assert.equal(page.catalog.products[0].priceIls, 60);
+  assert.equal(page.viewer, viewer);
+  assert.equal(request.events.filter((event) => event === "auth").length, 1);
+  assert.equal(
+    request.events.filter((event) => event === "session:product_prices").length,
+    1,
+    "the preload and final catalog share one request-scoped role-price read",
+  );
+});
+
+test("standalone viewer calls do not preload prices outside a React render", async () => {
+  const h = harness({ renderCache: false });
+  const request = visitor({
+    user: { id: "worker" },
+    role: "worker",
+    rolePrice: 60,
+  });
+  await h.run(request, async () => {
+    const viewer = await h.exports.getStoreViewer();
+    assert.ok(!request.events.includes("session:product_prices"));
+    const catalog = await h.exports.getStoreCatalog("en", viewer.role);
+    assert.equal(catalog.products[0].priceIls, 60);
+  });
+  assert.equal(
+    request.events.filter((event) => event === "session:product_prices").length,
+    1,
+  );
+});
+
+test("a failed saved-products read keeps the existing anonymous viewer fallback", async () => {
+  const h = harness();
+  const request = visitor({
+    user: { id: "worker" },
+    role: "worker",
+    rolePrice: 60,
+    throwTable: "saved_products",
+  });
+  const page = await h.run(request, () => h.exports.getStorePageData("en"));
+  assert.equal(page.viewer.role, null);
+  assert.equal(page.viewer.savedProductIds.length, 0);
+  assert.equal(page.catalog.products[0].priceIls, 100);
 });
 
 test("viewer and live catalog stay isolated and fresh between requests", async () => {

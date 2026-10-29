@@ -86,8 +86,10 @@ async function catalogHarness({
   navigationCategories = [],
   productImages = [],
   legacyImage = null,
+  gates = {},
 } = {}) {
   const queries = [];
+  const started = [];
   const product = {
     id: productId,
     slug: "camera",
@@ -156,25 +158,29 @@ async function catalogHarness({
           query.operations.push({ method, args });
           return query;
         };
-      query.then = (resolve, reject) =>
-        Promise.resolve({
-          data:
-            table === "products"
-              ? [product]
-              : table === "product_variants"
-                ? matchingProducts
-                : table === "categories"
-                  ? navigationCategories.filter((category) =>
-                      query.operations.every(
-                        ({ method, args }) =>
-                          !["eq", "is"].includes(method) ||
-                          category[args[0]] === args[1],
-                      ),
-                    )
-                  : [],
-          count: table === "products" ? 1 : null,
-          error: null,
-        }).then(resolve, reject);
+      query.then = (resolve, reject) => {
+        started.push(table);
+        return Promise.resolve(gates[table])
+          .then(() => ({
+            data:
+              table === "products"
+                ? [product]
+                : table === "product_variants"
+                  ? matchingProducts
+                  : table === "categories"
+                    ? navigationCategories.filter((category) =>
+                        query.operations.every(
+                          ({ method, args }) =>
+                            !["eq", "is"].includes(method) ||
+                            category[args[0]] === args[1],
+                        ),
+                      )
+                    : [],
+            count: table === "products" ? 1 : null,
+            error: null,
+          }))
+          .then(resolve, reject);
+      };
       return query;
     },
   };
@@ -209,8 +215,35 @@ async function catalogHarness({
       },
     },
   );
-  return { ...route, queries };
+  return { ...route, queries, started };
 }
+
+test("POS starts categories while its independent product read is pending", async () => {
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  const route = await catalogHarness({ gates: { products: gate } });
+  const response = route.GET(
+    new Request("https://miro.example/api/management/pos/catalog"),
+  );
+  await new Promise(setImmediate);
+  try {
+    assert.deepEqual(route.started, ["products", "categories"]);
+    assert.equal(
+      route.queries.some(
+        (query) => query.table === "commerce_pos_available_stock",
+      ),
+      false,
+    );
+  } finally {
+    release();
+  }
+  const result = await response;
+  assert.equal(result.status, 200);
+  assert.equal(result.body.products[0].variants[0].stock_qty, 3);
+  assert.equal(result.body.products[0].variants[0].reserved_qty, 2);
+});
 
 test("POS uses the first ordered gallery image with a legacy-only fallback", async () => {
   for (const [productImages, legacyImage, expected] of [
