@@ -24,6 +24,7 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import type { Product, ProductImage } from "@/features/catalog/product-data";
 import { PromoBadge } from "@/features/catalog/product-promo-badge";
+import { PriceAmount, DiscountBadge } from "./price-amount";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
 import {
   ProductIdentifiers,
@@ -724,11 +725,17 @@ export function ProductHoverPreview({
             />
             <div className="sf-hover-preview-price">
               <div className="sf-price-display__amount">
-                <strong dir="auto">{formattedPrice}</strong>
-                {effectivePrice !== null && (
+                <strong dir="auto">
+                  {enhanced && effectivePrice !== null ? (
+                    <PriceAmount amount={effectivePrice} locale={locale} />
+                  ) : (
+                    formattedPrice
+                  )}
+                </strong>
+                {!enhanced && effectivePrice !== null && (
                   <small>{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
                 )}
-                {effectivePrice !== null && (
+                {!enhanced && effectivePrice !== null && (
                   <small dir="auto">
                     {formatPrice(
                       priceBeforeVat(effectivePrice),
@@ -739,21 +746,51 @@ export function ProductHoverPreview({
                   </small>
                 )}
               </div>
-              <StockIndicator
-                quantity={product.stockQty}
-                locale={locale}
-                unconfirmed={product.availabilityUnconfirmed}
-              />
+              {!enhanced && (
+                <StockIndicator
+                  quantity={product.stockQty}
+                  locale={locale}
+                  unconfirmed={product.availabilityUnconfirmed}
+                />
+              )}
               {discountPercent !== null && formattedCompareAtPrice ? (
-                <>
-                  <span className="sf-hover-preview-compare-at" dir="auto">
-                    {formattedCompareAtPrice}
-                  </span>
-                  <span className="sf-hover-preview-discount">
-                    -{discountPercent}%
-                  </span>
-                </>
+                <span className="sf-hover-preview-promotion">
+                  <del className="sf-hover-preview-compare-at" dir="ltr">
+                    {enhanced && compareAtPrice !== null ? (
+                      <PriceAmount amount={compareAtPrice} locale={locale} />
+                    ) : (
+                      formattedCompareAtPrice
+                    )}
+                  </del>
+                  <DiscountBadge
+                    percent={discountPercent}
+                    locale={locale}
+                    className="sf-hover-preview-discount"
+                  />
+                </span>
               ) : null}
+              {enhanced && effectivePrice !== null && (
+                <>
+                  <small className="sf-hover-preview-vat">
+                    {locale === "he" ? "כולל מע״מ" : "incl. VAT"}
+                  </small>
+                  <small className="sf-hover-preview-vat" dir="auto">
+                    {formatPrice(
+                      priceBeforeVat(effectivePrice),
+                      locale,
+                      copy.priceUnpublished,
+                    )}{" "}
+                    {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
+                  </small>
+                </>
+              )}
+              {enhanced && (
+                <StockIndicator
+                  quantity={product.stockQty}
+                  locale={locale}
+                  unconfirmed={product.availabilityUnconfirmed}
+                />
+              )}
               {effectivePrice === null ? <span>{copy.demoPrice}</span> : null}
             </div>
 
@@ -795,7 +832,12 @@ export function ProductHoverPreview({
             {detailRows.length ? (
               <dl className="sf-hover-preview-specs">
                 {detailRows.map(([key, value], index) => (
-                  <div key={`${key}-${index}`}>
+                  <div
+                    key={`${key}-${index}`}
+                    data-product-field={
+                      product.brand && index === 0 ? "brand" : undefined
+                    }
+                  >
                     <dt dir="auto">{key}</dt>
                     <dd dir="auto">{value}</dd>
                   </div>

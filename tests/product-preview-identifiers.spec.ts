@@ -45,7 +45,7 @@ for (const locale of ["en", "he"] as const) {
         )
         .first();
       if (await rail.count()) {
-        expect((await rail.boundingBox())!.width).toBeLessThanOrEqual(232.1);
+        expect((await rail.boundingBox())!.width).toBeLessThanOrEqual(264.1);
       }
 
       for (const theme of ["dark", "medium", "light"]) {
@@ -91,6 +91,13 @@ for (const locale of ["en", "he"] as const) {
             // at 0.74rem/650; the former 17px/700 emphasis no longer applies.
             expect(style.weight).toBeGreaterThanOrEqual(620);
             expect(style.size).toBeGreaterThanOrEqual(11);
+          }
+          const brand = popup.locator('[data-product-field="brand"] dd');
+          if (await brand.count()) {
+            await expect(brand).toHaveAttribute("dir", "auto");
+            expect(
+              await brand.evaluate((node) => getComputedStyle(node).textAlign),
+            ).toBe("center");
           }
           const before = await inner.boundingBox();
           await popup

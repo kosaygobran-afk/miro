@@ -3,7 +3,7 @@
 import Link from "@/components/motion/motion-link";
 import { useAnimationSettings } from "@/components/motion/animation-provider";
 import { usePathname } from "next/navigation";
-import { useId, useState } from "react";
+import { useId, useState, useLayoutEffect, useRef } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -56,16 +56,28 @@ export function ProductSubNav({
   ariaLabel?: string;
   collapsible?: boolean;
 }) {
+  const enhanced = useAnimationSettings().appearanceVersion === "2";
+  const railRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
   const currentCategory = getCategoryKeyFromPath(pathname);
   const [expanded, setExpanded] = useState(false);
   const panelId = useId();
   const visibleCategories =
-    collapsible && !expanded
+    collapsible && !enhanced && !expanded
       ? categories.filter((category) => category.key === currentCategory)
       : categories;
   const isRtl = isLocale(locale) ? locale === "he" : false;
-  const enhanced = useAnimationSettings().appearanceVersion === "2";
+  useLayoutEffect(() => {
+    const rail = railRef.current;
+    const current = rail?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!enhanced || !rail || !current) return;
+    const bounds = rail.getBoundingClientRect();
+    const chip = current.getBoundingClientRect();
+    if (chip.left < bounds.left || chip.right > bounds.right) {
+      rail.scrollLeft +=
+        chip.left + chip.width / 2 - bounds.left - bounds.width / 2;
+    }
+  }, [currentCategory, enhanced]);
   const Arrow = enhanced
     ? isRtl
       ? CornerDownRight
@@ -78,9 +90,9 @@ export function ProductSubNav({
     <nav
       className={`sf-departments${collapsible ? " sf-departments-collapsible" : ""}`}
       aria-label={ariaLabel}
-      data-expanded={collapsible ? expanded : undefined}
+      data-expanded={collapsible ? enhanced || expanded : undefined}
     >
-      {collapsible && (
+      {collapsible && !enhanced && (
         <div className="miro-container sf-departments-controls">
           <p>{locale === "he" ? "קטגוריות ראשיות" : "Main categories"}</p>
           <button
@@ -115,7 +127,11 @@ export function ProductSubNav({
           </button>
         </div>
       )}
-      <div className="miro-container sf-department-grid" id={panelId}>
+      <div
+        ref={railRef}
+        className="miro-container sf-department-grid"
+        id={panelId}
+      >
         {visibleCategories.map((category) => {
           const Icon = categoryIcons[category.key] ?? ShieldCheck;
           const isActive = category.key === currentCategory;

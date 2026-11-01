@@ -51,7 +51,7 @@ export function usePreviewLongPress(
         !event.isPrimary ||
         (event.target instanceof Element &&
           event.target.closest(
-            "button, input, select, textarea, [role=button]",
+            "button, input, select, textarea, summary, .sf-card-identifiers, .sf-badge-rail, .sf-card-media-tools, [role=button]",
           ))
       )
         return;

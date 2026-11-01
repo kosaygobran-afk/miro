@@ -1,13 +1,14 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
-import { Search, SlidersHorizontal, X } from "lucide-react";
+import { Search, SlidersHorizontal, X, LayoutGrid, List } from "lucide-react";
 import { ProductGrid } from "@/components/products/ProductGrid";
 import { SubcategoryBar } from "@/components/products/subcategory-bar";
 import { storeCopy } from "@/features/catalog/store-copy";
 import type { Product } from "@/features/catalog/product-data";
 import { trackProductSearch } from "@/components/analytics/track";
 import { AnimatedNumber } from "@/components/motion/animated-number";
+import { useAnimationSettings } from "@/components/motion/animation-provider";
 
 type CatalogCategory = { key: string; label: string };
 export type SubcategoryNavigation = {
@@ -34,13 +35,23 @@ export function ProductsClient({
   subcategoryNavigation?: SubcategoryNavigation;
 }) {
   const copy = storeCopy[locale];
+  const enhanced = useAnimationSettings().appearanceVersion === "2";
   const [query, setQuery] = useState(initialQuery);
   const [category, setCategory] = useState(fixedCategory ?? "all");
   const [sort, setSort] = useState("featured");
   const [limit, setLimit] = useState(12);
+  const [view, setView] = useState<"grid" | "list">("grid");
   const normalized = query.toLocaleLowerCase(locale).trim();
   const activeSubcategoryId = subcategoryNavigation?.activeId;
   const searchTrackedRef = useRef<string>("");
+  const loadMoreHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadMoreHoverActivated = useRef(false);
+  const cancelLoadMoreHover = useCallback(() => {
+    if (loadMoreHoverTimer.current !== null) {
+      clearTimeout(loadMoreHoverTimer.current);
+      loadMoreHoverTimer.current = null;
+    }
+  }, []);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -142,6 +153,23 @@ export function ProductsClient({
     return () => clearTimeout(timer);
   }, [normalized, filtered.length, trackSearch]);
 
+  useEffect(() => {
+    cancelLoadMoreHover();
+    loadMoreHoverActivated.current = false;
+    return cancelLoadMoreHover;
+  }, [
+    normalized,
+    category,
+    sort,
+    activeSubcategoryId,
+    filtered.length,
+    cancelLoadMoreHover,
+  ]);
+
+  function loadMoreProducts() {
+    setLimit((value) => Math.min(value + 12, filtered.length));
+  }
+
   function resetFilters() {
     setQuery("");
     setCategory(fixedCategory ?? "all");
@@ -157,8 +185,139 @@ export function ProductsClient({
       : href;
   }
 
+  const toolbar = (
+    <div className="sf-catalog-toolbar" dir={locale === "he" ? "rtl" : "ltr"}>
+      <div className="sf-search">
+        <Search size={19} aria-hidden="true" />
+        <input
+          type="search"
+          aria-label={copy.search}
+          placeholder={copy.search}
+          value={query}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setLimit(12);
+          }}
+        />
+        {query && (
+          <button
+            type="button"
+            aria-label={copy.clear}
+            onClick={() => {
+              setQuery("");
+              setLimit(12);
+            }}
+          >
+            <X size={17} aria-hidden="true" />
+          </button>
+        )}
+      </div>
+      <label className="sf-sort">
+        <SlidersHorizontal size={16} aria-hidden="true" />
+        <span className="sr-only">{copy.sort}</span>
+        <select
+          value={sort}
+          onChange={(event) => {
+            setSort(event.target.value);
+            setLimit(12);
+          }}
+        >
+          <option value="featured">{copy.featured}</option>
+          <option value="low">{copy.low}</option>
+          <option value="high">{copy.high}</option>
+          <option value="name">{copy.name}</option>
+        </select>
+      </label>
+      {enhanced && (
+        <div
+          className="sf-catalog-view"
+          role="group"
+          aria-label={locale === "he" ? "תצוגת מוצרים" : "Product view"}
+        >
+          <button
+            type="button"
+            aria-label={locale === "he" ? "תצוגת רשת" : "Grid view"}
+            aria-pressed={view === "grid"}
+            onClick={() => setView("grid")}
+          >
+            <LayoutGrid size={18} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            aria-label={locale === "he" ? "תצוגת רשימה" : "List view"}
+            aria-pressed={view === "list"}
+            onClick={() => setView("list")}
+          >
+            <List size={18} aria-hidden="true" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+  const categoryFilters = !fixedCategory ? (
+    <div
+      className="sf-category-filters"
+      role="group"
+      aria-label={copy.category}
+    >
+      <button
+        type="button"
+        className="miro-centered-control"
+        aria-pressed={category === "all"}
+        onClick={() => {
+          setCategory("all");
+          setLimit(12);
+        }}
+      >
+        <span className="miro-control-label">{copy.all}</span>
+        <span className="miro-control-end">
+          <AnimatedNumber value={products.length} />
+        </span>
+      </button>
+      {categories.map((item) => (
+        <button
+          key={item.key}
+          type="button"
+          className="miro-centered-control"
+          aria-pressed={category === item.key}
+          onClick={() => {
+            setCategory(item.key);
+            setLimit(12);
+          }}
+        >
+          <span className="miro-control-label">{item.label}</span>
+          <span className="miro-control-end">
+            <AnimatedNumber value={categoryCounts.get(item.key) ?? 0} />
+          </span>
+        </button>
+      ))}
+    </div>
+  ) : null;
+  const summary = (
+    <div className="sf-catalog-summary">
+      <p role="status" aria-live="polite" aria-atomic="true">
+        <strong>
+          <AnimatedNumber value={filtered.length} />
+        </strong>{" "}
+        {copy.results}
+      </p>
+      {isFiltered && (
+        <button type="button" onClick={resetFilters}>
+          <X size={14} aria-hidden="true" />
+          {copy.reset}
+        </button>
+      )}
+    </div>
+  );
+
   return (
-    <div className="sf-catalog" data-testid="store-catalog">
+    <div
+      className="sf-catalog"
+      data-testid="store-catalog"
+      data-catalog-scope={fixedCategory ? "category" : "all"}
+      data-catalog-view={enhanced ? view : undefined}
+      dir={locale === "he" ? "rtl" : "ltr"}
+    >
       {subcategoryNavigation && subcategoryItems.length > 0 && (
         <SubcategoryBar
           items={subcategoryItems}
@@ -172,102 +331,19 @@ export function ProductsClient({
           locale={locale}
         />
       )}
-      <div className="sf-catalog-toolbar" dir={locale === "he" ? "rtl" : "ltr"}>
-        <div className="sf-search">
-          <Search size={19} aria-hidden="true" />
-          <input
-            type="search"
-            aria-label={copy.search}
-            placeholder={copy.search}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setLimit(12);
-            }}
-          />
-          {query && (
-            <button
-              type="button"
-              aria-label={copy.clear}
-              onClick={() => {
-                setQuery("");
-                setLimit(12);
-              }}
-            >
-              <X size={17} aria-hidden="true" />
-            </button>
-          )}
-        </div>
-        <label className="sf-sort">
-          <SlidersHorizontal size={16} aria-hidden="true" />
-          <span className="sr-only">{copy.sort}</span>
-          <select
-            value={sort}
-            onChange={(event) => {
-              setSort(event.target.value);
-              setLimit(12);
-            }}
-          >
-            <option value="featured">{copy.featured}</option>
-            <option value="low">{copy.low}</option>
-            <option value="high">{copy.high}</option>
-            <option value="name">{copy.name}</option>
-          </select>
-        </label>
-      </div>
-      {!fixedCategory && (
-        <div
-          className="sf-category-filters"
-          role="group"
-          aria-label={copy.category}
-        >
-          <button
-            type="button"
-            className="miro-centered-control"
-            aria-pressed={category === "all"}
-            onClick={() => {
-              setCategory("all");
-              setLimit(12);
-            }}
-          >
-            <span className="miro-control-label">{copy.all}</span>
-            <span className="miro-control-end">
-              <AnimatedNumber value={products.length} />
-            </span>
-          </button>
-          {categories.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              className="miro-centered-control"
-              aria-pressed={category === item.key}
-              onClick={() => {
-                setCategory(item.key);
-                setLimit(12);
-              }}
-            >
-              <span className="miro-control-label">{item.label}</span>
-              <span className="miro-control-end">
-                <AnimatedNumber value={categoryCounts.get(item.key) ?? 0} />
-              </span>
-            </button>
-          ))}
-        </div>
+      {!fixedCategory && enhanced ? (
+        <>
+          {summary}
+          {categoryFilters}
+          {toolbar}
+        </>
+      ) : (
+        <>
+          {toolbar}
+          {categoryFilters}
+          {summary}
+        </>
       )}
-      <div className="sf-catalog-summary">
-        <p role="status" aria-live="polite" aria-atomic="true">
-          <strong>
-            <AnimatedNumber value={filtered.length} />
-          </strong>{" "}
-          {copy.results}
-        </p>
-        {isFiltered && (
-          <button type="button" onClick={resetFilters}>
-            <X size={14} aria-hidden="true" />
-            {copy.reset}
-          </button>
-        )}
-      </div>
       {filtered.length ? (
         <ProductGrid
           products={filtered.slice(0, limit)}
@@ -293,7 +369,35 @@ export function ProductsClient({
           <button
             type="button"
             className="miro-button miro-button-secondary"
-            onClick={() => setLimit((value) => value + 12)}
+            onPointerEnter={(event) => {
+              if (
+                event.pointerType !== "mouse" ||
+                !window.matchMedia("(any-hover: hover) and (any-pointer: fine)")
+                  .matches
+              )
+                return;
+              cancelLoadMoreHover();
+              loadMoreHoverActivated.current = false;
+              loadMoreHoverTimer.current = setTimeout(() => {
+                loadMoreHoverTimer.current = null;
+                loadMoreHoverActivated.current = true;
+                loadMoreProducts();
+              }, 200);
+            }}
+            onPointerLeave={() => {
+              cancelLoadMoreHover();
+              loadMoreHoverActivated.current = false;
+            }}
+            onPointerCancel={() => {
+              cancelLoadMoreHover();
+              loadMoreHoverActivated.current = false;
+            }}
+            onClick={(event) => {
+              cancelLoadMoreHover();
+              // A mouse click after this hover already loaded its one batch.
+              if (event.detail > 0 && loadMoreHoverActivated.current) return;
+              loadMoreProducts();
+            }}
           >
             {locale === "he" ? "הצגת מוצרים נוספים" : "Load more products"}
             <span>({filtered.length - limit})</span>

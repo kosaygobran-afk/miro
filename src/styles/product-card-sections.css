@@ -259,7 +259,7 @@
       .sf-moving-rail-card[data-preview-source]:hover,
       .sf-moving-rail-card-shell[data-preview-intent]
         > .sf-moving-rail-card[data-preview-source]
-    ) {
+    ):not(.sf-reference-card > [data-preview-source]) {
     transform: translateY(-3px) !important;
   }
 
@@ -270,7 +270,7 @@
       .sf-moving-rail-card[data-preview-source]:hover,
       .sf-moving-rail-card-shell[data-preview-intent]
         > .sf-moving-rail-card[data-preview-source]
-    ) {
+    ):not(.sf-reference-card > [data-preview-source]) {
     transform: translateY(-2px) !important;
   }
 }

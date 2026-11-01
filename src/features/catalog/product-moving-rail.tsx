@@ -13,6 +13,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { OverflowLabel } from "./overflow-label";
+import { ProductCard } from "./product-card";
 import { ProductMedia } from "./product-media";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import { useStoreDesign } from "@/features/store-design/design-context";
@@ -52,7 +53,46 @@ function usePrefersReducedMotion() {
   );
 }
 
+/** Version 2 uses the canonical card in both rails and grids. */
 export function RailProduct({
+  product,
+  locale,
+  isDuplicate = false,
+  onPreviewChange,
+}: {
+  product: Product;
+  locale: "he" | "en";
+  isDuplicate?: boolean;
+  onPreviewChange: (id: string, open: boolean) => void;
+}) {
+  const enhanced = useAnimationSettings().appearanceVersion === "2";
+  const onVisibilityChange = useCallback(
+    (open: boolean) =>
+      onPreviewChange(
+        `${product.id}:${isDuplicate ? "copy" : "original"}`,
+        open,
+      ),
+    [product.id, isDuplicate, onPreviewChange],
+  );
+  return enhanced ? (
+    <ProductCard
+      product={product}
+      locale={locale}
+      variant="rail"
+      isDuplicate={isDuplicate}
+      onPreviewVisibilityChange={onVisibilityChange}
+    />
+  ) : (
+    <LegacyRailProduct
+      product={product}
+      locale={locale}
+      isDuplicate={isDuplicate}
+      onPreviewChange={onPreviewChange}
+    />
+  );
+}
+
+function LegacyRailProduct({
   product,
   locale,
   isDuplicate = false,
