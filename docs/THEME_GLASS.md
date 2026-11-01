@@ -20,7 +20,7 @@ visit. Pages already open elsewhere are not pushed or polled.
 - Every enhancement requires `data-appearance-version="2"`, `data-glass="on"` and `data-theme="dark"`.
   Version 1 retains its existing appearance. No enhancement changes header sizes,
   card widths, control radii, product fitting, text layout or motion settings.
-- Public Dark uses neutral near-black/charcoal surfaces, warm gold, restrained sage-mint and bright supporting text. Medium and Light have no enhancement palette, glass, nested-sheen or hover overrides. Public palette rules exclude management surfaces; the console's existing Dark and semantic status colors remain authoritative.
+- Public, customer and worker Dark use true neutral black/gray surfaces, warm gold, restrained sage-mint and bright supporting text. Medium and Light have no enhancement palette, glass, nested-sheen or hover overrides. Public palette rules exclude CEO/admin shells and management surfaces except the explicitly marked worker page; the console's existing Dark and semantic status colors remain authoritative.
 - Selected public headers, category/account/mobile menus, non-compact service
   cards, consultation/bundle panels and department/brand bands receive glass.
   Chrome uses a 94% surface fill, menus a quieter 98% fill, 12px blur, 112%
@@ -45,12 +45,13 @@ visit. Pages already open elsewhere are not pushed or polled.
   off is executable restoration rather than an approximate alternate palette.
 
 The owner’s subsequent color-harmony refinement on 2026-10-29 supersedes the
-initial neon-yellow palette. Public Dark uses page `#070809`, panel `#101214`,
-inset `#191c1f` and hover `#252a2e`, with off-white `#f5f5f2` main text and
-`#bfc6cc` supporting text. Warm gold `#e8c55b` fills primary actions, `#f2d67e`
+initial neon-yellow palette. The 2026-10-31 follow-up removes the residual blue
+channel bias from structural surfaces. Public/customer/worker Dark uses page `#050505`, panel `#0c0c0c`,
+inset `#171717` and hover `#242424`, with off-white `#f5f5f2` main text and
+`#c4c4c4` supporting text. Warm gold `#e8c55b` fills primary actions, `#f2d67e`
 is their hover color, and dark ink `#17140b` labels both. Pale gold `#f3d989`
 is the reading/focus accent; sage-mint `#9bcdbd` remains secondary. Structural
-borders use `#42494f`; interactive outlines use the stronger `#7e8993`.
+borders use `#444444`; interactive outlines use the stronger `#858585`.
 
 Public shadow tokens now use short neutral downward shadows (4px/14px at rest,
 8px/24px elevated), with a restrained top highlight. Primary controls no longer
@@ -58,6 +59,24 @@ inherit the older saturated yellow glow. Gold hover/focus rings still highlight
 all four card edges. Public glass edge tint and nested sheen are quieter; the
 12px blur and management paints are unchanged. These are paint-only overrides
 inside the existing three-way gate; off, Version 1 and Medium/Light remain exact.
+
+## Worker and storefront surface completion — 2026-10-31
+
+The worker section keeps `data-management-surface="true"` for its existing
+geometry and adds `data-worker-surface="true"` solely to opt into the enhanced
+black palette. The exception is limited to `deep-glass.css`; authorization and
+other public/management guards do not change. A real `.mgmt-shell-root` still
+excludes the enhancement, even when a worker marker is also present.
+
+Product-card, moving-rail, preview and detail media backplates use neutral-token
+radial gradients instead of hard-coded blue-gray studio highlights. Product
+images, their fitting/clipping and semantic badges remain intact. The public
+account dashboard, its forms, login/cart surfaces and worker navigation inherit
+the same neutral tokens. Verify protected pages with
+`node scripts/verify-dark-surfaces.mjs` (optional `BASE_URL`, `DARK_OUTPUT_DIR`):
+disposable customer/worker identities, both locales, 320/1440px, all themes,
+neutral Dark tokens, exact bright-theme paints and scoped identity cleanup.
+The harness never submits account, request or settings forms.
 
 ## Global setting and authorization
 

@@ -1,4 +1,6 @@
 "use client";
+
+import { BrandArtwork } from "@/components/brand/brand-artwork";
 import {
   useCallback,
   useEffect,
@@ -515,7 +517,9 @@ export function PaymentPageClient({
       aria-label={he ? "תשלום מאובטח" : "Secure payment"}
     >
       <section className={styles.card} aria-busy={loading || submitting}>
-        <p className={styles.brand}>MIRO</p>
+        <div className={styles.brand}>
+          <BrandArtwork locale={locale} />
+        </div>
         <h1>{he ? "תשלום מאובטח" : "Secure payment"}</h1>
         <p>
           {he

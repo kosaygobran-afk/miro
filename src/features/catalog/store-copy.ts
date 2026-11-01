@@ -1,6 +1,6 @@
 export const storeCopy = {
   en: {
-    eyebrow: "THE MIRO COLLECTION",
+    eyebrow: "THE MIRO GROUP COLLECTION",
     title: "Smarter technology.",
     titleAccent: "A safer everyday.",
     intro:
@@ -126,7 +126,7 @@ export const storeCopy = {
     promoBadgesLabel: "Promotions",
   },
   he: {
-    eyebrow: "הקולקציה של MIRO",
+    eyebrow: "הקולקציה של מירו גרופ",
     title: "טכנולוגיה חכמה.",
     titleAccent: "שקט שמרגישים.",
     intro:

@@ -92,7 +92,7 @@ export function PageHeader({
             <Icon size={21} aria-hidden="true" />
           </span>
           <span className="mgmt-workspace-header__identity">
-            <span>MIRO / {mgmtNavSectionLabel(section.key, locale)}</span>
+            <span>MIRO GROUP / {mgmtNavSectionLabel(section.key, locale)}</span>
             <span>
               {workspace
                 ? roleLabel(workspace.role, locale)

@@ -1,3 +1,4 @@
+import { BrandArtwork } from "@/components/brand/brand-artwork";
 import Link from "@/components/motion/motion-link";
 import { StoreHeroBackdrop } from "@/features/store-design/store-hero-backdrop";
 import { CompanyRail } from "@/features/store-design/company-rail";
@@ -69,8 +70,8 @@ export default async function ProductsPage({
     "@type": "WebSite",
     "@id": `${getSiteUrl()}/#website`,
     url: getSiteUrl(),
-    name: "MIRO",
-    alternateName: ["MIRO Group", "מירו"],
+    name: "MIRO Group",
+    alternateName: ["מירו גרופ", "MIRO"],
   };
 
   return (
@@ -119,7 +120,7 @@ export default async function ProductsPage({
               <span>CONNECTED.</span>
             </div>
           </div>
-          <span className="sf-hero-caption">MIRO SYSTEMS / COLLECTION 01</span>
+          <span className="sf-hero-caption">MIRO GROUP / COLLECTION 01</span>
         </div>
       </section>
 
@@ -182,7 +183,7 @@ export default async function ProductsPage({
             </div>
             <SecurityComposition />
             <span className="sf-bundle-watermark" aria-hidden="true">
-              MIRO.
+              <BrandArtwork locale={locale} compact />
             </span>
           </div>
           <div className="sf-assurance-grid">

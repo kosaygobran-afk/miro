@@ -1149,3 +1149,67 @@
     }
   }
 }
+
+/* Shared vector brand: fixed Hebrew outlines must never mirror with scenery.
+   This is a brand update in both appearance versions, not a theme override. */
+.sf-hero-slide[data-brand-banner="true"] img,
+[dir="rtl"] .sf-hero-slide[data-brand-banner="true"] img {
+  transform: none;
+}
+.experience-system-core {
+  --brand-width: 102px;
+}
+.mgmt-sidebar__brand-name {
+  --brand-width: 118px;
+}
+.mgmt-sidebar__brand-mark:has([data-brand="miro-group-mark"]) {
+  background: var(--surface-muted);
+  box-shadow: none;
+  padding: 3px;
+}
+
+.sf-hero-image[data-brand-only="true"] {
+  inline-size: 44%;
+  z-index: 0;
+  pointer-events: none;
+}
+.sf-hero-brand-art {
+  --brand-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  block-size: 100%;
+  padding: clamp(1.25rem, 3vw, 3rem);
+  color: var(--foreground);
+}
+@media (max-width: 900px) {
+  .sf-hero:has([data-brand-only="true"]) {
+    display: flex;
+    flex-direction: column;
+  }
+  .sf-hero:has([data-brand-only="true"]) .sf-hero-inner {
+    order: 1;
+    min-block-size: 0;
+    padding-block: 2.5rem 1rem;
+  }
+  .sf-hero:has([data-brand-only="true"]) .sf-hero-copy {
+    inline-size: 100%;
+  }
+  .sf-hero-image[data-brand-only="true"] {
+    position: relative;
+    order: 2;
+    inline-size: 100%;
+    block-size: clamp(130px, 25vw, 200px);
+    inset: auto;
+    opacity: 1;
+  }
+  .sf-hero-brand-art {
+    --brand-width: min(100%, 480px);
+  }
+}
+
+.sf-bundle-watermark {
+  --brand-width: 520px;
+  inline-size: min(520px, 75%);
+  bottom: -1rem;
+}

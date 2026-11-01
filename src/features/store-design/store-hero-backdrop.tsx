@@ -1,6 +1,8 @@
 "use client";
 import { useAnimationFeature } from "@/components/motion/animation-provider";
 import Image from "next/image";
+import { BrandArtwork } from "@/components/brand/brand-artwork";
+import { BRAND_HERO_ASSET, resolveBrandAsset } from "@/lib/brand-assets";
 import { ChevronLeft, ChevronRight, Pause, Play } from "lucide-react";
 import {
   useEffect,
@@ -16,7 +18,14 @@ function subscribeVisibility(cb: () => void) {
 }
 export function StoreHeroBackdrop({ locale }: { locale: "he" | "en" }) {
   const { hero } = useStoreDesign();
-  const slides = hero.slides.filter((slide) => slide.enabled);
+  const slides = hero.slides
+    .filter((slide) => slide.enabled)
+    .map((slide) => ({ ...slide, imageUrl: resolveBrandAsset(slide.imageUrl) }))
+    .filter(
+      (slide, index, items) =>
+        slide.imageUrl !== BRAND_HERO_ASSET ||
+        items.findIndex((item) => item.imageUrl === BRAND_HERO_ASSET) === index,
+    );
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -52,6 +61,11 @@ export function StoreHeroBackdrop({ locale }: { locale: "he" | "en" }) {
     <>
       <div
         className="sf-hero-image sf-hero-slideshow"
+        data-brand-only={
+          slides.every((slide) => slide.imageUrl === BRAND_HERO_ASSET)
+            ? "true"
+            : undefined
+        }
         data-transition={reduceMotion ? "none" : hero.transition}
         style={
           { "--sf-slide-duration": `${hero.transitionMs}ms` } as CSSProperties
@@ -62,16 +76,25 @@ export function StoreHeroBackdrop({ locale }: { locale: "he" | "en" }) {
           <div
             key={slide.id}
             className="sf-hero-slide"
+            data-brand-banner={
+              slide.imageUrl === BRAND_HERO_ASSET ? "true" : undefined
+            }
             data-active={i === current}
           >
-            <Image
-              src={slide.imageUrl}
-              alt=""
-              fill
-              sizes="100vw"
-              preload={i === 0}
-              unoptimized={slide.imageUrl.endsWith(".svg")}
-            />
+            {slide.imageUrl === BRAND_HERO_ASSET ? (
+              <div className="sf-hero-brand-art">
+                <BrandArtwork locale={locale} />
+              </div>
+            ) : (
+              <Image
+                src={slide.imageUrl}
+                alt=""
+                fill
+                sizes="100vw"
+                preload={i === 0}
+                unoptimized={slide.imageUrl.endsWith(".svg")}
+              />
+            )}
           </div>
         ))}
       </div>

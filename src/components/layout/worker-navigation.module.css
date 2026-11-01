@@ -126,3 +126,7 @@
     overflow-wrap: anywhere;
   }
 }
+
+.brand {
+  --brand-width: 114px;
+}

@@ -1,14 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  LayoutGrid,
-  Maximize,
-  Minimize,
-  ScanLine,
-  Wifi,
-  WifiOff,
-} from "lucide-react";
+import { LayoutGrid, Maximize, Minimize, Wifi, WifiOff } from "lucide-react";
+import { BrandArtwork, BrandMark } from "@/components/brand/brand-artwork";
 import type { Locale } from "@/lib/i18n";
 import styles from "./pos-workspace.module.css";
 
@@ -58,11 +52,12 @@ export function PosTopbar({
     <header className={styles.topbar}>
       <div className={styles.brand}>
         <span className={styles.brandIcon}>
-          <ScanLine size={23} aria-hidden="true" />
+          <BrandMark />
         </span>
         <div>
           <h2>
-            MIRO <span>{he ? "קופה" : "POS"}</span>
+            <BrandArtwork locale={locale} compact />{" "}
+            <span>{he ? "קופה" : "POS"}</span>
           </h2>
           <small>{he ? "סביבת המכירה שלך" : "Your sales workspace"}</small>
         </div>

@@ -8,6 +8,7 @@ import Link from "@/components/motion/motion-link";
 import { withLocale, type Locale } from "@/lib/i18n";
 import { switchNavigationLocale } from "./switch-navigation-locale";
 import { NavigationThemeSelector } from "./navigation-theme-selector";
+import { BrandArtwork } from "@/components/brand/brand-artwork";
 import { AccountMenu } from "./account-menu";
 import type { HeaderLabels } from "./header-client";
 import styles from "./worker-navigation.module.css";
@@ -70,9 +71,9 @@ export function WorkerNavigation({
           className={styles.brand}
           aria-label={labels.workerArea}
         >
-          <ClipboardList size={21} aria-hidden="true" />
           <span>
-            MIRO <small>{labels.workerArea}</small>
+            <BrandArtwork locale={locale} compact />
+            <small>{labels.workerArea}</small>
           </span>
         </Link>
         <nav

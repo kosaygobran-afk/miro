@@ -1,15 +1,15 @@
 {
   "locale": "English",
   "site": {
-    "name": "MIRO",
-    "defaultTitle": "MIRO - Security and Communications Systems",
+    "name": "MIRO Group",
+    "defaultTitle": "MIRO Group - Security and Communications Systems",
     "description": "MIRO provides professional security, networking and communications installation foundations for homes and businesses in Israel."
   },
   "layout": {
     "header": {
-      "logo": "MIRO",
+      "logo": "MIRO Group",
       "tagline": "Secure Smart Connected",
-      "homeLabel": "MIRO home",
+      "homeLabel": "MIRO Group home",
       "navLabel": "Main navigation",
       "nav": {
         "home": "Home",

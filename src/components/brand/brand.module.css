@@ -1,0 +1,68 @@
+.logo,
+.wordmark {
+  display: block;
+  flex: 0 0 auto;
+  inline-size: var(--brand-width, 180px);
+  max-inline-size: 100%;
+  block-size: auto;
+  overflow: visible;
+  color: var(--foreground);
+  /* Do not mirror Hebrew outlines on an English page or RTL image stage. */
+  transform: none;
+}
+.wordmark {
+  inline-size: var(--brand-width, 120px);
+}
+.mark {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  color: var(--foreground);
+}
+@media (max-width: 700px) {
+  .logo {
+    inline-size: var(--brand-width, 128px);
+  }
+}
+@media (max-width: 359px) {
+  .logo {
+    inline-size: var(--brand-width, 98px);
+  }
+}
+
+/* Generic icon selectors must not repaint or resize the lettering. */
+.logo.logo,
+.wordmark.wordmark {
+  color: var(--foreground);
+}
+
+.mobileMark {
+  display: none;
+}
+@media (max-width: 480px) {
+  :global(.premium-logo-link) .logo {
+    inline-size: 90px;
+  }
+}
+@media (max-width: 359px) {
+  :global(.premium-logo-link) .logo {
+    display: none;
+  }
+  :global(.premium-logo-link) .mobileMark {
+    display: block;
+    inline-size: 32px;
+    block-size: 32px;
+  }
+}
+
+/* Center the visible outline, without an inline-text baseline gap. */
+:global(.premium-logo-link) {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+}
+:global(.premium-brand) {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
