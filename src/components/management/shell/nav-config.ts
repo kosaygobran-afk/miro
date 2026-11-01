@@ -411,7 +411,7 @@ const itemSubtitles: Record<MgmtNavItemKey, LocalizedText> = {
 /** Shared shell strings that are not tied to a specific nav entry. */
 export const mgmtShellCopy = {
   navLabel: { he: "ניווט ניהול", en: "Management navigation" },
-  brandName: { he: "MIRO", en: "MIRO" },
+  brandName: { he: "מירו גרופ.", en: "MIRO Group" },
   brandTagline: { he: "קונסולת ניהול", en: "Management console" },
   breadcrumbRoot: { he: "ניהול", en: "Management" },
   ceoOnlyBadge: { he: "מנכ״ל בלבד", en: "CEO only" },

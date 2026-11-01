@@ -25,7 +25,7 @@ export function StoreCategoryMenu({
         </span>
         <div>
           <p className="premium-category-menu__eyebrow" dir="ltr">
-            MIRO STORE
+            MIRO GROUP STORE
           </p>
           <h2>{he ? "בוחרים קטגוריה" : "Shop by category"}</h2>
         </div>

@@ -10,6 +10,7 @@ import Link from "@/components/motion/motion-link";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { roleLabel, type AppRole } from "@/lib/roles";
 import { withLocale, type Locale } from "@/lib/i18n";
+import { BrandArtwork, BrandMark } from "@/components/brand/brand-artwork";
 import { AdminNav } from "@/components/management/admin-nav";
 import { Drawer } from "@/components/management/ui/drawer";
 import { OverlayStackProvider } from "@/components/management/ui/overlay-stack";
@@ -127,20 +128,14 @@ export function ManagementShell({
                 <Link
                   href={withLocale(locale, "admin")}
                   className="mgmt-sidebar__brand-link"
+                  aria-label={`${mgmtShellCopy.brandName[locale]} — ${mgmtShellCopy.brandTagline[locale]}`}
                 >
                   <span className="mgmt-sidebar__brand-mark" aria-hidden="true">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="23"
-                      height="23"
-                      fill="currentColor"
-                    >
-                      <path d="M4 18V6h3.5l4.5 7 4.5-7H20v12h-3.5v-6.5L12 18l-4.5-6.5V18z" />
-                    </svg>
+                    <BrandMark />
                   </span>
                   <span className="mgmt-sidebar__brand-text">
                     <span className="mgmt-sidebar__brand-name">
-                      {mgmtShellCopy.brandName[locale]}
+                      <BrandArtwork locale={locale} compact />
                     </span>
                     <span className="mgmt-sidebar__brand-tagline">
                       {mgmtShellCopy.brandTagline[locale]}

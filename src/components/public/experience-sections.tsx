@@ -1,3 +1,4 @@
+import { BrandArtwork } from "@/components/brand/brand-artwork";
 import Link from "@/components/motion/motion-link";
 import {
   ArrowLeft,
@@ -307,7 +308,9 @@ export function SolutionCards({ locale }: { locale: Locale }) {
             <span className="experience-art-orbit" />
             <Icon strokeWidth={0.8} />
             <span className="experience-art-point" />
-            <span className="experience-art-label">MIRO / {item.label}</span>
+            <span className="experience-art-label">
+              MIRO GROUP / {item.label}
+            </span>
           </div>
           <div className="experience-solution-copy">
             <p className="experience-overline" lang="en" dir="ltr">
@@ -367,7 +370,9 @@ export function ConnectedSystem({ locale }: { locale: Locale }) {
     >
       <div className="experience-system-lines" aria-hidden="true" />
       <div className="experience-system-core" aria-hidden="true">
-        <span>MIRO</span>
+        <span>
+          <BrandArtwork locale={locale} compact />
+        </span>
         <small>CONNECTED SECURITY</small>
       </div>
       {nodes.map(({ Icon, title, text }, i) => (

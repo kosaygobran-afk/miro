@@ -480,3 +480,15 @@ This entry supersedes the earlier admin table wrapping and cosmetic-control note
 - Owner-requested refinement replaces the initial enhanced neon yellow/blue-black combination with neutral charcoal, warm gold actions, pale gold reading accents and muted sage-mint. The authoritative scale and shadow roles are in `docs/THEME_GLASS.md`.
 - Keep changes in the public-only Version 2 + Dark + shared glass-on gate in `deep-glass.css`. Preserve management/semantic colors, baseline restoration, Medium/Light, geometry, image fitting and the final `public-refinement.css` import.
 - Use neutral downward shadows and subtle top-edge reflection for depth. Do not restore the baseline saturated gold halo in enhanced public Dark, add nested backdrop filters, or use structural-divider colors as interactive control outlines.
+
+## Customer and worker neutral black surfaces — 2026-10-31
+
+- Follow-up owner feedback removes the remaining blue cast: enhanced Dark page/panel/inset/hover use `#050505` / `#0c0c0c` / `#171717` / `#242424`; structural borders and supporting text are neutral gray. Keep the previously approved warm gold accents.
+- `data-worker-surface="true"` on the existing worker section allows only the shared enhanced palette/glass layer to include the worker interface. Retain its management marker, authorization and geometry; CEO/admin shells remain excluded. The customer account page inherits the public palette.
+- Catalog grid/rail/preview/detail media backplates use neutral gradients; never desaturate the actual artwork or semantic status indicators. Preserve Version 1, glass-off restoration and exact Medium/Light paints. See `docs/THEME_GLASS.md` and the disposable `scripts/verify-dark-surfaces.mjs` harness.
+
+## MIRO Group vector identity — 2026-11-01
+
+- The owner-selected name is `מירו גרופ.` with the י and dot in deep yellow `#e5b526`. Use the shared path-based `BrandArtwork` / `BrandMark`; the complete source/export map and font attribution are in `docs/BRANDING.md`.
+- Keep natural subtitle proportions and balanced tracking. Navbar centering follows the visible vector ink, with equal view-box margins and a flex link that removes the inline baseline gap. Never mirror lettering in RTL layouts. At narrow 320px headers use the matching compact mark to preserve reachable controls.
+- This explicit branding update applies to both appearance versions and all themes. It includes public/customer/worker/management/POS/payment chrome and the two owner-approved PNG campaign replacements. Preserve other uploaded media, theme colors, permissions and financial document identity.

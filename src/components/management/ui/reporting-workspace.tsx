@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandArtwork } from "@/components/brand/brand-artwork";
 import type { ReactNode } from "react";
 import {
   Activity,
@@ -41,7 +42,7 @@ export function ReportingHeader({
         <span className="insight-icon" aria-hidden="true">
           <SectionIcon size={20} />
         </span>
-        <span>MIRO</span>
+        <BrandArtwork locale={locale} compact />
         <span className={styles.dot} aria-hidden="true" />
         {he ? "ניהול העסק" : "BUSINESS WORKSPACE"}
       </div>
@@ -60,7 +61,7 @@ export function ReportingHeader({
             ["requests", he ? "פניות" : "Requests"],
             ["finance", he ? "כספים" : "Finance"],
             ["analytics", he ? "אנליטיקה" : "Analytics"],
-            ["store", he ? "חנות MIRO" : "MIRO store"],
+            ["store", he ? "חנות מירו גרופ" : "MIRO Group store"],
           ] as const
         ).map(([key, label]) => (
           <Link

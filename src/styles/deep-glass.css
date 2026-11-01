@@ -19,24 +19,29 @@
 }
 
 /* The console's semantic high-contrast Dark palette stays authoritative.
-   Public Dark pairs neutral charcoal with warm gold and restrained sage-mint. */
+   Public/customer/worker Dark pairs true neutral blacks with warm gold.
+   The worker marker is a presentation-only exception to the management guard;
+   CEO/admin shells and other management surfaces retain their own palette. */
 :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
-    :has(.mgmt-shell-root, [data-management-surface="true"])
+    :has(
+      .mgmt-shell-root,
+      [data-management-surface="true"]:not([data-worker-surface="true"])
+    )
   ) {
-  --background: #070809;
-  --surface: #101214;
-  --surface-muted: #191c1f;
-  --surface-hover: #252a2e;
+  --background: #050505;
+  --surface: #0c0c0c;
+  --surface-muted: #171717;
+  --surface-hover: #242424;
   --foreground: #f5f5f2;
-  --muted-foreground: #bfc6cc;
-  --border-subtle: #42494f;
-  --border-control: #7e8993;
+  --muted-foreground: #c4c4c4;
+  --border-subtle: #444444;
+  --border-control: #858585;
   --primary: #e8c55b;
   --primary-hover: #f2d67e;
   --primary-foreground: #17140b;
   --accent-text: #f3d989;
   --secondary-accent: #9bcdbd;
-  --header-surface: #101214;
+  --header-surface: #0c0c0c;
   --focus-ring: #f3d989;
   /* One light source above; neutral shadows below. Keep gold in the control
      itself instead of inheriting the baseline's saturated yellow halo. */
@@ -69,7 +74,10 @@
 }
 
 :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
-    :has(.mgmt-shell-root, [data-management-surface="true"])
+    :has(
+      .mgmt-shell-root,
+      [data-management-surface="true"]:not([data-worker-surface="true"])
+    )
   ) {
   body {
     background:
@@ -84,6 +92,21 @@
         transparent 40rem
       ),
       var(--background);
+  }
+
+  /* Remove legacy blue-gray studio highlights from the media backplates only.
+     Product bitmaps, lens overlays, fitting and clipping remain untouched. */
+  :is(
+    .sf-product-media,
+    .sf-moving-rail-media,
+    .sf-hover-preview-media,
+    .sf-main-image
+  ) {
+    background: radial-gradient(
+      ellipse at 50% 65%,
+      var(--surface-hover),
+      var(--surface-muted) 68%
+    );
   }
 
   /* A few elevated reading surfaces, not every product in the catalog. */
@@ -253,7 +276,10 @@
 @media (prefers-reduced-transparency: reduce) {
   :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"],
   :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
-      :has(.mgmt-shell-root, [data-management-surface="true"])
+      :has(
+        .mgmt-shell-root,
+        [data-management-surface="true"]:not([data-worker-surface="true"])
+      )
     ) {
     --glass-fill: var(--surface);
     --glass-menu-fill: var(--surface);
@@ -266,7 +292,10 @@
 @media (forced-colors: active) {
   :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"],
   :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
-      :has(.mgmt-shell-root, [data-management-surface="true"])
+      :has(
+        .mgmt-shell-root,
+        [data-management-surface="true"]:not([data-worker-surface="true"])
+      )
     ) {
     --glass-fill: Canvas;
     --glass-menu-fill: Canvas;

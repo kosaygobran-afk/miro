@@ -36,7 +36,11 @@ export default async function WorkerPage({
   return (
     <>
       <WorkerNavigation locale={safeLocale} labels={labels} />
-      <section className="miro-section" data-management-surface="true">
+      <section
+        className="miro-section"
+        data-management-surface="true"
+        data-worker-surface="true"
+      >
         <div className="miro-container space-y-6">
           <h1 className="text-3xl font-black">
             {safeLocale === "he" ? "סביבת העבודה" : "Your workspace"}

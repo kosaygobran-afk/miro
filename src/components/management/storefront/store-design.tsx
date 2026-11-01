@@ -23,6 +23,7 @@ import {
   type StorefrontDesign,
 } from "@/lib/storefront-design";
 import styles from "./store-design.module.css";
+import { resolveBrandAsset } from "@/lib/brand-assets";
 
 type Slide = StorefrontDesign["hero"]["slides"][number];
 type Brand = StorefrontDesign["brands"]["items"][number];
@@ -422,7 +423,7 @@ export function StoreDesign({
                       src={
                         /^https:\/\//.test(slide.imageUrl) ||
                         slide.imageUrl.startsWith("/images/")
-                          ? slide.imageUrl
+                          ? resolveBrandAsset(slide.imageUrl)
                           : defaultStorefrontDesign.hero.slides[0].imageUrl
                       }
                       alt=""

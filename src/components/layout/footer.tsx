@@ -10,7 +10,7 @@ export function Footer({ locale }: { locale: Locale }) {
     ["", he ? "חנות המוצרים" : "Explore the store"],
     ["services", he ? "הפתרונות שלנו" : "Our solutions"],
     ["home", he ? "בית" : "Home"],
-    ["about", he ? "אודות מירו" : "About MIRO"],
+    ["about", he ? "אודות מירו גרופ" : "About MIRO Group"],
     ["contact", he ? "יצירת קשר" : "Get in touch"],
   ];
   const solutions = [
@@ -34,7 +34,7 @@ export function Footer({ locale }: { locale: Locale }) {
         <div className="premium-footer-brand">
           <Link
             href={withLocale(locale)}
-            aria-label={he ? "דף הבית של מירו" : "MIRO home"}
+            aria-label={he ? "דף הבית של מירו גרופ" : "MIRO Group home"}
           >
             <Brand locale={locale} />
           </Link>
@@ -48,7 +48,7 @@ export function Footer({ locale }: { locale: Locale }) {
           </span>
         </div>
         <div className="premium-footer-column">
-          <h2>{he ? "מכירים את מירו" : "Discover MIRO"}</h2>
+          <h2>{he ? "מכירים את מירו גרופ" : "Discover MIRO Group"}</h2>
           <nav aria-label={he ? "ניווט תחתון" : "Footer navigation"}>
             {links.map(([path, label]) => (
               <Link key={path} href={withLocale(locale, path)}>
@@ -88,8 +88,8 @@ export function Footer({ locale }: { locale: Locale }) {
           <span>
             © {new Date().getFullYear()}{" "}
             {he
-              ? "מירו. מערכות מיגון ותקשורת."
-              : "MIRO. Security & Communications."}
+              ? "מירו גרופ. מערכות מיגון ותקשורת."
+              : "MIRO Group. Security & Communications."}
           </span>
           <nav
             className="premium-footer-legal"

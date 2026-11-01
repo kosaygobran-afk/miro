@@ -4,9 +4,9 @@ import type { MetadataRoute } from "next";
 export default function manifest(): MetadataRoute.Manifest {
   return {
     id: "/admin/pos",
-    name: "MIRO POS",
-    short_name: "MIRO POS",
-    description: "MIRO management point of sale",
+    name: "MIRO Group POS",
+    short_name: "MIRO Group POS",
+    description: "MIRO Group management point of sale",
     start_url: "/he/admin/pos",
     scope: "/",
     display: "standalone",
