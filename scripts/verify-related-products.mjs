@@ -49,7 +49,13 @@ try {
     );
     const links = await rail
       .locator(".sf-moving-rail-card")
-      .evaluateAll((nodes) => nodes.map((n) => n.getAttribute("href")));
+      .evaluateAll((nodes) =>
+        nodes.map(
+          (n) =>
+            n.getAttribute("href") ||
+            n.querySelector("a[href]")?.getAttribute("href"),
+        ),
+      );
     assert.ok(links.length > 0);
     assert.ok(!links.includes(href));
     assert.equal(new Set(links).size, links.length);

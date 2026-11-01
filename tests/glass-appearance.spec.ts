@@ -470,7 +470,7 @@ for (const theme of ["dark"] as const) {
         .locator(
           kind === "grid"
             ? ".sf-product-card"
-            : '.sf-moving-rail-segment:not([aria-hidden="true"]) .sf-moving-rail-card-shell:has(> a[data-preview-source])',
+            : '.sf-moving-rail-segment:not([aria-hidden="true"]) .sf-moving-rail-card-shell:has(> [data-preview-source])',
         )
         .first();
       await expect(card).toBeVisible({ timeout: 15000 });
@@ -487,6 +487,7 @@ for (const theme of ["dark"] as const) {
           const style = getComputedStyle(node);
           return {
             accent,
+            shadow: style.boxShadow,
             colors: [
               style.borderTopColor,
               style.borderRightColor,
@@ -502,6 +503,7 @@ for (const theme of ["dark"] as const) {
           };
         });
         expect(edge.colors).toEqual(Array(4).fill(edge.accent));
+        expect(edge.shadow).not.toContain("inset");
         expect(edge.widths.every((width) => width >= 1)).toBe(true);
       };
       await footer.hover();

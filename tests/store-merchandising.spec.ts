@@ -8,12 +8,12 @@ test.describe("Storefront merchandising interactions", () => {
     await page.goto("/en/store");
     const card = page.locator(".sf-product-card").first();
     await expect(card).toBeVisible();
-    await expect(card.locator(".sf-product-price__amount small")).toHaveCount(
-      2,
-    );
+    await expect(card.locator(".sf-card-vat")).toHaveCount(1);
+    await expect(card.locator(".sf-card-vat")).toContainText("incl. VAT");
+    await expect(card.locator(".sf-card-specifications")).toHaveCount(0);
     await expect(
-      card.locator(".sf-product-price__amount small").last(),
-    ).toContainText("excl. VAT");
+      card.locator(".sf-card-price-secondary .sf-card-identifiers"),
+    ).toBeVisible();
     const indicator = card.locator(".sf-stock-indicator");
     const count = Number(
       await indicator.locator(".sf-stock-indicator__number").textContent(),

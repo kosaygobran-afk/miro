@@ -1,5 +1,9 @@
 # MIRO animation, loading and appearance system
 
+## Per-card label rails — 2026-11-01
+
+Version 2 grid, moving and related cards use `ProductBadgeRail`: collection label first in reading direction, then every assigned promotion. Overflow loops at `storefrontDesign.products.pixelsPerSecond`, the same value as the main product rail. Ambient Motion/master-off and reduced motion disable automatic movement and retain native horizontal scrolling. Hover or keyboard focus pauses the row; its localized Pause/Play button keeps an explicit local pause. Touch scrolling pauses automatically. There is one accessible label list and an aria-hidden visual copy for the loop; decorative product-rail copies remain outside keyboard focus. Badge interaction is excluded from product hover/hold/focus preview triggers. No extra setting or permission path was added. Canonical Version 2 card sources are excluded from the old upward hover translation so upper paint cannot cover the rounded frame. Touch/pen press feedback and portaled preview animation remain active.
+
 ## Category and account menu refinement — 2026-10-23
 
 Version 2 root-category and account panels retain the existing opaque `motion-menu-in` entrance, governed by Menus and its saved duration/easing. Category rows animate their border/background and move the decorative arrow 3px in reading direction on hover or keyboard focus. Account action icons lift 1px. These local hover effects use the existing Micro-interactions switch and duration/easing; master-off and reduced motion remove the movement. Do not add row entrance delays, animate label text, fade menu copy or delay clicks.

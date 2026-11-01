@@ -71,6 +71,7 @@ export function ProductIdentifiers({
           <dt className="product-identifier-label">{label}</dt>
           <dd
             className="product-identifier-value"
+            title={value}
             dir={kind === "model" ? "auto" : "ltr"}
           >
             {value}

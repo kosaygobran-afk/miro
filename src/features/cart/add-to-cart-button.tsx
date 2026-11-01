@@ -9,6 +9,7 @@ type AddToCartButtonProps = {
   locale: "he" | "en";
   compact?: boolean;
   disabled?: boolean;
+  tabIndex?: number;
 };
 
 export function AddToCartButton({
@@ -16,6 +17,7 @@ export function AddToCartButton({
   locale,
   compact = false,
   disabled = false,
+  tabIndex,
 }: AddToCartButtonProps) {
   const { addItem, items, updateQuantity } = useCart();
   const quantity =
@@ -46,6 +48,7 @@ export function AddToCartButton({
         </span>
         <button
           type="button"
+          tabIndex={tabIndex}
           disabled={disabled}
           aria-label={`${locale === "he" ? "הפחתת כמות" : "Decrease quantity"}: ${item.name}`}
           onClick={(event) => {
@@ -64,6 +67,7 @@ export function AddToCartButton({
         </output>
         <button
           type="button"
+          tabIndex={tabIndex}
           disabled={disabled || quantity >= 99}
           aria-label={`${locale === "he" ? "הגדלת כמות" : "Increase quantity"}: ${item.name}`}
           onClick={(event) => {
@@ -80,6 +84,7 @@ export function AddToCartButton({
   return (
     <button
       type="button"
+      tabIndex={tabIndex}
       className={`sf-add-cart-button ${compact ? "is-compact" : ""} ${added ? "is-added" : ""}`}
       aria-label={`${added ? addedLabel : label}: ${item.name}`}
       title={added ? addedLabel : label}

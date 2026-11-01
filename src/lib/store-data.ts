@@ -695,8 +695,8 @@ export async function getStoreCatalog(
           subcategoryLabel: childrenById.get(product.subcategory_id)?.label,
           badge: product.is_featured
             ? locale === "he"
-              ? "מהקולקציה"
-              : "Collection pick"
+              ? "קולקציה"
+              : "Collection"
             : undefined,
           icon: getProductIcon(categoryKey),
           isFeatured: Boolean(product.is_featured),

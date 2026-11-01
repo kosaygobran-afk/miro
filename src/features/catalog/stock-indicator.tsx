@@ -4,10 +4,14 @@ export function StockIndicator({
   quantity,
   locale,
   unconfirmed = false,
+  variant = "default",
+  tabIndex = 0,
 }: {
   quantity: number;
   locale: Locale;
   unconfirmed?: boolean;
+  variant?: "default" | "card";
+  tabIndex?: number;
 }) {
   if (unconfirmed)
     return (
@@ -41,9 +45,9 @@ export function StockIndicator({
 
   return (
     <span
-      className={`sf-stock-indicator sf-stock-indicator--${level}`}
+      className={`sf-stock-indicator sf-stock-indicator--${level}${variant === "card" ? " sf-card-stock" : ""}`}
       role="group"
-      tabIndex={0}
+      tabIndex={tabIndex}
       aria-label={label}
       data-tooltip={wording}
     >
@@ -52,7 +56,17 @@ export function StockIndicator({
         {count}
       </span>
       <span className="sf-stock-indicator__caption" aria-hidden="true">
-        {locale === "he" ? "נותרו" : "left"}
+        {variant === "card"
+          ? count === 0
+            ? locale === "he"
+              ? "אזל מהמלאי"
+              : "Out of stock"
+            : locale === "he"
+              ? "במלאי"
+              : "In stock"
+          : locale === "he"
+            ? "נותרו"
+            : "left"}
       </span>
     </span>
   );
