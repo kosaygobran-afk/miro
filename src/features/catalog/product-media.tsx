@@ -9,6 +9,7 @@ export type ProductImageSubject = Pick<
   Product,
   "id" | "name" | "category" | "icon"
 >;
+export type ProductImageStatus = "loading" | "ready" | "unavailable";
 /** A failed external image never leaves an empty product stage. */
 export function ProductMedia({
   product,
@@ -17,7 +18,7 @@ export function ProductMedia({
   sizes,
   loading = "lazy",
   className = "",
-  onImageReadyChange,
+  onImageStatusChange,
   fallback,
   fetchPriority,
 }: {
@@ -27,17 +28,21 @@ export function ProductMedia({
   sizes: string;
   loading?: "eager" | "lazy";
   className?: string;
-  onImageReadyChange?: (ready: boolean) => void;
+  onImageStatusChange?: (status: ProductImageStatus) => void;
   fallback?: ReactNode;
   fetchPriority?: "high" | "low" | "auto";
 }) {
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const status: ProductImageStatus =
+    !src || failedSrc === src
+      ? "unavailable"
+      : loadedSrc === src
+        ? "ready"
+        : "loading";
   useEffect(() => {
-    onImageReadyChange?.(
-      Boolean(src && loadedSrc === src && failedSrc !== src),
-    );
-  }, [src, loadedSrc, failedSrc, onImageReadyChange]);
+    onImageStatusChange?.(status);
+  }, [status, onImageStatusChange]);
   useEffect(() => {
     // Visible popup media must settle even if the image request/decode never
     // emits load or error. Lazy catalog images keep their normal loading policy.

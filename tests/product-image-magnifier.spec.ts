@@ -595,3 +595,134 @@ test("touch dragging pans only while magnification is enabled", async ({
   await expect(stage).toHaveCSS("touch-action", "auto");
   await context.close();
 });
+
+for (const locale of ["en", "he"] as const) {
+  for (const surface of ["popup", "detail"] as const) {
+    for (const width of [320, 1440]) {
+      test(`${locale}: ${surface} keeps zoom controls mounted during slow image changes at ${width}px`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 1000 });
+        const scope =
+          surface === "popup"
+            ? (await openPreview(page, locale)).popup
+            : await openDetail(page, locale);
+        const toggle = scope.locator(".sf-image-magnifier-toggle");
+        const next = scope.locator(
+          surface === "popup"
+            ? ".sf-hover-preview-arrow-next"
+            : ".sf-gallery-arrow-next",
+        );
+        const previous = scope.locator(
+          surface === "popup"
+            ? ".sf-hover-preview-arrow-previous"
+            : ".sf-gallery-arrow-previous",
+        );
+        await expect(toggle).toBeEnabled();
+        await expect(next).toBeVisible();
+        await scope.evaluate((element) => {
+          const root = element as HTMLElement & {
+            continuityObserver?: MutationObserver;
+          };
+          const button = element.querySelector<HTMLElement>(
+            ".sf-image-magnifier-toggle",
+          )!;
+          const persistentControls = Array.from(
+            element.querySelectorAll(
+              ".sf-image-magnifier-toggle, .sf-hover-preview-close, .sf-hover-preview-arrow, .sf-hover-preview-thumbnail, .sf-gallery-arrow, .sf-thumbnail",
+            ),
+          );
+          button.dataset.continuityProbe = "original";
+          root.dataset.controlRemovals = "0";
+          root.continuityObserver = new MutationObserver((records) => {
+            for (const record of records)
+              for (const node of record.removedNodes) {
+                if (
+                  persistentControls.some(
+                    (control) => node === control || node.contains(control),
+                  )
+                )
+                  root.dataset.controlRemovals = String(
+                    Number(root.dataset.controlRemovals) + 1,
+                  );
+              }
+          });
+          root.continuityObserver.observe(element, {
+            childList: true,
+            subtree: true,
+          });
+        });
+        const stage = scope.locator(".sf-hover-preview-image-stage");
+        const stageId = await stage.getAttribute("id");
+        const relativeControlPosition = () =>
+          scope.evaluate((element) => {
+            const frame = element.getBoundingClientRect();
+            const button = element
+              .querySelector(".sf-image-magnifier-toggle")!
+              .getBoundingClientRect();
+            return { x: button.x - frame.x, y: button.y - frame.y };
+          });
+        const position = await relativeControlPosition();
+        await toggle.click();
+        await scope.getByRole("slider").focus();
+        await page.keyboard.press("End");
+        let release!: () => void;
+        const gate = new Promise<void>((resolve) => {
+          release = resolve;
+        });
+        let waiting = 0;
+        await page.route("**/_next/image?**", async (route) => {
+          if (
+            Number(new URL(route.request().url()).searchParams.get("w")) < 600
+          )
+            return route.fallback();
+          waiting++;
+          await gate;
+          await route.fulfill({
+            contentType: "image/svg+xml",
+            body: imageFixture,
+          });
+        });
+        try {
+          await next.click();
+          await expect.poll(() => waiting).toBeGreaterThan(0);
+          await expect(toggle).toBeVisible();
+          await expect(toggle).toBeDisabled();
+          await expect(toggle).toHaveCSS("opacity", "1");
+          await expect(toggle).toHaveAttribute("aria-busy", "true");
+          await expect(toggle).toHaveAttribute(
+            "data-continuity-probe",
+            "original",
+          );
+          await expect(stage).toHaveAttribute("id", stageId!);
+          await expect(scope.getByRole("slider")).toHaveCount(0);
+          // Native focus may scroll the page; compare layout inside the viewer.
+          const pendingPosition = await relativeControlPosition();
+          expect(pendingPosition.x).toBeCloseTo(position.x, 0);
+          expect(pendingPosition.y).toBeCloseTo(position.y, 0);
+          release();
+          await expect(toggle).toBeEnabled();
+          await expect(toggle).toHaveAttribute("aria-pressed", "false");
+          await toggle.click();
+          await expect(scope.getByRole("slider")).toHaveValue("2");
+          await page.keyboard.press("Escape");
+          await previous.click();
+          await expect(toggle).toBeEnabled();
+          await expect(toggle).toHaveAttribute(
+            "data-continuity-probe",
+            "original",
+          );
+          await expect(stage).toHaveAttribute("id", stageId!);
+          await expect(scope).toHaveAttribute("data-control-removals", "0");
+        } finally {
+          release();
+          await scope.evaluate((element) =>
+            (
+              element as HTMLElement & { continuityObserver?: MutationObserver }
+            ).continuityObserver?.disconnect(),
+          );
+        }
+      });
+    }
+  }
+}

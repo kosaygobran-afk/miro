@@ -4,13 +4,18 @@ import {
   useCallback,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import { ZoomIn, ZoomOut } from "lucide-react";
-import { ProductMedia, type ProductImageSubject } from "./product-media";
+import {
+  ProductMedia,
+  type ProductImageSubject,
+  type ProductImageStatus,
+} from "./product-media";
 
 const MIN_ZOOM = 1.25;
 const MAX_ZOOM = 5;
@@ -21,6 +26,7 @@ const IMAGE_SIZES = "(max-width: 380px) 600px, 800px";
 export function ProductImageMagnifier({
   product,
   src,
+  imageKey,
   alt,
   locale,
   active,
@@ -35,6 +41,7 @@ export function ProductImageMagnifier({
 }: {
   product: ProductImageSubject;
   src?: string;
+  imageKey?: string;
   alt: string;
   locale: "he" | "en";
   active: boolean;
@@ -52,9 +59,20 @@ export function ProductImageMagnifier({
   togglePortalTarget?: HTMLElement | null;
 }) {
   const he = locale === "he";
-  const [ready, setReady] = useState(false);
-  const [enabled, setEnabled] = useState(false);
-  const [zoom, setZoom] = useState(2);
+  const mediaKey = `${product.id}:${imageKey ?? ""}:${src ?? ""}`;
+  const initialImageState = {
+    key: mediaKey,
+    status: (src ? "loading" : "unavailable") as ProductImageStatus,
+    enabled: false,
+    zoom: 2,
+  };
+  const [imageState, setImageState] = useState(initialImageState);
+  // Reset image-specific state without replacing the stage, toolbar or portal.
+  if (imageState.key !== mediaKey) setImageState(initialImageState);
+  const currentImage =
+    imageState.key === mediaKey ? imageState : initialImageState;
+  const { enabled, zoom, status } = currentImage;
+  const ready = status === "ready";
   const zoomRef = useRef(2);
   const stageRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -102,14 +120,33 @@ export function ProductImageMagnifier({
       stage.style.setProperty(name, value);
   }, []);
 
+  useLayoutEffect(() => {
+    zoomRef.current = 2;
+    pointRef.current = { x: 50, y: 50 };
+    updateLens();
+  }, [mediaKey, updateLens]);
+
+  const handleImageStatusChange = useCallback(
+    (nextStatus: ProductImageStatus) => {
+      setImageState((current) =>
+        current.key === mediaKey && current.status !== nextStatus
+          ? { ...current, status: nextStatus }
+          : current,
+      );
+    },
+    [mediaKey],
+  );
+
   const changeZoom = useCallback(
     (value: number) => {
       const next = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, value));
       zoomRef.current = next;
-      setZoom(next);
+      setImageState((current) =>
+        current.key === mediaKey ? { ...current, zoom: next } : current,
+      );
       updateLens();
     },
-    [updateLens],
+    [mediaKey, updateLens],
   );
 
   const moveTo = (x: number, y: number) => {
@@ -121,42 +158,47 @@ export function ProductImageMagnifier({
     updateLens();
   };
 
-  const magnifierToggle = ready ? (
-    <button
-      ref={buttonRef}
-      type="button"
-      className="sf-image-magnifier-toggle"
-      aria-label={toggleLabel}
-      aria-pressed={zoomed}
-      aria-controls={stageId}
-      onClick={() => {
-        moveTo(50, 50);
-        setEnabled(!zoomed);
-        if (!zoomed) {
-          requestAnimationFrame(() =>
-            stageRef.current?.focus({ preventScroll: true }),
-          );
-        }
-      }}
-    >
-      {zoomed ? (
-        <ZoomOut size={16} aria-hidden="true" />
-      ) : (
-        <ZoomIn size={16} aria-hidden="true" />
-      )}
-      <span
-        className="sf-image-magnifier-tooltip"
-        aria-hidden="true"
-        dir={he ? "rtl" : "ltr"}
+  const magnifierToggle =
+    src && status !== "unavailable" ? (
+      <button
+        ref={buttonRef}
+        type="button"
+        className="sf-image-magnifier-toggle"
+        aria-label={toggleLabel}
+        aria-pressed={zoomed}
+        aria-controls={stageId}
+        disabled={!ready || !active}
+        aria-busy={!ready || undefined}
+        onClick={() => {
+          moveTo(50, 50);
+          setImageState((current) => ({ ...current, enabled: !zoomed }));
+          if (!zoomed) {
+            requestAnimationFrame(() =>
+              stageRef.current?.focus({ preventScroll: true }),
+            );
+          }
+        }}
       >
-        {toggleLabel}
-      </span>
-    </button>
-  ) : null;
+        {zoomed ? (
+          <ZoomOut size={16} aria-hidden="true" />
+        ) : (
+          <ZoomIn size={16} aria-hidden="true" />
+        )}
+        <span
+          className="sf-image-magnifier-tooltip"
+          aria-hidden="true"
+          dir={he ? "rtl" : "ltr"}
+        >
+          {toggleLabel}
+        </span>
+      </button>
+    ) : null;
   const placedMagnifierToggle =
-    magnifierToggle && togglePortalTarget
-      ? createPortal(magnifierToggle, togglePortalTarget)
-      : magnifierToggle;
+    togglePortalTarget === undefined
+      ? magnifierToggle
+      : togglePortalTarget
+        ? createPortal(magnifierToggle, togglePortalTarget)
+        : null;
 
   useEffect(() => {
     const stage = stageRef.current;
@@ -192,7 +234,7 @@ export function ProductImageMagnifier({
       // The first Escape leaves magnification; the next closes the preview.
       event.preventDefault();
       event.stopPropagation();
-      setEnabled(false);
+      setImageState((current) => ({ ...current, enabled: false }));
       buttonRef.current?.focus({ preventScroll: true });
     };
     document.addEventListener("keydown", handleEscape, true);
@@ -249,13 +291,14 @@ export function ProductImageMagnifier({
         }}
       >
         <ProductMedia
+          key={mediaKey}
           product={product}
           src={src}
           alt={alt}
           sizes={sizes}
           loading="eager"
           className={imageClassName}
-          onImageReadyChange={setReady}
+          onImageStatusChange={handleImageStatusChange}
           fallback={fallback}
           fetchPriority={fetchPriority}
         />
@@ -275,7 +318,7 @@ export function ProductImageMagnifier({
         ) : null}
         {annotation}
       </div>
-      {ready || counter ? (
+      {status !== "unavailable" || counter ? (
         <div ref={toolsRef} className="sf-hover-preview-image-tools">
           {counter}
           {placedMagnifierToggle}

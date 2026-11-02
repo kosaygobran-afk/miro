@@ -210,7 +210,8 @@ export function ProductDetailInteractive({
           {enhanced ? (
             <div className="sf-detail-magnifier">
               <ProductImageMagnifier
-                key={`${productId}:${activeImage?.id ?? "empty"}`}
+                key={productId}
+                imageKey={activeImage?.id}
                 product={{
                   id: productId,
                   name: productName,

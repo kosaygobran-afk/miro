@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Plus, Trash2, GripVertical } from "lucide-react";
 
-type SpecEntry = { key: string; value: string };
+type SpecEntry = { id: number; key: string; value: string };
 
 export function SpecificationsEditor({
   locale,
@@ -18,12 +18,16 @@ export function SpecificationsEditor({
 }) {
   const he = locale === "he";
   const [specs, setSpecs] = useState<SpecEntry[]>(() => {
-    const entries = Object.entries(initialSpecs ?? {}).map(([key, value]) => ({
-      key,
-      value: String(value ?? ""),
-    }));
-    return entries.length > 0 ? entries : [{ key: "", value: "" }];
+    const entries = Object.entries(initialSpecs ?? {}).map(
+      ([key, value], id) => ({
+        id,
+        key,
+        value: String(value ?? ""),
+      }),
+    );
+    return entries.length > 0 ? entries : [{ id: 0, key: "", value: "" }];
   });
+  const nextRowId = useRef(specs.length);
 
   const syncToParent = useCallback(() => {
     const obj: Record<string, unknown> = {};
@@ -40,7 +44,8 @@ export function SpecificationsEditor({
   }, [syncToParent]);
 
   const addRow = () => {
-    setSpecs((prev) => [...prev, { key: "", value: "" }]);
+    const id = nextRowId.current++;
+    setSpecs((prev) => [...prev, { id, key: "", value: "" }]);
   };
 
   const removeRow = (index: number) => {
@@ -81,7 +86,7 @@ export function SpecificationsEditor({
       >
         {specs.map((spec, index) => (
           <div
-            key={`${index}-${spec.key}`}
+            key={spec.id}
             className="flex items-center gap-2 miro-card p-3"
             role="listitem"
           >

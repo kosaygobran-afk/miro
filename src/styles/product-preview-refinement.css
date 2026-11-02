@@ -78,6 +78,8 @@
 
   .sf-hover-preview-magnifier-slot {
     display: flex;
+    min-inline-size: 44px;
+    min-block-size: 44px;
   }
 
   /* The toolbar sits above the gallery, so its tooltip opens downward. */
@@ -229,6 +231,10 @@
     border: 1px solid var(--border-subtle);
     border-radius: 0.75rem;
     background: var(--surface);
+  }
+
+  .sf-image-magnifier-toggle:disabled {
+    cursor: wait;
   }
 
   .sf-image-magnifier-toggle:is(:hover, [aria-pressed="true"]) {

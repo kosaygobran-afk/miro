@@ -654,7 +654,8 @@ export function ProductHoverPreview({
           <div id={imageId} className="sf-hover-preview-media">
             {enhanced ? (
               <ProductImageMagnifier
-                key={`${product.id}:${allImages[activeImageIndex]?.id ?? "empty"}`}
+                key={product.id}
+                imageKey={allImages[activeImageIndex]?.id}
                 product={product}
                 src={allImages[activeImageIndex]?.url}
                 alt={imageAlt}
