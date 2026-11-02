@@ -1,6 +1,13 @@
 # Project Status
 
-Last updated: 2026-11-02 (continuous product rail loop correction).
+Last updated: 2026-11-02 (management merchandising preview keys).
+
+## Management merchandising preview keys — 2026-11-02
+
+- Owner reported React’s unique-key warning from the live preview in `StorefrontMerchandising`. The product-badges API embeds appearance fields from `promo_badge_types` without `id`/`sort_order`, while the client incorrectly typed it as a complete badge type and used the missing type ID as a React key.
+- List identity now belongs to a keyed fragment using the actual product-badge assignment ID (`pb.id`). The shared preview renderer no longer supplies a list key; its display-only badge identity uses the existing unique type key. Corrected the nested projection and renderer parameter types to match the fields actually used. No extra DOM wrapper, layout, API or permission change.
+- PASS: `npm run typecheck`, scoped ESLint, scoped Prettier and `git diff --check`. Read-only development-browser verification on port 3000 used a disposable admin and browser-only fixtures matching the real nested API projection, with two badges and reversed assignment order in both locales: **4 render/reorder cases**, zero React key warnings, page errors or management writes. The disposable actor was deleted. Temporary harness: `/tmp/miro-verify-merchandising-keys.cjs` (no credentials saved in it).
+- Local follow-up only; no push/deployment. No new privacy collection, commercial claims or business-data writes. QA retains manual bilingual device/screen-reader approval, and existing business/legal, accountant/provider and operations launch owners/gates remain unchanged.
 
 ## Continuous product-card rail loop — 2026-11-02
 

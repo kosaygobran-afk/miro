@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -104,7 +111,7 @@ type ProductBadge = {
   scheduled_until: string | null;
   created_by: string;
   created_at: string;
-  promo_badge_types?: BadgeType | null;
+  promo_badge_types?: Omit<BadgeType, "id" | "sort_order"> | null;
 };
 
 type Promotion = {
@@ -783,26 +790,22 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
 
   const renderPreviewBadge = useCallback(
     (
-      badgeType: BadgeType,
+      badgeType: Pick<
+        BadgeType,
+        "key" | "label_he" | "label_en" | "shape" | "tone" | "icon_name"
+      >,
       size: "sm" | "md" | "lg" = "sm",
       previewLocale: "he" | "en" = locale,
     ) => {
       const badge: StorePromoBadge = {
-        id: badgeType.id,
+        id: badgeType.key,
         key: badgeType.key,
         label: previewLocale === "he" ? badgeType.label_he : badgeType.label_en,
         shape: badgeType.shape,
         tone: badgeType.tone,
         iconName: badgeType.icon_name,
       };
-      return (
-        <PromoBadge
-          key={badgeType.id}
-          badge={badge}
-          locale={previewLocale}
-          size={size}
-        />
-      );
+      return <PromoBadge badge={badge} locale={previewLocale} size={size} />;
     },
     [locale],
   );
@@ -1354,7 +1357,11 @@ export function StorefrontMerchandising({ locale }: { locale: "he" | "en" }) {
                           const bt =
                             pb.promo_badge_types ||
                             getBadgeType(pb.badge_type_id);
-                          return bt ? renderPreviewBadge(bt) : null;
+                          return bt ? (
+                            <Fragment key={pb.id}>
+                              {renderPreviewBadge(bt)}
+                            </Fragment>
+                          ) : null;
                         })}
                       </div>
                     </div>
