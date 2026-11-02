@@ -7,7 +7,7 @@ import {
 
 import {
   useCallback,
-  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
@@ -58,21 +58,23 @@ export function RailProduct({
   product,
   locale,
   isDuplicate = false,
+  copyIndex = isDuplicate ? 1 : 0,
   onPreviewChange,
 }: {
   product: Product;
   locale: "he" | "en";
   isDuplicate?: boolean;
+  copyIndex?: number;
   onPreviewChange: (id: string, open: boolean) => void;
 }) {
   const enhanced = useAnimationSettings().appearanceVersion === "2";
   const onVisibilityChange = useCallback(
     (open: boolean) =>
       onPreviewChange(
-        `${product.id}:${isDuplicate ? "copy" : "original"}`,
+        `${product.id}:${isDuplicate ? `copy-${copyIndex}` : "original"}`,
         open,
       ),
-    [product.id, isDuplicate, onPreviewChange],
+    [product.id, isDuplicate, copyIndex, onPreviewChange],
   );
   return enhanced ? (
     <ProductCard
@@ -87,6 +89,7 @@ export function RailProduct({
       product={product}
       locale={locale}
       isDuplicate={isDuplicate}
+      copyIndex={copyIndex}
       onPreviewChange={onPreviewChange}
     />
   );
@@ -96,11 +99,13 @@ function LegacyRailProduct({
   product,
   locale,
   isDuplicate = false,
+  copyIndex = isDuplicate ? 1 : 0,
   onPreviewChange,
 }: {
   product: Product;
   locale: "he" | "en";
   isDuplicate?: boolean;
+  copyIndex?: number;
   onPreviewChange: (id: string, open: boolean) => void;
 }) {
   const enhancedBadges = useAnimationSettings().appearanceVersion === "2";
@@ -128,10 +133,10 @@ function LegacyRailProduct({
   const onVisibilityChange = useCallback(
     (open: boolean) =>
       onPreviewChange(
-        `${product.id}:${isDuplicate ? "copy" : "original"}`,
+        `${product.id}:${isDuplicate ? `copy-${copyIndex}` : "original"}`,
         open,
       ),
-    [product.id, isDuplicate, onPreviewChange],
+    [product.id, isDuplicate, copyIndex, onPreviewChange],
   );
 
   const previewButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -407,10 +412,11 @@ export function ProductMovingRail({
   const prefersReducedMotion = usePrefersReducedMotion();
   const ambientMotion = useAnimationFeature("ambientMotion");
   const shouldAnimate =
-    ambientMotion && !prefersReducedMotion && featuredProducts.length >= 3;
+    ambientMotion && !prefersReducedMotion && featuredProducts.length > 0;
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const segmentRef = useRef<HTMLDivElement | null>(null);
+  const [copyCount, setCopyCount] = useState(1);
   const [manualPaused, setManualPaused] = useState(false);
   const [interactionPaused, setInteractionPaused] = useState(false);
   const isPaused = manualPaused || interactionPaused || previews.length > 0;
@@ -418,15 +424,20 @@ export function ProductMovingRail({
   const updateAnimationMetrics = useCallback(() => {
     const track = trackRef.current;
     const segment = segmentRef.current;
-    if (!track || !segment) return;
+    const viewport = viewportRef.current;
+    if (!track || !segment || !viewport) return;
     const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
     const shift = segment.getBoundingClientRect().width + gap;
-    const duration = Math.max(15, shift / motion.pixelsPerSecond);
-    track.style.setProperty("--sf-rail-shift", `-${shift}px`);
+    if (shift <= 0) return;
+    const duration = shift / motion.pixelsPerSecond;
+    track.style.setProperty("--sf-rail-shift", `${isRtl ? shift : -shift}px`);
     track.style.setProperty("--sf-rail-duration", `${duration}s`);
-  }, [motion.pixelsPerSecond]);
+    // Keep the viewport covered even when the selected products form a short group.
+    const copies = Math.max(1, Math.ceil(viewport.clientWidth / shift));
+    setCopyCount((previous) => (previous === copies ? previous : copies));
+  }, [isRtl, motion.pixelsPerSecond]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!shouldAnimate) return;
     const viewport = viewportRef.current;
     const segment = segmentRef.current;
@@ -448,18 +459,20 @@ export function ProductMovingRail({
   const pauseLabel = isRtl ? "עצירת פס המוצרים" : "Pause product rail";
   const playLabel = isRtl ? "הפעלת פס המוצרים" : "Play product rail";
 
-  const renderSegment = (duplicate: boolean) => (
+  const renderSegment = (index: number) => (
     <div
-      ref={duplicate ? undefined : segmentRef}
+      key={index}
+      ref={index === 0 ? segmentRef : undefined}
       className="sf-moving-rail-segment"
-      aria-hidden={duplicate || undefined}
+      aria-hidden={index > 0 || undefined}
     >
       {featuredProducts.map((product) => (
         <div key={product.id} className="sf-moving-rail-item" role="listitem">
           <RailProduct
             product={product}
             locale={locale}
-            isDuplicate={duplicate}
+            isDuplicate={index > 0}
+            copyIndex={index}
             onPreviewChange={onPreviewChange}
           />
         </div>
@@ -518,8 +531,12 @@ export function ProductMovingRail({
             role="list"
             aria-label={title}
           >
-            {renderSegment(false)}
-            {shouldAnimate ? renderSegment(true) : null}
+            {renderSegment(0)}
+            {shouldAnimate
+              ? Array.from({ length: copyCount }, (_, index) =>
+                  renderSegment(index + 1),
+                )
+              : null}
           </div>
         </div>
       </div>
