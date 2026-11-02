@@ -42,6 +42,12 @@ const reporting = await moduleAt("../../src/lib/management-reporting.ts", {
 const copy = await moduleAt(
   "../../src/components/management/accounts/accounts-copy.ts",
 );
+const { Pager } = await moduleAt("../../src/components/management/pager.tsx", {
+  react: { useId: () => "fixture-pager-page-size" },
+  "react/jsx-runtime": jsx,
+  "lucide-react": { ChevronLeft: () => null, ChevronRight: () => null },
+  "./list-controls.module.css": { default: {} },
+});
 const actorId = "11111111-1111-4111-8111-111111111111";
 const orderId = "22222222-2222-4222-8222-222222222222";
 const emptyReport = {
@@ -63,6 +69,7 @@ const emptyReport = {
 function elements(node) {
   if (Array.isArray(node)) return node.flatMap(elements);
   if (!node || typeof node !== "object" || !node.props) return [];
+  if (node.type === Pager) return [node, ...elements(Pager(node.props))];
   return [
     node,
     ...elements(node.props.children),
@@ -74,9 +81,19 @@ const textOf = (node) =>
     ? node.map(textOf).join("")
     : typeof node === "string" || typeof node === "number"
       ? String(node)
-      : node?.props
-        ? textOf(node.props.children)
-        : "";
+      : node?.type === Pager
+        ? textOf(Pager(node.props))
+        : node?.props
+          ? textOf(node.props.children)
+          : "";
+
+function pagerStatus(tree) {
+  const pager = elements(tree).find((node) => node.type === Pager);
+  assert.ok(pager, "Real pager is mounted");
+  const status = elements(pager).find((node) => node.props.role === "status");
+  assert.ok(status, "Pager exposes its status");
+  return textOf(status);
+}
 
 async function dashboard({
   data = emptyReport,
@@ -112,6 +129,7 @@ async function dashboard({
     },
     "react/jsx-runtime": jsx,
     "./accounts-copy": copy,
+    "@/components/management/pager": { Pager },
     "@/lib/management-reporting": reporting,
     "lucide-react": Object.fromEntries(
       [
@@ -257,38 +275,84 @@ test("the actual POS accounts dashboard emits API-valid default, all-time and pa
   }
 });
 
-test("POS accounts pagination uses server totals and resets on range changes; empty reports show 0-0", async () => {
+test("POS accounts pagination uses real pager totals, page sizes, range resets and localized empty states", async () => {
   const order = {
     order_id: orderId,
     order_number: "QA-1",
     created_at: "2026-10-17T10:00:00Z",
     payments: [],
   };
-  const ui = await dashboard({
-    data: { ...emptyReport, orders: [order], total_count: 60 },
-  });
-  const next = ui.find(
-    (node) => node.type === "button" && textOf(node) === "Next",
-  );
-  assert.equal(next.props.disabled, false);
-  next.props.onClick();
-  ui.render();
-  assert.equal(
-    new URL(ui.url, "https://miro.example").searchParams.get("offset"),
-    "25",
-  );
-  ui.find((node) => node.type === ui.DateRangePicker).props.onChange({
-    preset: "all",
-    from: "",
-    to: "",
-  });
-  ui.render();
-  assert.equal(
-    new URL(ui.url, "https://miro.example").searchParams.get("offset"),
-    "0",
-  );
-  const empty = await dashboard();
-  assert.match(textOf(empty.tree), /Showing 0-0 of 0/);
+  for (const locale of ["en", "he"]) {
+    const ui = await dashboard({
+      data: { ...emptyReport, orders: [order], total_count: 60 },
+    });
+    const button = (label) =>
+      ui.find((node) => node.type === "button" && textOf(node) === label);
+    const status = () => pagerStatus(ui.tree);
+    const nextLabel = locale === "he" ? "הבא" : "Next";
+    const previousLabel = locale === "he" ? "הקודם" : "Previous";
+    ui.render(locale);
+    assert.equal(button(previousLabel).props.disabled, true);
+    assert.equal(button(nextLabel).props.disabled, false);
+    assert.equal(
+      status(),
+      locale === "he" ? "מוצגים 1–25 מתוך 60" : "Showing 1–25 of 60",
+    );
+    button(nextLabel).props.onClick();
+    ui.render(locale);
+    assert.equal(
+      new URL(ui.url, "https://miro.example").searchParams.get("offset"),
+      "25",
+    );
+    assert.equal(
+      status(),
+      locale === "he" ? "מוצגים 26–50 מתוך 60" : "Showing 26–50 of 60",
+    );
+    button(nextLabel).props.onClick();
+    ui.render(locale);
+    assert.equal(button(nextLabel).props.disabled, true);
+    assert.equal(
+      status(),
+      locale === "he" ? "מוצגים 51–60 מתוך 60" : "Showing 51–60 of 60",
+    );
+    button(previousLabel).props.onClick();
+    ui.render(locale);
+    assert.equal(
+      new URL(ui.url, "https://miro.example").searchParams.get("offset"),
+      "25",
+    );
+    ui.control("fixture-pager-page-size").props.onChange({
+      target: { value: "50" },
+    });
+    ui.render(locale);
+    const query = new URL(ui.url, "https://miro.example").searchParams;
+    assert.equal(query.get("limit"), "50");
+    assert.equal(query.get("offset"), "0");
+    button(nextLabel).props.onClick();
+    ui.render(locale);
+    ui.find((node) => node.type === ui.DateRangePicker).props.onChange({
+      preset: "all",
+      from: "",
+      to: "",
+    });
+    ui.render(locale);
+    assert.equal(
+      new URL(ui.url, "https://miro.example").searchParams.get("offset"),
+      "0",
+    );
+    const empty = await dashboard();
+    empty.render(locale);
+    assert.equal(
+      pagerStatus(empty.tree),
+      locale === "he" ? "אין תוצאות" : "No results",
+    );
+    for (const label of [previousLabel, nextLabel])
+      assert.equal(
+        empty.find((node) => node.type === "button" && textOf(node) === label)
+          .props.disabled,
+        true,
+      );
+  }
 });
 
 test("POS receipt details consume the nested API projection and cancel requests when closed", async () => {
@@ -379,6 +443,6 @@ test("cashier names resolve to bounded paginated staff options without blocking 
       (node) => node.type === "option" && node.props.value === actorId,
     ),
   );
-  assert.match(textOf(ui.tree), /Showing 0-0 of 0/);
+  assert.equal(pagerStatus(ui.tree), "No results");
   cleanup();
 });
