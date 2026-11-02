@@ -218,6 +218,7 @@ const server = createServer(async (req, res) => {
         "commerce_intents",
         "commerce_intent_items",
         "payment_attempts",
+        "fiscal_documents",
       ].includes(table)
     ) {
       const column =

@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FormField, useConfirmDialog } from "../ui";
+import {
+  DocumentPreviewTester,
+  StoredDraftPreviewLinks,
+  DocumentSnapshotDetails,
+  DocumentCreatedAt,
+} from "./document-previews";
 import { toAgorot } from "@/lib/commerce/money";
 import {
   ActionButton,
@@ -558,7 +564,9 @@ export function CommerceReadWorkspace({
     {
       key: "created_at",
       label: he ? "נוצר" : "Created",
-      render: (r: CommerceRow) => text(r, "created_at"),
+      render: (r: CommerceRow) => (
+        <DocumentCreatedAt value={r.created_at} locale={locale} />
+      ),
     },
     {
       key: "amount",
@@ -679,6 +687,9 @@ export function CommerceReadWorkspace({
       }
     >
       <SectionFeedback notice={notice} setNotice={setNotice} locale={locale} />
+      {variant === "documents" ? (
+        <DocumentPreviewTester locale={locale} />
+      ) : null}
       {variant === "reports" ? (
         <div
           className={styles.reportTabs}
@@ -764,13 +775,6 @@ export function CommerceReadWorkspace({
                     }
                   />
                 </div>
-                {sourceError ? (
-                  <p className={styles.helpText} role="alert">
-                    {he
-                      ? "לא ניתן לטעון הזמנות וכוונות. נסו לרענן את הדף לפני יצירת טיוטה."
-                      : "Orders and intents could not be loaded. Refresh before creating a draft."}
-                  </p>
-                ) : null}
                 <pre className={styles.helpText}>
                   {payload?.summary
                     ? Object.entries(payload.summary).map(([k, v], index) => (
@@ -801,32 +805,6 @@ export function CommerceReadWorkspace({
                       ? "היקף: הזמנות ומכירות, גבייה מאומתת ב-production, sandbox ותשלומים ידניים בנפרד, החזרים מאומתים וסליקות. מספר המשימות הממתינות הוא backlog נוכחי ולא טווח התאריכים. התאריכים מבוססים על יצירת ניסיון תשלום, עדכון החזר מאומת ותאריך סליקה, לפי השורה. לא כולל chargebacks, דיווח לרשויות או תנועות בנק שלא נרשמו; אין להציג כרווח נקי או כהתאמה בנקאית."
                       : "Scope: orders and sales, production-verified collections, sandbox and manual tenders separately, verified refunds, and settlements. Pending jobs are a current backlog count, not a period total. Dates use payment-attempt creation, verified refund update, and settlement date as labeled. Excludes chargebacks, regulatory filings, and unrecorded bank movements; this is not net profit or bank reconciliation."}
                   </p>
-                ) : null}
-                {UUID.test(selectedDocumentId) ? (
-                  <div className={styles.actionRow}>
-                    {(["a4", "receipt80"] as const).map((layout) => (
-                      <span key={layout} className={styles.actionRow}>
-                        <a
-                          className="mgmt-button mgmt-button--secondary"
-                          href={`/api/management/commerce/documents/${encodeURIComponent(selectedDocumentId)}/preview?layout=${layout}&format=html`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          {he
-                            ? `תצוגה · ${layout === "a4" ? "A4" : "80 מ״מ"}`
-                            : `Preview · ${layout === "a4" ? "A4" : "80 mm"}`}
-                        </a>
-                        <a
-                          className="mgmt-button mgmt-button--secondary"
-                          href={`/api/management/commerce/documents/${encodeURIComponent(selectedDocumentId)}/preview?layout=${layout}&format=pdf`}
-                        >
-                          {he
-                            ? `הורדת PDF · ${layout === "a4" ? "A4" : "80 מ״מ"}`
-                            : `Download PDF · ${layout === "a4" ? "A4" : "80 mm"}`}
-                        </a>
-                      </span>
-                    ))}
-                  </div>
                 ) : null}
                 <ActionButton
                   label={he ? "הורדת CSV" : "Download CSV"}
@@ -961,6 +939,13 @@ export function CommerceReadWorkspace({
                     }}
                   />
                 </div>
+                {sourceError ? (
+                  <p className={styles.helpText} role="alert">
+                    {he
+                      ? "לא ניתן לטעון הזמנות וכוונות. נסו לרענן את הדף לפני יצירת טיוטה."
+                      : "Orders and intents could not be loaded. Refresh before creating a draft."}
+                  </p>
+                ) : null}
                 <p className={styles.helpText}>
                   {he
                     ? "מסמכים רשמיים דורשים זהות עסקית ומוכנות לפי השרת. בדקו את הפרטים לפני הקצאת מספר."
@@ -1005,15 +990,14 @@ export function CommerceReadWorkspace({
                   he ? "פרטי מסמך (צילום מצב)" : "Document details (snapshot)"
                 }
               >
-                <pre className={styles.helpText}>
-                  {Object.entries(selection)
-                    .filter(([k]) => !/(url|secret|token|storage_key)/i.test(k))
-                    .map(
-                      ([k, v]) =>
-                        `${k.replaceAll("_", " ")}: ${typeof v === "object" ? JSON.stringify(v) : String(v ?? "—")}`,
-                    )
-                    .join("\n")}
-                </pre>
+                <DocumentSnapshotDetails document={selection} locale={locale} />
+                {UUID.test(selectedDocumentId) &&
+                (selection.state ?? selection.status) === "draft" ? (
+                  <StoredDraftPreviewLinks
+                    id={selectedDocumentId}
+                    locale={locale}
+                  />
+                ) : null}
                 {selection.readiness === true &&
                 access.allowed("issueDocuments") ? (
                   <ActionButton

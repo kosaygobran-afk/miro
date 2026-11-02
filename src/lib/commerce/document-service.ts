@@ -6,6 +6,7 @@ import {
   renderDraftHtml,
   type DocumentLayout,
 } from "./documents/renderer";
+import { PAPER_TEMPLATE_VERSION } from "./documents/paper-artwork";
 import { pdfSha256 } from "./documents/renderer";
 import { COMMERCE_PRIVATE_BUCKET } from "./attachments";
 import type {
@@ -19,6 +20,11 @@ const object = (value: unknown): Row =>
     ? (value as Row)
     : {};
 const text = (value: unknown) => (typeof value === "string" ? value : "");
+/** PostgREST timestamps can carry six fractional digits; canonical input uses ms. */
+const snapshotTimestamp = (value: unknown) => {
+  const raw = text(value);
+  return Number.isNaN(Date.parse(raw)) ? raw : new Date(raw).toISOString();
+};
 /** Translate the stored immutable SQL snapshot, never current settings/catalog. */
 export function documentSnapshotFromRow(row: Row): FiscalDocumentSnapshot {
   if (row.state !== "draft")
@@ -48,7 +54,7 @@ export function documentSnapshotFromRow(row: Row): FiscalDocumentSnapshot {
     id: text(row.id),
     type,
     state: "draft",
-    created_at: text(row.created_at),
+    created_at: snapshotTimestamp(row.created_at),
     identity_snapshot: {
       legal_name: text(business.legal_name),
       trade_name: text(business.trade_name),
@@ -102,10 +108,11 @@ export function documentSnapshotFromRow(row: Row): FiscalDocumentSnapshot {
                 : (item.product_name_en ?? item.name_en),
             ),
           quantity: Number(item.quantity),
-          ...(item.unit_price_agorot
+          ...(Number(item.unit_price_agorot) > 0
             ? { unit_agorot: Number(item.unit_price_agorot) }
             : {}),
-          ...(item.discount_agorot
+          ...(item.discount_agorot !== undefined &&
+          item.discount_agorot !== null
             ? { discount_agorot: Number(item.discount_agorot) }
             : {}),
           net_agorot: Number(item.net_agorot),
@@ -126,6 +133,13 @@ export function documentSnapshotFromRow(row: Row): FiscalDocumentSnapshot {
       .map((value) => {
         const item = object(value);
         return {
+          ...((item.collected_at ?? item.paid_at)
+            ? {
+                collected_at: snapshotTimestamp(
+                  item.collected_at ?? item.paid_at,
+                ),
+              }
+            : {}),
           method: text(item.method),
           amount_agorot: Number(item.amount_agorot),
           reference: `${item.collection_kind === "manual_recorded" ? (language === "he" ? "תשלום שנרשם ידנית · " : "Manually recorded · ") : ""}${text(item.reference)}`,
@@ -151,8 +165,11 @@ export async function readDraftDocument(id: string) {
 export async function renderStoredDraft(id: string, layout: DocumentLayout) {
   return renderDraftDocument(await readDraftDocument(id), layout);
 }
-export async function renderStoredDraftHtml(id: string) {
-  return renderDraftHtml(await readDraftDocument(id));
+export async function renderStoredDraftHtml(
+  id: string,
+  layout: DocumentLayout = "a4",
+) {
+  return renderDraftHtml(await readDraftDocument(id), layout);
 }
 
 /** Idempotent private preview artifact; a render never assigns a fiscal number. */
@@ -162,7 +179,7 @@ export async function persistDraftArtifact(
 ) {
   const admin = createAdminClient();
   const rendered = await renderStoredDraft(id, layout);
-  const storageKey = `documents/${id}/${rendered.sourceHash}-${layout}.pdf`;
+  const storageKey = `documents/${id}/${rendered.sourceHash}-${PAPER_TEMPLATE_VERSION}-${layout}.pdf`;
   const prior = await admin
     .from("fiscal_document_artifacts")
     .select("id,sha256,storage_key")

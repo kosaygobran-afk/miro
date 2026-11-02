@@ -249,6 +249,12 @@ try {
       404,
     ],
     [
+      "commerce/documents/sample",
+      "commerce/documents/sample?type=invalid&language=en",
+      null,
+      400,
+    ],
+    [
       "commerce/expenses/[id]/attachments",
       `commerce/expenses/${absent}/attachments?attachment_id=${absent}`,
       null,

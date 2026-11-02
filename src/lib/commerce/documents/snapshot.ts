@@ -107,7 +107,7 @@ function address(
   const source = record(value, name);
   onlyKeys(source, ["street", "city", "postal_code", "country"], [], name);
   return {
-    street: text(source.street, `${name}.street`, 200),
+    street: text(source.street, `${name}.street`, 300),
     city: text(source.city, `${name}.city`, 100),
     postal_code: text(source.postal_code, `${name}.postal_code`, 30),
     country: text(source.country, `${name}.country`, 80),

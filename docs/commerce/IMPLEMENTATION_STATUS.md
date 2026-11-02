@@ -39,3 +39,12 @@ Connected-schema update, 2026-10-09: all reviewed additive migrations through `2
 Additional master-spec scope: tokenized recurring lifecycle and MASAV domain/adapters; payment requests/invoice/remote links; PWA manifest with no private financial cache; product sales-channel configuration; security headers/CSP; structured redacted financial diagnostics; actual-role and single-business isolation tests. Optional wallets/EMV/Tap-on-Phone stay capability-gated. No fictitious cashier/accountant/tenant roles will be added.
 
 Update rows with implementation file/test/evidence links after each verified slice. “Code complete”, “locally verified”, “sandbox verified” and “live verified” are separate states. A configuration flag or mock never proves external success.
+
+## Document layout follow-up — 2026-11-02
+
+C03/C12/C18: bilingual draft template/tester enhancements and evidence are recorded
+in `docs/commerce/DOCUMENT_LAYOUTS.md` and `docs/PROJECT_STATUS.md`. This adds
+read-only fictional/current-business previews, premium shared row alignment,
+300-character address capacity and print verification. Current-business samples
+read the latest identity on each opening; saved/issued snapshots remain intact.
+Official issuance remains gated.

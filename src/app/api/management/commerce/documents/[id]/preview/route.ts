@@ -8,6 +8,7 @@ import {
   renderStoredDraft,
   renderStoredDraftHtml,
 } from "@/lib/commerce/document-service";
+import { DOCUMENT_PREVIEW_HEADERS } from "@/lib/commerce/documents/preview-response";
 export const runtime = "nodejs";
 export async function GET(
   request: Request,
@@ -27,17 +28,14 @@ export async function GET(
       .strict()
       .safeParse(Object.fromEntries(new URL(request.url).searchParams));
     if (!id.success || !query.success) throw new CommerceError("invalid_input");
-    const headers = {
-      "Cache-Control": "private, no-store",
-      "X-Content-Type-Options": "nosniff",
-      "Referrer-Policy": "no-referrer",
-      "Content-Security-Policy":
-        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
-    };
+    const headers = DOCUMENT_PREVIEW_HEADERS;
     if (query.data.format === "html")
-      return new Response(await renderStoredDraftHtml(id.data), {
-        headers: { ...headers, "Content-Type": "text/html; charset=utf-8" },
-      });
+      return new Response(
+        await renderStoredDraftHtml(id.data, query.data.layout),
+        {
+          headers: { ...headers, "Content-Type": "text/html; charset=utf-8" },
+        },
+      );
     const rendered = await renderStoredDraft(id.data, query.data.layout);
     return new Response(Buffer.from(rendered.pdfBytes), {
       headers: {

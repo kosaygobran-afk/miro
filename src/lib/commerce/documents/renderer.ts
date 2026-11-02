@@ -5,7 +5,19 @@ import bidiFactory from "bidi-js";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { formatDocumentTimestamp } from "./format";
+export { formatDocumentTimestamp } from "./format";
+import { paperStyles } from "./paper-styles";
 import { validateDocumentSnapshot } from "./snapshot";
+import {
+  drawPaperBrand,
+  drawPaperIcon,
+  paperBrandSvg,
+  paperIconSvg,
+  PAPER_RULE_SVG,
+  PAPER_TEMPLATE_VERSION,
+  type PaperIcon,
+} from "./paper-artwork";
 import type {
   FiscalDocumentSnapshot,
   DocumentLanguage,
@@ -14,6 +26,7 @@ import type {
 
 const RECEIPT = { width: 226.77, height: 841.89 };
 const bidi = bidiFactory();
+const graphemes = new Intl.Segmenter(undefined, { granularity: "grapheme" });
 const COLORS = {
   ink: "#17202A",
   muted: "#596574",
@@ -47,6 +60,9 @@ const LABELS: Record<DocumentLanguage, Record<string, string>> = {
     draft: "טיוטה - לא מסמך מס",
     document: "מסמך",
     date: "תאריך",
+    time: "שעה (שעון ישראל)",
+    previewId: "מזהה טיוטה",
+    continued: "המשך",
     customer: "לכבוד",
     business: "פרטי העסק",
     description: "תיאור",
@@ -89,6 +105,9 @@ const LABELS: Record<DocumentLanguage, Record<string, string>> = {
     draft: "DRAFT - NOT A TAX DOCUMENT",
     document: "Document",
     date: "Date",
+    time: "Time (Israel)",
+    previewId: "Draft ID",
+    continued: "Continued",
     customer: "Bill to",
     business: "Business details",
     description: "Description",
@@ -163,94 +182,212 @@ function fullAddress(
     : "";
 }
 
-function uniqueLines(lines: Array<string | undefined>): string[] {
-  const seen = new Set<string>();
-  return lines.filter((line): line is string => {
-    if (!line?.trim() || seen.has(line)) return false;
-    seen.add(line);
-    return true;
-  });
-}
-
-function legalBusinessLines(
-  identity: FiscalDocumentSnapshot["identity_snapshot"],
-  l: Record<string, string>,
-): string[] {
-  if (identity.trade_name && identity.trade_name !== identity.legal_name) {
-    return [
-      `${l.tradeName}: ${identity.trade_name}`,
-      `${l.legalName}: ${identity.legal_name}`,
-    ];
-  }
-  return [`${l.legalName}: ${identity.legal_name}`];
-}
-
-function businessLegalDetail(
-  identity: FiscalDocumentSnapshot["identity_snapshot"],
-  l: Record<string, string>,
-): string {
-  return identity.trade_name && identity.trade_name !== identity.legal_name
-    ? `${l.legalName}: ${identity.legal_name}`
-    : "";
-}
-
-function customerDetailLines(
-  customer: FiscalDocumentSnapshot["customer_snapshot"],
-  l: Record<string, string>,
-): string[] {
-  return uniqueLines([
-    customer.company_name && customer.company_name !== customer.name
-      ? customer.company_name
-      : "",
-    customer.registration_number
-      ? `${l.registration}: ${customer.registration_number}`
-      : "",
-    fullAddress(customer.address),
-    customer.phone,
-    customer.email,
-  ]);
-}
-
 function typeLabel(document: FiscalDocumentSnapshot): string {
   return labels(document.identity_snapshot.document_language)[document.type];
 }
 
-function accessibleHtml(document: FiscalDocumentSnapshot): string {
-  const lang = document.identity_snapshot.document_language;
-  const rtl = lang === "he";
+function paymentMethod(value: string, lang: DocumentLanguage): string {
+  const methods: Record<string, [string, string]> = {
+    cash: ["מזומן", "Cash"],
+    card: ["כרטיס אשראי", "Card"],
+    credit_card: ["כרטיס אשראי", "Card"],
+    bit: ["bit", "bit"],
+    bank_transfer: ["העברה בנקאית", "Bank transfer"],
+    cheque: ["המחאה", "Cheque"],
+    check: ["המחאה", "Cheque"],
+    manual: ["רישום ידני", "Manual record"],
+  };
+  return methods[value]?.[lang === "he" ? 0 : 1] ?? value;
+}
+
+type DetailField = {
+  label: string;
+  value: string;
+  ltr?: boolean;
+  wide?: boolean;
+  emphasis?: boolean;
+  icon?: PaperIcon;
+};
+function businessFields(document: FiscalDocumentSnapshot): DetailField[] {
+  const b = document.identity_snapshot,
+    l = labels(b.document_language);
+  return [
+    {
+      label: l.tradeName,
+      value: b.trade_name && b.trade_name !== b.legal_name ? b.trade_name : "",
+    },
+    { label: l.legalName, value: b.legal_name },
+    { label: l.registration, value: b.registration_number, ltr: true },
+    { label: l.vatNumber, value: b.vat_number, ltr: true },
+    { label: l.address, value: fullAddress(b.address) },
+    { label: l.phone, value: b.phone, ltr: true },
+    { label: l.email, value: b.email, ltr: true },
+  ].filter((field) => field.value);
+}
+function customerFields(document: FiscalDocumentSnapshot): DetailField[] {
+  const c = document.customer_snapshot,
+    l = labels(document.identity_snapshot.document_language);
+  return [
+    { label: l.customer, value: c.name },
+    {
+      label: l.legalName,
+      value: c.company_name && c.company_name !== c.name ? c.company_name : "",
+    },
+    { label: l.registration, value: c.registration_number ?? "", ltr: true },
+    { label: l.address, value: fullAddress(c.address) },
+    { label: l.phone, value: c.phone ?? "", ltr: true },
+    { label: l.email, value: c.email ?? "", ltr: true },
+  ].filter((field) => field.value);
+}
+function summaryFields(document: FiscalDocumentSnapshot): DetailField[] {
+  const lang = document.identity_snapshot.document_language,
+    l = labels(lang);
+  const paid = document.payment_references.reduce(
+    (sum, p) => sum + p.amount_agorot,
+    0,
+  );
+  return [
+    { label: l.net, value: money(document.net_agorot, lang), ltr: true },
+    { label: l.vat, value: money(document.vat_agorot, lang), ltr: true },
+    {
+      label: document.type === "credit_note" ? l.credit : l.total,
+      value: money(
+        document.total_agorot,
+        lang,
+        document.type === "credit_note",
+      ),
+      ltr: true,
+    },
+    ...(paid > 0
+      ? [{ label: l.paid, value: money(paid, lang), ltr: true }]
+      : []),
+    ...(paid > 0 && paid < document.total_agorot
+      ? [
+          {
+            label: l.balance,
+            value: money(document.total_agorot - paid, lang),
+            ltr: true,
+          },
+        ]
+      : []),
+  ];
+}
+function itemDetails(
+  item: FiscalDocumentSnapshot["items"][number],
+  lang: DocumentLanguage,
+) {
   const l = labels(lang);
-  const direction = rtl ? "rtl" : "ltr";
-  const itemRows = document.items
-    .map(
-      (item) =>
-        `<tr><td>${escapeHtml(item.description)}</td><td>${item.quantity}</td><td>${escapeHtml(money(item.net_agorot, lang))}</td><td>${escapeHtml(money(item.vat_agorot, lang))}</td><td>${escapeHtml(money(item.gross_agorot, lang, document.type === "credit_note"))}</td></tr>`,
-    )
+  return [
+    ...(item.unit_agorot !== undefined
+      ? [{ label: l.unit, value: money(item.unit_agorot, lang), ltr: true }]
+      : []),
+    ...(item.discount_agorot !== undefined
+      ? [
+          {
+            label: l.discount,
+            value: money(item.discount_agorot, lang),
+            ltr: true,
+          },
+        ]
+      : []),
+  ];
+}
+
+function profileFields(document: FiscalDocumentSnapshot): DetailField[] {
+  const business = document.identity_snapshot,
+    l = labels(business.document_language);
+  const promotedLabel =
+    business.trade_name && business.trade_name !== business.legal_name
+      ? l.tradeName
+      : l.legalName;
+  return businessFields(document)
+    .filter((field) => field.label !== promotedLabel)
+    .map((field) => ({
+      ...field,
+      wide: field.label === l.legalName || field.label === l.address,
+    }));
+}
+
+function accessibleHtml(
+  document: FiscalDocumentSnapshot,
+  layout: DocumentLayout,
+): string {
+  const lang = document.identity_snapshot.document_language,
+    rtl = lang === "he",
+    l = labels(lang);
+  const stamp = formatDocumentTimestamp(
+    document.issued_at ?? document.created_at,
+    lang,
+  );
+  const bdi = (text: string, ltr = false) =>
+    `<bdi dir="${ltr ? "ltr" : "auto"}">${escapeHtml(text)}</bdi>`;
+  const details = (fields: DetailField[], className = "") =>
+    `<dl class="detail-grid ${className}">${fields.map((field, index) => `<div class="field${className === "summary-grid" && index === 2 ? " total-field" : ""}" data-field="${escapeHtml(field.label)}" data-reading-anchor="start"${field.wide ? ' data-wide="true"' : ""}><dt>${field.icon ? paperIconSvg(field.icon) : ""}${escapeHtml(field.label)}</dt><dd>${bdi(field.value, field.ltr)}</dd></div>`).join("")}</dl>`;
+  const sectionTitle = (icon: PaperIcon, value: string) =>
+    `<h2>${paperIconSvg(icon)}<span>${escapeHtml(value)}</span></h2>`;
+  const rows = document.items
+    .map((item, index) => {
+      const amountFields = itemDetails(item, lang);
+      return layout === "a4"
+        ? `<tr><td><span class="item-description">${bdi(item.description)}</span>${amountFields.length ? `<div class="item-meta">${details(amountFields)}</div>` : ""}</td><td class="numeric">${bdi(String(item.quantity), true)}</td><td class="numeric">${bdi(money(item.net_agorot, lang), true)}</td><td class="numeric">${bdi(money(item.vat_agorot, lang), true)}</td><td class="numeric">${bdi(money(item.gross_agorot, lang, document.type === "credit_note"), true)}</td></tr>`
+        : `<article class="receipt-item"><h3>${bdi(item.description)}</h3>${details([{ label: l.quantity, value: String(item.quantity), ltr: true }, ...amountFields, { label: l.net, value: money(item.net_agorot, lang), ltr: true }, { label: l.vat, value: money(item.vat_agorot, lang), ltr: true }, { label: l.gross, value: money(item.gross_agorot, lang, document.type === "credit_note"), ltr: true }])}<span class="sr-only">${index + 1}</span></article>`;
+    })
     .join("");
   const payments = document.payment_references
-    .map(
-      (p) =>
-        `<li>${escapeHtml(p.method)}: ${escapeHtml(money(p.amount_agorot, lang))}${p.reference ? ` (${escapeHtml(p.reference)})` : ""}</li>`,
-    )
+    .map((payment) => {
+      const collected = payment.collected_at
+        ? formatDocumentTimestamp(payment.collected_at, lang)
+        : null;
+      return `<article class="payment">${details([
+        { label: l.payment, value: paymentMethod(payment.method, lang) },
+        {
+          label: l.gross,
+          value: money(payment.amount_agorot, lang),
+          ltr: true,
+        },
+        ...(payment.reference
+          ? [{ label: l.reference, value: payment.reference }]
+          : []),
+        ...(collected
+          ? [
+              { label: l.date, value: collected.date, ltr: true },
+              { label: l.time, value: collected.time, ltr: true },
+            ]
+          : []),
+      ])}</article>`;
+    })
     .join("");
-  const identity = document.identity_snapshot;
-  const identityLines = [
-    ...legalBusinessLines(identity, l),
-    identity.registration_number
-      ? `${l.registration}: ${identity.registration_number}`
-      : "",
-    identity.vat_number ? `${l.vatNumber}: ${identity.vat_number}` : "",
-    fullAddress(identity.address),
-    identity.phone,
-    identity.email,
-  ].filter((line): line is string => Boolean(line));
-  const customerLines = [
-    document.customer_snapshot.name,
-    ...customerDetailLines(document.customer_snapshot, l),
-  ];
-  const docRef = document.number
-    ? `${l.document} ${document.number}`
-    : `${l.noNumber} (${document.id})`;
-  return `<!doctype html><html lang="${lang}" dir="${direction}"><head><meta charset="utf-8"><title>${escapeHtml(typeLabel(document))} - ${escapeHtml(docRef)}</title><style>body{font:16px/1.55 system-ui,sans-serif;color:#17202a;max-width:920px;margin:2rem auto;padding:0 1rem}h1{font-size:1.6rem} .draft{display:inline-block;padding:.5rem 1rem;border:2px solid #b58927;background:#fff4d3;font-weight:700} table{width:100%;border-collapse:collapse;margin:1.5rem 0}th,td{border-bottom:1px solid #d8dee6;padding:.55rem;text-align:start;vertical-align:top}tfoot th{text-align:end}.details{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}address{font-style:normal} .total{font-size:1.25rem;font-weight:700}</style></head><body><p class="draft">${escapeHtml(l.draft)}</p><h1>${escapeHtml(typeLabel(document))}</h1><p>${escapeHtml(docRef)}</p><p>${escapeHtml(l.date)}: <time datetime="${escapeHtml(document.issued_at ?? document.created_at)}">${escapeHtml(document.issued_at ?? document.created_at)}</time></p><div class="details"><section><h2>${escapeHtml(l.business)}</h2><address>${identityLines.map(escapeHtml).join("<br>")}</address></section><section><h2>${escapeHtml(l.customer)}</h2><address>${customerLines.map(escapeHtml).join("<br>")}</address></section></div><table><thead><tr><th scope="col">${escapeHtml(l.description)}</th><th scope="col">${escapeHtml(l.quantity)}</th><th scope="col">${escapeHtml(l.net)}</th><th scope="col">${escapeHtml(l.vat)}</th><th scope="col">${escapeHtml(l.gross)}</th></tr></thead><tbody>${itemRows}</tbody><tfoot><tr><th colspan="4">${escapeHtml(l.net)}</th><td>${escapeHtml(money(document.net_agorot, lang))}</td></tr><tr><th colspan="4">${escapeHtml(l.vat)}</th><td>${escapeHtml(money(document.vat_agorot, lang))}</td></tr><tr class="total"><th colspan="4">${escapeHtml(document.type === "credit_note" ? l.credit : l.total)}</th><td>${escapeHtml(money(document.total_agorot, lang, document.type === "credit_note"))}</td></tr></tfoot></table>${payments ? `<section><h2>${escapeHtml(l.paid)}</h2><ul>${payments}</ul></section>` : ""}${document.allocation_number ? `<p>${escapeHtml(l.allocation)}: ${escapeHtml(document.allocation_number)}</p>` : ""}${document.related_document_number ? `<p>${escapeHtml(l.related)}: ${escapeHtml(document.related_document_number)}</p>` : ""}${document.note ? `<section><h2>${escapeHtml(l.note)}</h2><p>${escapeHtml(document.note)}</p></section>` : ""}</body></html>`;
+  const paymentsHtml = payments
+    ? `<section class="payments">${sectionTitle("payment", l.paid)}${payments}</section>`
+    : "";
+  const summary = `<section class="summary" aria-label="${escapeHtml(l.total)}">${details(
+    summaryFields(document).map((field, index) => ({
+      ...field,
+      wide: index === 2,
+    })),
+    "summary-grid",
+  )}</section>`;
+  const businessName =
+    document.identity_snapshot.trade_name ||
+    document.identity_snapshot.legal_name;
+  const contacts = businessFields(document).filter(
+    (field) => field.label === l.phone || field.label === l.email,
+  );
+  return `<!doctype html><html lang="${lang}" dir="${rtl ? "rtl" : "ltr"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHtml(typeLabel(document))} - ${escapeHtml(l.draft)}</title><style>${paperStyles(layout)}</style></head><body><main class="paper" data-layout="${layout}" data-template="${PAPER_TEMPLATE_VERSION}">
+<header><div class="masthead"><section class="business-identity" aria-label="${escapeHtml(l.business)}"><p class="kicker">${escapeHtml(l.business)}</p><h2 class="business-name">${bdi(businessName)}</h2>${details(profileFields(document), "business-profile")}</section><div class="brand-position">${paperBrandSvg()}</div></div>
+<div class="title-band"><h1>${escapeHtml(typeLabel(document))}</h1><p class="draft">${escapeHtml(l.draft)}</p></div><div class="metadata">${details(
+    [
+      { label: l.date, value: stamp.date, ltr: true, icon: "calendar" },
+      { label: l.time, value: stamp.time, ltr: true, icon: "clock" },
+      { label: l.previewId, value: document.id, ltr: true },
+    ],
+  )}</div><p class="number-note">${escapeHtml(document.number ? l.document : l.noNumber)}${document.number ? `: ${bdi(document.number, true)}` : ""}</p>${PAPER_RULE_SVG}</header>
+<section class="recipient">${sectionTitle("customer", l.customer)}${details(customerFields(document))}</section>
+${layout === "a4" ? `<table class="items"><caption>ILS</caption><thead><tr>${[l.description, l.quantity, l.net, l.vat, l.gross].map((label, index) => `<th scope="col"${index > 0 ? ' class="numeric"' : ""}>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>` : `<section aria-label="${escapeHtml(l.description)}">${rows}</section>`}
+${payments ? `<div class="closing">${paymentsHtml}${summary}</div>` : summary}
+${document.allocation_number || document.related_document_number ? `<section class="notes">${details([...(document.allocation_number ? [{ label: l.allocation, value: document.allocation_number, ltr: true }] : []), ...(document.related_document_number ? [{ label: l.related, value: document.related_document_number, ltr: true }] : [])])}</section>` : ""}
+${document.note ? `<section class="notes">${sectionTitle("note", l.note)}<p>${bdi(document.note)}</p></section>` : ""}
+<footer class="paper-footer">${PAPER_RULE_SVG}${details(contacts)}<p>${escapeHtml(l.draft)} · ${bdi(document.id, true)}</p></footer></main></body></html>`;
 }
 
 function wrapText(
@@ -282,7 +419,7 @@ function wrapText(
       }
       if (doc.widthOfString(word) > width) {
         let segment = "";
-        for (const grapheme of Array.from(word)) {
+        for (const { segment: grapheme } of graphemes.segment(word)) {
           const next = segment + grapheme;
           if (segment && doc.widthOfString(next) > width) {
             lines.push(segment);
@@ -303,28 +440,41 @@ export function bidiVisualTokens(
   text: string,
   language: DocumentLanguage,
 ): string[] {
-  const tokens = text.match(/\s+|[^\s]+/gu) ?? [];
-  if (!/[\u0590-\u05ff]/u.test(text)) return tokens;
+  if (!/[\u0590-\u05ff]/u.test(text)) return text.match(/\s+|[^\s]+/gu) ?? [];
   const embedding = bidi.getEmbeddingLevels(
     text,
     language === "he" ? "rtl" : "ltr",
   );
-  const levels: number[] = [];
+  const mirrored = bidi.getMirroredCharactersMap(text, embedding.levels);
+  const tokens: string[] = [],
+    levels: number[] = [];
   let offset = 0;
-  for (const token of tokens) {
-    const tokenLevels = Array.from(
-      embedding.levels.slice(offset, offset + token.length),
-    );
-    const level = token.trim()
-      ? Math.max(...tokenLevels)
-      : (tokenLevels[0] ?? 0);
-    levels.push(level);
-    offset += token.length;
+  for (const word of text.match(/\s+|[^\s]+/gu) ?? []) {
+    let start = 0;
+    while (start < word.length) {
+      const level = embedding.levels[offset + start];
+      let end = start + 1;
+      while (end < word.length && embedding.levels[offset + end] === level)
+        end++;
+      let token = "";
+      for (let index = start; index < end;) {
+        const character = String.fromCodePoint(word.codePointAt(index)!);
+        token += mirrored.get(offset + index) ?? character;
+        index += character.length;
+      }
+      // Fontkit reverses Hebrew glyph runs, but does not mirror parentheses.
+      // Pure punctuation runs have no Hebrew shaper and need their own reversal.
+      if (level % 2 && !/[\u0590-\u05ff]/u.test(token))
+        token = Array.from(token).reverse().join("");
+      tokens.push(token);
+      levels.push(level);
+      start = end;
+    }
+    offset += word.length;
   }
 
-  // Apply UAX #9's level-run reversal to whitespace-delimited tokens, not
-  // characters. PDFKit/fontkit shapes each Hebrew token itself, so this moves
-  // words into visual order without reversing the glyphs inside a word.
+  // Apply UAX #9 to same-level shaping runs. Numeric/model runs retain LTR
+  // order even inside a word; Hebrew glyph shaping is applied exactly once.
   const order = tokens.map((_, index) => index);
   const maxLevel = Math.max(...levels, 0);
   const minOddLevel = levels.reduce(
@@ -371,10 +521,12 @@ function drawBidiLine(
       : align === "center"
         ? x + (width - totalWidth) / 2
         : x;
+  doc.markContent("Span", { actual: text });
   tokens.forEach((token, index) => {
     doc.text(token, cursor, y, { lineBreak: false });
     cursor += tokenWidths[index];
   });
+  doc.endMarkedContent();
 }
 
 function drawText(
@@ -416,255 +568,15 @@ async function loadFonts(): Promise<{ regular: Buffer; bold: Buffer }> {
   return { regular, bold };
 }
 
-function addPage(
-  doc: PDFKit.PDFDocument,
-  document: FiscalDocumentSnapshot,
-  layout: DocumentLayout,
-  pageNumber: number,
-): number {
-  if (pageNumber > 1)
-    doc.addPage({
-      size: layout === "a4" ? "A4" : [RECEIPT.width, RECEIPT.height],
-      margin: 0,
-    });
-  const lang = document.identity_snapshot.document_language;
-  const l = labels(lang);
-  const pageWidth = doc.page.width;
-  const margin = layout === "a4" ? 38 : 18;
-  const usable = pageWidth - margin * 2;
-  const align = lang === "he" ? "right" : "left";
-  doc.save().fillColor(COLORS.paleGold).rect(margin, 26, usable, 31).fill();
-  doc.restore();
-  doc
-    .rect(margin, 26, usable, 31)
-    .strokeColor(COLORS.gold)
-    .lineWidth(1.2)
-    .stroke();
-  drawText(doc, l.draft, margin + 8, 34, usable - 16, {
-    fontSize: layout === "a4" ? 13 : 10,
-    bold: true,
-    color: "#6E4C00",
-    align,
-    language: lang,
-    lineHeight: 16,
-  });
-  const businessName =
-    document.identity_snapshot.trade_name ||
-    document.identity_snapshot.legal_name;
-  const y = drawText(doc, businessName, margin, 68, usable, {
-    fontSize: layout === "a4" ? 16 : 13,
-    bold: true,
-    align,
-    language: lang,
-    lineHeight: 20,
-  });
-  let titleTop = y + 2;
-  if (layout === "receipt80") {
-    const business = document.identity_snapshot;
-    const businessLines = [
-      businessLegalDetail(business, l),
-      business.registration_number
-        ? `${l.registration}: ${business.registration_number}`
-        : "",
-      business.vat_number ? `${l.vatNumber}: ${business.vat_number}` : "",
-      fullAddress(business.address),
-      business.phone ? `${l.phone}: ${business.phone}` : "",
-      business.email,
-    ].filter(Boolean);
-    if (businessLines.length) {
-      titleTop =
-        drawText(doc, businessLines.join("\n"), margin, titleTop, usable, {
-          fontSize: 7.2,
-          color: COLORS.muted,
-          align,
-          language: lang,
-          lineHeight: 10,
-        }) + 3;
-    }
-  }
-  const titleY = drawText(doc, typeLabel(document), margin, titleTop, usable, {
-    fontSize: layout === "a4" ? 14 : 12,
-    bold: true,
-    align,
-    language: lang,
-    lineHeight: 18,
-  });
-  if (pageNumber === 1) {
-    const ref = document.number
-      ? `${l.document}: ${document.number}`
-      : `${l.noNumber}: ${document.id}`;
-    const refBottom = drawText(doc, ref, margin, titleY + 1, usable, {
-      fontSize: 9,
-      color: COLORS.muted,
-      align,
-      language: lang,
-      lineHeight: 14,
-    });
-    const dateY = layout === "receipt80" ? refBottom + 1 : titleY + 16;
-    const dateBottom = drawText(
-      doc,
-      `${l.date}: ${document.issued_at ?? document.created_at}`,
-      margin,
-      dateY,
-      usable,
-      {
-        fontSize: 9,
-        color: COLORS.muted,
-        align,
-        language: lang,
-        lineHeight: 14,
-      },
-    );
-    if (layout === "a4") {
-      const colGap = 16;
-      const colWidth = (usable - colGap) / 2;
-      const detailTop = titleY + 45;
-      const business = document.identity_snapshot;
-      const businessLines = [
-        businessLegalDetail(business, l),
-        business.registration_number
-          ? `${l.registration}: ${business.registration_number}`
-          : "",
-        business.vat_number ? `${l.vatNumber}: ${business.vat_number}` : "",
-        fullAddress(business.address),
-        business.phone,
-        business.email,
-      ].filter(Boolean);
-      const customer = document.customer_snapshot;
-      const customerLines = customerDetailLines(customer, l);
-      const firstX = lang === "he" ? margin + colWidth + colGap : margin;
-      const secondX = lang === "he" ? margin : margin + colWidth + colGap;
-      drawText(doc, l.business, firstX, detailTop, colWidth, {
-        fontSize: 10,
-        bold: true,
-        align,
-        language: lang,
-        lineHeight: 15,
-      });
-      drawText(
-        doc,
-        businessLines.join("\n"),
-        firstX,
-        detailTop + 16,
-        colWidth,
-        {
-          fontSize: 8.5,
-          color: COLORS.muted,
-          align,
-          language: lang,
-          lineHeight: 12,
-        },
-      );
-      drawText(
-        doc,
-        `${l.customer}: ${customer.name}`,
-        secondX,
-        detailTop,
-        colWidth,
-        { fontSize: 10, bold: true, align, language: lang, lineHeight: 15 },
-      );
-      drawText(
-        doc,
-        customerLines.join("\n"),
-        secondX,
-        detailTop + 16,
-        colWidth,
-        {
-          fontSize: 8.5,
-          color: COLORS.muted,
-          align,
-          language: lang,
-          lineHeight: 12,
-        },
-      );
-      return (
-        detailTop +
-        16 +
-        Math.max(businessLines.length, customerLines.length, 1) * 12 +
-        24
-      );
-    }
-    const customerY = layout === "receipt80" ? dateBottom + 3 : titleY + 34;
-    drawText(
-      doc,
-      `${l.customer}: ${document.customer_snapshot.name}`,
-      margin,
-      customerY,
-      usable,
-      { fontSize: 9, bold: true, align, language: lang, lineHeight: 14 },
-    );
-    if (layout === "receipt80") {
-      const customerLines = customerDetailLines(document.customer_snapshot, l);
-      const detailsEnd = customerLines.length
-        ? drawText(
-            doc,
-            customerLines.join("\n"),
-            margin,
-            customerY + 15,
-            usable,
-            {
-              fontSize: 7.2,
-              color: COLORS.muted,
-              align,
-              language: lang,
-              lineHeight: 10,
-            },
-          )
-        : customerY + 15;
-      return detailsEnd + 8;
-    }
-    return titleY + 60;
-  }
-  return titleY + 8;
+function textLanguage(
+  value: string,
+  fallback: DocumentLanguage,
+): DocumentLanguage {
+  const first = value.match(/[A-Za-z\u0590-\u05ff]/u)?.[0];
+  return first ? (/[\u0590-\u05ff]/u.test(first) ? "he" : "en") : fallback;
 }
 
-function drawTableHeading(
-  doc: PDFKit.PDFDocument,
-  layout: DocumentLayout,
-  y: number,
-  margin: number,
-  usable: number,
-  lang: DocumentLanguage,
-): number {
-  const l = labels(lang);
-  const headingHeight = 25;
-  doc
-    .save()
-    .fillColor(COLORS.panel)
-    .rect(margin, y, usable, headingHeight)
-    .fill();
-  doc.restore();
-  const cols =
-    layout === "a4"
-      ? [
-          { key: "description", label: l.description, width: usable * 0.5 },
-          { key: "quantity", label: l.quantity, width: usable * 0.1 },
-          { key: "net", label: l.net, width: usable * 0.14 },
-          { key: "vat", label: l.vat, width: usable * 0.12 },
-          { key: "gross", label: l.gross, width: usable * 0.14 },
-        ]
-      : [
-          { key: "description", label: l.description, width: usable * 0.56 },
-          { key: "gross", label: l.gross, width: usable * 0.44 },
-        ];
-  const physical = lang === "he" ? [...cols].reverse() : cols;
-  let x = margin;
-  for (const col of physical) {
-    const columnAlign =
-      col.key === "description" ? (lang === "he" ? "right" : "left") : "right";
-    drawText(doc, col.label, x + 3, y + 7, col.width - 6, {
-      fontSize: layout === "a4" ? 8 : 8,
-      bold: true,
-      align: columnAlign,
-      language: lang,
-      lineHeight: 12,
-    });
-    x += col.width;
-  }
-  return y + headingHeight;
-}
-
-function renderLayout(
+async function renderLayout(
   document: FiscalDocumentSnapshot,
   layout: DocumentLayout,
   fonts: { regular: Buffer; bold: Buffer },
@@ -678,272 +590,762 @@ function renderLayout(
       Title: `${typeLabel(document)} - ${document.id}`,
       Author: document.identity_snapshot.legal_name,
       Subject: "Draft preview; not an official tax document",
+      Keywords: PAPER_TEMPLATE_VERSION,
       CreationDate: new Date(document.created_at),
       ModDate: new Date(document.created_at),
     },
   });
-  doc
-    .registerFont("NotoRegular", fonts.regular)
-    .registerFont("NotoBold", fonts.bold);
-  const lang = document.identity_snapshot.document_language;
-  const l = labels(lang);
-  const align = lang === "he" ? "right" : "left";
-  const margin = layout === "a4" ? 38 : 18;
-  const usable = doc.page.width - margin * 2;
-  let pageNo = 1;
-  let y = addPage(doc, document, layout, pageNo);
-  y = drawTableHeading(doc, layout, y, margin, usable, lang);
-  const lineHeight = layout === "a4" ? 12 : 13;
-  for (const item of document.items) {
-    const descriptions = wrapText(
-      doc.font("NotoRegular").fontSize(layout === "a4" ? 8.5 : 9),
-      item.description,
-      layout === "a4" ? usable * 0.5 - 8 : usable * 0.56 - 8,
-      layout === "a4" ? 8.5 : 9,
-    );
-    const rowHeight = Math.max(24, descriptions.length * lineHeight + 12);
-    if (y + rowHeight > doc.page.height - 66) {
-      pageNo++;
-      y = addPage(doc, document, layout, pageNo);
-      y = drawTableHeading(doc, layout, y, margin, usable, lang);
-    }
-    const descriptionWidth = layout === "a4" ? usable * 0.5 : usable * 0.56;
-    const amountWidth =
-      layout === "a4"
-        ? [usable * 0.1, usable * 0.14, usable * 0.12, usable * 0.14]
-        : [usable * 0.44];
-    let values =
-      layout === "a4"
-        ? [
-            item.quantity.toLocaleString(lang === "he" ? "he-IL" : "en-IL"),
-            money(item.net_agorot, lang),
-            money(item.vat_agorot, lang),
-            money(item.gross_agorot, lang, document.type === "credit_note"),
-          ]
-        : [money(item.gross_agorot, lang, document.type === "credit_note")];
-    const langIsRtl = lang === "he";
-    const descriptionX = langIsRtl
-      ? margin + usable - descriptionWidth
-      : margin;
-    drawText(
-      doc,
-      item.description,
-      descriptionX + 4,
-      y + 6,
-      descriptionWidth - 8,
-      {
-        fontSize: layout === "a4" ? 8.5 : 9,
-        align: langIsRtl ? "right" : "left",
-        language: lang,
-        lineHeight,
-      },
-    );
-    if (layout === "a4" && langIsRtl) values = [...values].reverse();
-    let colX = langIsRtl ? margin : margin + descriptionWidth;
-    for (let i = 0; i < values.length; i++) {
-      const width =
-        layout === "a4" && langIsRtl
-          ? [usable * 0.14, usable * 0.12, usable * 0.14, usable * 0.1][i]
-          : amountWidth[i];
-      drawText(doc, values[i], colX + 2, y + 6, width - 4, {
-        fontSize: layout === "a4" ? 7.3 : 8.2,
-        align: "right",
-        language: lang,
-        lineHeight: 11,
-      });
-      colX += width;
-    }
-    y += rowHeight;
-    doc
-      .moveTo(margin, y)
-      .lineTo(margin + usable, y)
-      .strokeColor(COLORS.line)
-      .lineWidth(0.6)
-      .stroke();
-  }
-
-  const summaryHeight = layout === "a4" ? 111 : 125;
-  if (y + summaryHeight > doc.page.height - 54) {
-    pageNo++;
-    y = addPage(doc, document, layout, pageNo) + 10;
-  }
-  y += 12;
-  const summaryX = layout === "a4" ? margin + usable * 0.48 : margin;
-  const summaryW = usable - (summaryX - margin);
-  const summaryRows = [
-    [l.net, money(document.net_agorot, lang)],
-    [l.vat, money(document.vat_agorot, lang)],
-    [
-      document.type === "credit_note" ? l.credit : l.total,
-      money(document.total_agorot, lang, document.type === "credit_note"),
-    ],
-  ];
-  doc
-    .save()
-    .fillColor(COLORS.panel)
-    .roundedRect(summaryX, y, summaryW, summaryHeight, 5)
-    .fill();
-  doc.restore();
-  let sy = y + 10;
-  for (let i = 0; i < summaryRows.length; i++) {
-    const [name, amount] = summaryRows[i];
-    drawText(doc, name, summaryX + 9, sy, summaryW * 0.47, {
-      fontSize: i === 2 ? 10 : 8.5,
-      bold: i === 2,
-      align: lang === "he" ? "right" : "left",
-      language: lang,
-      lineHeight: 15,
-    });
-    drawText(doc, amount, summaryX + summaryW * 0.48, sy, summaryW * 0.48 - 8, {
-      fontSize: i === 2 ? 10 : 8.5,
-      bold: i === 2,
-      align: "right",
-      language: lang,
-      lineHeight: 15,
-    });
-    sy += i === 2 ? 23 : 18;
-  }
-  const recordedPayments = document.payment_references.reduce(
-    (sum, p) => sum + p.amount_agorot,
-    0,
-  );
-  if (recordedPayments > 0) {
-    drawText(
-      doc,
-      `${l.paid}: ${money(recordedPayments, lang)}`,
-      summaryX + 9,
-      sy + 1,
-      summaryW - 18,
-      {
-        fontSize: 8,
-        color: COLORS.muted,
-        align,
-        language: lang,
-        lineHeight: 12,
-      },
-    );
-    sy += 15;
-    if (recordedPayments < document.total_agorot)
-      drawText(
-        doc,
-        `${l.balance}: ${money(document.total_agorot - recordedPayments, lang)}`,
-        summaryX + 9,
-        sy,
-        summaryW - 18,
-        {
-          fontSize: 8,
-          color: COLORS.muted,
-          align,
-          language: lang,
-          lineHeight: 12,
-        },
-      );
-  }
-  y += summaryHeight + 12;
-  if (document.payment_references.length > 0) {
-    if (y + 28 > doc.page.height - 45) {
-      pageNo++;
-      y = addPage(doc, document, layout, pageNo) + 10;
-    }
-    drawText(doc, l.payment, margin, y, usable, {
-      fontSize: 8.5,
-      bold: true,
-      align,
-      language: lang,
-      lineHeight: 13,
-    });
-    y += 14;
-    for (const payment of document.payment_references) {
-      const detail = `${payment.method}${payment.reference ? ` - ${payment.reference}` : ""}: ${money(payment.amount_agorot, lang)}`;
-      const lines = wrapText(doc, detail, usable, 8);
-      const blockHeight = lines.length * 12;
-      if (y + blockHeight > doc.page.height - 45) {
-        pageNo++;
-        y = addPage(doc, document, layout, pageNo) + 10;
-      }
-      y = drawText(doc, detail, margin, y, usable, {
-        fontSize: 8,
-        color: COLORS.muted,
-        align,
-        language: lang,
-        lineHeight: 12,
-      });
-    }
-  }
-  if (document.allocation_number) {
-    if (y + 28 > doc.page.height - 45) {
-      pageNo++;
-      y = addPage(doc, document, layout, pageNo) + 10;
-    }
-    y = drawText(
-      doc,
-      `${l.allocation}: ${document.allocation_number}`,
-      margin,
-      y + 7,
-      usable,
-      { fontSize: 9, bold: true, align, language: lang, lineHeight: 14 },
-    );
-  }
-  if (document.related_document_number)
-    y = drawText(
-      doc,
-      `${l.related}: ${document.related_document_number}`,
-      margin,
-      y + 7,
-      usable,
-      {
-        fontSize: 8,
-        color: COLORS.muted,
-        align,
-        language: lang,
-        lineHeight: 12,
-      },
-    );
-  if (document.note) {
-    if (y + 30 > doc.page.height - 45) {
-      pageNo++;
-      y = addPage(doc, document, layout, pageNo) + 10;
-    }
-    drawText(doc, `${l.note}: ${document.note}`, margin, y + 8, usable, {
-      fontSize: 8,
-      color: COLORS.muted,
-      align,
-      language: lang,
-      lineHeight: 12,
-    });
-  }
-  const pages = doc.bufferedPageRange();
-  for (let index = pages.start; index < pages.start + pages.count; index++) {
-    doc.switchToPage(index);
-    const footerY = doc.page.height - 35;
-    doc
-      .moveTo(margin, footerY - 5)
-      .lineTo(doc.page.width - margin, footerY - 5)
-      .strokeColor(COLORS.line)
-      .lineWidth(0.6)
-      .stroke();
-    drawText(
-      doc,
-      `${l.page} ${index - pages.start + 1} / ${pages.count}`,
-      margin,
-      footerY,
-      usable,
-      {
-        fontSize: 7.5,
-        color: COLORS.muted,
-        align: "center",
-        language: lang,
-        lineHeight: 10,
-      },
-    );
-  }
-  return new Promise<Uint8Array>((resolve, reject) => {
+  const completed = new Promise<Uint8Array>((resolve, reject) => {
     const chunks: Buffer[] = [];
     doc.on("data", (chunk: Buffer) => chunks.push(Buffer.from(chunk)));
     doc.once("error", reject);
     doc.once("end", () => resolve(new Uint8Array(Buffer.concat(chunks))));
-    doc.end();
   });
+  doc
+    .registerFont("NotoRegular", fonts.regular)
+    .registerFont("NotoBold", fonts.bold);
+  const lang = document.identity_snapshot.document_language,
+    rtl = lang === "he",
+    l = labels(lang);
+  const margin = layout === "a4" ? 36 : 12;
+  const usable = doc.page.width - 2 * margin;
+  const align = rtl ? "right" : "left";
+  let y = 0,
+    pageNo = 0;
+  let pendingProfile = false;
+  const measure = (value: string, width: number, size = 9, bold = false) => {
+    doc.font(bold ? "NotoBold" : "NotoRegular").fontSize(size);
+    return wrapText(doc, value, width, size);
+  };
+  const footerFields = businessFields(document).filter(
+    (field) => field.label === l.phone || field.label === l.email,
+  );
+  const footerCellW = (usable - 16) / 2;
+  const footerTextH = Math.max(
+    0,
+    ...footerFields.map(
+      (field) => measure(field.value, footerCellW, 6.5).length * 9.1,
+    ),
+  );
+  const footerReserve = Math.max(52, footerTextH + 36);
+  const bottom = doc.page.height - footerReserve;
+  doc.info.Keywords = `${PAPER_TEMPLATE_VERSION}; footer-reserve=${footerReserve.toFixed(2)}`;
+  const write = (
+    value: string,
+    x: number,
+    top: number,
+    width: number,
+    size = 9,
+    bold = false,
+    ltr = false,
+    color = COLORS.ink,
+    paragraphLanguage?: DocumentLanguage,
+    anchor?: "left" | "right" | "center",
+  ) =>
+    drawText(doc, value, x, top, width, {
+      fontSize: size,
+      bold,
+      color,
+      align: anchor ?? align,
+      language: ltr ? "en" : (paragraphLanguage ?? textLanguage(value, lang)),
+      lineHeight: size * 1.4,
+    });
+  const rule = (top: number, x = margin, width = usable) => {
+    doc
+      .save()
+      .moveTo(x, top)
+      .lineTo(x + width, top)
+      .lineWidth(0.6)
+      .stroke(COLORS.line)
+      .restore();
+  };
+  const labelSize = (size: number) => Math.max(6.8, size * 0.76);
+  const valueSize = (field: DetailField, size: number) =>
+    field.emphasis ? size * 1.8 : size;
+  const labelHeight = (field: DetailField, width: number, size: number) =>
+    measure(
+      field.label,
+      width - (field.icon ? 18 : 0),
+      labelSize(size),
+      field.emphasis,
+    ).length *
+    labelSize(size) *
+    1.4;
+  const fieldHeight = (
+    field: DetailField,
+    width: number,
+    size = 9,
+    bold = false,
+    band?: number,
+  ) =>
+    (band ?? labelHeight(field, width, size)) +
+    3 +
+    measure(field.value, width, valueSize(field, size), bold || field.emphasis)
+      .length *
+      valueSize(field, size) *
+      1.4 +
+    (layout === "a4" ? 5 : 7);
+  const fieldAt = (
+    field: DetailField,
+    x: number,
+    top: number,
+    width: number,
+    size = 9,
+    bold = false,
+    band?: number,
+  ) => {
+    const labelBand = band ?? labelHeight(field, width, size);
+    if (field.icon)
+      drawPaperIcon(doc, field.icon, rtl ? x + width - 11 : x, top, 11);
+    write(
+      field.label,
+      rtl ? x : x + (field.icon ? 18 : 0),
+      top,
+      width - (field.icon ? 18 : 0),
+      labelSize(size),
+      bold || field.emphasis,
+      false,
+      COLORS.muted,
+    );
+    write(
+      field.value,
+      x,
+      top + labelBand + 3,
+      width,
+      valueSize(field, size),
+      bold || field.emphasis,
+      field.ltr,
+    );
+    return top + fieldHeight(field, width, size, bold, labelBand);
+  };
+  const gridRows = (
+    fields: DetailField[],
+    width: number,
+    columns = 2,
+    size = 9,
+  ) => {
+    const groups: DetailField[][] = [];
+    let group: DetailField[] = [];
+    for (const field of fields) {
+      if (field.wide) {
+        if (group.length) groups.push(group);
+        groups.push([field]);
+        group = [];
+      } else {
+        group.push(field);
+        if (group.length === columns) {
+          groups.push(group);
+          group = [];
+        }
+      }
+    }
+    if (group.length) groups.push(group);
+    return groups.map((fields) => {
+      const cellWidth = fields[0].wide
+        ? width
+        : (width - (columns - 1) * 14) / columns;
+      const band = Math.max(
+        ...fields.map((field) => labelHeight(field, cellWidth, size)),
+      );
+      return {
+        fields,
+        cellWidth,
+        band,
+        height: Math.max(
+          ...fields.map((field) =>
+            fieldHeight(field, cellWidth, size, false, band),
+          ),
+        ),
+      };
+    });
+  };
+  const gridHeight = (
+    fields: DetailField[],
+    width: number,
+    columns = 2,
+    size = 9,
+  ) =>
+    gridRows(fields, width, columns, size).reduce(
+      (height, row) => height + row.height,
+      0,
+    );
+  const rowAt = (
+    row: ReturnType<typeof gridRows>[number],
+    x: number,
+    top: number,
+    width: number,
+    size: number,
+  ) => {
+    row.fields.forEach((field, index) =>
+      fieldAt(
+        field,
+        rtl
+          ? x + width - row.cellWidth - index * (row.cellWidth + 14)
+          : x + index * (row.cellWidth + 14),
+        top,
+        row.cellWidth,
+        size,
+        false,
+        row.band,
+      ),
+    );
+    return top + row.height;
+  };
+  const gridAt = (
+    fields: DetailField[],
+    x: number,
+    top: number,
+    width: number,
+    columns = 2,
+    size = 9,
+  ) => {
+    for (const row of gridRows(fields, width, columns, size))
+      top = rowAt(row, x, top, width, size);
+    return top;
+  };
+  const businessName =
+    document.identity_snapshot.trade_name ||
+    document.identity_snapshot.legal_name;
+  const metadata: DetailField[] = [
+    {
+      label: l.date,
+      value: formatDocumentTimestamp(
+        document.issued_at ?? document.created_at,
+        lang,
+      ).date,
+      ltr: true,
+      icon: "calendar",
+    },
+    {
+      label: l.time,
+      value: formatDocumentTimestamp(
+        document.issued_at ?? document.created_at,
+        lang,
+      ).time,
+      ltr: true,
+      icon: "clock",
+    },
+    {
+      label: l.previewId,
+      value: document.id,
+      ltr: true,
+      wide: layout === "receipt80",
+    },
+  ];
+  const newPage = () => {
+    if (pageNo++)
+      doc.addPage({
+        size: layout === "a4" ? "A4" : [RECEIPT.width, RECEIPT.height],
+        margin: 0,
+      });
+    y = layout === "a4" ? 32 : 20;
+    if (pageNo === 1) {
+      const businessW = layout === "a4" ? usable * 0.63 : usable;
+      const bx = rtl ? margin + usable - businessW : margin;
+      const logoW = layout === "a4" ? 155 : 132;
+      const logoX =
+        layout === "a4"
+          ? rtl
+            ? margin
+            : margin + usable - logoW
+          : (doc.page.width - logoW) / 2;
+      const logoH = drawPaperBrand(doc, logoX, y, logoW);
+      const nameTop = layout === "a4" ? y : y + logoH + 18;
+      let businessBottom =
+        write(
+          businessName,
+          bx,
+          nameTop,
+          businessW,
+          layout === "a4" ? 17 : 13.5,
+          true,
+        ) + 10;
+      const profile = profileFields(document);
+      const profileH = gridHeight(profile, businessW, 2, 8.2);
+      if (
+        businessBottom + profileH <
+        Math.min(bottom - 150, layout === "a4" ? 470 : 540)
+      )
+        businessBottom = gridAt(profile, bx, businessBottom, businessW, 2, 8.2);
+      else pendingProfile = true;
+      y =
+        Math.max(businessBottom, (layout === "a4" ? y : nameTop) + logoH) +
+        (layout === "a4" ? 8 : 14);
+    } else {
+      const logoW = layout === "a4" ? 96 : 108;
+      const logoX = rtl ? margin : margin + usable - logoW;
+      const logoH = drawPaperBrand(doc, logoX, y, logoW);
+      const titleW = usable - logoW - 18;
+      const titleX = rtl ? margin + logoW + 18 : margin;
+      const titleEnd = write(
+        `${typeLabel(document)} - ${l.continued}`,
+        titleX,
+        y,
+        titleW,
+        layout === "a4" ? 14 : 11,
+        true,
+      );
+      y = Math.max(titleEnd, y + logoH) + 12;
+    }
+    if (pageNo === 1 && layout === "a4") {
+      const badgeW = 156,
+        titleW = usable - badgeW - 18;
+      const titleX = rtl ? margin + badgeW + 18 : margin;
+      const badgeX = rtl ? margin : margin + usable - badgeW;
+      const titleEnd = write(typeLabel(document), titleX, y, titleW, 21, true);
+      doc
+        .save()
+        .roundedRect(badgeX, y + 2, badgeW, 23, 3)
+        .fillAndStroke(COLORS.paleGold, COLORS.gold)
+        .restore();
+      write(
+        l.draft,
+        badgeX + 7,
+        y + 8,
+        badgeW - 14,
+        7.3,
+        true,
+        false,
+        "#6E4C00",
+      );
+      y = Math.max(titleEnd, y + 25) + 10;
+    } else {
+      if (pageNo === 1)
+        y = write(typeLabel(document), margin, y, usable, 17, true) + 8;
+      doc
+        .save()
+        .roundedRect(margin, y, usable, 23, 3)
+        .fillAndStroke(COLORS.paleGold, COLORS.gold)
+        .restore();
+      write(
+        l.draft,
+        margin + 7,
+        y + 6,
+        usable - 14,
+        layout === "a4" ? 9 : 7.8,
+        true,
+        false,
+        "#6E4C00",
+      );
+      y += 34;
+    }
+    if (pageNo === 1) {
+      const metaH = gridHeight(
+        metadata,
+        usable - 20,
+        layout === "a4" ? 3 : 2,
+        8,
+      );
+      doc
+        .save()
+        .roundedRect(margin, y, usable, metaH + 14, 4)
+        .fillAndStroke(COLORS.panel, COLORS.line)
+        .restore();
+      y =
+        gridAt(
+          metadata,
+          margin + 10,
+          y + 8,
+          usable - 20,
+          layout === "a4" ? 3 : 2,
+          8,
+        ) + (layout === "a4" ? 8 : 12);
+      y =
+        write(
+          document.number ? `${l.document}: ${document.number}` : l.noNumber,
+          margin,
+          y,
+          usable,
+          7.3,
+          false,
+          false,
+          COLORS.muted,
+        ) + (layout === "a4" ? 2 : 5);
+    } else {
+      y =
+        gridAt(
+          metadata.map((field) => ({ ...field, icon: undefined })),
+          margin,
+          y,
+          usable,
+          layout === "a4" ? 3 : 2,
+          7.2,
+        ) + 4;
+    }
+    rule(y + 2);
+    y += layout === "a4" ? 12 : 17;
+  };
+  const ensure = (height: number) => {
+    if (y + height > bottom) newPage();
+  };
+  const heading = (icon: PaperIcon, value: string) => {
+    ensure(30);
+    drawPaperIcon(doc, icon, rtl ? margin + usable - 12 : margin, y + 1);
+    y = write(value, rtl ? margin : margin + 18, y, usable - 18, 10, true) + 8;
+  };
+  const flowingText = (value: string, size = 9, color = COLORS.ink) => {
+    for (const line of measure(value, usable, size)) {
+      ensure(size * 1.4 + 3);
+      y = write(
+        line,
+        margin,
+        y,
+        usable,
+        size,
+        false,
+        false,
+        color,
+        textLanguage(value, lang),
+      );
+    }
+  };
+  const flowField = (field: DetailField, size = 9) => {
+    ensure(fieldHeight(field, usable, size));
+    y = fieldAt(field, margin, y, usable, size);
+  };
+  const flowGrid = (fields: DetailField[], columns = 2, size = 9) => {
+    for (const row of gridRows(fields, usable, columns, size)) {
+      ensure(row.height);
+      y = rowAt(row, margin, y, usable, size);
+    }
+  };
+  newPage();
+  if (pendingProfile) {
+    heading("business", l.business);
+    flowGrid(profileFields(document), 2, 8.5);
+    y += 10;
+  }
+  const customer = customerFields(document);
+  const customerH = gridHeight(customer, usable - 24, 2, 8.8) + 40;
+  if (customerH < 400) {
+    ensure(customerH + 12);
+    const top = y;
+    doc
+      .save()
+      .roundedRect(margin, top, usable, customerH, 5)
+      .lineWidth(0.7)
+      .stroke(COLORS.line)
+      .restore();
+    drawPaperIcon(
+      doc,
+      "customer",
+      rtl ? margin + usable - 24 : margin + 12,
+      top + 12,
+    );
+    write(
+      l.customer,
+      rtl ? margin + 12 : margin + 30,
+      top + 11,
+      usable - 42,
+      9.5,
+      true,
+    );
+    gridAt(customer, margin + 12, top + 34, usable - 24, 2, 8.8);
+    y = top + customerH + (layout === "a4" ? 12 : 16);
+  } else {
+    heading("customer", l.customer);
+    flowGrid(customer, 2, 8.8);
+    y += 12;
+  }
+
+  const columns = [
+    { label: l.description, ratio: 0.42 },
+    { label: l.quantity, ratio: 0.08 },
+    { label: l.net, ratio: 0.17 },
+    { label: l.vat, ratio: 0.15 },
+    { label: l.gross, ratio: 0.18 },
+  ].map((column, index, all) => ({
+    ...column,
+    width: usable * column.ratio,
+    x:
+      margin +
+      usable *
+        (rtl
+          ? 1 - all.slice(0, index + 1).reduce((s, c) => s + c.ratio, 0)
+          : all.slice(0, index).reduce((s, c) => s + c.ratio, 0)),
+  }));
+  const tableHeading = () => {
+    ensure(46);
+    const height =
+      Math.max(
+        ...columns.map(
+          (col) => measure(col.label, col.width - 10, 8, true).length,
+        ),
+      ) *
+        12 +
+      12;
+    doc.save().rect(margin, y, usable, height).fill(COLORS.panel).restore();
+    for (const col of columns)
+      write(
+        col.label,
+        col.x + 5,
+        y + 6,
+        col.width - 10,
+        8,
+        true,
+        false,
+        COLORS.ink,
+        undefined,
+        col === columns[0] ? align : "right",
+      );
+    y += height;
+  };
+  if (layout === "a4") tableHeading();
+  for (const item of document.items) {
+    if (layout === "receipt80") {
+      const fields: DetailField[] = [
+        { label: l.quantity, value: String(item.quantity), ltr: true },
+        ...itemDetails(item, lang),
+        { label: l.net, value: money(item.net_agorot, lang), ltr: true },
+        { label: l.vat, value: money(item.vat_agorot, lang), ltr: true },
+        {
+          label: l.gross,
+          value: money(
+            item.gross_agorot,
+            lang,
+            document.type === "credit_note",
+          ),
+          ltr: true,
+        },
+      ];
+      const itemHeight =
+        measure(item.description, usable, 9.5).length * 14.25 +
+        18 +
+        gridHeight(fields, usable, 2, 8.8);
+      // Keep normal thermal-receipt items together; oversized descriptions still
+      // flow across pages line-by-line without dropping any content.
+      ensure(itemHeight < 550 ? itemHeight : 36);
+      flowingText(item.description, 9.5);
+      y += 4;
+      flowGrid(fields, 2, 8.8);
+      rule(y + 3);
+      y += 14;
+      continue;
+    }
+    const description = columns[0];
+    const meta = itemDetails(item, lang);
+    type ItemBlock =
+      | { kind: "text"; value: string; height: number }
+      | { kind: "fields"; fields: DetailField[]; height: number };
+    const blocks: ItemBlock[] = [
+      ...measure(item.description, description.width - 10, 8.5).map(
+        (value) => ({ kind: "text" as const, value, height: 13 }),
+      ),
+      ...(meta.length
+        ? [
+            {
+              kind: "fields" as const,
+              fields: meta,
+              height: gridHeight(meta, description.width - 10, 2, 7.5) + 4,
+            },
+          ]
+        : []),
+    ];
+    const values = [
+      String(item.quantity),
+      money(item.net_agorot, lang),
+      money(item.vat_agorot, lang),
+      money(item.gross_agorot, lang, document.type === "credit_note"),
+    ];
+    const numericHeight = Math.max(
+      ...values.map(
+        (value, index) =>
+          measure(value, columns[index + 1].width - 10, 8).length * 11.2 + 12,
+      ),
+    );
+    let offset = 0;
+    while (offset < blocks.length) {
+      const minimumHeight = Math.max(
+        38,
+        blocks[offset].height + 12,
+        offset === 0 ? numericHeight : 0,
+      );
+      if (y + minimumHeight > bottom) {
+        newPage();
+        tableHeading();
+      }
+      let lineY = y + 6,
+        count = 0;
+      while (
+        offset + count < blocks.length &&
+        lineY + blocks[offset + count].height + 6 <= bottom
+      ) {
+        const block = blocks[offset + count];
+        if (block.kind === "text")
+          write(
+            block.value,
+            description.x + 5,
+            lineY,
+            description.width - 10,
+            8.5,
+            false,
+            false,
+            COLORS.ink,
+            textLanguage(item.description, lang),
+          );
+        else
+          gridAt(
+            block.fields,
+            description.x + 5,
+            lineY + 2,
+            description.width - 10,
+            2,
+            7.5,
+          );
+        lineY += block.height;
+        count++;
+      }
+      let rowBottom = lineY + 6;
+      for (let index = 0; index < values.length; index++) {
+        const col = columns[index + 1];
+        const valueBottom = write(
+          offset === 0 ? values[index] : "-",
+          col.x + 5,
+          y + 6,
+          col.width - 10,
+          8,
+          false,
+          true,
+          COLORS.ink,
+          undefined,
+          "right",
+        );
+        rowBottom = Math.max(rowBottom, valueBottom + 6);
+      }
+      y = rowBottom;
+      rule(y);
+      offset += count;
+      if (offset < blocks.length) {
+        newPage();
+        tableHeading();
+      }
+    }
+  }
+
+  y += 16;
+  const summary = summaryFields(document).map((field, index) => ({
+      ...field,
+      wide: index === 2,
+      emphasis: index === 2,
+    })),
+    summaryW = layout === "a4" ? usable * 0.54 : usable;
+  const summaryX =
+    layout === "a4" && !rtl ? margin + usable - summaryW : margin;
+  const summaryH = 24 + gridHeight(summary, summaryW - 24, 2, 9);
+  const paymentFields = document.payment_references.flatMap(
+    (payment): DetailField[] => {
+      const stamp = payment.collected_at
+        ? formatDocumentTimestamp(payment.collected_at, lang)
+        : null;
+      return [
+        { label: l.payment, value: paymentMethod(payment.method, lang) },
+        {
+          label: l.gross,
+          value: money(payment.amount_agorot, lang),
+          ltr: true,
+        },
+        ...(payment.reference
+          ? [{ label: l.reference, value: payment.reference }]
+          : []),
+        ...(stamp
+          ? [
+              { label: l.date, value: stamp.date, ltr: true },
+              { label: l.time, value: stamp.time, ltr: true },
+            ]
+          : []),
+      ];
+    },
+  );
+  const paymentW = layout === "a4" ? usable - summaryW - 20 : usable;
+  const paymentH = 28 + gridHeight(paymentFields, paymentW, 2, 8.2);
+  const parallelPayments =
+    layout === "a4" &&
+    paymentFields.length > 0 &&
+    Math.max(paymentH, summaryH) < 500;
+  ensure(parallelPayments ? Math.max(summaryH, paymentH) : summaryH);
+  const summaryTop = y;
+  doc
+    .save()
+    .roundedRect(summaryX, y, summaryW, summaryH, 5)
+    .fillAndStroke(COLORS.panel, COLORS.line)
+    .restore();
+  gridAt(summary, summaryX + 12, y + 12, summaryW - 24, 2, 9);
+  if (parallelPayments) {
+    const px = rtl ? margin + summaryW + 20 : margin;
+    drawPaperIcon(doc, "payment", rtl ? px + paymentW - 12 : px, y + 1);
+    const paymentTop =
+      write(l.paid, rtl ? px : px + 18, y, paymentW - 18, 9, true) + 10;
+    const py = gridAt(paymentFields, px, paymentTop, paymentW, 2, 8.2);
+    y = Math.max(summaryTop + summaryH, py) + 18;
+  } else {
+    y += summaryH + 18;
+    if (paymentFields.length) {
+      heading("payment", l.paid);
+      flowGrid(paymentFields, 2, 8.2);
+    }
+  }
+  if (document.allocation_number)
+    flowField({
+      label: l.allocation,
+      value: document.allocation_number,
+      ltr: true,
+    });
+  if (document.related_document_number)
+    flowField({
+      label: l.related,
+      value: document.related_document_number,
+      ltr: true,
+    });
+  if (document.note) {
+    y += 8;
+    heading("note", l.note);
+    flowingText(document.note, 8, COLORS.muted);
+  }
+  const pages = doc.bufferedPageRange();
+  for (let index = pages.start; index < pages.start + pages.count; index++) {
+    doc.switchToPage(index);
+    const footerTop = doc.page.height - footerReserve + 12;
+    rule(footerTop - 7);
+    footerFields.forEach((field, index) => {
+      const x = rtl
+        ? margin + usable - footerCellW - index * (footerCellW + 16)
+        : margin + index * (footerCellW + 16);
+      write(
+        field.value,
+        x,
+        footerTop,
+        footerCellW,
+        6.5,
+        false,
+        true,
+        COLORS.muted,
+      );
+    });
+    write(
+      l.page,
+      rtl ? margin + usable * 0.5 : margin,
+      doc.page.height - 20,
+      usable * 0.5,
+      6.8,
+      false,
+      false,
+      COLORS.muted,
+    );
+    write(
+      `${index - pages.start + 1} / ${pages.count}`,
+      rtl ? margin : margin + usable * 0.5,
+      doc.page.height - 20,
+      usable * 0.5,
+      6.8,
+      false,
+      true,
+      COLORS.muted,
+      undefined,
+      rtl ? "left" : "right",
+    );
+  }
+  doc.end();
+  return completed;
 }
 
 export async function renderDraftDocument(
@@ -961,7 +1363,7 @@ export async function renderDraftDocument(
   const pdfBytes = await renderLayout(document, layout, fontBytes);
   return {
     pdfBytes,
-    accessibleHtml: accessibleHtml(document),
+    accessibleHtml: accessibleHtml(document, layout),
     sourceHash: validated.canonicalHash,
     layout,
     watermark: "DRAFT",
@@ -970,6 +1372,7 @@ export async function renderDraftDocument(
 
 export function renderDraftHtml(
   input: FiscalDocumentSnapshot | ValidatedDocumentSnapshot,
+  layout: DocumentLayout = "a4",
 ): string {
   const validated =
     "canonicalJson" in input ? input : validateDocumentSnapshot(input);
@@ -980,7 +1383,7 @@ export function renderDraftHtml(
     throw new Error(
       "Issued artifacts must be retrieved from immutable storage",
     );
-  return accessibleHtml(validated.document);
+  return accessibleHtml(validated.document, layout);
 }
 
 export function pdfSha256(bytes: Uint8Array): string {

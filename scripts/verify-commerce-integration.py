@@ -50,7 +50,11 @@ def wait_http(url, process, log_path, timeout=90):
             time.sleep(0.3)
     raise RuntimeError(f"service readiness timed out; see {log_path}")
 
-with tempfile.TemporaryDirectory(prefix="miro-commerce-integration-") as temp:
+# Keep the temporary app inside the ignored workspace so Turbopack can resolve
+# the real dependency tree without broad filesystem roots or repository env files.
+qa_parent = ROOT / "test-results"
+qa_parent.mkdir(exist_ok=True)
+with tempfile.TemporaryDirectory(prefix="miro-commerce-integration-", dir=qa_parent) as temp:
     temp = pathlib.Path(temp)
     pg_port, fixture_port, next_port = free_port(), free_port(), free_port()
     data = temp / "pgdata"
@@ -85,6 +89,12 @@ with tempfile.TemporaryDirectory(prefix="miro-commerce-integration-") as temp:
         ) + ";"
         seed += " update public.user_roles set role='admin' where user_id='00000000-0000-0000-0000-000000009901'; update public.user_roles set role='ceo' where user_id='00000000-0000-0000-0000-000000009902'; update public.profiles set account_status='active' where id in ('00000000-0000-0000-0000-000000009901','00000000-0000-0000-0000-000000009902'); update public.user_roles set role='admin' where user_id='00000000-0000-0000-0000-000000009903'; update public.profiles set account_status='suspended' where id='00000000-0000-0000-0000-000000009903';"
         run(psql, input=seed)
+        if os.getenv("DOCUMENT_PREVIEW_REVIEW"):
+            # Synthetic stored draft for preview readback; never linked business records.
+            identity = {"legal_name":"Fixture document business", "trade_name":"Fixture documents", "entity_kind":"company", "registration_number":"EXAMPLE-REG", "vat_number":"EXAMPLE-VAT", "address":{"street":"12 Example Street","city":"Example City","postal_code":"0000000","country":"IL"}, "phone":"+972-00-000-0000","email":"fixture@example.invalid","document_language":"he"}
+            snapshot = {"items":[{"description":"Stored draft fixture / מסמך בדיקה", "quantity":1,"unit_price_agorot":10000,"discount_agorot":0,"net_agorot":10000,"vat_agorot":1800,"gross_agorot":11800}], "payment_references":[]}
+            encode = lambda value: "'" + json.dumps(value, ensure_ascii=False).replace("'", "''") + "'::jsonb"
+            run(psql, input="insert into public.fiscal_documents(id,document_type,state,business_snapshot,customer_snapshot,subtotal_agorot,vat_agorot,total_agorot,document_snapshot,idempotency_effect_key,created_by) values ('00000000-0000-4000-8000-000000009941','quote','draft'," + encode(identity) + "," + encode({"name":"Sample customer / לקוח לדוגמה"}) + ",10000,1800,11800," + encode(snapshot) + ",'document-preview-fixture','00000000-0000-0000-0000-000000009902');")
         if os.getenv("POS_REVIEW"):
             run(psql + ["-f", str(ROOT / "scripts/pos-review-fixtures.sql")])
         env = {key: os.environ[key] for key in ("PATH", "HOME", "TMPDIR", "LANG", "LC_ALL") if key in os.environ}
@@ -107,6 +117,8 @@ with tempfile.TemporaryDirectory(prefix="miro-commerce-integration-") as temp:
             env["POS_ENGINES"] = os.environ["POS_ENGINES"]
         if os.getenv("COMMERCE_OUTPUT_DIR"):
             env["COMMERCE_OUTPUT_DIR"] = os.environ["COMMERCE_OUTPUT_DIR"]
+        if os.getenv("COMMERCE_RENDERER_FIXTURE_DIR"):
+            env["COMMERCE_RENDERER_FIXTURE_DIR"] = os.environ["COMMERCE_RENDERER_FIXTURE_DIR"]
         with fixture_log.open("w") as log:
             fixture = subprocess.Popen(["node", str(ROOT / "scripts/commerce-fixture-server.mjs")], cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
         wait_http(f"http://127.0.0.1:{fixture_port}/fixture/health", fixture, fixture_log)
@@ -122,20 +134,22 @@ with tempfile.TemporaryDirectory(prefix="miro-commerce-integration-") as temp:
                 else:
                     shutil.copy2(source, app_dir / entry)
         config = (ROOT / "next.config.ts").read_text()
-        config = config.replace("const nextConfig: NextConfig = {", f"const nextConfig: NextConfig = {{ distDir: {json.dumps(str(app_dir / '.next-ci'))},", 1)
+        config = config.replace("const nextConfig: NextConfig = {", f'const nextConfig: NextConfig = {{ distDir: ".next-ci", turbopack: {{ root: {json.dumps(str(ROOT.resolve()))} }},', 1)
         (app_dir / "next.config.ts").write_text(config)
         production = os.getenv("COMMERCE_PRODUCTION") == "1"
         next_cli = str(ROOT / "node_modules/.bin/next")
         if production:
             env["NODE_ENV"] = "production"
-            next_log.write_text(run([next_cli, "build", "--webpack"], cwd=app_dir, env=env, timeout=300))
+            next_log.write_text(run([next_cli, "build"], cwd=app_dir, env=env, timeout=300))
         with next_log.open("a" if production else "w") as log:
-            command = [next_cli, "start"] if production else [next_cli, "dev", str(app_dir), "--webpack"]
+            command = [next_cli, "start"] if production else [next_cli, "dev", str(app_dir)]
             next_server = subprocess.Popen(command + ["--hostname", "127.0.0.1", "--port", str(next_port)], cwd=app_dir, env=env, stdout=log, stderr=subprocess.STDOUT)
         wait_http(f"http://127.0.0.1:{next_port}/api/management/commerce/settings", next_server, next_log, 150)
         node_env = env | {"COMMERCE_NEXT_URL": f"http://127.0.0.1:{next_port}"}
         try:
-            run(["node", str(ROOT / "scripts" / ("verify-pos-workspace.mjs" if os.getenv("POS_REVIEW") else "verify-commerce-workspaces.mjs"))], cwd=ROOT, env=node_env, timeout=600)
+            script = "verify-document-previews.mjs" if os.getenv("DOCUMENT_PREVIEW_REVIEW") else "verify-pos-workspace.mjs" if os.getenv("POS_REVIEW") else "verify-commerce-workspaces.mjs"
+            result = run(["node", str(ROOT / "scripts" / script)], cwd=ROOT, env=node_env, timeout=600)
+            print(result)
         except Exception as error:
             fixture_tail = fixture_log.read_text(errors="replace")[-2000:]
             next_tail = next_log.read_text(errors="replace")[-10000:]
