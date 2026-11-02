@@ -1,3 +1,10 @@
+## 0.1.4 follow-ups published and merged — 2026-11-02
+
+- Committed all pending project sources as `e4ae09a` (`feat(catalog): add variant media and audited stock controls`, 32 files). Pushed existing release branch `0.1.4`, fast-forward merged it into `main`, and pushed `main`. `git ls-remote --heads origin main 0.1.4` confirmed both remote branches at `e4ae09aa9cf9e0bfe09e25c9293ca02ad015f350`; local working tree was clean. The three earlier local fixes (`aadc155`, `d0aae46`, `6e91033`) are included in both histories without rewriting commits or force pushes.
+- Final staged and newly reachable-history credential-pattern scan checked 47 blobs with zero findings. No ignored environment exports, private QA artifacts, or archived debug history were published. Validation and the four baseline POS dashboard harness failures are recorded in the preparation entry below.
+- GitHub's Vercel status for `e4ae09a` was `pending` at publication verification. Hosting automation started from the push; this is not a claim of a READY deployment or live commerce certification. This documentation-only follow-up is committed to `0.1.4` and synchronized to `main` using the same fast-forward workflow.
+- No new legal/privacy issue arose from source publication. Business, QA/accessibility, accountant/provider and operations owners retain the launch actions below; engineering retains the pre-existing POS test harness and linked-schema/source drift follow-ups.
+
 ## 0.1.4 accumulated follow-up publication preparation — 2026-11-02
 
 - Owner now explicitly requests committing every pending project change, publishing to the latest existing release branch, and updating `main`. Fetched origin and confirmed `0.1.4` is the newest release branch; both remote tips initially pointed to `4f61b96`. Advanced local `0.1.4` by fast-forward to include the three already committed local follow-ups: continuous bilingual product rails (`aadc155`), management badge assignment keys (`d0aae46`), and stable magnifier controls/specification row identity (`6e91033`). No package-version bump or new release branch is needed.
