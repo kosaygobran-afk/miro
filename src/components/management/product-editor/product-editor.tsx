@@ -1076,6 +1076,7 @@ export function ProductEditor({
               <MediaGallery
                 locale={locale}
                 productId={product.id}
+                variants={variants}
                 onImagesChange={setImages}
               />
             </FormSection>
@@ -1102,6 +1103,16 @@ export function ProductEditor({
               description={sectionDescriptions.inventory[locale]}
             >
               <div className={styles.sectionStack}>
+                <p className={styles.statusNote}>
+                  {he
+                    ? "מלאי המוצר הזמין — סכום הווריאנטים הפעילים:"
+                    : "Available product stock — sum of active variants:"}{" "}
+                  <strong>
+                    {variants
+                      .filter((variant) => variant.is_active)
+                      .reduce((sum, variant) => sum + variant.stock_qty, 0)}
+                  </strong>
+                </p>
                 <Notice tone="info">{variantCopy.inventoryNote[locale]}</Notice>
                 <ul
                   className={styles.sectionStack}

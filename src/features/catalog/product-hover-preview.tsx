@@ -22,7 +22,9 @@ import { useStoreDesign } from "@/features/store-design/design-context";
 import Link from "@/components/motion/motion-link";
 import { ArrowUpRight, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
-import type { Product, ProductImage } from "@/features/catalog/product-data";
+import { getVariantImages } from "@/lib/catalog/variant-media";
+import { VariantChoices } from "./variant-choices";
+import type { Product } from "@/features/catalog/product-data";
 import { PromoBadge } from "@/features/catalog/product-promo-badge";
 import { PriceAmount, DiscountBadge } from "./price-amount";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
@@ -34,6 +36,7 @@ import {
   formatPrice,
   getDiscountPercent,
   priceBeforeVat,
+  resolvePrice,
 } from "@/lib/catalog/pricing";
 
 interface ProductHoverPreviewProps {
@@ -68,10 +71,6 @@ function useMediaQuery(query: string) {
   );
 }
 
-function getSortedImages(product: Product): ProductImage[] {
-  return [...product.images].sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
 export function ProductHoverPreview({
   product,
   locale,
@@ -102,7 +101,10 @@ export function ProductHoverPreview({
   const graceTimerRef = useRef<number | null>(null);
   const exitTimerRef = useRef<number | null>(null);
   const [phase, setPhase] = useState<PreviewPhase>("closed");
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [imageIndex, setActiveImageIndex] = useState(0);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
   const [magnifierSlot, setMagnifierSlot] = useState<HTMLDivElement | null>(
     null,
   );
@@ -134,7 +136,30 @@ export function ProductHoverPreview({
   );
   const enhanced = animationSettings.appearanceVersion === "2";
   const preserveSourceActions = hasFinePointer && !focusOnOpen;
-  const allImages = getSortedImages(product);
+  const selectedVariant =
+    product.variants.find((variant) => variant.id === selectedVariantId) ??
+    getProductIdentifierVariant(product.variants);
+  const allImages = getVariantImages(
+    product.images,
+    selectedVariant?.id ?? null,
+  );
+  const activeImageIndex = Math.min(
+    imageIndex,
+    Math.max(allImages.length - 1, 0),
+  );
+  const pricingInputs = {
+    basePrice:
+      product.basePriceIls !== undefined
+        ? product.basePriceIls
+        : product.priceIls,
+    variants: product.variants,
+    selectedVariantId: selectedVariant?.id ?? null,
+    defaultVariantId: selectedVariant?.id ?? null,
+    roleOverride: product.rolePrice ?? null,
+    variantOverride: null,
+    publicPromotion: product.publicPromotion,
+  };
+  const pricingResult = resolvePrice(pricingInputs);
   const detailRows = [
     ...(product.brand
       ? [[locale === "he" ? "מותג" : "Brand", product.brand]]
@@ -147,9 +172,10 @@ export function ProductHoverPreview({
       : []),
     ...Object.entries(product.specifications ?? {}),
   ];
-  const effectivePrice = product.priceIls;
-  const identifierVariant = getProductIdentifierVariant(product.variants);
-  const compareAtPrice = product.compareAtPrice ?? null;
+  const effectivePrice = pricingResult.effectivePrice;
+  const identifierVariant = selectedVariant;
+  const compareAtPrice =
+    pricingResult.compareAtPrice ?? product.compareAtPrice ?? null;
   const discountPercent = getDiscountPercent(compareAtPrice, effectivePrice);
   const formattedPrice = formatPrice(
     effectivePrice,
@@ -749,7 +775,7 @@ export function ProductHoverPreview({
               </div>
               {!enhanced && (
                 <StockIndicator
-                  quantity={product.stockQty}
+                  quantity={selectedVariant?.stockQty ?? product.stockQty}
                   locale={locale}
                   unconfirmed={product.availabilityUnconfirmed}
                 />
@@ -787,7 +813,7 @@ export function ProductHoverPreview({
               )}
               {enhanced && (
                 <StockIndicator
-                  quantity={product.stockQty}
+                  quantity={selectedVariant?.stockQty ?? product.stockQty}
                   locale={locale}
                   unconfirmed={product.availabilityUnconfirmed}
                 />
@@ -795,6 +821,16 @@ export function ProductHoverPreview({
               {effectivePrice === null ? <span>{copy.demoPrice}</span> : null}
             </div>
 
+            <VariantChoices
+              variants={product.variants}
+              selectedId={selectedVariant?.id ?? null}
+              locale={locale}
+              pricing={pricingInputs}
+              onSelect={(id) => {
+                setSelectedVariantId(id);
+                setActiveImageIndex(0);
+              }}
+            />
             {product.promoBadges && product.promoBadges.length > 0 ? (
               <div
                 className="sf-hover-preview-badges"
@@ -850,15 +886,15 @@ export function ProductHoverPreview({
             {effectivePrice !== null && product.stockState !== "out" ? (
               <AddToCartButton
                 compact
+                disabled={
+                  selectedVariant
+                    ? selectedVariant.stockQty <= 0
+                    : product.stockQty <= 0
+                }
                 locale={locale}
                 item={{
                   productId: product.id,
-                  variantId:
-                    (
-                      product.variants.find(
-                        (v) => v.isDefault && v.stockQty > 0,
-                      ) ?? product.variants.find((v) => v.stockQty > 0)
-                    )?.id ?? null,
+                  variantId: selectedVariant?.id ?? null,
                   slug: product.slug,
                   category: product.category,
                   name: product.name,

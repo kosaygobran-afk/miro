@@ -1,5 +1,7 @@
 "use client";
 
+import { getVariantImages } from "@/lib/catalog/variant-media";
+import { VariantChoices } from "@/features/catalog/variant-choices";
 import { useState } from "react";
 import { RevealImage as Image } from "@/components/ui/reveal-image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -102,11 +104,17 @@ export function ProductDetailInteractive({
     variants.find((variant) => variant.id === selectedVariantId) ??
     defaultVariant;
 
+  const visibleImages = getVariantImages(images, selectedVariant?.id ?? null);
+  const selectVariant = (id: string) => {
+    setSelectedVariantId(id);
+    setActiveImageIndex(0);
+  };
+
   // Centralized price resolution with public promotion
   const pricingInputs: PricingInputs = {
     basePrice,
     variants,
-    selectedVariantId,
+    selectedVariantId: selectedVariant?.id ?? null,
     defaultVariantId: defaultVariant?.id ?? null,
     roleOverride,
     variantOverride: null,
@@ -128,23 +136,23 @@ export function ProductDetailInteractive({
   const displayedStock = selectedVariant?.stockQty ?? stockQty;
   const resolvedActiveImageIndex = Math.min(
     activeImageIndex,
-    Math.max(images.length - 1, 0),
+    Math.max(visibleImages.length - 1, 0),
   );
-  const activeImage = images[resolvedActiveImageIndex];
+  const activeImage = visibleImages[resolvedActiveImageIndex];
   const activeImageFailed = activeImage
     ? failedImageIds.has(activeImage.id)
     : false;
 
   const showPreviousImage = () => {
     setActiveImageIndex((current) =>
-      current <= 0 || current >= images.length
-        ? images.length - 1
+      current <= 0 || current >= visibleImages.length
+        ? visibleImages.length - 1
         : current - 1,
     );
   };
 
   const showNextImage = () => {
-    setActiveImageIndex((current) => (current + 1) % images.length);
+    setActiveImageIndex((current) => (current + 1) % visibleImages.length);
   };
 
   // Generate distinct thumbnail names
@@ -175,13 +183,13 @@ export function ProductDetailInteractive({
   return (
     <>
       <div className="sf-product-gallery">
-        {images.length > 1 && (
+        {visibleImages.length > 1 && (
           <div
             className="sf-thumbnail-strip"
             aria-label={copy.productImagesLabel}
           >
             <ul className="sf-thumbnail-list" role="list">
-              {images.map((image, index) => (
+              {visibleImages.map((image, index) => (
                 <li key={image.id} className="sf-thumbnail-item">
                   <button
                     type="button"
@@ -240,11 +248,11 @@ export function ProductDetailInteractive({
                       aria-atomic="true"
                       aria-label={
                         locale === "he"
-                          ? `תמונה ${resolvedActiveImageIndex + 1} מתוך ${images.length}`
-                          : `Image ${resolvedActiveImageIndex + 1} of ${images.length}`
+                          ? `תמונה ${resolvedActiveImageIndex + 1} מתוך ${visibleImages.length}`
+                          : `Image ${resolvedActiveImageIndex + 1} of ${visibleImages.length}`
                       }
                     >
-                      {resolvedActiveImageIndex + 1}/{images.length}
+                      {resolvedActiveImageIndex + 1}/{visibleImages.length}
                     </span>
                   ) : null
                 }
@@ -276,7 +284,7 @@ export function ProductDetailInteractive({
             imageFallback
           )}
           {!enhanced ? imageAnnotation : null}
-          {images.length > 1 ? (
+          {visibleImages.length > 1 ? (
             <>
               <button
                 type="button"
@@ -302,7 +310,7 @@ export function ProductDetailInteractive({
                   dir="ltr"
                   aria-live="polite"
                 >
-                  {resolvedActiveImageIndex + 1}/{images.length}
+                  {resolvedActiveImageIndex + 1}/{visibleImages.length}
                 </span>
               ) : null}
             </>
@@ -310,7 +318,10 @@ export function ProductDetailInteractive({
         </div>
       </div>
 
-      <div className="sf-product-info">
+      <div
+        className="sf-product-info"
+        data-selected-variant={selectedVariant?.id}
+      >
         <div className="sf-detail-heading">{header}</div>
 
         <div
@@ -372,71 +383,21 @@ export function ProductDetailInteractive({
 
         {displayedStock <= 0 && (
           <div className="sf-product-stock" aria-live="polite">
-            {stockBadge}
+            {selectedVariant
+              ? locale === "he"
+                ? "הווריאנט שנבחר אזל מהמלאי"
+                : "The selected variant is out of stock"
+              : stockBadge}
           </div>
         )}
 
-        {variants.length > 0 && (
-          <fieldset className="sf-variant-fieldset">
-            <legend>{copy.variants}</legend>
-            <div
-              className="sf-variant-chips"
-              role="radiogroup"
-              aria-label={copy.variants}
-            >
-              {variants.map((variant) => {
-                const isSelected = selectedVariantId === variant.id;
-                const variantName =
-                  (locale === "he" ? variant.colorHe : variant.colorEn) ||
-                  variant.colorHe ||
-                  variant.colorEn ||
-                  variant.sku;
-                const variantPrice =
-                  variant.price !== null
-                    ? formatPrice(variant.price, locale, copy.priceUnpublished)
-                    : null;
-                return (
-                  <label key={variant.id} className="sf-variant-chip-label">
-                    <input
-                      type="radio"
-                      name={`variant-${productId}`}
-                      value={variant.id}
-                      checked={isSelected}
-                      className="sr-only"
-                      onChange={() => setSelectedVariantId(variant.id)}
-                    />
-                    <span
-                      className="sf-variant-chip"
-                      style={
-                        {
-                          "--variant-color": variant.colorHex,
-                        } as React.CSSProperties
-                      }
-                    >
-                      {variant.colorHex ? (
-                        <span
-                          className="sf-variant-swatch"
-                          aria-hidden="true"
-                        />
-                      ) : null}
-                      <span className="sf-variant-name">{variantName}</span>
-                      <span className="sf-variant-stock">
-                        {variant.stockQty}{" "}
-                        {locale === "he" ? "במלאי" : "in stock"}
-                      </span>
-                      {variant.price !== null &&
-                        variant.price !== priceResult.effectivePrice && (
-                          <span className="sf-variant-price-diff">
-                            {variantPrice}
-                          </span>
-                        )}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-        )}
+        <VariantChoices
+          variants={variants}
+          selectedId={selectedVariant?.id ?? null}
+          onSelect={selectVariant}
+          locale={locale}
+          pricing={pricingInputs}
+        />
 
         {description}
 

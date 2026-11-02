@@ -13,6 +13,7 @@ import {
 } from "../ui";
 import { editorCopy, validationCopy, variantCopy } from "./copy";
 import type { Locale, ProductVariant, Supplier } from "./types";
+import { VariantStockControl } from "./variant-stock-control";
 import styles from "./product-editor.module.css";
 
 type VariantForm = {
@@ -26,6 +27,7 @@ type VariantForm = {
   supplier_id: string;
   supplier_sku: string;
   low_stock_threshold: string;
+  initial_stock_qty: string;
   is_active: boolean;
   is_default: boolean;
 };
@@ -41,6 +43,7 @@ const emptyVariantForm: VariantForm = {
   supplier_id: "",
   supplier_sku: "",
   low_stock_threshold: "0",
+  initial_stock_qty: "0",
   is_active: true,
   is_default: false,
 };
@@ -57,6 +60,7 @@ function toVariantForm(variant: ProductVariant): VariantForm {
     supplier_id: variant.supplier_id ?? "",
     supplier_sku: variant.supplier_sku ?? "",
     low_stock_threshold: String(variant.low_stock_threshold ?? 0),
+    initial_stock_qty: "0",
     is_active: variant.is_active,
     is_default: variant.is_default,
   };
@@ -100,6 +104,7 @@ export function VariantsSection({
   >({});
   const [dialogError, setDialogError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [refreshRequired, setRefreshRequired] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<ProductVariant | null>(
     null,
   );
@@ -158,7 +163,7 @@ export function VariantsSection({
   }
 
   async function saveVariant() {
-    if (saving) return;
+    if (saving || refreshRequired) return;
     const errors: Partial<Record<keyof VariantForm, string>> = {};
     if (!form.sku.trim()) {
       errors.sku = variantCopy.skuRequired[locale];
@@ -189,6 +194,16 @@ export function VariantsSection({
       } else {
         threshold = parsed;
       }
+    }
+    const initialStock = Number(form.initial_stock_qty);
+    if (
+      !editing &&
+      (!form.initial_stock_qty.trim() ||
+        !Number.isInteger(initialStock) ||
+        initialStock < 0 ||
+        initialStock > 10000)
+    ) {
+      errors.initial_stock_qty = validationCopy.invalidNumber[locale];
     }
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors);
@@ -237,6 +252,7 @@ export function VariantsSection({
             product_id: productId,
             ...basePayload,
             is_default: form.is_default,
+            initial_stock_qty: initialStock,
           }),
         });
       }
@@ -253,13 +269,24 @@ export function VariantsSection({
           setFieldErrors({ barcode: variantCopy.duplicateBarcode[locale] });
           return;
         }
+        if (response.status >= 500) setRefreshRequired(true);
         setDialogError(err.error || variantCopy.operationFailed[locale]);
         return;
       }
 
+      const confirmation = (await response.json()) as {
+        variant?: ProductVariant;
+      };
+      if (
+        !confirmation.variant?.id ||
+        confirmation.variant.product_id !== productId
+      ) {
+        throw new Error("Unconfirmed variant save");
+      }
       setDialogOpen(false);
       setReloadToken((token) => token + 1);
     } catch {
+      setRefreshRequired(true);
       setDialogError(variantCopy.operationFailed[locale]);
     } finally {
       setSaving(false);
@@ -326,6 +353,20 @@ export function VariantsSection({
         </Notice>
       ) : null}
 
+      <p className={styles.statusNote}>
+        {he
+          ? "מלאי מוצר זמין (סכום הווריאנטים הפעילים):"
+          : "Available product stock (sum of active variants):"}{" "}
+        <strong>
+          {variants
+            .filter((variant) => variant.is_active)
+            .reduce((sum, variant) => sum + variant.stock_qty, 0)}
+        </strong>
+        {" · "}
+        {he
+          ? "כל וריאנט נשמר עם כמות, גם 0. מחיר ריק יורש את תמחור המוצר לפי סוג הלקוח."
+          : "Every variant has a quantity, including 0. An empty price inherits the product price for the customer's role."}
+      </p>
       <DataTable
         caption={variantCopy.tableCaption[locale]}
         isEmpty={variants.length === 0}
@@ -415,7 +456,12 @@ export function VariantsSection({
                 )}
               </td>
               <td>
-                <span className="inline-flex items-center gap-1">
+                <span className="inline-flex flex-wrap items-center gap-1">
+                  <VariantStockControl
+                    variant={variant}
+                    locale={locale}
+                    onSaved={() => setReloadToken((token) => token + 1)}
+                  />
                   <button
                     type="button"
                     className={styles.iconButton}
@@ -467,7 +513,7 @@ export function VariantsSection({
               type="button"
               className="miro-button miro-button-primary"
               onClick={() => void saveVariant()}
-              disabled={saving}
+              disabled={saving || refreshRequired}
               aria-busy={saving || undefined}
             >
               {saving
@@ -479,6 +525,59 @@ export function VariantsSection({
       >
         <div className={styles.sectionStack}>
           {dialogError ? <Notice tone="danger">{dialogError}</Notice> : null}
+          {refreshRequired ? (
+            <Notice tone="danger">
+              {he
+                ? "תוצאת השמירה אינה ודאית. רעננו ובדקו את הווריאנטים לפני פעולה נוספת."
+                : "The save result is uncertain. Refresh and review variants before another operation."}
+              <button
+                type="button"
+                className="miro-button miro-button-secondary"
+                onClick={() => window.location.reload()}
+              >
+                {he ? "רענון ובדיקה" : "Refresh and review"}
+              </button>
+            </Notice>
+          ) : null}
+          {!editing ? (
+            <FormField
+              id="variant-initial-stock"
+              label={
+                he ? "מלאי התחלתי (כולל 0)" : "Initial stock (including 0)"
+              }
+              required
+              error={fieldErrors.initial_stock_qty}
+              description={
+                he
+                  ? "כמות חיובית תירשם כתנועת פתיחה ביומן המלאי יחד עם יצירת הווריאנט."
+                  : "A positive quantity is recorded as an opening movement atomically with variant creation."
+              }
+            >
+              {(control) => (
+                <input
+                  {...control}
+                  type="number"
+                  min="0"
+                  max="10000"
+                  step="1"
+                  inputMode="numeric"
+                  className="miro-input"
+                  value={form.initial_stock_qty}
+                  onChange={(event) =>
+                    setField("initial_stock_qty", event.target.value)
+                  }
+                  disabled={saving || refreshRequired}
+                />
+              )}
+            </FormField>
+          ) : (
+            <p>
+              {he ? "מלאי נוכחי:" : "Current stock:"} {editing.stock_qty} ·{" "}
+              {he
+                ? "עדכון דרך כפתור עדכון מלאי ברשימת הווריאנטים."
+                : "Use Update stock in the variant list to record a correction."}
+            </p>
+          )}
           <div className={styles.fieldGrid}>
             <FormField
               id="variant-sku"

@@ -109,10 +109,12 @@ function uploadFile(
 export function MediaGallery({
   locale,
   productId,
+  variants,
   onImagesChange,
 }: {
   locale: Locale;
   productId: string;
+  variants: import("./types").ProductVariant[];
   onImagesChange?: (images: ProductImage[]) => void;
 }) {
   const he = locale === "he";
@@ -437,6 +439,7 @@ export function MediaGallery({
         const body = (await response.json().catch(() => ({}))) as {
           error?: string;
         };
+        if (response.status >= 500) setNeedsRefresh(true);
         setNotice(body.error || failureNotice);
         // Log storage-related failures for observability
         if (
@@ -450,11 +453,20 @@ export function MediaGallery({
         }
         return false;
       }
+      const confirmation = (await response.json()) as { image?: ProductImage };
+      if (
+        confirmation.image?.id !== id ||
+        ("variant_id" in patch &&
+          confirmation.image.variant_id !== patch.variant_id)
+      ) {
+        throw new Error("Unconfirmed image metadata save");
+      }
       await loadImages();
       announceSaved();
       return true;
     } catch (err) {
-      setNotice(failureNotice);
+      setNeedsRefresh(true);
+      setNotice(mediaCopy.imageWriteUncertain[locale]);
       console.error("[MediaGallery] Patch error:", err);
       return false;
     } finally {
@@ -872,6 +884,11 @@ export function MediaGallery({
           </button>
         ) : null}
       </div>
+      <p className={styles.statusNote}>
+        {he
+          ? "אפשר לשייך כמה תמונות לאותו וריאנט או להשאיר תמונות כלליות. התמונה הראשית נבחרת בנפרד מהשיוך; בחירת וריאנט באתר מציגה את תמונותיו ואת התמונות הכלליות."
+          : "Assign multiple images to one variant or keep general product images. The main image is chosen independently; selecting a variant shows its images and the general images."}
+      </p>
       <p className={styles.statusNote}>{mediaCopy.removalScope[locale]}</p>
 
       {uploads.length > 0 ? (
@@ -965,6 +982,52 @@ export function MediaGallery({
                   />
                 </div>
                 <div className={styles.tileBody}>
+                  <FormField
+                    id={`image-variant-${image.id}`}
+                    label={he ? "שיוך תמונה" : "Image assignment"}
+                  >
+                    {(control) => (
+                      <select
+                        {...control}
+                        className="miro-input"
+                        value={image.variant_id ?? ""}
+                        disabled={mutationsDisabled}
+                        onChange={(event) =>
+                          void patchImage(
+                            image.id,
+                            { variant_id: event.target.value || null },
+                            mediaCopy.imageOperationFailed[locale],
+                          )
+                        }
+                      >
+                        <option value="">
+                          {he ? "כללי — ללא וריאנט" : "General — no variant"}
+                        </option>
+                        {variants
+                          .filter(
+                            (variant) =>
+                              variant.is_active ||
+                              variant.id === image.variant_id,
+                          )
+                          .map((variant) => (
+                            <option
+                              key={variant.id}
+                              value={variant.id}
+                              disabled={!variant.is_active}
+                            >
+                              {(he ? variant.color_he : variant.color_en) ||
+                                variant.sku}{" "}
+                              · {variant.sku}
+                              {!variant.is_active
+                                ? he
+                                  ? " (בארכיון)"
+                                  : " (archived)"
+                                : ""}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+                  </FormField>
                   <button
                     type="button"
                     className={`miro-button miro-button-secondary ${styles.removeBackgroundButton}`}

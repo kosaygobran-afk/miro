@@ -45,6 +45,7 @@ type Variant = {
   is_default: boolean;
   is_active: boolean;
   stock_qty: number;
+  product_stock_qty?: number;
   low_stock_threshold: number;
   reorder_point: number | null;
   reorder_qty: number | null;
@@ -84,6 +85,7 @@ type ReplenishmentItem = {
   product_name_he: string;
   product_name_en: string;
   stock_qty: number;
+  product_stock_qty?: number;
   low_stock_threshold: number;
   reorder_point: number | null;
   reorder_qty: number | null;
@@ -894,6 +896,14 @@ export function InventoryManager({
                           >
                             {variant.stock_qty}
                           </span>
+                          {variant.product_stock_qty !== undefined ? (
+                            <small className="block text-muted-foreground">
+                              {he
+                                ? "סה״כ מוצר זמין:"
+                                : "Available product total:"}{" "}
+                              {variant.product_stock_qty}
+                            </small>
+                          ) : null}
                         </td>
                         <td>{variant.low_stock_threshold}</td>
                         <td>{variant.reorder_point ?? "—"}</td>
@@ -996,6 +1006,12 @@ export function InventoryManager({
                     </div>
                   </div>
                   <div className="inventory-manager__card-body">
+                    {variant.product_stock_qty !== undefined ? (
+                      <p>
+                        {he ? "סה״כ מוצר זמין:" : "Available product total:"}{" "}
+                        {variant.product_stock_qty}
+                      </p>
+                    ) : null}
                     <div className="inventory-manager__card-row">
                       <span className="inventory-manager__card-label">
                         {he ? "ברקוד" : "Barcode"}

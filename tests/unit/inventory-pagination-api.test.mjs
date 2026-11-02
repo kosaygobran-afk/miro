@@ -55,7 +55,7 @@ function load({ authorized = true, data = rows, errorPage = null } = {}) {
     "@/lib/supabase/server": {
       createServerSupabaseClient: async () => ({
         rpc: async (name, args) => {
-          assert.equal(name, "management_inventory_list");
+          assert.equal(name, "management_inventory_variant_list");
           calls.push(args);
           if (args.p_page === errorPage)
             return {

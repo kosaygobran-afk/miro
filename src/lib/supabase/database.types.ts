@@ -438,6 +438,7 @@ export type Database = {
       };
       product_images: {
         Row: {
+          variant_id: string | null;
           original_image_url: string | null;
           alt_en: string | null;
           alt_he: string | null;
@@ -448,6 +449,7 @@ export type Database = {
           sort_order: number;
         };
         Insert: {
+          variant_id?: string | null;
           original_image_url?: string | null;
           alt_en?: string | null;
           alt_he?: string | null;
@@ -458,6 +460,7 @@ export type Database = {
           sort_order?: number;
         };
         Update: {
+          variant_id?: string | null;
           original_image_url?: string | null;
           alt_en?: string | null;
           alt_he?: string | null;
@@ -1101,6 +1104,32 @@ export type Database = {
       };
     };
     Functions: {
+      create_catalog_variant_with_stock: {
+        Args: { p_data: Json };
+        Returns: Database["public"]["Tables"]["product_variants"]["Row"];
+      };
+      update_catalog_image: {
+        Args: { p_id: string; p_patch: Json };
+        Returns: Database["public"]["Tables"]["product_images"]["Row"];
+      };
+      management_inventory_variant_list: {
+        Args: {
+          p_search?: string | null;
+          p_status?: string | null;
+          p_page?: number;
+          p_page_size?: number;
+        };
+        Returns: Json;
+      };
+      adjust_catalog_variant_stock: {
+        Args: {
+          p_variant_id: string;
+          p_counted: number;
+          p_expected: number;
+          p_reason: string;
+        };
+        Returns: string;
+      };
       active_app_role: { Args: never; Returns: string };
       add_ceo: { Args: { account_email: string }; Returns: undefined };
       adjust_stock: {

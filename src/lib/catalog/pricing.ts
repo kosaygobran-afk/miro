@@ -111,9 +111,9 @@ export function getDefaultVariant(
  *
  * Priority order (highest to lowest):
  * 1. variantOverride (explicit test/simulation override)
- * 2. roleOverride (role-based pricing from product_prices table)
- * 3. Selected variant's priceOverride (if selected)
- * 4. Default variant's priceOverride (if exists)
+ * 2. Selected variant's price, or default variant only without a selection
+ * 3. roleOverride (role-based product fallback from product_prices)
+ * 4. No sibling/default price fallback when a variant is selected
  * 5. Base product price
  *
  * After the base effective price is determined, public promotions are applied:
@@ -148,50 +148,38 @@ export function resolvePrice(inputs: PricingInputs): PricingResult {
     return applyPublicPromotion(baseResult, publicPromotion);
   }
 
-  // 2. Role-based price override
-  if (roleOverride !== null) {
-    const baseResult = {
-      effectivePrice: roleOverride,
-      pricingVariant: null,
-      hasRoleOverride: true,
-      hasVariantOverride: false,
-      isVariantPrice: false,
-      publicPromotion: null,
-      compareAtPrice: null,
-    };
-    return applyPublicPromotion(baseResult, publicPromotion);
-  }
-
-  // 3. Selected variant price
-  if (selectedVariantId) {
-    const selectedVariant = variants.find((v) => v.id === selectedVariantId);
-    if (selectedVariant && selectedVariant.price !== null) {
-      const baseResult = {
-        effectivePrice: selectedVariant.price,
-        pricingVariant: selectedVariant,
+  // Explicit selection never inherits the price of a different/default sibling.
+  const pricingVariant = selectedVariantId
+    ? (variants.find((variant) => variant.id === selectedVariantId) ?? null)
+    : getDefaultVariant(variants, defaultVariantId);
+  if (pricingVariant?.price !== null && pricingVariant?.price !== undefined) {
+    return applyPublicPromotion(
+      {
+        effectivePrice: pricingVariant.price,
+        pricingVariant,
         hasRoleOverride: false,
         hasVariantOverride: false,
         isVariantPrice: true,
         publicPromotion: null,
         compareAtPrice: null,
-      };
-      return applyPublicPromotion(baseResult, publicPromotion);
-    }
+      },
+      publicPromotion,
+    );
   }
 
-  // 4. Default variant price
-  const defaultVariant = getDefaultVariant(variants, defaultVariantId);
-  if (defaultVariant && defaultVariant.price !== null) {
-    const baseResult = {
-      effectivePrice: defaultVariant.price,
-      pricingVariant: defaultVariant,
-      hasRoleOverride: false,
-      hasVariantOverride: false,
-      isVariantPrice: true,
-      publicPromotion: null,
-      compareAtPrice: null,
-    };
-    return applyPublicPromotion(baseResult, publicPromotion);
+  if (roleOverride !== null) {
+    return applyPublicPromotion(
+      {
+        effectivePrice: roleOverride,
+        pricingVariant,
+        hasRoleOverride: true,
+        hasVariantOverride: false,
+        isVariantPrice: false,
+        publicPromotion: null,
+        compareAtPrice: null,
+      },
+      publicPromotion,
+    );
   }
 
   // 5. Base product price

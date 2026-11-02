@@ -157,7 +157,7 @@ export default async function ProductDetailPage({
     product.variants.find((v) => v.isDefault) ??
     product.variants.find((v) => v.price !== null) ??
     product.variants[0];
-  const effectivePrice = defaultVariant?.price ?? product.priceIls;
+  const effectivePrice = product.priceIls;
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const productUrl = `${siteUrl}/${locale}/store/${category}/${slug}`;
@@ -233,7 +233,11 @@ export default async function ProductDetailPage({
               productCategory={product.category}
               productName={product.name}
               locale={locale}
-              basePrice={product.basePriceIls ?? product.priceIls}
+              basePrice={
+                product.basePriceIls !== undefined
+                  ? product.basePriceIls
+                  : product.priceIls
+              }
               images={product.images}
               variants={product.variants}
               defaultVariantId={defaultVariant?.id ?? null}

@@ -240,7 +240,8 @@ test("catalogue rows and role prices start while inventory defaults are pending"
   defaultsGate.resolve();
   priceGate.resolve();
   const catalog = await result;
-  assert.equal(catalog.products[0].priceIls, 70);
+  assert.equal(catalog.products[0].priceIls, 90);
+  assert.equal(catalog.products[0].rolePrice, 70);
   assert.equal(catalog.products[0].stockState, "in_stock");
   assert.equal(catalog.products[0].outOfStockPolicy, "keep_visible_contact");
   assert.deepEqual(
@@ -252,7 +253,9 @@ test("catalogue rows and role prices start while inventory defaults are pending"
 });
 
 test("metadata and role-aware page share rows without sharing prices or anonymous reads", async () => {
-  const store = loadStore();
+  const rows = fixtures();
+  rows.product_variants[0].price_override = null;
+  const store = loadStore({ rows });
   const [metadata, page] = await Promise.all([
     store.getStoreCatalog("en"),
     store.getStoreCatalog("he", "ceo"),
@@ -261,7 +264,7 @@ test("metadata and role-aware page share rows without sharing prices or anonymou
     store.started.filter((entry) => entry === "session:products").length,
     1,
   );
-  assert.equal(metadata.products[0].priceIls, 90);
+  assert.equal(metadata.products[0].priceIls, 100);
   assert.equal(page.products[0].priceIls, 70);
   assert.equal(page.products[0].name, "מצלמה");
   await store.getStoreCatalog("en", null, true);
@@ -296,7 +299,7 @@ test("saved-products data starts categories and restricted role prices alongside
   assert.deepEqual(Array.from(prices.filters[1][1]), ["product-1"]);
   priceGate.resolve();
   const result = await pending;
-  assert.equal(result[0].price, 70);
+  assert.equal(result[0].price, 90);
   assert.equal(result[0].imageUrl, "/primary.svg");
   assert.equal(result[0].categoryLabel, "Cameras");
   assert.equal(result[0].category, "cameras");

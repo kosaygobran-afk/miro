@@ -346,3 +346,10 @@ Important notes for future agents:
 - Image-band symmetry: canonical Version 2 cards have equal-height badge and bottom media-tools bands around the photo, with a shared backplate and matching neutral dividers. Keep the page-entry arrow in the lower band as a real link, excluded from preview focus/hold, and keep the photo centered with symmetric insets. Test actual band bounds and navigation in both locales.
 
 - The generated featured label now reads `Collection` / `קולקציה`, including both appearance versions. Version 2 renders it in a 12px bordered gold frame within the badge rail; keep its natural text width and reading-start position instead of shrinking/truncating it.
+
+## Variant media and explicit stock — 2026-11-02
+
+- Read `docs/VARIANT_MEDIA.md` before changing variant media/pricing/stock. Images may be general or assigned to one same-product variant; multiple images are allowed. Main-image ordering is independent. Detail/eye preview use selected images then general images, never sibling media; price, identifiers, stock, quote/cart selection must match. Zero-stock variants remain inspectable and cannot be added to cart.
+- Every variant stores quantity including 0. Opening stock and later corrections use the audited ledger; corrections check expected stock and preserve reservation guards. Available product totals sum all active siblings before pagination/filtering. Never automatically retry an uncertain save.
+- Explicit variant prices precede role/base product fallbacks; promotions use the same resolver. Unpriced selected variants never borrow a sibling's override. Preserve explicit `null` product base prices through component props.
+- The linked database has catalog status/audience/revision/pricing/audit hardening absent from local migration sources (observed during rolled-back preflight). Preserve it. The new functions are additive wrappers around installed legacy RPCs; do not replace those legacy functions using older repository definitions. Engineering/owner must reconcile schema-source drift separately.

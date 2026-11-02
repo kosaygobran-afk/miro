@@ -408,10 +408,10 @@ export const variantCopy = {
   colorHe: { he: "צבע (עברית)", en: "Color (Hebrew)" },
   colorEn: { he: "צבע (אנגלית)", en: "Color (English)" },
   colorHex: { he: "קוד צבע", en: "Color swatch" },
-  priceOverride: { he: "מחיר עקיף (₪)", en: "Price override (₪)" },
+  priceOverride: { he: "מחיר וריאנט (₪)", en: "Price override (₪)" },
   priceOverrideDescription: {
-    he: "ריק = מחיר הבסיס של המוצר.",
-    en: "Empty = the product base price.",
+    he: "מחיר מפורש חל על הווריאנט לכל סוגי הלקוחות. ריק = תמחור המוצר לפי סוג הלקוח. מבצעים חלים כרגיל.",
+    en: "An explicit variant price applies to every customer type. Empty = the product price for the customer role. Promotions still apply.",
   },
   costOverride: { he: "עלות (₪)", en: "Cost (₪)" },
   supplier: { he: "ספק", en: "Supplier" },

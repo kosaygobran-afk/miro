@@ -305,7 +305,9 @@ const getCatalogRows = cache(async (anonymous: boolean) => {
       .abortSignal(signal),
     supabase
       .from("product_images")
-      .select("id, product_id, image_url, alt_he, alt_en, sort_order")
+      .select(
+        "id, product_id, image_url, alt_he, alt_en, sort_order, variant_id",
+      )
       .order("sort_order", { ascending: true })
       .abortSignal(signal),
     supabase
@@ -436,6 +438,7 @@ export async function getStoreCatalog(
         altHe: image.alt_he ?? undefined,
         altEn: image.alt_en ?? undefined,
         sortOrder: image.sort_order ?? 0,
+        variantId: image.variant_id ?? null,
       });
       imagesByProduct.set(image.product_id, list);
     }
@@ -898,7 +901,7 @@ export async function getSavedProductsWithCanonicalData(
           ? Number(defaultVariant.price_override)
           : null;
       const effectivePrice =
-        rolePrices.get(product.id) ?? variantPrice ?? productPrice;
+        variantPrice ?? rolePrices.get(product.id) ?? productPrice;
 
       const stockQty = productVariants.reduce(
         (sum, v) => sum + (v.stock_qty ?? 0),

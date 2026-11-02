@@ -17,6 +17,7 @@ export interface ProductImage {
   altHe?: string;
   altEn?: string;
   sortOrder: number;
+  variantId?: string | null;
 }
 
 export type PromoBadge = {

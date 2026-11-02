@@ -46,7 +46,8 @@ const movementSchema = z.object({
 const adjustSchema = z.object({
   variantId: z.string().uuid(),
   counted: z.number().int().nonnegative(),
-  reason: z.string().min(1).max(500),
+  reason: z.string().trim().min(1).max(500),
+  expectedStock: z.number().int().nonnegative().optional(),
 });
 
 const inventoryListQuerySchema = z.object({
@@ -64,6 +65,14 @@ const inventoryListQuerySchema = z.object({
 
 // Items returned by the management_inventory_list RPC (snake_case jsonb).
 type InventoryListItem = {
+  product_stock_qty: number;
+  color_he: string | null;
+  color_en: string | null;
+  color_hex: string | null;
+  is_active: boolean;
+  product_status: string;
+  tracking_mode: string;
+  out_of_stock_policy: string;
   variant_id: string;
   sku: string;
   barcode: string | null;
@@ -161,7 +170,7 @@ export async function GET(request: Request) {
   // null under the service-role key.
   const client = await createServerSupabaseClient();
   const { data: result, error } = await client.rpc(
-    "management_inventory_list",
+    "management_inventory_variant_list",
     {
       p_search: search || null,
       p_status: rpcStatus,
@@ -182,7 +191,7 @@ export async function GET(request: Request) {
     // An arbitrary offset can straddle two RPC pages. Fill the requested slice
     // with one more bounded, identically filtered actor-context read.
     const { data: next, error: nextError } = await client.rpc(
-      "management_inventory_list",
+      "management_inventory_variant_list",
       {
         p_search: search || null,
         p_status: rpcStatus,
@@ -202,6 +211,11 @@ export async function GET(request: Request) {
       sku: item.sku,
       barcode: item.barcode,
       stock_qty: item.stock_qty,
+      product_stock_qty: item.product_stock_qty,
+      color_he: item.color_he,
+      color_en: item.color_en,
+      color_hex: item.color_hex,
+      is_active: item.is_active,
       low_stock_threshold: item.low_stock_threshold,
       reorder_point: item.reorder_point,
       reorder_qty: item.reorder_qty,
@@ -209,6 +223,9 @@ export async function GET(request: Request) {
       products: {
         id: item.product_id,
         slug: item.product_slug,
+        status: item.product_status,
+        tracking_mode: item.tracking_mode,
+        out_of_stock_policy: item.out_of_stock_policy,
         name_he: item.product_name_he,
         name_en: item.product_name_en,
       },
@@ -277,13 +294,23 @@ export async function PATCH(request: Request) {
   }
 
   const client = await createServerSupabaseClient();
-  const { data: movementId, error } = await client.rpc("adjust_stock", {
+  const args = {
     p_variant_id: parsed.data.variantId,
     p_counted: parsed.data.counted,
     p_reason: parsed.data.reason,
-  });
+  };
+  const { data: movementId, error } =
+    parsed.data.expectedStock === undefined
+      ? await client.rpc("adjust_stock", args)
+      : await client.rpc("adjust_catalog_variant_stock", {
+          ...args,
+          p_expected: parsed.data.expectedStock,
+        });
 
   if (error) {
+    if (error.code === "PT409") {
+      return errorResponse("Stock changed; refresh before saving", 409);
+    }
     if (error.code === "22023") {
       const msg = error.message || "";
       if (msg.includes("No change")) {

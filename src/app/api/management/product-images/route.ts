@@ -35,7 +35,7 @@ const imageSchema = z.object({
   sort_order: z.number().int().default(0),
 });
 
-// PATCH goes through upsert_product_image_meta: alt texts, sort_order and the
+// PATCH uses update_catalog_image; the existing metadata RPC owns alt/order and the
 // is_primary convention (primary = lowest sort_order; the RPC moves this image
 // below the current minimum).
 const imagePatchSchema = z
@@ -45,6 +45,7 @@ const imagePatchSchema = z
     alt_en: z.string().max(300).nullable().optional(),
     sort_order: z.number().int().optional(),
     is_primary: z.boolean().optional(),
+    variant_id: z.string().uuid().nullable().optional(),
   })
   .strict();
 
@@ -225,13 +226,13 @@ export async function PATCH(request: Request) {
   // Self-authorizing RPC (audits as auth.uid()): user-context client required.
   const client = await createServerSupabaseClient();
   const { data: image, error: imageError } = await client.rpc(
-    "upsert_product_image_meta",
+    "update_catalog_image",
     { p_id: id, p_patch: patch },
   );
 
   if (imageError) {
     console.error(
-      "upsert_product_image_meta failed:",
+      "update_catalog_image failed:",
       imageError.code,
       imageError.message,
     );

@@ -9,28 +9,30 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-const variantSchema = z.object({
-  id: z.string().uuid().optional(),
-  product_id: z.string().uuid(),
-  sku: z.string().min(1).max(100),
-  barcode: z.string().max(100).nullable().optional(),
-  color_he: z.string().max(100).nullable().optional(),
-  color_en: z.string().max(100).nullable().optional(),
-  color_hex: z
-    .string()
-    .regex(/^#[0-9A-Fa-f]{6}$/)
-    .nullable()
-    .optional(),
-  price_override: z.number().positive().nullable().optional(),
-  cost_override: z.number().nonnegative().nullable().optional(),
-  supplier_id: z.string().uuid().nullable().optional(),
-  supplier_sku: z.string().max(100).nullable().optional(),
-  is_default: z.boolean().default(false),
-  is_active: z.boolean().default(true),
-  low_stock_threshold: z.number().int().nonnegative().default(0),
-  reorder_point: z.number().int().nonnegative().nullable().optional(),
-  reorder_qty: z.number().int().nonnegative().nullable().optional(),
-});
+const variantSchema = z
+  .object({
+    initial_stock_qty: z.number().int().min(0).max(10000).default(0),
+    product_id: z.string().uuid(),
+    sku: z.string().min(1).max(100),
+    barcode: z.string().max(100).nullable().optional(),
+    color_he: z.string().max(100).nullable().optional(),
+    color_en: z.string().max(100).nullable().optional(),
+    color_hex: z
+      .string()
+      .regex(/^#[0-9A-Fa-f]{6}$/)
+      .nullable()
+      .optional(),
+    price_override: z.number().positive().nullable().optional(),
+    cost_override: z.number().nonnegative().nullable().optional(),
+    supplier_id: z.string().uuid().nullable().optional(),
+    supplier_sku: z.string().max(100).nullable().optional(),
+    is_default: z.boolean().default(false),
+    is_active: z.boolean().default(true),
+    low_stock_threshold: z.number().int().nonnegative().default(0),
+    reorder_point: z.number().int().nonnegative().nullable().optional(),
+    reorder_qty: z.number().int().positive().nullable().optional(),
+  })
+  .strict();
 
 // PATCH payload for public.update_variant(p_id, p_patch): exactly the RPC
 // whitelist (reorder_point/reorder_qty are intentionally not editable there;
@@ -139,7 +141,7 @@ export async function POST(request: Request) {
 
   const client = await createServerSupabaseClient();
   const { data: variant, error: variantError } = await client.rpc(
-    "create_catalog_variant",
+    "create_catalog_variant_with_stock",
     { p_data: parsed.data },
   );
 
