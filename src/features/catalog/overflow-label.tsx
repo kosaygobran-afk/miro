@@ -3,7 +3,15 @@ import { useAnimationFeature } from "@/components/motion/animation-provider";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { useReducedMotion } from "@/features/store-design/use-reduced-motion";
 /** Display text only: never use around inputs, editable fields or textareas. */
-export function OverflowLabel({ children }: { children: string }) {
+export function OverflowLabel({
+  children,
+  activation = "auto",
+  direction: suppliedDirection,
+}: {
+  children: string;
+  activation?: "auto" | "hover";
+  direction?: "ltr" | "rtl";
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const textRef = useRef<HTMLSpanElement>(null);
   const [measurement, setMeasurement] = useState({ distance: 0, width: 0 });
@@ -29,12 +37,17 @@ export function OverflowLabel({ children }: { children: string }) {
   const railsEnabled = useAnimationFeature("textRails");
   const moving = measurement.distance > 2 && !reduced && railsEnabled;
   const firstLetter = children.match(/[A-Za-z\u0590-\u08ff]/)?.[0] ?? "A";
-  const direction = /[\u0590-\u08ff]/.test(firstLetter) ? "rtl" : "ltr";
+  const direction =
+    suppliedDirection ?? (/[\u0590-\u08ff]/.test(firstLetter) ? "rtl" : "ltr");
   return (
     <span
       ref={ref}
       className="sf-overflow-label"
       data-overflow={moving || undefined}
+      data-activation={activation === "hover" ? "hover" : undefined}
+      data-static={
+        (activation === "hover" && (reduced || !railsEnabled)) || undefined
+      }
       dir={direction}
       title={children}
       style={

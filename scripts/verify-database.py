@@ -49,6 +49,7 @@ with tempfile.TemporaryDirectory(prefix="miro-db-tests-") as directory:
             run(sql + ["-f", str(migration)])
             print("PASS migration", migration.name)
         runpy.run_path(str(root / "supabase/tests/pos_concurrency.py"))["verify_pos_concurrency"](sql, run)
+        runpy.run_path(str(root / "supabase/tests/optional_offers_concurrency.py"))["verify_optional_offers_concurrency"](sql, run)
         for test in sorted((root / "supabase/tests").glob("*.sql")):
             run(sql + ["-f", str(test)])
             print("PASS test", test.name)

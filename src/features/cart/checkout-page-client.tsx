@@ -5,9 +5,15 @@ import Link from "@/components/motion/motion-link";
 import { CheckCircle2, LockKeyhole, ShoppingBag } from "lucide-react";
 import { useCart } from "@/features/cart/cart-context";
 import { cartCopy } from "@/features/cart/cart-copy";
-import { formatPrice } from "@/lib/catalog/pricing";
 import { withLocale } from "@/lib/i18n";
 import { CartSkeleton } from "./cart-skeleton";
+import {
+  cartLineId,
+  cartUnitTotal,
+  checkoutCartLines,
+  MAX_CHECKOUT_LINES,
+  formatCartPrice as formatPrice,
+} from "./cart-items";
 
 type CheckoutFields = {
   name: string;
@@ -38,12 +44,19 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const eligibilityKey = JSON.stringify(
-    items.map((item) => [item.productId, item.variantId, item.quantity]),
-  );
+  const eligibilityKey = JSON.stringify(checkoutCartLines(items));
+  const lineLimitExceeded =
+    checkoutCartLines(items).length > MAX_CHECKOUT_LINES;
   const [onlineSelection, setOnlineSelection] = useState<{
     key: string;
-    items: { variant_id: string; quantity: number }[];
+    items: {
+      variant_id: string;
+      quantity: number;
+      line_id?: string;
+      offer_id?: string;
+      parent_line_id?: string;
+      offer_revision?: number;
+    }[];
   } | null>(null);
   const onlineItems =
     onlineSelection?.key === eligibilityKey ? onlineSelection.items : null;
@@ -56,17 +69,14 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
   }, []);
 
   useEffect(() => {
-    if (!hydrated || !items.length) return;
+    if (!hydrated || !items.length || lineLimitExceeded) return;
     const controller = new AbortController();
     void fetch("/api/commerce/eligibility", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        items: items.map((item) => ({
-          product_id: item.productId,
-          variant_id: item.variantId,
-          quantity: item.quantity,
-        })),
+        locale,
+        items: checkoutCartLines(items),
       }),
       signal: controller.signal,
     })
@@ -83,7 +93,7 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
         if (!controller.signal.aborted) setOnlineSelection(null);
       });
     return () => controller.abort();
-  }, [hydrated, items, eligibilityKey]);
+  }, [hydrated, items, eligibilityKey, locale, lineLimitExceeded]);
 
   function setField(name: keyof CheckoutFields, value: string) {
     setFields((current) => ({ ...current, [name]: value }));
@@ -92,6 +102,11 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (submitting || items.length === 0) return;
+    if (lineLimitExceeded) {
+      setError(copy.tooManyLines);
+      requestAnimationFrame(() => statusRef.current?.focus());
+      return;
+    }
 
     const required = [
       fields.name,
@@ -166,6 +181,8 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
             name: item.name,
             unitPrice: item.unitPrice,
             quantity: item.quantity,
+            lineId: cartLineId(item),
+            optionalOffers: item.optionalOffers,
           })),
           shipping: {
             address: fields.address,
@@ -251,6 +268,12 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
             ) : null}
           </div>
         </header>
+
+        {lineLimitExceeded ? (
+          <p className="sf-cart-limit-note" role="status">
+            {copy.tooManyLines}
+          </p>
+        ) : null}
 
         <div className="sf-checkout-layout">
           <form className="sf-checkout-form" onSubmit={handleSubmit} noValidate>
@@ -372,7 +395,7 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
             <button
               type="submit"
               className="miro-button miro-button-primary sf-checkout-submit"
-              disabled={submitting}
+              disabled={submitting || lineLimitExceeded}
             >
               {submitting
                 ? copy.submitting
@@ -392,12 +415,23 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
             <h2>{copy.summary}</h2>
             <ul>
               {items.map((item) => (
-                <li key={`${item.productId}:${item.variantId ?? "default"}`}>
+                <li key={cartLineId(item)}>
                   <span>
                     {item.name} × {item.quantity}
+                    {item.optionalOffers?.map((offer) => (
+                      <small className="sf-checkout-option" key={offer.id}>
+                        + {offer.label || offer.name}:{" "}
+                        {formatPrice(offer.unitPrice, locale, "—")} ×{" "}
+                        {item.quantity}
+                      </small>
+                    ))}
                   </span>
                   <strong>
-                    {formatPrice(item.unitPrice * item.quantity, locale, "—")}
+                    {formatPrice(
+                      cartUnitTotal(item) * item.quantity,
+                      locale,
+                      "—",
+                    )}
                   </strong>
                 </li>
               ))}

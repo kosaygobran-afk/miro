@@ -47,6 +47,7 @@ export const sectionLabels = {
   content: { he: "תוכן", en: "Content" },
   media: { he: "מדיה", en: "Media" },
   variants: { he: "וריאנטים", en: "Variants" },
+  optional_offers: { he: "מוצרים משלימים ונלווים", en: "Optional products" },
   inventory: { he: "מלאי", en: "Inventory" },
   pricing: { he: "תמחור", en: "Pricing" },
   seo: { he: "SEO", en: "SEO" },
@@ -71,6 +72,10 @@ export const sectionDescriptions: Record<EditorSection, LocalizedText> = {
   variants: {
     he: "וריאנטי מוצר עם מק״ט, ברקוד, צבע ותמחור עקיף.",
     en: "Product variants with SKU, barcode, color and price overrides.",
+  },
+  optional_offers: {
+    he: "בחירת מוצרים אמיתיים מהקטלוג, סדר הצגתם ותמחורם לצד המוצר הזה.",
+    en: "Choose real catalog products, their display order and pricing alongside this product.",
   },
   inventory: {
     he: "מלאי נוכחי לכל וריאנט. שינויי מלאי מתבצעים בעמוד המלאי.",
@@ -467,4 +472,119 @@ export const priceCopy = {
     en: "Price must be greater than 0",
   },
   noPriceSet: { he: "לא הוגדר", en: "Not set" },
+} as const satisfies Record<string, LocalizedText>;
+
+export const optionalOfferCopy = {
+  complementary: { he: "מוצרים משלימים", en: "Complementary products" },
+  accompanying: { he: "מוצרים נלווים", en: "Accompanying products" },
+  complementaryDescription: {
+    he: "מוצגים ראשונים מתחת לווריאנטים בעמוד המוצר. הבחירה של הלקוח היא אופציונלית.",
+    en: "Shown first beneath the variants on the product page. Customer selection is optional.",
+  },
+  accompanyingDescription: {
+    he: "מוצגים אחרי המוצרים המשלימים בעמוד המוצר.",
+    en: "Shown after complementary products on the product page.",
+  },
+  rule: {
+    he: "התמחור הזה חל רק ברכישה יחד עם המוצר הראשי: יחידה מוצעת אחת לכל יחידה שלו. ההנחה מחושבת ממחיר הקטלוג הנוכחי של הלקוח. השינויים נשמרים בכפתור השמירה הראשי.",
+    en: "These prices apply only with the parent product: one offered unit per parent unit. Percentage discounts use the customer’s current catalog price. Use the main Save button to save these changes.",
+  },
+  empty: {
+    he: "עדיין לא הוגדרו מוצרים בקבוצה הזו.",
+    en: "No products configured in this group yet.",
+  },
+  add: { he: "הוספת מוצר", en: "Add product" },
+  choose: { he: "בחירת מוצר ווריאנט", en: "Choose product and variant" },
+  change: { he: "החלפת מוצר או וריאנט", en: "Change product or variant" },
+  unnamed: { he: "מוצר חדש לבחירה", en: "New product selection" },
+  remove: { he: "הסרת השורה", en: "Remove row" },
+  up: { he: "הזזה למעלה", en: "Move up" },
+  down: { he: "הזזה למטה", en: "Move down" },
+  active: { he: "הצגת ההצעה באתר", en: "Show this offer on the website" },
+  labelHe: { he: "כותרת בעברית (לא חובה)", en: "Hebrew label (optional)" },
+  labelEn: { he: "כותרת באנגלית (לא חובה)", en: "English label (optional)" },
+  labelHint: {
+    he: "ללא כותרת מותאמת יוצג שם המוצר.",
+    en: "Leave blank to use the product name.",
+  },
+  pricing: { he: "שיטת תמחור", en: "Pricing method" },
+  catalog: { he: "מחיר הקטלוג הנוכחי", en: "Current catalog price" },
+  percent: { he: "הנחה באחוזים", en: "Percentage discount" },
+  fixed: { he: "מחיר קבוע בש״ח", en: "Fixed price in ILS" },
+  discount: { he: "אחוז הנחה", en: "Discount percentage" },
+  discountHint: {
+    he: "בין 0.01% ל־95%, עד שתי ספרות אחרי הנקודה.",
+    en: "From 0.01% to 95%, with up to two decimal places.",
+  },
+  fixedAmount: { he: "מחיר ליחידה בש״ח", en: "Unit price in ILS" },
+  fixedHint: {
+    he: "מחיר חיובי עד 1,000,000 ש״ח, עד שתי ספרות אחרי הנקודה.",
+    en: "A positive amount up to ILS 1,000,000, with up to two decimal places.",
+  },
+  chooseFirst: {
+    he: "יש לבחור מוצר אמיתי ווריאנט פעיל עבור כל שורה.",
+    en: "Choose a real product and an active variant for every row.",
+  },
+  self: {
+    he: "לא ניתן להוסיף את המוצר הזה לעצמו.",
+    en: "A product cannot offer itself.",
+  },
+  duplicate: {
+    he: "הווריאנט הזה כבר נבחר באחת הקבוצות. בחרו וריאנט אחר.",
+    en: "This variant is already selected in one of the groups. Choose another variant.",
+  },
+  labelLong: {
+    he: "כותרות מותאמות מוגבלות ל־160 תווים.",
+    en: "Custom labels are limited to 160 characters.",
+  },
+  invalidDiscount: {
+    he: "יש להזין אחוז בין 0.01 ל־95, עד שתי ספרות אחרי הנקודה.",
+    en: "Enter a percentage from 0.01 to 95, with up to two decimal places.",
+  },
+  invalidFixed: {
+    he: "יש להזין מחיר חיובי עד 1,000,000 ש״ח, עד שתי ספרות אחרי הנקודה.",
+    en: "Enter a positive ILS amount up to 1,000,000, with up to two decimal places.",
+  },
+  searchTitle: { he: "בחירת מוצר מהקטלוג", en: "Choose a catalog product" },
+  searchDescription: {
+    he: "חפשו לפי שם, מק״ט או כתובת המוצר ובחרו וריאנט פעיל. הוספה כאן אינה משנה מלאי או מחיר קטלוג.",
+    en: "Search by name, SKU or product slug and choose an active variant. Adding here does not change stock or catalog prices.",
+  },
+  search: { he: "חיפוש מוצר", en: "Search products" },
+  searching: { he: "מחפש מוצרים…", en: "Searching products…" },
+  loadingVariants: { he: "טוען וריאנטים…", en: "Loading variants…" },
+  noResults: {
+    he: "לא נמצאו מוצרים מתאימים.",
+    en: "No matching products found.",
+  },
+  loadFailed: {
+    he: "לא ניתן לטעון מוצרים כרגע. נסו לטעון שוב.",
+    en: "Products could not be loaded. Try loading again.",
+  },
+  noVariants: {
+    he: "למוצר הזה אין כרגע וריאנטים פעילים לבחירה.",
+    en: "This product has no active variants to choose from.",
+  },
+  variant: { he: "וריאנט פעיל", en: "Active variant" },
+  selectVariant: { he: "בחרו וריאנט", en: "Choose a variant" },
+  useVariant: { he: "שימוש בווריאנט הזה", en: "Use this variant" },
+  stock: { he: "יחידות במלאי", en: "units in stock" },
+  conflict: {
+    he: "המוצרים המקושרים השתנו מאז הטעינה. הטיוטה שלכם נשמרה במסך. טענו את הגרסה השמורה ובדקו אותה לפני שמירה נוספת.",
+    en: "Linked products changed since loading. Your draft is still on screen. Reload and review the saved version before saving again.",
+  },
+  uncertain: {
+    he: "לא ניתן לאשר את תוצאת השמירה. הטיוטה נשארה במסך. טענו את הגרסה השמורה לפני ניסיון נוסף.",
+    en: "The save result could not be confirmed. Your draft remains on screen. Reload the saved version before another attempt.",
+  },
+  reload: { he: "טעינת ההצעות השמורות", en: "Reload saved offers" },
+  reloadTitle: { he: "לטעון את ההצעות השמורות?", en: "Reload saved offers?" },
+  reloadDescription: {
+    he: "הפעולה תחליף רק את טיוטת המוצרים המשלימים והנלווים בגרסה השמורה העדכנית. שינויים בשאר שדות המוצר יישארו במסך.",
+    en: "This replaces only the optional-product draft with the latest saved version. Other unsaved product fields stay on screen.",
+  },
+  reloadFailed: {
+    he: "לא ניתן לטעון את הגרסה השמורה. הטיוטה שלכם לא השתנתה.",
+    en: "The saved version could not be loaded. Your draft has not changed.",
+  },
 } as const satisfies Record<string, LocalizedText>;

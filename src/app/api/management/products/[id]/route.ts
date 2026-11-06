@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { optionalOffersProjectionSchema } from "@/lib/catalog/product-options-schema";
 import {
   withManagementAuth,
   errorResponse,
@@ -54,5 +56,20 @@ export async function GET(
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
 
-  return NextResponse.json({ product });
+  const client = await createServerSupabaseClient();
+  const optionsResult = await client.rpc(
+    "management_read_product_optional_offers",
+    { p_product_id: id },
+  );
+  if (optionsResult.error) return mapPostgresError(optionsResult.error);
+  const options = optionalOffersProjectionSchema.safeParse(optionsResult.data);
+  if (!options.success)
+    return errorResponse("Product options are unavailable", 503);
+  return NextResponse.json({
+    product: {
+      ...product,
+      optional_offers: options.data.offers,
+      optional_offers_revision: options.data.revision,
+    },
+  });
 }

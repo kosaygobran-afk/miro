@@ -16,6 +16,10 @@ type CardKind = "grid" | "rail";
 type Point = { x: number; y: number };
 const gesturePages = new WeakSet<Page>();
 
+test.beforeEach(async ({ page }) => {
+  await page.route("**/api/track", (route) => route.fulfill({ status: 204 }));
+});
+
 function productCard(page: Page, kind: CardKind) {
   return kind === "grid"
     ? page.locator(".sf-product-card").first()
@@ -156,7 +160,23 @@ async function touchPage(browser: Browser, locale: "en" | "he", width: number) {
     viewport: { width, height: width < 500 ? 900 : 1180 },
   });
   const page = await context.newPage();
+  await page.route("**/api/track", (route) => route.fulfill({ status: 204 }));
   await ready(page, locale);
+  // A compositor-driven rail keeps moving even when the JS clock is paused.
+  // Stop decorative motion through its real setting before targeting a hold.
+  await page.evaluate(
+    (detail) =>
+      window.dispatchEvent(
+        new CustomEvent("miro-animation-settings-change", { detail }),
+      ),
+    {
+      ...DEFAULT_ANIMATION_SETTINGS,
+      features: {
+        ...DEFAULT_ANIMATION_SETTINGS.features,
+        ambientMotion: false,
+      },
+    },
+  );
   // Pause after hydration so the 499/500ms boundary is measured exactly.
   await page.clock.install({ time: new Date("2026-10-11T00:00:00Z") });
   await page.clock.pauseAt(new Date("2026-10-11T00:01:00Z"));
@@ -166,7 +186,7 @@ async function touchPage(browser: Browser, locale: "en" | "he", width: number) {
 }
 
 for (const locale of ["en", "he"] as const) {
-  test(`${locale}: grid and rail have four distinct sections and subtle dividers`, async ({
+  test(`${locale}: grid and rail separate purchase details, identifiers and actions`, async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 1100 });
@@ -174,29 +194,35 @@ for (const locale of ["en", "he"] as const) {
     for (const kind of ["grid", "rail"] as const) {
       const card = productCard(page, kind);
       const sections = card.locator("[data-product-section]");
-      await expect(sections).toHaveCount(4);
+      await expect(sections).toHaveCount(5);
       expect(
         await sections.evaluateAll((elements) =>
           elements.map((element) =>
             element.getAttribute("data-product-section"),
           ),
         ),
-      ).toEqual(["image", "details", "pricing", "actions"]);
+      ).toEqual(["image", "identifiers", "details", "pricing", "actions"]);
       const source = card.locator('[data-preview-source="true"]');
       await expect(source).toHaveCount(1);
       await expect(
         source.locator('[data-product-section="actions"]'),
       ).toHaveCount(0);
       expect(
-        await sections.evaluateAll((elements) =>
-          elements.slice(1).every((element, index) => {
-            const previous = elements[index];
+        await sections.evaluateAll((elements) => {
+          // The compact price panel follows the summary and owns its top divider.
+          const regions = elements.map((element) =>
+            element.getAttribute("data-product-section") === "pricing"
+              ? element.closest(".sf-card-media-tools")!
+              : element,
+          );
+          return regions.slice(1).every((element, index) => {
+            const previous = regions[index];
             return (
               parseFloat(getComputedStyle(element).borderTopWidth) > 0 ||
               parseFloat(getComputedStyle(previous).borderBottomWidth) > 0
             );
-          }),
-        ),
+          });
+        }),
       ).toBe(true);
     }
   });
@@ -210,8 +236,15 @@ for (const kind of ["grid", "rail"] as const) {
     test.skip(isMobile, "Desktop hover requires a fine pointer");
     await page.setViewportSize({ width: 1440, height: 1100 });
     await ready(page, "en");
+    if (kind === "rail") {
+      // Pause through the real control so pointer targets remain stable.
+      await page.locator(".sf-moving-rail-toggle").first().click();
+      await expect(
+        page.locator(".sf-moving-rail-viewport").first(),
+      ).toHaveAttribute("data-paused", "true");
+    }
     const card = productCard(page, kind);
-    for (const section of ["image", "details", "pricing"] as const) {
+    for (const section of ["image", "details"] as const) {
       await card.locator(`[data-product-section="${section}"]`).hover();
       await page.waitForTimeout(400);
       if (PRODUCT_PREVIEW_HOVER_ENABLED) {
@@ -224,6 +257,15 @@ for (const kind of ["grid", "rail"] as const) {
         await expect(card).not.toHaveAttribute("data-preview-intent", "true");
         await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
       }
+    }
+    for (const target of [
+      card.locator('[data-product-section="pricing"]'),
+      card.locator(".sf-card-meta-band"),
+    ]) {
+      await target.hover();
+      await page.waitForTimeout(400);
+      await expect(card).not.toHaveAttribute("data-preview-intent", "true");
+      await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
     }
     await card.locator('[data-product-section="actions"]').hover();
     await page.waitForTimeout(400);
@@ -321,20 +363,22 @@ test("a 320×240 fine-pointer viewport keeps compact details, close and original
     const actions = cardElement.querySelector(
       '[data-product-section="actions"]',
     )!;
-    cardElement.style.top = `${100 - actions.getBoundingClientRect().top}px`;
+    // The optional identifier block now follows the preview-eligible details.
+    // Keep those details visible above the actions in this short-window fixture.
+    cardElement.style.top = `${200 - actions.getBoundingClientRect().top}px`;
   });
   const actions = card.locator('[data-product-section="actions"]');
   await expect
     .poll(async () => (await actions.boundingBox())!.y)
-    .toBeCloseTo(100, 0);
-  const pricing = card.locator('[data-product-section="pricing"]');
-  const box = (await pricing.boundingBox())!;
+    .toBeCloseTo(200, 0);
+  const sourceDetails = card.locator('[data-product-section="details"]');
+  const box = (await sourceDetails.boundingBox())!;
   const hoverPoint = {
     x: box.x + box.width / 2,
     y: Math.max(24, Math.min(76, box.y + box.height - 16)),
   };
   expect(
-    await pricing.evaluate((element, point) => {
+    await sourceDetails.evaluate((element, point) => {
       const hit = document.elementFromPoint(point.x, point.y);
       return hit !== null && element.contains(hit);
     }, hoverPoint),

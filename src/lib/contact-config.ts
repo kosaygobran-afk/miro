@@ -52,6 +52,7 @@ const readPublicContactConfig = cachePublicPresentation(
     if (error) throw error;
     return rpcConfigSchema.parse(data);
   },
+  { refresh: "blocking" },
 );
 
 export type PublicContactConfig = {
@@ -119,8 +120,10 @@ export const getPublicContactConfig = cache(
     if (!(envPhone && envWhatsapp && envEmail)) {
       try {
         rpc = await readPublicContactConfig();
-      } catch (error) {
-        console.error("get_public_contact_config RPC failed", error);
+      } catch {
+        // This is an optional public read. Raw RPC/transport errors must not be
+        // forwarded to the browser's RSC error overlay or expose their details.
+        console.warn("Public contact configuration unavailable.");
       }
     }
 

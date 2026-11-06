@@ -6,6 +6,20 @@ import { runInNewContext } from "node:vm";
 import ts from "typescript";
 
 const nativeRequire = createRequire(import.meta.url);
+const optionalOfferSchemas = {};
+runInNewContext(
+  ts.transpileModule(
+    await readFile(
+      new URL(
+        "../../src/lib/catalog/product-options-schema.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+    { compilerOptions: { module: ts.ModuleKind.CommonJS } },
+  ).outputText,
+  { exports: optionalOfferSchemas, require: nativeRequire },
+);
 const categoryErrors = {};
 runInNewContext(
   ts.transpileModule(
@@ -110,11 +124,19 @@ async function loadRoute(
   const actorClient = {
     rpc: async (name, args) => {
       calls.rpc.push({ name, args });
-      return { data: rpcError ? null : product, error: rpcError };
+      return {
+        data: rpcError
+          ? null
+          : name === "management_read_product_optional_offers"
+            ? { revision: 0, offers: [] }
+            : product,
+        error: rpcError,
+      };
     },
   };
   const imports = {
     "@/lib/catalog/category-errors": categoryErrors,
+    "@/lib/catalog/product-options-schema": optionalOfferSchemas,
     "next/server": { NextResponse: Response },
     "next/cache": {
       revalidatePath: (...args) => calls.revalidated.push(args),

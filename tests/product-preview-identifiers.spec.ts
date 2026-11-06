@@ -59,7 +59,9 @@ for (const locale of ["en", "he"] as const) {
             .evaluateAll((nodes) =>
               nodes.map((node) => ({
                 kind: node.getAttribute("data-product-identifier"),
-                value: node.querySelector("dd")!.textContent!.trim(),
+                value: node
+                  .querySelector(".sf-label-copy")!
+                  .textContent!.trim(),
               })),
             );
           const trigger = card.locator(".sf-product-quick-preview");

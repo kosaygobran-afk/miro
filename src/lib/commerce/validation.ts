@@ -41,6 +41,57 @@ export const intentItemSchema = z
   })
   .strict();
 
+export const checkoutOfferContextFields = {
+  line_id: z
+    .string()
+    .min(1)
+    .max(160)
+    .regex(/^[A-Za-z0-9:_-]+$/)
+    .optional(),
+  offer_id: id.optional(),
+  parent_line_id: z
+    .string()
+    .min(1)
+    .max(160)
+    .regex(/^[A-Za-z0-9:_-]+$/)
+    .optional(),
+  offer_revision: revision.optional(),
+};
+
+export function validateCheckoutOfferContext(
+  item: {
+    line_id?: string;
+    offer_id?: string;
+    parent_line_id?: string;
+    offer_revision?: number;
+  },
+  context: z.RefinementCtx,
+) {
+  const hasOffer =
+    item.offer_id !== undefined ||
+    item.parent_line_id !== undefined ||
+    item.offer_revision !== undefined;
+  if (
+    hasOffer &&
+    (!item.line_id ||
+      !item.offer_id ||
+      !item.parent_line_id ||
+      item.offer_revision === undefined ||
+      item.line_id === item.parent_line_id)
+  )
+    context.addIssue({
+      code: "custom",
+      path: ["offer_id"],
+      message: "Complete offer and parent context required",
+    });
+}
+
+export const publicCheckoutItemSchema = intentItemSchema
+  .omit({ discount_per_unit_agorot: true })
+  .extend(checkoutOfferContextFields)
+  .strict()
+  .superRefine(validateCheckoutOfferContext);
+
 export const createIntentSchema = z
   .object({
     channel: z.enum(["pos", "website"]),
@@ -54,10 +105,7 @@ export const createIntentSchema = z
 export const createPublicIntentSchema = createIntentSchema
   .omit({ channel: true })
   .extend({
-    items: z
-      .array(intentItemSchema.omit({ discount_per_unit_agorot: true }))
-      .min(1)
-      .max(100),
+    items: z.array(publicCheckoutItemSchema).min(1).max(100),
     customer_snapshot: customerSnapshotSchema.omit({ customer_id: true }),
     locale: z.enum(["he", "en"]).default("he"),
   })

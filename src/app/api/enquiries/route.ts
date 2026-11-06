@@ -4,6 +4,10 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { hasSameOrigin } from "@/lib/request-origin";
 import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
 import { resolvePrice } from "@/lib/catalog/pricing";
+import {
+  OptionalOfferCartChanged,
+  resolveCartOptionalOffers,
+} from "@/lib/catalog/product-options-cart-server";
 
 const SOURCE_VALUES = [
   "contact_page",
@@ -12,6 +16,23 @@ const SOURCE_VALUES = [
   "checkout_page",
 ] as const;
 
+const optionalCartOfferSchema = z
+  .object({
+    id: z.string().uuid(),
+    revision: z.number().int().nonnegative(),
+    kind: z.enum(["complementary", "accompanying"]),
+    label: z.string().max(300),
+    productId: z.string().uuid(),
+    variantId: z.string().uuid(),
+    name: z.string().min(1).max(300),
+    sku: z.string().max(200),
+    slug: z.string().min(1).max(200),
+    category: z.string().max(200),
+    imageUrl: z.string().max(2000).nullable(),
+    unitPrice: z.number().finite().positive(),
+  })
+  .strict();
+
 const checkoutCartItemSchema = z.object({
   productId: z.string().uuid(),
   variantId: z.string().uuid(),
@@ -19,6 +40,13 @@ const checkoutCartItemSchema = z.object({
   name: z.string().min(1).max(300),
   unitPrice: z.number().finite().nonnegative(),
   quantity: z.number().int().min(1).max(99),
+  lineId: z
+    .string()
+    .min(1)
+    .max(120)
+    .regex(/^[A-Za-z0-9:_-]+$/)
+    .optional(),
+  optionalOffers: z.array(optionalCartOfferSchema).max(99).optional(),
 });
 
 const shippingSchema = z.object({
@@ -198,21 +226,74 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerSupabaseClient();
     const rateLimitKey = buildRateLimitKey(ip);
     const phone = data.phone?.trim() || null;
-    let verifiedCart: typeof data.cart;
+    let verifiedCart:
+      | Array<{
+          productId: string;
+          variantId: string;
+          slug: string;
+          name: string;
+          unitPrice: number;
+          quantity: number;
+          lineId?: string;
+          offerId?: string;
+          parentLineId?: string;
+          offerRevision?: number;
+          offerKind?: "complementary" | "accompanying";
+          label?: string;
+        }>
+      | undefined;
     if (data.source === "checkout_page" && data.cart) {
       const viewer = await getStoreViewer();
       const catalog = await getStoreCatalog(data.locale, viewer.role);
+      if (catalog.error) return failureResponse("unavailable", 503, locale);
+      const requestedLines = data.cart.flatMap((item) => {
+        const lineId = item.lineId ?? `${item.productId}:${item.variantId}`;
+        return [
+          {
+            line_id: lineId,
+            product_id: item.productId,
+            variant_id: item.variantId,
+            quantity: item.quantity,
+            slug: item.slug,
+            offer_id: undefined as string | undefined,
+            parent_line_id: undefined as string | undefined,
+            offer_revision: undefined as number | undefined,
+          },
+          ...(item.optionalOffers ?? []).map((offer) => ({
+            line_id: `${lineId}:${offer.id}`,
+            product_id: offer.productId,
+            variant_id: offer.variantId,
+            quantity: item.quantity,
+            slug: offer.slug,
+            offer_id: offer.id,
+            parent_line_id: lineId,
+            offer_revision: offer.revision,
+          })),
+        ];
+      });
+      let optionalOffers;
+      try {
+        optionalOffers = await resolveCartOptionalOffers(
+          requestedLines,
+          catalog.products,
+          data.locale,
+        );
+      } catch (error) {
+        if (error instanceof OptionalOfferCartChanged)
+          return failureResponse("cart_changed", 409, locale);
+        throw error;
+      }
       const requestedByVariant = new Map<string, number>();
       verifiedCart = [];
-      for (const item of data.cart) {
+      for (const item of requestedLines) {
         const product = catalog.products.find(
-          (entry) => entry.id === item.productId,
+          (entry) => entry.id === item.product_id,
         );
         const variant = product?.variants.find(
-          (entry) => entry.id === item.variantId,
+          (entry) => entry.id === item.variant_id,
         );
         const requested =
-          (requestedByVariant.get(item.variantId) ?? 0) + item.quantity;
+          (requestedByVariant.get(item.variant_id) ?? 0) + item.quantity;
         if (
           !product ||
           !variant ||
@@ -221,17 +302,20 @@ export async function POST(request: NextRequest) {
         ) {
           return failureResponse("cart_changed", 409, locale);
         }
-        requestedByVariant.set(item.variantId, requested);
-        const price = resolvePrice({
-          basePrice: product.basePriceIls ?? product.priceIls,
-          variants: product.variants,
-          selectedVariantId: variant.id,
-          defaultVariantId:
-            product.variants.find((entry) => entry.isDefault)?.id ?? null,
-          roleOverride: product.rolePrice ?? null,
-          variantOverride: null,
-          publicPromotion: product.publicPromotion ?? null,
-        }).effectivePrice;
+        requestedByVariant.set(item.variant_id, requested);
+        const selectedOffer = optionalOffers.get(item.line_id);
+        const price = selectedOffer
+          ? selectedOffer.unitPrice
+          : resolvePrice({
+              basePrice: product.basePriceIls ?? product.priceIls,
+              variants: product.variants,
+              selectedVariantId: variant.id,
+              defaultVariantId:
+                product.variants.find((entry) => entry.isDefault)?.id ?? null,
+              roleOverride: product.rolePrice ?? null,
+              variantOverride: null,
+              publicPromotion: product.publicPromotion ?? null,
+            }).effectivePrice;
         if (price === null) return failureResponse("cart_changed", 409, locale);
         verifiedCart.push({
           productId: product.id,
@@ -240,6 +324,18 @@ export async function POST(request: NextRequest) {
           name: product.name,
           unitPrice: price,
           quantity: item.quantity,
+          ...(selectedOffer
+            ? {
+                lineId: item.line_id,
+                offerId: selectedOffer.id,
+                parentLineId: item.parent_line_id,
+                offerRevision: selectedOffer.revision,
+                offerKind: selectedOffer.kind,
+                label: selectedOffer.label,
+              }
+            : data.cart.some((entry) => entry.optionalOffers?.length)
+              ? { lineId: item.line_id }
+              : {}),
         });
       }
     }
@@ -263,10 +359,14 @@ export async function POST(request: NextRequest) {
                 checkout: {
                   cart: verifiedCart,
                   shipping: data.shipping,
-                  estimated_subtotal: verifiedCart?.reduce(
-                    (total, item) => total + item.unitPrice * item.quantity,
-                    0,
-                  ),
+                  estimated_subtotal: verifiedCart
+                    ? verifiedCart.reduce(
+                        (total, item) =>
+                          total +
+                          Math.round(item.unitPrice * 100) * item.quantity,
+                        0,
+                      ) / 100
+                    : undefined,
                   payment_collected: false,
                 },
               }

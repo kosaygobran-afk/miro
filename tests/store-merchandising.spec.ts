@@ -2,7 +2,11 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
 test.describe("Storefront merchandising interactions", () => {
-  test("cards place VAT pricing beside an accessible stock tier", async ({
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/api/track", (route) => route.fulfill({ status: 204 }));
+  });
+
+  test("cards place VAT pricing and accessible stock beneath the photo", async ({
     page,
   }) => {
     await page.goto("/en/store");
@@ -12,9 +16,15 @@ test.describe("Storefront merchandising interactions", () => {
     await expect(card.locator(".sf-card-vat")).toContainText("incl. VAT");
     await expect(card.locator(".sf-card-specifications")).toHaveCount(0);
     await expect(
-      card.locator(".sf-card-price-secondary .sf-card-identifiers"),
+      card.locator(".sf-card-identifiers-section .sf-card-identifiers"),
     ).toBeVisible();
-    const indicator = card.locator(".sf-stock-indicator");
+    const purchaseBand = card.locator(
+      ".sf-card-media-tools > .sf-card-purchase-band",
+    );
+    await expect(purchaseBand.locator(".sf-card-price-main")).toHaveCount(1);
+    await expect(purchaseBand.locator(".sf-card-vat")).toHaveCount(1);
+    await expect(card.locator(".sf-product-price")).toHaveCount(0);
+    const indicator = purchaseBand.locator(".sf-stock-indicator");
     const count = Number(
       await indicator.locator(".sf-stock-indicator__number").textContent(),
     );
@@ -35,6 +45,7 @@ test.describe("Storefront merchandising interactions", () => {
     );
     await indicator.focus();
     await expect(indicator).toBeFocused();
+    await expect(page.locator(".sf-hover-preview")).toHaveCount(0);
   });
   test("eye button opens a viewport-bounded preview and closes", async ({
     page,

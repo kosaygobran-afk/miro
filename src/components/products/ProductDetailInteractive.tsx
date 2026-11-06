@@ -28,6 +28,15 @@ import { StockIndicator } from "@/features/catalog/stock-indicator";
 import { ProductIdentifiers } from "@/features/catalog/product-identifiers";
 import { ProductImageMagnifier } from "@/features/catalog/product-image-magnifier";
 import { useAnimationSettings } from "@/components/motion/animation-provider";
+import {
+  ProductOptionalOffers,
+  optionalOfferCanBeSelected,
+  MAX_SELECTED_OPTIONAL_OFFERS,
+} from "@/features/catalog/product-optional-offers";
+import type {
+  CartOptionalOffer,
+  PublicOptionalOffer,
+} from "@/lib/catalog/product-options";
 
 interface ProductDetailInteractiveProps {
   productId: string;
@@ -51,6 +60,8 @@ interface ProductDetailInteractiveProps {
   roleOverride?: number | null;
   canAddToCart?: boolean;
   availabilityUnconfirmed?: boolean;
+  optionalOffers?: PublicOptionalOffer[];
+  optionalOffersUnavailable?: boolean;
 }
 
 export function ProductDetailInteractive({
@@ -75,6 +86,8 @@ export function ProductDetailInteractive({
   roleOverride = null,
   canAddToCart = true,
   availabilityUnconfirmed = false,
+  optionalOffers = [],
+  optionalOffersUnavailable = false,
 }: ProductDetailInteractiveProps) {
   const copy = storeCopy[locale] as StoreCopy;
   const enhanced = useAnimationSettings().appearanceVersion === "2";
@@ -134,6 +147,84 @@ export function ProductDetailInteractive({
   );
   const displaySku = selectedVariant?.sku;
   const displayedStock = selectedVariant?.stockQty ?? stockQty;
+  const parentAvailableForOptions =
+    canAddToCart &&
+    !optionalOffersUnavailable &&
+    !availabilityUnconfirmed &&
+    effectivePrice !== null &&
+    effectivePrice > 0 &&
+    displayedStock > 0;
+  const eligibleOffers = parentAvailableForOptions
+    ? optionalOffers.filter(optionalOfferCanBeSelected)
+    : [];
+  const eligibleKeys = new Set(
+    eligibleOffers.map((offer) => `${offer.id}:${offer.revision}`),
+  );
+  const optionalSelectionScope = JSON.stringify([
+    productId,
+    parentAvailableForOptions,
+    optionalOffers.map((offer) => [
+      offer.id,
+      offer.revision,
+      optionalOfferCanBeSelected(offer),
+    ]),
+  ]);
+  const [optionalSelection, setOptionalSelection] = useState<{
+    scope: string;
+    keys: string[];
+  }>(() => ({ scope: optionalSelectionScope, keys: [] }));
+  const selectedKeys = optionalSelection.keys.filter((key) =>
+    eligibleKeys.has(key),
+  );
+  if (optionalSelection.scope !== optionalSelectionScope) {
+    // Prune removed, revised or unavailable offers before they can reach the cart.
+    setOptionalSelection({ scope: optionalSelectionScope, keys: selectedKeys });
+  }
+  const selectedOptionalOffers = eligibleOffers.filter((offer) =>
+    selectedKeys.includes(`${offer.id}:${offer.revision}`),
+  );
+  const selectedOptionalIds = new Set(
+    selectedOptionalOffers.map((offer) => offer.id),
+  );
+  const cartOptionalOffers: CartOptionalOffer[] = selectedOptionalOffers.map(
+    (offer) => ({
+      id: offer.id,
+      kind: offer.kind,
+      revision: offer.revision,
+      label: offer.label,
+      productId: offer.productId,
+      variantId: offer.variantId,
+      name: offer.name,
+      sku: offer.sku,
+      slug: offer.slug,
+      category: offer.category,
+      imageUrl: offer.imageUrl,
+      unitPrice: offer.unitPrice!,
+    }),
+  );
+  const toggleOptionalOffer = (id: string, selected: boolean) => {
+    const offer = eligibleOffers.find((item) => item.id === id);
+    if (!offer) return;
+    const key = `${offer.id}:${offer.revision}`;
+    setOptionalSelection((current) => {
+      const keys = current.keys.filter((item) => eligibleKeys.has(item));
+      if (
+        selected &&
+        !keys.includes(key) &&
+        keys.length >= MAX_SELECTED_OPTIONAL_OFFERS
+      ) {
+        return current;
+      }
+      return {
+        scope: optionalSelectionScope,
+        keys: selected
+          ? keys.includes(key)
+            ? keys
+            : [...keys, key]
+          : keys.filter((item) => item !== key),
+      };
+    });
+  };
   const resolvedActiveImageIndex = Math.min(
     activeImageIndex,
     Math.max(visibleImages.length - 1, 0),
@@ -399,6 +490,16 @@ export function ProductDetailInteractive({
           pricing={pricingInputs}
         />
 
+        <ProductOptionalOffers
+          offers={optionalOffers}
+          locale={locale}
+          selectedIds={selectedOptionalIds}
+          onToggle={toggleOptionalOffer}
+          parentAvailable={parentAvailableForOptions}
+          basePrice={effectivePrice}
+          unavailable={optionalOffersUnavailable}
+        />
+
         {description}
 
         <div className="sf-detail-purchase">
@@ -407,6 +508,7 @@ export function ProductDetailInteractive({
               locale={locale}
               disabled={
                 !canAddToCart ||
+                availabilityUnconfirmed ||
                 (variants.length > 0 && (selectedVariant?.stockQty ?? 0) <= 0)
               }
               item={{
@@ -417,6 +519,9 @@ export function ProductDetailInteractive({
                 name: productName,
                 imageUrl: activeImage?.url ?? images[0]?.url ?? null,
                 unitPrice: effectivePrice,
+                ...(cartOptionalOffers.length > 0
+                  ? { optionalOffers: cartOptionalOffers }
+                  : {}),
               }}
             />
           )}

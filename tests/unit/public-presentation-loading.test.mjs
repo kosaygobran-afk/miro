@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
+import { AsyncLocalStorage } from "node:async_hooks";
 import ts from "typescript";
 
 async function loadModule(path, dependencies, globals = {}) {
@@ -249,7 +250,7 @@ test("contact configuration caches only validated anonymous RPC data and recover
     },
     {
       process: { env: { NEXT_PUBLIC_CONTACT_PHONE: "+972987654321" } },
-      console: { error: () => {} },
+      console: { warn: () => {} },
     },
   );
   const fallback = await loaded.getPublicContactConfig();
@@ -262,6 +263,123 @@ test("contact configuration caches only validated anonymous RPC data and recover
   assert.equal(config.addressEn, publicPayload.address_en);
   await loaded.getPublicContactConfig();
   assert.equal(reads, 2);
+});
+
+test("contact refresh failures stay catchable in the installed Next cache and never persist fallbacks", async (t) => {
+  // Exercise Next's actual App Router revalidation path, rather than a mock
+  // which only covers cache misses and cannot reproduce the reported error.
+  globalThis.AsyncLocalStorage ??= AsyncLocalStorage;
+  const { unstable_cache } =
+    await import("next/dist/server/web/spec-extension/unstable-cache.js");
+  const { workAsyncStorage } =
+    await import("next/dist/server/app-render/work-async-storage.external.js");
+  const { z } = await import("zod");
+  const entries = new Map();
+  const errors = [];
+  const warnings = [];
+  let now = 0;
+  let reads = 0;
+  let reply = async () => ({
+    data: { email: "shop@example.test", address_en: "Approved public address" },
+  });
+  t.mock.method(console, "error", (...args) => errors.push(args));
+  const incrementalCache = {
+    generateSimpleCacheKey: async (key) => key,
+    get: async (key) => {
+      const entry = entries.get(key);
+      return entry
+        ? {
+            value: entry.value,
+            isStale: now - entry.savedAt > entry.value.revalidate * 1000,
+          }
+        : null;
+    },
+    set: async (key, value, { tags }) => {
+      assert.deepEqual(Array.from(tags), ["public-contact-config"]);
+      entries.set(key, { value, savedAt: now });
+    },
+  };
+  const presentation = await loadModule(
+    "src/lib/public-presentation-cache.ts",
+    { react: { cache: (fn) => fn }, "next/cache": { unstable_cache } },
+    { Date: { now: () => now } },
+  );
+  const loaded = await loadModule(
+    "src/lib/contact-config.ts",
+    {
+      zod: { z },
+      react: { cache: (fn) => fn },
+      "@/lib/public-presentation-cache": presentation,
+      "@/lib/supabase/public-server": {
+        createPublicServerClient: () => ({
+          rpc: async (name) => {
+            assert.equal(name, "get_public_contact_config");
+            reads++;
+            return reply();
+          },
+        }),
+      },
+    },
+    {
+      process: { env: { NEXT_PUBLIC_CONTACT_PHONE: "+972987654321" } },
+      console: { warn: (...args) => warnings.push(args) },
+    },
+  );
+  const render = async () => {
+    const store = { incrementalCache };
+    const result = await workAsyncStorage.run(store, () =>
+      loaded.getPublicContactConfig(),
+    );
+    await Promise.all(Object.values(store.pendingRevalidates ?? {}));
+    return result;
+  };
+
+  assert.equal((await render()).email, "shop@example.test");
+  now = 59_999;
+  assert.equal((await render()).email, "shop@example.test");
+  assert.equal(reads, 1, "successful contact reads are shared across renders");
+
+  for (const fail of [
+    async () => ({ error: { code: "SUPABASE_TIMEOUT", details: "private" } }),
+    async () => {
+      throw new TypeError("fetch failed: private upstream details");
+    },
+    async () => ({ data: null }),
+  ]) {
+    now += 60_001;
+    reply = fail;
+    const size = entries.size;
+    const fallback = await render();
+    assert.equal(
+      errors.length,
+      0,
+      "Next must not log background refresh errors",
+    );
+    assert.equal(fallback.phone, "+972987654321");
+    assert.equal(fallback.email, null);
+    assert.equal(fallback.addressEn, null);
+    assert.equal(entries.size, size, "failed refreshes never cache a fallback");
+
+    reply = async () => ({ data: { email: "recovered@example.test" } });
+    assert.equal((await render()).email, "recovered@example.test");
+    const recoveredReads = reads;
+    await render();
+    assert.equal(
+      reads,
+      recoveredReads,
+      "recovery is cached in the same window",
+    );
+  }
+
+  // Simulate an expired tag after an authorized save, within the same minute.
+  entries.clear();
+  reply = async () => ({ data: { email: "updated@example.test" } });
+  assert.equal((await render()).email, "updated@example.test");
+  assert.deepEqual(warnings, [
+    ["Public contact configuration unavailable."],
+    ["Public contact configuration unavailable."],
+    ["Public contact configuration unavailable."],
+  ]);
 });
 
 test("public contact save expires cache only after successful authorized write", async () => {

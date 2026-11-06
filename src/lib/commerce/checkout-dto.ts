@@ -20,6 +20,28 @@ const checkoutItemSchema = z.object({
   sku_snapshot: z.string().nullable(),
   product_name_he: z.string().nullable(),
   product_name_en: z.string().nullable(),
+  line_id: z.string().max(160).nullable().optional(),
+  offer_id: z.string().uuid().nullable().optional(),
+  parent_line_id: z.string().max(160).nullable().optional(),
+  offer_revision: z.number().int().nonnegative().nullable().optional(),
+  offer_snapshot: z
+    .object({
+      id: z.string().uuid(),
+      kind: z.enum(["complementary", "accompanying"]),
+      label_he: z.string().max(160).nullable(),
+      label_en: z.string().max(160).nullable(),
+      pricing_mode: z.enum(["catalog", "percent", "fixed"]),
+      discount_bps: z.number().int().min(1).max(9500).nullable(),
+      fixed_price_agorot: agorotSchema.nullable(),
+      catalog_price_agorot: agorotSchema,
+      effective_price_agorot: agorotSchema,
+      parent_product_id: z.string().uuid(),
+      target_product_id: z.string().uuid(),
+      target_variant_id: z.string().uuid(),
+      revision: z.number().int().nonnegative(),
+    })
+    .nullable()
+    .optional(),
 });
 
 export function checkoutItemsDto(value: unknown) {

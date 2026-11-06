@@ -8,6 +8,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Version 0.1.5 source release — 2026-11-06
+
+- Owner requested committing the current pending source, pushing the next sequential branch `0.1.5` and merging it into `main`. Package/lockfile versions are `0.1.5`; scope, evidence and remaining owners live in `docs/releases/0.1.5.md` and the latest `docs/PROJECT_STATUS.md` entry. Keep private archive history, environment exports and generated QA/build output out of publication.
+- This release includes compact storefront SKU/stock, price and joined footer cells, earlier product-specific optional selections/cart/checkout support and the public-contact cache fix. Follow the latest `docs/DESIGN_SYSTEM.md` card contract and `docs/PRODUCT_OPTIONAL_OFFERS.md`; the latter's additive migrations were applied to linked Supabase on 2026-11-05. Source publication is separate from deployment readiness and does not enable live payments or official issuance.
+
 ## Document templates and safe previews — 2026-11-02
 
 - Read `docs/commerce/DOCUMENT_LAYOUTS.md` before changing document templates/preview controls. Keep the full canonical SVG logo/icons, isolated numeric/contact values, Hebrew/English reading columns, Israel-local date/clock/DST, measured A4/80 mm pagination and explicit unit/discount details. Static graphics stay paths; dynamic content stays escaped/selectable text. Use bidi-js's actual `embedding.levels` array for punctuation mirroring, and do not reverse shaped Hebrew twice.

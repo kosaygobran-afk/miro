@@ -34,7 +34,7 @@ export async function GET(
       admin
         .from("commerce_intent_items")
         .select(
-          "line_no,product_id,variant_id,quantity,unit_price_agorot,discount_per_unit_agorot,discount_agorot,gross_agorot,net_agorot,vat_agorot,vat_rate,sku_snapshot,product_name_he,product_name_en",
+          "line_no,product_id,variant_id,quantity,unit_price_agorot,discount_per_unit_agorot,discount_agorot,gross_agorot,net_agorot,vat_agorot,vat_rate,sku_snapshot,product_name_he,product_name_en,line_id,offer_id,parent_line_id,offer_revision,offer_snapshot",
         )
         .eq("intent_id", intent.id)
         .order("line_no")

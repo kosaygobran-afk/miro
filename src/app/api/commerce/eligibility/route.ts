@@ -3,6 +3,15 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { commerceReadiness } from "@/lib/commerce/config";
 import { hasSameOrigin } from "@/lib/request-origin";
 import {
+  checkoutOfferContextFields,
+  validateCheckoutOfferContext,
+} from "@/lib/commerce/validation";
+import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import {
+  resolveCartOptionalOffers,
+  OptionalOfferCartChanged,
+} from "@/lib/catalog/product-options-cart-server";
+import {
   checkManagementRateLimit,
   getClientIp,
 } from "@/app/api/management/_shared";
@@ -15,6 +24,7 @@ import {
 } from "@/lib/commerce/http";
 const inputSchema = z
   .object({
+    locale: z.enum(["he", "en"]).default("he"),
     items: z
       .array(
         z
@@ -22,8 +32,10 @@ const inputSchema = z
             product_id: z.string().uuid(),
             variant_id: z.string().uuid().nullable(),
             quantity: z.number().int().min(1).max(99),
+            ...checkoutOfferContextFields,
           })
-          .strict(),
+          .strict()
+          .superRefine(validateCheckoutOfferContext),
       )
       .min(1)
       .max(100),
@@ -56,6 +68,27 @@ export async function POST(request: Request) {
       )
       .in("id", [...new Set(parsed.data.items.map((item) => item.product_id))]);
     checkRpcError(result.error);
+    const hasOffers = parsed.data.items.some(
+      (item) => item.offer_id !== undefined,
+    );
+    if (hasOffers) {
+      const viewer = await getStoreViewer();
+      if (viewer.role && viewer.role !== "customer")
+        return commerceJson({ eligible: false });
+      const catalog = await getStoreCatalog(parsed.data.locale, viewer.role);
+      if (catalog.error) throw new CommerceError("commerce_unavailable", 503);
+      try {
+        await resolveCartOptionalOffers(
+          parsed.data.items,
+          catalog.products,
+          parsed.data.locale,
+        );
+      } catch (error) {
+        if (error instanceof OptionalOfferCartChanged)
+          return commerceJson({ eligible: false });
+        throw error;
+      }
+    }
     const items = [];
     for (const item of parsed.data.items) {
       const product = result.data?.find(
@@ -78,7 +111,22 @@ export async function POST(request: Request) {
         ? variants.find((candidate) => candidate.id === item.variant_id)
         : variants.find((candidate) => candidate.is_default);
       if (!variant) return commerceJson({ eligible: false });
-      items.push({ variant_id: variant.id, quantity: item.quantity });
+      items.push({
+        variant_id: variant.id,
+        quantity: item.quantity,
+        ...(hasOffers
+          ? {
+              line_id: item.line_id,
+              ...(item.offer_id
+                ? {
+                    offer_id: item.offer_id,
+                    parent_line_id: item.parent_line_id,
+                    offer_revision: item.offer_revision,
+                  }
+                : {}),
+            }
+          : {}),
+      });
     }
     // Advisory only: intent RPC locks and rechecks price/channel/stock atomically.
     return commerceJson({ eligible: true, items });

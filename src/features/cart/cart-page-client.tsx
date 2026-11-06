@@ -6,12 +6,20 @@ import Link from "@/components/motion/motion-link";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/features/cart/cart-context";
 import { cartCopy } from "@/features/cart/cart-copy";
-import { formatPrice } from "@/lib/catalog/pricing";
 import { withLocale } from "@/lib/i18n";
+import {
+  cartLineId,
+  cartUnitTotal,
+  checkoutCartLines,
+  MAX_CHECKOUT_LINES,
+  formatCartPrice as formatPrice,
+} from "./cart-items";
 
 export function CartPageClient({ locale }: { locale: "he" | "en" }) {
   const { items, subtotal, hydrated, updateQuantity, removeItem } = useCart();
   const copy = cartCopy[locale];
+  const lineLimitExceeded =
+    checkoutCartLines(items).length > MAX_CHECKOUT_LINES;
 
   if (!hydrated) {
     return <CartSkeleton locale={locale} />;
@@ -46,7 +54,7 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
           <div className="sf-cart-layout">
             <section className="sf-cart-items" aria-label={copy.cartTitle}>
               {items.map((item) => {
-                const key = `${item.productId}:${item.variantId ?? "default"}`;
+                const key = cartLineId(item);
                 const productHref = withLocale(
                   locale,
                   `store/${item.category}/${item.slug}`,
@@ -80,6 +88,26 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                       <strong>
                         {formatPrice(item.unitPrice, locale, "—")}
                       </strong>
+                      {Boolean(item.optionalOffers?.length) && (
+                        <ul className="sf-cart-optional-offers">
+                          {item.optionalOffers!.map((offer) => (
+                            <li key={offer.id}>
+                              <Link
+                                href={withLocale(
+                                  locale,
+                                  `store/${offer.category}/${offer.slug}`,
+                                )}
+                              >
+                                {offer.label || offer.name}
+                              </Link>
+                              <span>
+                                {formatPrice(offer.unitPrice, locale, "—")} ×{" "}
+                                {item.quantity}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       <div className="sf-cart-item-controls">
                         <span>{copy.quantity}</span>
                         <div className="sf-cart-stepper">
@@ -90,6 +118,7 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                                 item.productId,
                                 item.variantId,
                                 item.quantity - 1,
+                                key,
                               )
                             }
                             aria-label={`${copy.quantity}: ${item.quantity - 1}`}
@@ -104,6 +133,7 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                                 item.productId,
                                 item.variantId,
                                 item.quantity + 1,
+                                key,
                               )
                             }
                             aria-label={`${copy.quantity}: ${item.quantity + 1}`}
@@ -115,7 +145,7 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                           type="button"
                           className="sf-cart-remove"
                           onClick={() =>
-                            removeItem(item.productId, item.variantId)
+                            removeItem(item.productId, item.variantId, key)
                           }
                         >
                           <Trash2 size={16} aria-hidden="true" />
@@ -124,7 +154,11 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                       </div>
                     </div>
                     <strong className="sf-cart-line-total">
-                      {formatPrice(item.unitPrice * item.quantity, locale, "—")}
+                      {formatPrice(
+                        cartUnitTotal(item) * item.quantity,
+                        locale,
+                        "—",
+                      )}
                     </strong>
                   </article>
                 );
@@ -138,12 +172,27 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                 <strong>{formatPrice(subtotal, locale, "—")}</strong>
               </div>
               <p>{copy.estimateNote}</p>
-              <Link
-                href={withLocale(locale, "checkout")}
-                className="miro-button miro-button-primary"
-              >
-                {copy.checkout}
-              </Link>
+              {lineLimitExceeded ? (
+                <>
+                  <p className="sf-cart-limit-note" role="status">
+                    {copy.tooManyLines}
+                  </p>
+                  <button
+                    type="button"
+                    className="miro-button miro-button-primary"
+                    disabled
+                  >
+                    {copy.checkout}
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href={withLocale(locale, "checkout")}
+                  className="miro-button miro-button-primary"
+                >
+                  {copy.checkout}
+                </Link>
+              )}
             </aside>
           </div>
         )}

@@ -25,6 +25,7 @@ import {
 } from "../ui";
 import {
   editorCopy,
+  optionalOfferCopy,
   fieldLabels,
   policyLabels,
   priceCopy,
@@ -40,6 +41,14 @@ import { RolePricesSection } from "./role-prices-section";
 import { VariantsSection } from "./variants-section";
 import { SalesChannelControl } from "./sales-channel-control";
 import { CategoryAssignmentFields } from "./category-assignment-fields";
+import {
+  OptionalOffersSection,
+  optionalOfferRows as toOptionalOfferRows,
+  optionalOfferRowsToDrafts,
+  type OptionalOfferEditorError,
+  type OptionalOfferEditorRow,
+  type OptionalOfferRowsChange,
+} from "./optional-offers-section";
 import {
   OUT_OF_STOCK_POLICIES,
   STATUS_OPTIONS,
@@ -89,6 +98,7 @@ const SECTION_ORDER: EditorSection[] = [
   "content",
   "media",
   "variants",
+  "optional_offers",
   "inventory",
   "pricing",
   "seo",
@@ -223,6 +233,23 @@ export function ProductEditor({
   const [variants, setVariants] = useState<ProductVariant[]>([]);
   const [form, setForm] = useState<EditorForm | null>(null);
   const [initialForm, setInitialForm] = useState<EditorForm | null>(null);
+  const [optionalOffers, setOptionalOffers] = useState<
+    OptionalOfferEditorRow[]
+  >([]);
+  const [initialOptionalOffers, setInitialOptionalOffers] = useState<
+    OptionalOfferEditorRow[]
+  >([]);
+  const [optionalOffersRevision, setOptionalOffersRevision] = useState(0);
+  const [optionalOffersError, setOptionalOffersError] =
+    useState<OptionalOfferEditorError | null>(null);
+  const [optionalOffersReviewRequired, setOptionalOffersReviewRequired] =
+    useState(false);
+  const [optionalOffersReviewReason, setOptionalOffersReviewReason] = useState<
+    "conflict" | "uncertain"
+  >("conflict");
+  const [confirmReloadOptionalOffers, setConfirmReloadOptionalOffers] =
+    useState(false);
+  const [reloadingOptionalOffers, setReloadingOptionalOffers] = useState(false);
   const [activeSection, setActiveSection] = useState<EditorSection>("general");
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<FieldKey, string>>
@@ -348,6 +375,12 @@ export function ProductEditor({
         const nextForm = toForm(found);
         setForm(nextForm);
         setInitialForm(nextForm);
+        const nextOffers = toOptionalOfferRows(found.optional_offers ?? []);
+        setOptionalOffers(nextOffers);
+        setInitialOptionalOffers(nextOffers);
+        setOptionalOffersRevision(found.optional_offers_revision ?? 0);
+        setOptionalOffersError(null);
+        setOptionalOffersReviewRequired(false);
 
         // Initialize role prices from product data
         const pricesMap: Partial<Record<PriceRole, number>> = {};
@@ -371,12 +404,20 @@ export function ProductEditor({
     };
   }, [productId, reloadToken]);
 
+  const optionalOffersDirty = useMemo(
+    () =>
+      JSON.stringify(optionalOffers) !== JSON.stringify(initialOptionalOffers),
+    [optionalOffers, initialOptionalOffers],
+  );
+
   const dirty = useMemo(
     () =>
-      form !== null &&
-      initialForm !== null &&
-      JSON.stringify(form) !== JSON.stringify(initialForm),
-    [form, initialForm],
+      optionalOffersDirty ||
+      optionalOffersReviewRequired ||
+      (form !== null &&
+        initialForm !== null &&
+        JSON.stringify(form) !== JSON.stringify(initialForm)),
+    [form, initialForm, optionalOffersDirty, optionalOffersReviewRequired],
   );
 
   useEffect(() => {
@@ -393,6 +434,48 @@ export function ProductEditor({
     setFieldErrors((prev) => ({ ...prev, [key]: undefined }));
     setSaveOk(false);
     if (key === "status") setPublishError("");
+  }
+
+  const changeOptionalOffers: OptionalOfferRowsChange = (next) => {
+    setOptionalOffers(next);
+    setOptionalOffersError(null);
+    setSaveOk(false);
+  };
+
+  async function reloadSavedOptionalOffers() {
+    if (!product || reloadingOptionalOffers) return;
+    setReloadingOptionalOffers(true);
+    try {
+      const response = await fetch(`/api/management/products/${product.id}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("unavailable");
+      const result = (await response.json()) as { product?: Product };
+      if (!result.product) throw new Error("unavailable");
+      const saved = result.product;
+      const next = toOptionalOfferRows(saved.optional_offers ?? []);
+      setOptionalOffers(next);
+      setInitialOptionalOffers(next);
+      setOptionalOffersRevision(saved.optional_offers_revision ?? 0);
+      setOptionalOffersReviewRequired(false);
+      setOptionalOffersError(null);
+      setSaveError("");
+      setSaveOk(false);
+      setProduct((current) =>
+        current
+          ? {
+              ...current,
+              optional_offers: saved.optional_offers,
+              optional_offers_revision: saved.optional_offers_revision,
+            }
+          : current,
+      );
+    } catch {
+      setSaveError(optionalOfferCopy.reloadFailed[locale]);
+    } finally {
+      setConfirmReloadOptionalOffers(false);
+      setReloadingOptionalOffers(false);
+    }
   }
 
   function addTag() {
@@ -504,6 +587,11 @@ export function ProductEditor({
 
   async function save() {
     if (saving || !product || !form || !initialForm) return;
+    if (optionalOffersReviewRequired) {
+      setSaveError(optionalOfferCopy[optionalOffersReviewReason][locale]);
+      setActiveSection("optional_offers");
+      return;
+    }
     setSaveError("");
     setPublishError("");
     setSaveOk(false);
@@ -514,7 +602,21 @@ export function ProductEditor({
       setSaveError(editorCopy.saveFailed[locale]);
       return;
     }
-    const patch = buildPatch(form, initialForm);
+    const offerValidation = optionalOffersDirty
+      ? optionalOfferRowsToDrafts(optionalOffers, product.id, locale)
+      : null;
+    if (offerValidation && !offerValidation.ok) {
+      setOptionalOffersError(offerValidation.error);
+      setActiveSection("optional_offers");
+      setSaveError(editorCopy.saveFailed[locale]);
+      return;
+    }
+    const corePatch = buildPatch(form, initialForm);
+    const patch: Record<string, unknown> = { ...corePatch };
+    if (offerValidation?.ok) {
+      patch.optional_offers = offerValidation.offers;
+      patch.expected_optional_offers_revision = optionalOffersRevision;
+    }
     if (Object.keys(patch).length === 0) {
       setSaveOk(true);
       return;
@@ -533,6 +635,23 @@ export function ProductEditor({
         product?: Partial<Product>;
       };
       if (!response.ok) {
+        if (
+          optionalOffersDirty &&
+          ((response.status === 409 && body.code === "revision_conflict") ||
+            response.status >= 500)
+        ) {
+          setOptionalOffersReviewRequired(true);
+          setOptionalOffersReviewReason(
+            response.status === 409 ? "conflict" : "uncertain",
+          );
+          setActiveSection("optional_offers");
+          setSaveError(
+            optionalOfferCopy[
+              response.status === 409 ? "conflict" : "uncertain"
+            ][locale],
+          );
+          return;
+        }
         if (body.code === "publish_incomplete") {
           setPublishError(
             `${validationCopy.publishFailed[locale]}: ${body.details ?? ""}`,
@@ -555,7 +674,7 @@ export function ProductEditor({
         return;
       }
       // Re-fetch canonical data to ensure we have the authoritative server state
-      const refetch = await fetch(`/api/management/products?id=${product.id}`, {
+      const refetch = await fetch(`/api/management/products/${product.id}`, {
         cache: "no-store",
       });
       if (refetch.ok) {
@@ -566,24 +685,51 @@ export function ProductEditor({
           const nextForm = toForm(data.product);
           setForm(nextForm);
           setInitialForm(nextForm);
+          const nextOffers = toOptionalOfferRows(
+            data.product.optional_offers ?? [],
+          );
+          setOptionalOffers(nextOffers);
+          setInitialOptionalOffers(nextOffers);
+          setOptionalOffersRevision(data.product.optional_offers_revision ?? 0);
+          setOptionalOffersError(null);
+          setOptionalOffersReviewRequired(false);
         } else {
           // Fallback: merge patch if refetch doesn't return full product
           setProduct((prev) =>
-            prev ? { ...prev, ...(body.product ?? {}), ...patch } : prev,
+            prev ? { ...prev, ...(body.product ?? {}), ...corePatch } : prev,
           );
           setInitialForm(form);
+          if (optionalOffersDirty) {
+            setOptionalOffersReviewRequired(true);
+            setOptionalOffersReviewReason("uncertain");
+            setActiveSection("optional_offers");
+            setSaveError(optionalOfferCopy.uncertain[locale]);
+            return;
+          }
         }
       } else {
         // Fallback: merge patch if refetch fails
         setProduct((prev) =>
-          prev ? { ...prev, ...(body.product ?? {}), ...patch } : prev,
+          prev ? { ...prev, ...(body.product ?? {}), ...corePatch } : prev,
         );
         setInitialForm(form);
+        if (optionalOffersDirty) {
+          setOptionalOffersReviewRequired(true);
+          setOptionalOffersReviewReason("uncertain");
+          setActiveSection("optional_offers");
+          setSaveError(optionalOfferCopy.uncertain[locale]);
+          return;
+        }
       }
       setSaveOk(true);
     } catch (err) {
       console.error("Save failed:", err);
-      setSaveError(editorCopy.saveFailed[locale]);
+      if (optionalOffersDirty) {
+        setOptionalOffersReviewRequired(true);
+        setOptionalOffersReviewReason("uncertain");
+        setActiveSection("optional_offers");
+        setSaveError(optionalOfferCopy.uncertain[locale]);
+      } else setSaveError(editorCopy.saveFailed[locale]);
     } finally {
       setSaving(false);
     }
@@ -715,7 +861,12 @@ export function ProductEditor({
             type="button"
             className={`miro-button ${saveOk && !dirty ? styles.saveButtonSaved : "miro-button-primary"}`}
             onClick={() => void save()}
-            disabled={saving || (!dirty && !saveOk)}
+            disabled={
+              saving ||
+              reloadingOptionalOffers ||
+              optionalOffersReviewRequired ||
+              (!dirty && !saveOk)
+            }
             aria-busy={saving || undefined}
           >
             {saving ? (
@@ -1097,6 +1248,22 @@ export function ProductEditor({
             </FormSection>
           ) : null}
 
+          {activeSection === "optional_offers" ? (
+            <OptionalOffersSection
+              locale={locale}
+              productId={product.id}
+              rows={optionalOffers}
+              onChange={changeOptionalOffers}
+              disabled={saving || reloadingOptionalOffers}
+              error={optionalOffersError}
+              reviewRequired={optionalOffersReviewRequired}
+              reviewMessage={
+                optionalOfferCopy[optionalOffersReviewReason][locale]
+              }
+              onReload={() => setConfirmReloadOptionalOffers(true)}
+            />
+          ) : null}
+
           {activeSection === "inventory" ? (
             <FormSection
               title={sectionLabels.inventory[locale]}
@@ -1466,6 +1633,17 @@ export function ProductEditor({
         confirmLabel={editorCopy.leaveWithoutSaving[locale]}
         cancelLabel={editorCopy.keepEditing[locale]}
         tone="danger"
+        closeLabel={editorCopy.close[locale]}
+      />
+      <ConfirmationDialog
+        open={confirmReloadOptionalOffers}
+        onConfirm={() => void reloadSavedOptionalOffers()}
+        onCancel={() => setConfirmReloadOptionalOffers(false)}
+        title={optionalOfferCopy.reloadTitle[locale]}
+        description={optionalOfferCopy.reloadDescription[locale]}
+        confirmLabel={optionalOfferCopy.reload[locale]}
+        cancelLabel={editorCopy.keepEditing[locale]}
+        busy={reloadingOptionalOffers}
         closeLabel={editorCopy.close[locale]}
       />
     </div>

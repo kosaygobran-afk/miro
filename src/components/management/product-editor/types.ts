@@ -1,3 +1,5 @@
+import type { ManagedOptionalOffer } from "@/lib/catalog/product-options";
+
 export type Locale = "he" | "en";
 
 export type ProductStatus = "draft" | "active" | "hidden" | "archived";
@@ -94,6 +96,8 @@ export type Product = {
   product_prices: RolePrice[];
   product_variants: ProductVariant[];
   product_images?: ProductImage[];
+  optional_offers?: ManagedOptionalOffer[];
+  optional_offers_revision?: number;
 };
 
 export const STATUS_OPTIONS: ProductStatus[] = [
