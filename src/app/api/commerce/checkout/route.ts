@@ -38,9 +38,27 @@ export async function POST(request: Request) {
         rate === "limited" ? 429 : 503,
       );
     const { locale, ...payload } = parsed.data;
+    const hasOffers = payload.items.some((item) => item.offer_id !== undefined);
     const result = await (actor ? client : admin).rpc(
-      actor ? "commerce_create_intent" : "commerce_create_guest_intent",
-      { p_payload: { ...payload, channel: "website" } },
+      hasOffers
+        ? actor
+          ? "commerce_create_optional_offers_intent"
+          : "commerce_create_guest_optional_offers_intent"
+        : actor
+          ? "commerce_create_intent"
+          : "commerce_create_guest_intent",
+      {
+        p_payload: {
+          ...payload,
+          items: hasOffers
+            ? payload.items
+            : payload.items.map((item) => ({
+                variant_id: item.variant_id,
+                quantity: item.quantity,
+              })),
+          channel: "website",
+        },
+      },
     );
     checkRpcError(result.error);
     if (!result.data?.intent?.id)

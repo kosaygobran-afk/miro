@@ -1,0 +1,46 @@
+# Product-specific optional offers
+
+Owner request, implemented November 2026: the product detail page can show **מוצרים משלימים / Complementary products**, followed by **מוצרים נלווים / Accompanying products**, immediately below variants. The owner selected multiple simultaneous choices in both groups. Empty groups are omitted. Catalog cards, rails and preview popups do not load or display these choices.
+
+## Management
+
+Active CEO/admin users with the existing catalog permission edit these groups in the product editor. First save a new product, then open its editor to configure offers. Add an existing product, select its actual active variant, optionally supply Hebrew/English labels, choose pricing and arrange the rows. An empty label uses the target product's localized name. Each target variant can be linked once per parent, across both groups; self-links are rejected. Different variants of a target product can be separate choices. Configuration has no arbitrary row-count cap.
+
+Pricing modes are catalog price, percentage discount (0.01–95%, stored as integer basis points), or a positive fixed price (up to ₪1,000,000, stored as integer agorot). A fixed price can be higher or lower than catalog price; a struck original price appears only for an actual reduction. Hidden/inactive/unpriced/unconfirmed or unavailable items cannot be purchased merely because an administrator linked them.
+
+The main **Save** submits core product changes and the complete offer draft in one atomic PATCH/RPC. There is no independent auto-save. Inactive rows remain editable; removed rows are internal tombstones, preserving existing financial references. Re-adding the same target variant revives its original identity. A revision conflict or uncertain write preserves the draft and blocks further saving until an explicit confirmed reload of offers. Reloading offers preserves unrelated core-product drafts. Do not automatically retry an uncertain save.
+
+## Customer behavior
+
+The two fieldsets use native checkboxes, with no preselected items. A choice shows the real variant image or product fallback, label/name, SKU, current price, any actual price reduction and honest availability. All three themes, Hebrew/English reading directions, narrow phones, keyboard focus and forced colors are supported. Offer-read failures show a quiet unavailable status while retaining the parent product's independent purchase path.
+
+Each selected option adds **one unit per unit of the main product**. Configured selections remain attached to their parent cart line: changing its quantity changes all attached quantities, and removing it removes those selections. Different configurations of the same parent variant remain distinct cart lines. The existing transaction limit is 100 flattened lines, so one parent selection permits at most 99 selected extras; this does not limit the administrator's configuration list. No option is silently chosen or dropped to meet that limit. Cart and checkout explain an oversized cart and block submission until rows are removed, including direct form submission. Cart totals retain agorot precision. Catalog/stock reads are fresh at request time; cart values are estimates, not financial authority.
+
+## Data and authorization
+
+- `product_optional_offer_sets` stores each parent's revision; `product_optional_offers` stores target product/variant, group, localized labels, pricing, order, active flag and removal tombstone. The composite variant/product FK prevents cross-product variant substitution. No direct browser writes are granted.
+- `management_read_product_optional_offers`, `replace_product_optional_offers` and `update_product_with_optional_offers` enforce active CEO/admin roles in SQL. The combined wrapper delegates existing core changes to the **installed** `update_product`; it must not replace that function with an older repository definition. Writes lock the parent/set, compare revisions (`PT409`) and audit atomically. The API preserves same-origin and rate-limit controls.
+- `get_public_product_optional_offers` is an invoker projection. Parent, target product and target variant must pass existing catalog/audience RLS. It exposes no costs, suppliers or private management metadata. The scalar pricing helper checks installed product/variant visibility before resolving the caller's role price. Frontend server loading requires the matching parent and both authoritative price fields; incomplete projections fail closed.
+- Public options are request-scoped and intersect the caller's current visible catalog. Failed reads, prices and stock are not persistently cached. Removed, hidden, disabled, unavailable and revised selections are rejected when submitted.
+
+## Price and financial contracts
+
+Offer catalog prices resolve the selected variant override, then caller role price, then base product price, and the applicable active public promotion. Installed variant-specific promotions take precedence over product promotions, followed by priority and stable ID; schedule/audience checks remain effective. Percentage or fixed option pricing is then applied in integer agorot. An unpublished/nonpositive catalog price never becomes purchasable through a fixed option price, and a discount rounding to zero remains unavailable. The same SQL values feed detail display, enquiry verification and optional checkout lines.
+
+This extension intentionally preserves existing parent/standalone checkout pricing and installed commerce functions. The older general storefront promotion mapping and core `sale_price` pricing do not have full parity; this feature does not certify or rewrite that wider pricing contract. Engineering owns resolving that existing difference before live payment approval.
+
+Browser checkout payloads contain line/variant identities, quantities and optional `offer_id`, `parent_line_id`, `offer_revision` only. The database verifies the exact parent, linked target, revision and equal quantities. Orphans, nested offer parents, duplicate context/offer identities and client prices/discounts are rejected. Enquiry metadata is rebuilt from current server data, including the verified relationship and exact totals; supplied names/prices are untrusted.
+
+`commerce_create_optional_offers_intent` and the service-only guest equivalent aggregate quantities by variant before calling the preserved core intent creator. This retains channel/readiness gates, aggregate stock checks, reservations and locks, including a variant purchased both as a standalone item and an option. Product locks precede offer-set/variant locks, in stable order, to coexist with management saves.
+
+Each original actor/idempotency-key pair binds the complete context payload and immutable core request. Replays recover the original intent/guest capability before reevaluating later catalog changes. A changed payload with the same key conflicts. New intents split aggregate baselines into distinct exact-priced context lines; they never average option and standalone prices. Intent/order items preserve a whitelisted offer snapshot and parent-line provenance. Finalization verifies aggregate availability and copies provenance only to the newly created order, without rewriting existing orders. Existing provider/accountant/readiness controls remain mandatory; this feature does not activate payments or document issuance.
+
+## Rollout and verification
+
+Apply `20261104010000_product_optional_offers.sql` and `20261104020000_optional_offer_checkout.sql` together before deploying the frontend. The linked database contains newer catalog/visibility/promotion behavior than some historical repository migrations. Review the linked dry-run, execute both scripts in a rolled-back preflight, and preserve installed functions through the additive wrappers. Do not reset or reseed owner data. Existing products start with no choices until an administrator configures them.
+
+Both migrations were applied to the linked database on 2026-11-05 after that preflight. The source is included in the owner-requested `0.1.5` release; Git publication and hosting deployment are tracked separately in `docs/PROJECT_STATUS.md`. No owner product configuration was created for demonstration.
+
+Run `python3 scripts/verify-database.py`, focused `tests/unit/product-optional-offers-*.test.mjs`, lint/typecheck and an isolated production build. SQL tests include role/RLS guards, revision atomicity, 101-row configuration, exact option pricing, forged context, aggregate oversell, idempotent guest/customer recovery and immutable order provenance. Concurrency checks cover duplicate submissions, shared-variant stock, revision races and management-save lock ordering. Browser fixtures must use disposable data and ignored build output with no repository environment copies; preserve the owner's server and `.next`.
+
+No new customer tracking or outbound messaging is introduced. The existing enquiry retention/privacy contract applies to the saved chosen products. QA owns manual bilingual screen-reader, zoom and physical-device review; business/legal owns content/rights/privacy approval; accountant/provider/operations retain existing issuance, live-payment and monitored-worker launch gates. Final evidence and actual rollout status belong in `docs/PROJECT_STATUS.md`.

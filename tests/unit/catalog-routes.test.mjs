@@ -113,6 +113,10 @@ function loadPages(category, { hidden = false, unavailable = false } = {}) {
       exports,
       process: { env: {} },
       require(name) {
+        if (name === "@/lib/catalog/product-options-server")
+          return {
+            getProductOptionalOffers: async () => ({ revision: 0, offers: [] }),
+          };
         if (imports[name]) return imports[name];
         if (name === "lucide-react" || name.startsWith("@/components/")) {
           return new Proxy({}, { get: () => placeholder });

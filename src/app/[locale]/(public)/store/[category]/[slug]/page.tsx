@@ -18,6 +18,8 @@ import { getCategoryKeyFromSlug } from "@/lib/catalog/routes";
 import { withLocale, isLocale } from "@/lib/i18n";
 import { ProductViewTracker } from "@/components/analytics/ProductViewTracker";
 import { ProductDetailInteractive } from "@/components/products/ProductDetailInteractive";
+import { getProductOptionalOffers } from "@/lib/catalog/product-options-server";
+import type { PublicOptionalOffer } from "@/lib/catalog/product-options";
 import { CatalogUnavailable } from "@/components/products/catalog-unavailable";
 import { RelatedProductsRail } from "@/features/catalog/related-products-rail";
 import { getRelatedProducts } from "@/lib/catalog/related-products";
@@ -158,6 +160,16 @@ export default async function ProductDetailPage({
     product.variants.find((v) => v.price !== null) ??
     product.variants[0];
   const effectivePrice = product.priceIls;
+  let optionalOffers: PublicOptionalOffer[] = [];
+  let optionalOffersUnavailable = false;
+  try {
+    optionalOffers = (
+      await getProductOptionalOffers(product.id, catalog.products, locale)
+    ).offers;
+  } catch {
+    optionalOffersUnavailable = true;
+    console.warn("Product options are temporarily unavailable");
+  }
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const productUrl = `${siteUrl}/${locale}/store/${category}/${slug}`;
@@ -245,6 +257,8 @@ export default async function ProductDetailPage({
               publicPromotion={product.publicPromotion ?? null}
               compareAtPrice={product.compareAtPrice ?? null}
               canAddToCart={product.stockState !== "out"}
+              optionalOffers={optionalOffers}
+              optionalOffersUnavailable={optionalOffersUnavailable}
               visualKind={getProductVisualKind(product)}
               contact={toPublicContactActions(contactConfig)}
               header={

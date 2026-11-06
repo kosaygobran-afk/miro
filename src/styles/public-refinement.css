@@ -2407,10 +2407,31 @@
 :root[data-appearance-version="2"]
   :is(.sf-product-card, .sf-reference-rail).sf-reference-card {
   .sf-product-summary {
-    gap: 0.45rem;
-    padding-block: 0.85rem 0.55rem;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    align-content: start;
+    gap: 0.5rem;
+    min-block-size: 8rem;
+    padding-block: 0.95rem 0.8rem;
+  }
+  .sf-product-category {
+    min-width: 0;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .sf-product-category > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sf-product-category > svg {
+    width: 14px;
+    height: 14px;
+    stroke-width: 1.65;
   }
   .sf-product-summary h3 {
+    min-block-size: 2.8em;
     text-align: start;
     line-height: 1.4;
     letter-spacing: 0;
@@ -2424,6 +2445,9 @@
     color: var(--accent-text);
   }
   .sf-card-model-line {
+    align-items: center;
+    justify-content: flex-start;
+    min-block-size: 1.5em;
     line-height: 1.5;
     gap: 0.25rem 0.45rem;
     flex-wrap: nowrap;
@@ -2439,6 +2463,9 @@
   .sf-card-model-line > span {
     flex: none;
     opacity: 0.6;
+  }
+  .sf-card-model-line > bdi:last-child {
+    flex: 0 1 auto;
   }
   .sf-product-price__amount small {
     font-size: 0.68rem;
@@ -2522,10 +2549,11 @@
     inset: 0.6rem 0.9rem;
   }
   .sf-card-media-tools {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     align-items: center;
-    justify-content: flex-end;
-    gap: 0.6rem;
+    justify-items: center;
+    gap: 0.4rem;
     padding-inline: 0.8rem;
     border-block-start: 1px solid var(--border-subtle);
   }
@@ -2544,30 +2572,46 @@
   .sf-card-media-tools .sf-product-illustration-caption {
     position: static;
     inset: auto;
-    flex: 1;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: stretch;
+    min-width: 0;
     width: auto;
-    max-width: calc(100% - 3rem);
+    max-width: 100%;
     padding: 0;
-    margin-inline-end: auto;
+    margin: 0;
     font-size: 0.55rem;
-    line-height: 1.4;
-    text-align: start;
+    line-height: 1.2;
+    text-align: end;
+    overflow-wrap: anywhere;
     background: transparent;
+  }
+  .sf-card-media-tools:has(> .sf-product-illustration-caption) {
+    display: flex;
+    justify-content: center;
+
+    > :is(.sf-card-stock, .sf-availability-pending) {
+      flex: none;
+    }
+    > .sf-product-illustration-caption {
+      flex: 0 1 auto;
+      max-width: 5rem;
+    }
   }
 }
 
-/* Shared rows align price/SKU, original+discount/barcode, and VAT/quantity. */
+/* Price/SKU and promotion/barcode share rows; VAT follows below the price. */
 :root[data-appearance-version="2"]
   :is(.sf-product-card, .sf-reference-rail).sf-reference-card {
   .sf-product-summary + .sf-product-price {
     display: grid;
     grid-template-columns: minmax(min-content, 1.1fr) minmax(0, 1fr);
     grid-template-rows: minmax(2.25rem, auto) minmax(2.25rem, auto) minmax(
-        1.75rem,
+        1.1rem,
         auto
       );
-    gap: 0.4rem 0.75rem;
-    padding-block: 0.7rem;
+    gap: 0.35rem 0.85rem;
+    padding-block: 0.75rem;
   }
   .sf-card-price-main,
   .sf-card-price-secondary {
@@ -2575,12 +2619,12 @@
     grid-row: 1 / 4;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(2.25rem, auto) minmax(2.25rem, auto) minmax(
-        1.75rem,
+        1.1rem,
         auto
       );
     grid-template-rows: subgrid;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0.35rem;
     min-width: 0;
     max-width: 100%;
     width: 100%;
@@ -2597,6 +2641,15 @@
   .sf-card-price-main > .sf-product-price__amount {
     grid-row: 1;
     align-self: center;
+  }
+  .sf-card-price-main .sf-product-price__amount > strong {
+    letter-spacing: 0;
+  }
+  .sf-card-price-main .sf-product-price__amount:not(:has(.sf-money)) > strong {
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: start;
   }
   .sf-card-price-main > .sf-product-price__promotion {
     grid-row: 2;
@@ -2625,6 +2678,7 @@
   .sf-card-price-secondary {
     grid-column: 2;
     justify-items: start;
+    text-align: start;
   }
   .sf-card-identifiers {
     display: grid;
@@ -2637,7 +2691,7 @@
     container: none;
     width: 100%;
     min-width: 0;
-    gap: 0.4rem;
+    gap: 0.35rem;
     margin: 0;
   }
   .sf-card-identifiers .product-identifier {
@@ -2645,6 +2699,8 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 0.1rem;
     min-width: 0;
+    align-content: center;
+    text-align: start;
   }
   .sf-card-identifiers .product-identifier--sku {
     grid-row: 1;
@@ -2658,6 +2714,7 @@
     font-weight: 650;
     line-height: 1.4;
     letter-spacing: 0;
+    text-align: start;
   }
   .sf-card-identifiers .product-identifier-value {
     max-width: 100%;
@@ -2675,15 +2732,58 @@
   &[dir="rtl"] .sf-card-identifiers .product-identifier-value {
     text-align: right;
   }
-  .sf-card-price-secondary :is(.sf-card-stock, .sf-availability-pending) {
-    grid-row: 3;
+  .sf-card-media-tools > :is(.sf-card-stock, .sf-availability-pending) {
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
     align-self: center;
     max-width: 100%;
     margin: 0;
-    white-space: normal;
+    min-height: 1.875rem;
+    padding: 0.3rem 0.65rem;
+    border-radius: 0.6rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    white-space: nowrap;
   }
-  .sf-card-price-secondary .sf-card-stock {
-    flex-wrap: wrap;
+  .sf-card-media-tools > .sf-card-stock {
+    flex-wrap: nowrap;
+    gap: 0.375rem;
+    border-color: color-mix(
+      in srgb,
+      var(--stock-color) 45%,
+      var(--border-subtle)
+    );
+    background: color-mix(in srgb, var(--stock-color) 9%, var(--surface));
+    color: var(--foreground);
+    box-shadow: none;
+  }
+  .sf-card-media-tools > .sf-availability-pending {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--border-control);
+    background: var(--surface);
+    color: var(--muted-foreground);
+    font-weight: 650;
+  }
+  .sf-card-stock .sf-stock-indicator__light {
+    flex: none;
+    width: 0.4rem;
+    height: 0.4rem;
+    color: var(--stock-color);
+  }
+  .sf-card-stock .sf-stock-indicator__number {
+    flex: none;
+    color: var(--foreground);
+    font-size: 0.875rem;
+    font-weight: 800;
+    line-height: inherit;
+  }
+  .sf-card-stock .sf-stock-indicator__caption {
+    color: var(--foreground);
+    font-size: 0.75rem;
+    font-weight: 650;
+    line-height: inherit;
   }
 }
 
@@ -2694,4 +2794,559 @@
   dd {
   text-align: center;
   justify-self: stretch;
+}
+/* Keep the bordered media band available for future icons, including when empty. */
+:root[data-appearance-version="2"]
+  :is(.sf-product-card, .sf-reference-rail).sf-reference-card {
+  .sf-card-media-tools .sf-product-illustration-caption {
+    max-width: 100%;
+  }
+}
+
+/* Four joined action cells share the SKU half's gold hover/focus paint. */
+:root[data-appearance-version="2"]
+  :is(.sf-product-card, .sf-reference-rail).sf-reference-card
+  > .sf-product-actions:has(> .sf-card-action-hint) {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  background: var(--surface);
+  border-end-start-radius: calc(1.15rem - 1px);
+  border-end-end-radius: calc(1.15rem - 1px);
+
+  > .sf-card-action-hint {
+    display: inline-flex;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+  }
+
+  > .sf-card-action-hint + .sf-card-action-hint {
+    border-inline-start: 1px solid var(--border-subtle);
+  }
+
+  > .sf-card-action-hint
+    > :is(
+      .sf-add-cart-button,
+      .sf-product-action,
+      .sf-save-button,
+      .sf-product-quick-preview
+    ) {
+    position: relative;
+    inset: auto;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 100% !important;
+    min-width: 0;
+    height: 48px !important;
+    min-height: 48px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--foreground);
+    box-shadow: none;
+    transform: none;
+    backdrop-filter: none;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+
+    > svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      flex: none;
+      stroke-width: 1.75;
+    }
+
+    &:is(:hover, :focus-visible):not(:disabled) {
+      color: var(--accent-text);
+      background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--focus-ring);
+      outline-offset: -3px;
+    }
+  }
+
+  > .sf-card-action-hint:first-child > :is(button, a) {
+    border-end-start-radius: calc(1.15rem - 1px);
+  }
+
+  > .sf-card-action-hint:last-child > :is(button, a) {
+    border-end-end-radius: calc(1.15rem - 1px);
+  }
+
+  > .sf-card-action-hint > .sf-card-cart-unavailable {
+    border-style: dashed;
+    color: var(--muted-foreground);
+    background: var(--surface-muted);
+    cursor: not-allowed;
+
+    > svg:not(.sf-card-cart-slash) {
+      opacity: 0.3;
+    }
+    > .sf-card-cart-slash {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      color: var(--error-text);
+      stroke-width: 1.75;
+      pointer-events: none;
+    }
+  }
+
+  .sf-card-cart-count {
+    position: absolute;
+    inset-block-start: 1px;
+    inset-inline-end: 1px;
+    display: grid;
+    place-items: center;
+    min-width: 15px;
+    height: 15px;
+    padding-inline: 2px;
+    border-radius: 0.35rem;
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-size: 0.6rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+}
+
+:root[data-appearance-version="2"] .sf-card-action-tooltip {
+  position: fixed;
+  z-index: 1200;
+  width: max-content;
+  max-width: min(15rem, calc(100vw - 2rem));
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border-control);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: 0 4px 12px #00000020;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+  transform: translate(-50%, -100%);
+
+  &[data-below="true"] {
+    transform: translateX(-50%);
+  }
+}
+
+/* Compact purchase panel follows product details — owner follow-up 2026-11-06. */
+:root[data-appearance-version="2"]
+  :is(.sf-product-card, .sf-reference-rail).sf-reference-card {
+  > .sf-product-actions {
+    border-block-start: 1px solid var(--border-subtle);
+  }
+
+  .sf-card-media-tools,
+  .sf-card-media-tools:has(> .sf-product-illustration-caption) {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    min-height: 3.75rem;
+    height: auto;
+    gap: 0.3rem;
+    padding: 0.55rem 0.8rem;
+    background: var(--surface-muted);
+  }
+
+  .sf-card-purchase-band {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .sf-card-purchase-band .sf-card-price-main,
+  .sf-card-purchase-band .sf-card-price-main:not(:has(.sf-product-discount)) {
+    display: grid;
+    grid-template-columns: minmax(min-content, 0.85fr) minmax(0, 1fr);
+    grid-template-rows: auto;
+    align-items: center;
+    gap: 0.65rem;
+    width: 100%;
+    min-width: 0;
+    direction: ltr;
+    font-family: var(--font-miro), Arial, sans-serif;
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  .sf-card-purchase-band .sf-product-price__amount {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+    max-width: 100%;
+    text-align: left;
+  }
+
+  .sf-card-purchase-band .sf-product-price__amount:has(.sf-money) > strong {
+    font-size: clamp(1.25rem, 9cqi, 1.65rem);
+    font-weight: 850;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    color: var(--foreground);
+    font-variant-numeric: lining-nums tabular-nums;
+  }
+
+  .sf-card-purchase-band:has(.sf-product-discount)
+    .sf-product-price__amount
+    > strong {
+    color: var(--accent-text);
+  }
+
+  .sf-card-purchase-band[data-long-price="true"]
+    .sf-product-price__amount:has(.sf-money)
+    > strong {
+    font-size: clamp(1rem, 6.5cqi, 1.35rem);
+  }
+
+  .sf-card-purchase-band
+    .sf-product-price__amount:not(:has(.sf-money))
+    > strong {
+    display: block;
+    max-inline-size: 7rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.4;
+    white-space: normal;
+    text-align: left;
+  }
+
+  .sf-card-price-context {
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 0.15rem 0.45rem;
+    min-width: 0;
+    color: var(--muted-foreground);
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    text-align: right;
+  }
+
+  .sf-card-price-context[dir="rtl"] {
+    justify-content: flex-start;
+  }
+
+  .sf-card-purchase-band .sf-product-price__promotion {
+    display: contents;
+  }
+
+  .sf-card-price-label,
+  .sf-card-original-price {
+    flex-basis: 100%;
+    min-width: 0;
+  }
+
+  .sf-card-purchase-band .sf-product-compare-at {
+    position: relative;
+    display: inline-flex;
+    margin-inline-start: 0.35rem;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.4;
+    text-decoration: none;
+    vertical-align: baseline;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset-inline: -0.05rem;
+      top: 50%;
+      height: 1px;
+      background: var(--error-text);
+      transform: rotate(-12deg);
+      transform-origin: center;
+      pointer-events: none;
+    }
+  }
+
+  /* Read-only savings annotation, with no chip/button-like frame. */
+  .sf-card-purchase-band .sf-product-discount {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.25rem;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    /* The earlier red badge keeps white text with !important (also in popups). */
+    color: var(--accent-text) !important;
+    font-size: 0.6875rem;
+    font-weight: 750;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .sf-card-purchase-band .sf-card-vat {
+    margin: 0;
+    color: var(--muted-foreground);
+    font-size: 0.65rem;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  /* Physical halves stay stock-left / SKU-right; each reads in its locale. */
+  .sf-card-meta-band {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    direction: ltr;
+    min-width: 0;
+    min-height: 3.5rem;
+    border-block-start: 1px solid var(--border-subtle);
+    background: var(--surface);
+  }
+
+  .sf-card-stock-slot {
+    display: flex;
+    align-items: stretch;
+    min-width: 0;
+    width: 100%;
+    container-type: inline-size;
+  }
+
+  .sf-card-stock-slot > :is(.sf-card-stock, .sf-availability-pending) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.375rem;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 3.5rem;
+    margin: 0;
+    padding: 0.45rem 0.65rem;
+    border: 0;
+    border-radius: 0;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .sf-card-stock-slot > .sf-card-stock {
+    background: color-mix(in srgb, var(--stock-color) 12%, var(--surface));
+    color: var(--foreground);
+    box-shadow: none;
+  }
+
+  .sf-card-stock-slot > .sf-availability-pending {
+    background: var(--surface-muted);
+    color: var(--muted-foreground);
+    font-weight: 650;
+  }
+
+  .sf-card-stock-slot .sf-stock-indicator__number {
+    min-width: 0;
+    font-size: clamp(0.75rem, 14cqi, 0.875rem);
+    overflow-wrap: anywhere;
+  }
+
+  .sf-card-stock-slot .sf-stock-indicator__caption {
+    min-width: 0;
+    font-size: 0.7rem;
+  }
+
+  .sf-card-media-tools .sf-product-illustration-caption,
+  .sf-card-media-tools:has(> .sf-product-illustration-caption)
+    > .sf-product-illustration-caption {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    text-align: start;
+    font-size: 0.6rem;
+    line-height: 1.4;
+  }
+
+  .sf-card-sku {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 0.15rem;
+    min-width: 0;
+    width: 100%;
+    min-height: 3.5rem;
+    padding: 0.45rem 0.65rem;
+    margin: 0;
+    border: 0;
+    border-left: 1px solid var(--border-subtle);
+    border-radius: 0;
+    background: var(--surface);
+    color: var(--foreground);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+
+  button.sf-card-sku:is(:hover, :focus-visible) {
+    background: color-mix(in srgb, var(--primary) 14%, var(--surface));
+    color: var(--accent-text);
+  }
+
+  .sf-card-sku-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-width: 0;
+    color: var(--muted-foreground);
+    font-size: 0.65rem;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  button.sf-card-sku:is(:hover, :focus-visible) .sf-card-sku-label {
+    color: inherit;
+  }
+
+  .sf-card-sku-label > svg {
+    flex: none;
+    margin-inline-start: auto;
+  }
+
+  .sf-card-sku-value {
+    display: block;
+    min-width: 0;
+    font-size: 0.8125rem;
+    font-weight: 650;
+    line-height: 1.45;
+    user-select: text;
+  }
+
+  .sf-card-sku[dir="rtl"]
+    .sf-overflow-label:not([data-overflow])
+    .sf-label-track {
+    justify-content: flex-end;
+  }
+
+  .sf-card-sku--empty {
+    cursor: default;
+    color: var(--muted-foreground);
+    font-size: 0.75rem;
+  }
+
+  .sf-card-meta-band
+    :is(
+      .sf-card-sku,
+      .sf-stock-indicator,
+      .sf-availability-pending
+    ):focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: -3px;
+  }
+
+  .sf-card-meta-band
+    .sf-overflow-label[data-activation="hover"]
+    .sf-label-track {
+    animation-play-state: paused;
+  }
+
+  .sf-card-meta-band
+    :is(.sf-card-sku, .sf-availability-pending):is(:hover, :focus-visible)
+    .sf-overflow-label[data-activation="hover"]
+    .sf-label-track {
+    animation-play-state: running;
+  }
+
+  .sf-card-meta-band .sf-overflow-label[data-static] {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .sf-card-meta-band
+    .sf-overflow-label[data-static]
+    :is(.sf-label-track, .sf-label-copy, .sf-label-copy > span) {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+/* Selected detail-page extras stay attached to their parent cart line. */
+:root[data-appearance-version="2"] .sf-cart-optional-offers {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0.8rem 0 0;
+  padding: 0.7rem 0.8rem;
+  border-inline-start: 2px solid var(--border-control);
+  border-radius: 0.5rem;
+  background: var(--surface-muted);
+  list-style: none;
+}
+
+:root[data-appearance-version="2"] .sf-cart-optional-offers li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.2rem 0.8rem;
+  min-inline-size: 0;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  line-height: 1.6;
+}
+
+:root[data-appearance-version="2"] .sf-cart-optional-offers a {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+  color: var(--foreground);
+}
+
+:root[data-appearance-version="2"] .sf-cart-optional-offers a:hover {
+  color: var(--accent-text);
+}
+
+:root[data-appearance-version="2"] .sf-cart-optional-offers li > span {
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-appearance-version="2"] .sf-checkout-summary li > span {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+:root[data-appearance-version="2"] .sf-checkout-option {
+  display: block;
+  margin-block-start: 0.4rem;
+  padding-inline-start: 0.6rem;
+  border-inline-start: 2px solid var(--border-control);
+  color: var(--muted-foreground);
+  font-size: 0.72rem;
+  line-height: 1.65;
+  font-variant-numeric: tabular-nums;
+}
+
+:root[data-appearance-version="2"] .sf-cart-limit-note {
+  padding: 0.8rem 1rem;
+  margin-block: 0 1rem;
+  border: 1px solid var(--border-control);
+  border-radius: 0.75rem;
+  background: var(--surface-muted);
+  color: var(--foreground);
+  font-size: 0.8rem;
+  line-height: 1.65;
 }

@@ -26,6 +26,22 @@ const [apiSource, clientSource] = await Promise.all([
     "utf8",
   ),
 ]);
+const optionalOfferSchemas = {};
+runInNewContext(
+  compile(
+    await readFile(
+      new URL(
+        "../../src/lib/catalog/product-options-schema.ts",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ),
+  {
+    exports: optionalOfferSchemas,
+    require: (name) => (name === "zod" ? { z } : undefined),
+  },
+);
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 const deferred = () => {
   let resolve;
@@ -78,6 +94,7 @@ function loadApi({ authorized = true, errorTable } = {}) {
       },
     },
     zod: { z },
+    "@/lib/catalog/product-options-schema": optionalOfferSchemas,
     "@/app/api/management/_shared": {
       withManagementAuth: async () =>
         authorized

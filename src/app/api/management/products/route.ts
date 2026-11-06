@@ -9,6 +9,7 @@ import {
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getCategoryWriteError } from "@/lib/catalog/category-errors";
+import { optionalOffersSchema } from "@/lib/catalog/product-options-schema";
 
 // List query schema
 const listQuerySchema = z.object({
@@ -107,8 +108,36 @@ const productPatchSchema = z
     sale_price: z.number().positive().nullable().optional(),
     purchase_cost: z.number().nonnegative().nullable().optional(),
     status: z.enum(["draft", "active", "hidden", "archived"]).optional(),
+    optional_offers: optionalOffersSchema.optional(),
+    expected_optional_offers_revision: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((value, context) => {
+    if (
+      (value.optional_offers !== undefined) !==
+      (value.expected_optional_offers_revision !== undefined)
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["optional_offers"],
+        message: "Offer revision required",
+      });
+    if (
+      value.optional_offers?.some(
+        (offer) =>
+          offer.target_product_id.toLowerCase() === value.id.toLowerCase(),
+      )
+    )
+      context.addIssue({
+        code: "custom",
+        path: ["optional_offers"],
+        message: "A product cannot offer itself",
+      });
+  });
 
 // update_product raises these exact texts with errcode 22023 when a requested
 // publish transition fails validation against the final patched state.
@@ -338,12 +367,13 @@ export async function PATCH(request: Request) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  const { id, ...fields } = parsed.data;
+  const { id, optional_offers, expected_optional_offers_revision, ...fields } =
+    parsed.data;
   const patch: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(fields)) {
     if (value !== undefined) patch[key] = value;
   }
-  if (Object.keys(patch).length === 0) {
+  if (Object.keys(patch).length === 0 && optional_offers === undefined) {
     return errorResponse("Nothing to update", 400);
   }
 
@@ -352,12 +382,25 @@ export async function PATCH(request: Request) {
   // state) and writes the audit row. Self-authorizing RPC, so it must run
   // through the user-context client (auth.uid()), not the service client.
   const client = await createServerSupabaseClient();
-  const { data: product, error: rpcError } = await client.rpc(
-    "update_product",
-    { p_id: id, p_patch: patch },
-  );
+  const { data: saved, error: rpcError } =
+    optional_offers === undefined
+      ? await client.rpc("update_product", { p_id: id, p_patch: patch })
+      : await client.rpc("update_product_with_optional_offers", {
+          p_id: id,
+          p_patch: patch,
+          p_offers: optional_offers,
+          p_expected_revision: expected_optional_offers_revision,
+        });
 
   if (rpcError) {
+    if (rpcError.code === "PT409")
+      return NextResponse.json(
+        {
+          error: "Product options changed. Refresh before saving again.",
+          code: "revision_conflict",
+        },
+        { status: 409 },
+      );
     const hierarchy = getCategoryWriteError(rpcError);
     if (hierarchy)
       return NextResponse.json(hierarchy.body, { status: hierarchy.status });
@@ -398,7 +441,9 @@ export async function PATCH(request: Request) {
 
   await revalidateCatalog();
 
-  return NextResponse.json({ product });
+  return NextResponse.json({
+    product: optional_offers === undefined ? saved : saved?.product,
+  });
 }
 
 export async function DELETE(request: Request) {

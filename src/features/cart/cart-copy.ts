@@ -11,6 +11,8 @@ export const cartCopy = {
     estimateNote:
       "Final availability, delivery cost and pricing are confirmed before payment.",
     checkout: "Continue to checkout",
+    tooManyLines:
+      "An order can contain up to 100 product lines, including selected options. Remove a product or a configured selection before continuing.",
     checkoutTitle: "Checkout request",
     checkoutIntro:
       "Send an enquiry. Stock is checked when you submit, but is not reserved; MIRO will confirm availability, shipping and the final total.",
@@ -47,6 +49,8 @@ export const cartCopy = {
     subtotal: "סכום ביניים משוער",
     estimateNote: "זמינות, עלות משלוח ומחיר סופי יאושרו לפני תשלום.",
     checkout: "המשך לפרטי המשלוח",
+    tooManyLines:
+      "הזמנה יכולה לכלול עד 100 שורות מוצר, כולל התוספות שנבחרו. הסירו מוצר או בחירה עם תוספות לפני ההמשך.",
     checkoutTitle: "בקשת הזמנה ומשלוח",
     checkoutIntro:
       "שלחו בקשה. המלאי נבדק בשליחה אך אינו נשמר; MIRO תאשר זמינות, משלוח וסכום סופי.",

@@ -14,6 +14,8 @@ import {
   HeartOff,
   Loader2,
   Eye,
+  ShoppingCart,
+  Slash,
   Tag,
 } from "lucide-react";
 import { PriceAmount, DiscountBadge } from "./price-amount";
@@ -38,6 +40,8 @@ import { usePreviewHoverDismissal } from "./use-preview-hover-dismissal";
 import { usePreviewLongPress } from "./use-preview-long-press";
 import { StickerCluster } from "@/features/catalog/product-promo-badge";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
+import { CardActionHint } from "./card-action-hint";
+import { ProductCardSku } from "./product-card-sku";
 
 export type { Product } from "@/features/catalog/product-data";
 
@@ -206,7 +210,7 @@ export function ProductCard({
     if (
       event.target instanceof Element &&
       event.target.closest(
-        ".sf-card-identifiers, .sf-badge-rail, .sf-card-media-tools",
+        ".sf-card-identifiers, .sf-badge-rail, .sf-card-media-tools, .sf-card-meta-band",
       )
     )
       return;
@@ -221,10 +225,28 @@ export function ProductCard({
     }
   };
 
-  const cartAction =
-    effectivePrice !== null && product.stockState !== "out" ? (
+  const canAddToCart =
+    effectivePrice !== null &&
+    product.stockState !== "out" &&
+    (!enhancedBadges ||
+      (product.stockQty > 0 && !product.availabilityUnconfirmed));
+  const cartUnavailableReason = product.availabilityUnconfirmed
+    ? locale === "he"
+      ? "יש לברר זמינות לפני הוספה לסל"
+      : "Confirm availability before adding to cart"
+    : product.stockState === "out" || product.stockQty <= 0
+      ? locale === "he"
+        ? "אזל מהמלאי — לא ניתן להוסיף לסל"
+        : "Out of stock — cannot add to cart"
+      : locale === "he"
+        ? "יש לברר מחיר לפני הוספה לסל"
+        : "Request a price before adding to cart";
+  const cartAction = (descriptionId?: string) =>
+    canAddToCart && effectivePrice !== null ? (
       <AddToCartButton
         compact={!enhancedBadges}
+        iconOnly={enhancedBadges}
+        descriptionId={descriptionId}
         tabIndex={isDuplicate ? -1 : undefined}
         locale={locale}
         item={{
@@ -244,12 +266,51 @@ export function ProductCard({
       />
     ) : null;
 
+  const saveAction = (descriptionId?: string) => (
+    <button
+      type="button"
+      className="miro-button miro-button-secondary sf-save-button"
+      onClick={handleSave}
+      aria-label={saved ? copy.removeFromSaved : copy.saveForLater}
+      aria-describedby={descriptionId}
+      aria-pressed={saved}
+      disabled={isSaving}
+      tabIndex={isDuplicate ? -1 : undefined}
+    >
+      {isSaving ? (
+        <Loader2 size={18} className="animate-spin" aria-hidden="true" />
+      ) : saved ? (
+        <Heart size={18} className="text-accent-text" aria-hidden="true" />
+      ) : enhancedBadges ? (
+        <Heart size={18} aria-hidden="true" />
+      ) : (
+        <HeartOff size={18} aria-hidden="true" />
+      )}
+    </button>
+  );
+  const previewLabel = locale === "he" ? "תצוגה מקדימה" : "Quick preview";
+  const previewAction = (descriptionId?: string) => (
+    <button
+      ref={previewButtonRef}
+      type="button"
+      className={`sf-product-quick-preview${variant === "rail" ? " sf-moving-rail-preview-button" : ""}`}
+      aria-label={`${previewLabel}: ${product.name}`}
+      aria-describedby={descriptionId}
+      tabIndex={isDuplicate ? -1 : undefined}
+      aria-haspopup="dialog"
+      aria-expanded={showHoverPreview}
+      onClick={openExplicitly}
+    >
+      <Eye size={enhancedBadges ? 18 : 16} aria-hidden="true" />
+    </button>
+  );
+
   const stockIndicator = (
     <StockIndicator
       quantity={product.stockQty}
       locale={locale}
       unconfirmed={product.availabilityUnconfirmed}
-      variant={enhancedBadges ? "card" : "default"}
+      variant={enhancedBadges ? "segment" : "default"}
       tabIndex={isDuplicate ? -1 : undefined}
     />
   );
@@ -259,6 +320,12 @@ export function ProductCard({
       <strong dir="auto">
         {enhancedBadges && effectivePrice !== null ? (
           <PriceAmount amount={effectivePrice} locale={locale} />
+        ) : enhancedBadges ? (
+          locale === "he" ? (
+            "מחיר לפי בירור"
+          ) : (
+            "Price on request"
+          )
         ) : (
           formattedPrice
         )}
@@ -297,6 +364,43 @@ export function ProductCard({
         </>
       )}
       {effectivePrice === null && <span>{copy.demoPrice}</span>}
+    </div>
+  );
+
+  const enhancedPriceContext = (
+    <div
+      className="sf-card-price-context"
+      dir={locale === "he" ? "rtl" : "ltr"}
+    >
+      {discountPercent !== null && compareAtPrice !== null ? (
+        <div className="sf-product-price__promotion">
+          <span className="sf-card-original-price">
+            <span>{locale === "he" ? "לפני הנחה" : "Was"}</span>
+            <del className="sf-product-compare-at" dir="ltr">
+              <PriceAmount amount={compareAtPrice} locale={locale} />
+            </del>
+          </span>
+          <span className="sf-product-discount sf-card-discount-note">
+            <bdi dir="ltr">−{discountPercent}%</bdi>
+            <span>{locale === "he" ? "הנחה" : "off"}</span>
+          </span>
+        </div>
+      ) : (
+        <span className="sf-card-price-label">
+          {effectivePrice === null
+            ? locale === "he"
+              ? "לקבלת הצעת מחיר"
+              : "Request a quote"
+            : locale === "he"
+              ? "מחיר המוצר"
+              : "Product price"}
+        </span>
+      )}
+      {effectivePrice !== null && (
+        <small className="sf-card-vat">
+          {locale === "he" ? "כולל מע״מ" : "incl. VAT"}
+        </small>
+      )}
     </div>
   );
 
@@ -352,7 +456,7 @@ export function ProductCard({
           if (
             !(event.target instanceof Element) ||
             event.target.closest(
-              ".sf-card-identifiers, .sf-badge-rail, .sf-card-media-tools",
+              ".sf-card-identifiers, .sf-badge-rail, .sf-card-media-tools, .sf-card-meta-band",
             ) ||
             !event.target.matches(":focus-visible")
           )
@@ -424,24 +528,21 @@ export function ProductCard({
             )}
           </Link>
           {enhancedBadges && (
-            <div className="sf-card-media-tools">
-              {(!primaryImage ||
-                product.images[0]?.url.match(
-                  /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
-                )) && (
-                <span className="sf-product-illustration-caption">
-                  {copy.illustration}
-                </span>
-              )}
-              <Link
-                href={productUrl}
-                prefetch={false}
-                className="sf-product-expand"
-                aria-label={`${copy.details}: ${product.name}`}
-                tabIndex={isDuplicate ? -1 : undefined}
+            <div
+              className="sf-card-meta-band"
+              data-product-section="identifiers"
+            >
+              <div
+                className="sf-card-stock-slot"
+                dir={locale === "he" ? "rtl" : "ltr"}
               >
-                <ArrowUpRight size={17} aria-hidden="true" />
-              </Link>
+                {stockIndicator}
+              </div>
+              <ProductCardSku
+                sku={identifierVariant?.sku}
+                locale={locale}
+                isDuplicate={isDuplicate}
+              />
             </div>
           )}
         </div>
@@ -455,7 +556,13 @@ export function ProductCard({
           >
             <p className="sf-product-category">
               {enhancedBadges && <Tag size={14} aria-hidden="true" />}
-              {product.categoryLabel ?? product.category}
+              {enhancedBadges ? (
+                <span title={product.categoryLabel ?? product.category}>
+                  {product.categoryLabel ?? product.category}
+                </span>
+              ) : (
+                (product.categoryLabel ?? product.category)
+              )}
             </p>
             <h3
               dir={enhancedBadges ? (locale === "he" ? "rtl" : "ltr") : "auto"}
@@ -477,15 +584,20 @@ export function ProductCard({
             {enhancedBadges ? (
               <>
                 {(product.brand || product.modelNumber) && (
-                  <p className="sf-card-model-line" dir="ltr">
+                  <p
+                    className="sf-card-model-line"
+                    dir={locale === "he" ? "rtl" : "ltr"}
+                  >
                     {product.brand && (
-                      <bdi title={product.brand}>{product.brand}</bdi>
+                      <bdi dir="auto" title={product.brand}>
+                        {product.brand}
+                      </bdi>
                     )}
                     {product.brand && product.modelNumber && (
                       <span aria-hidden="true">|</span>
                     )}
                     {product.modelNumber && (
-                      <bdi title={product.modelNumber}>
+                      <bdi dir="auto" title={product.modelNumber}>
                         {product.modelNumber}
                       </bdi>
                     )}
@@ -523,41 +635,42 @@ export function ProductCard({
             )}
           </div>
 
-          {/* Price with promotional display */}
-          <div
-            className={`sf-product-price${variant === "rail" ? " sf-moving-rail-price" : ""}`}
-            data-product-section="pricing"
-          >
-            {enhancedBadges ? (
-              <>
+          {enhancedBadges && (
+            <div className="sf-card-media-tools sf-card-price-panel">
+              <div
+                className="sf-card-purchase-band"
+                data-product-section="pricing"
+                data-long-price={
+                  Math.max(effectivePrice ?? 0, compareAtPrice ?? 0) >=
+                    1_000_000 || undefined
+                }
+              >
                 <div className="sf-card-price-main">
                   {priceAmount}
-                  {pricePromotion}
-                  {effectivePrice !== null && (
-                    <small className="sf-card-vat" dir="auto">
-                      {locale === "he" ? "כולל מע״מ" : "incl. VAT"}
-                    </small>
-                  )}
+                  {enhancedPriceContext}
                 </div>
-                <div className="sf-card-price-secondary">
-                  <ProductIdentifiers
-                    sku={identifierVariant?.sku}
-                    barcode={identifierVariant?.barcode}
-                    locale={locale}
-                    compact
-                    className="sf-card-identifiers"
-                  />
-                  {stockIndicator}
-                </div>
-              </>
-            ) : (
-              <>
-                {priceAmount}
-                {stockIndicator}
-                {pricePromotion}
-              </>
-            )}
-          </div>
+              </div>
+              {(!primaryImage ||
+                product.images[0]?.url.match(
+                  /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
+                )) && (
+                <span className="sf-product-illustration-caption">
+                  {copy.illustration}
+                </span>
+              )}
+            </div>
+          )}
+
+          {!enhancedBadges && (
+            <div
+              className={`sf-product-price${variant === "rail" ? " sf-moving-rail-price" : ""}`}
+              data-product-section="pricing"
+            >
+              {priceAmount}
+              {stockIndicator}
+              {pricePromotion}
+            </div>
+          )}
         </div>
       </div>
       <div
@@ -573,10 +686,68 @@ export function ProductCard({
           setShowHoverPreview(false);
         }}
       >
-        {enhancedBadges && cartAction}
+        {enhancedBadges && (
+          <>
+            <CardActionHint
+              locale={locale}
+              label={
+                canAddToCart
+                  ? locale === "he"
+                    ? "הוספה לסל"
+                    : "Add to cart"
+                  : cartUnavailableReason
+              }
+            >
+              {(descriptionId) =>
+                canAddToCart ? (
+                  cartAction(descriptionId)
+                ) : (
+                  <button
+                    type="button"
+                    className="sf-add-cart-button is-compact sf-card-cart-unavailable"
+                    aria-label={cartUnavailableReason}
+                    aria-describedby={descriptionId}
+                    aria-disabled="true"
+                    tabIndex={isDuplicate ? -1 : undefined}
+                  >
+                    <ShoppingCart size={18} aria-hidden="true" />
+                    <Slash
+                      className="sf-card-cart-slash"
+                      size={24}
+                      aria-hidden="true"
+                    />
+                  </button>
+                )
+              }
+            </CardActionHint>
+            <CardActionHint locale={locale} label={actionLabel ?? copy.details}>
+              {(descriptionId) => (
+                <Link
+                  href={productUrl}
+                  prefetch={false}
+                  className="sf-product-action sf-card-details-action"
+                  aria-label={`${copy.details}: ${product.name}`}
+                  aria-describedby={descriptionId}
+                  tabIndex={isDuplicate ? -1 : undefined}
+                >
+                  <ArrowUpRight size={18} aria-hidden="true" />
+                </Link>
+              )}
+            </CardActionHint>
+            <CardActionHint
+              locale={locale}
+              label={saved ? copy.removeFromSaved : copy.saveForLater}
+            >
+              {saveAction}
+            </CardActionHint>
+            <CardActionHint locale={locale} label={previewLabel}>
+              {previewAction}
+            </CardActionHint>
+          </>
+        )}
 
         {/* Image and title remain detail links when the cart is the primary action. */}
-        {(!enhancedBadges || !cartAction) && (
+        {!enhancedBadges && (
           <Link
             href={productUrl}
             prefetch={false}
@@ -591,41 +762,11 @@ export function ProductCard({
           </Link>
         )}
 
-        {!enhancedBadges && cartAction}
+        {!enhancedBadges && cartAction()}
 
         {/* Save/Favorite - independently interactive */}
-        <button
-          type="button"
-          className="miro-button miro-button-secondary sf-save-button"
-          onClick={handleSave}
-          aria-label={saved ? copy.removeFromSaved : copy.saveForLater}
-          aria-pressed={saved}
-          disabled={isSaving}
-          tabIndex={isDuplicate ? -1 : undefined}
-        >
-          {isSaving ? (
-            <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-          ) : saved ? (
-            <Heart size={18} className="text-accent-text" />
-          ) : enhancedBadges ? (
-            <Heart size={18} aria-hidden="true" />
-          ) : (
-            <HeartOff size={18} aria-hidden="true" />
-          )}
-        </button>
-
-        <button
-          ref={previewButtonRef}
-          type="button"
-          className={`sf-product-quick-preview${variant === "rail" ? " sf-moving-rail-preview-button" : ""}`}
-          aria-label={`${locale === "he" ? "תצוגה מקדימה" : "Quick preview"}: ${product.name}`}
-          tabIndex={isDuplicate ? -1 : undefined}
-          aria-haspopup="dialog"
-          aria-expanded={showHoverPreview}
-          onClick={openExplicitly}
-        >
-          <Eye size={16} aria-hidden="true" />
-        </button>
+        {!enhancedBadges && saveAction()}
+        {!enhancedBadges && previewAction()}
 
         {saveError && (
           <span className="sf-save-error" role="alert" aria-live="polite">
