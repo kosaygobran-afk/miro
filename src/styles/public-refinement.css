@@ -1260,9 +1260,10 @@
   gap: 0.45rem;
   overflow-x: auto;
   overscroll-behavior-inline: contain;
-  padding: 0.3rem;
+  /* Keep native overlay scrollbars and focus outlines clear of the chips. */
+  padding: 0.35rem 0.35rem 1rem;
   margin: 0;
-  scrollbar-width: thin;
+  scrollbar-width: auto;
 }
 
 :root[data-appearance-version="2"]
@@ -1936,38 +1937,64 @@
   }
 }
 
-/* A real list mode uses the same catalog data and actions. */
+/* List cards use at most two columns, based on available catalog width. */
 :root[data-appearance-version="2"]
   .sf-catalog[data-catalog-view="list"]
   .sf-catalog-grid {
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, max(28rem, calc((100% - 0.9rem) / 2))), 1fr)
+  );
 }
-@media (min-width: 768px) {
+
+/* Narrow phones retain full-width stock/SKU halves and a shorter image stage. */
+:root[data-appearance-version="2"]
+  .sf-catalog[data-catalog-view="list"]
+  .sf-reference-card
+  .sf-product-media {
+  height: 9.5rem;
+}
+
+/* Cards already establish an inline-size container for their price. */
+@container (min-width: 27rem) {
   :root[data-appearance-version="2"]
     .sf-catalog[data-catalog-view="list"]
-    .sf-reference-card {
+    .sf-reference-card
+    > .sf-product-preview-source {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 15rem;
-    .sf-product-preview-source {
-      display: grid;
-      grid-template-columns: 15rem minmax(0, 1fr);
-    }
+    grid-template-columns: clamp(9.5rem, 36%, 12rem) minmax(0, 1fr);
+  }
+
+  :root[data-appearance-version="2"]
+    .sf-catalog[data-catalog-view="list"]
+    .sf-reference-card
+    .sf-product-media-shell {
+    min-width: 0;
+    border-inline-end: 1px solid var(--border-subtle);
+    border-start-end-radius: 0;
+  }
+
+  :root[data-appearance-version="2"]
+    .sf-catalog[data-catalog-view="list"]
+    .sf-reference-card
+    .sf-card-meta-band {
+    margin-block-start: auto;
+  }
+
+  :root[data-appearance-version="2"]
+    .sf-catalog[data-catalog-view="list"]
+    .sf-reference-card
     .sf-product-body {
-      justify-content: center;
-    }
+    min-width: 0;
+  }
+
+  :root[data-appearance-version="2"]
+    .sf-catalog[data-catalog-view="list"]
+    .sf-reference-card
     .sf-product-summary {
-      flex: none;
-      border-block-start: 0;
-    }
-    > .sf-product-actions {
-      align-content: center;
-      flex-wrap: wrap;
-      padding: 1rem;
-    }
-    > .sf-product-actions
-      > :is(.sf-add-cart-button, .sf-cart-quantity, .sf-product-action) {
-      flex-basis: 100%;
-    }
+    grid-template-rows: auto auto auto;
+    align-content: center;
+    border-block-start: 0;
   }
 }
 
@@ -2008,8 +2035,9 @@
     gap: 0.6rem;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
-    scrollbar-width: thin;
-    padding-block: 0.3rem;
+    scrollbar-width: auto;
+    /* The scrollbar may overlay the content instead of taking layout space. */
+    padding: 0.35rem 0.35rem 1rem;
   }
   .sf-department {
     display: inline-flex;
@@ -2421,9 +2449,8 @@
   }
   .sf-product-category > span {
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .sf-product-category > svg {
     width: 14px;
@@ -2847,7 +2874,8 @@
     padding: 0;
     margin: 0;
     border: 0;
-    border-radius: 0;
+    /* Override standalone icon radii before restoring the outer corners. */
+    border-radius: 0 !important;
     background: transparent;
     color: var(--foreground);
     box-shadow: none;
@@ -2877,11 +2905,11 @@
   }
 
   > .sf-card-action-hint:first-child > :is(button, a) {
-    border-end-start-radius: calc(1.15rem - 1px);
+    border-end-start-radius: calc(1.15rem - 1px) !important;
   }
 
   > .sf-card-action-hint:last-child > :is(button, a) {
-    border-end-end-radius: calc(1.15rem - 1px);
+    border-end-end-radius: calc(1.15rem - 1px) !important;
   }
 
   > .sf-card-action-hint > .sf-card-cart-unavailable {

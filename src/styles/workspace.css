@@ -2537,6 +2537,7 @@
 
 .sales-history__line-items {
   overflow-x: auto;
+  padding-block-end: 0.75rem;
 }
 
 .sales-history__line-items-table {

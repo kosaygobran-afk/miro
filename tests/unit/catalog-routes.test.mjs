@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFile } from "node:fs/promises";
 import { runInNewContext } from "node:vm";
 import * as jsx from "react/jsx-runtime";
+import { renderToStaticMarkup } from "react-dom/server";
 import ts from "typescript";
 
 const compile = (source) =>
@@ -22,6 +23,25 @@ runInNewContext(
     ),
   ),
   { exports: routes },
+);
+const productCategoryPath = {};
+runInNewContext(
+  compile(
+    await readFile(
+      new URL(
+        "../../src/features/catalog/product-category-path.tsx",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  ),
+  {
+    exports: productCategoryPath,
+    require(name) {
+      if (name === "react/jsx-runtime") return jsx;
+      throw new Error(`Unexpected import ${name}`);
+    },
+  },
 );
 const aliases = [
   ["security-cameras", "cameras"],
@@ -50,12 +70,22 @@ const pageSources = await Promise.all(
   ),
 );
 
-function loadPages(category, { hidden = false, unavailable = false } = {}) {
+function loadPages(
+  category,
+  {
+    hidden = false,
+    unavailable = false,
+    subcategoryLabel,
+    subcategorySlug,
+  } = {},
+) {
   const product = {
     id: "product",
     slug: "5586793",
     name: "Fixture product",
     category,
+    subcategoryLabel,
+    subcategorySlug,
     description: "Fixture description",
     stockState: "out",
     stockQty: 0,
@@ -75,6 +105,7 @@ function loadPages(category, { hidden = false, unavailable = false } = {}) {
   const imports = {
     "react/jsx-runtime": jsx,
     "@/lib/catalog/routes": routes,
+    "@/features/catalog/product-category-path": productCategoryPath,
     "next/navigation": {
       notFound() {
         throw new Error("NOT_FOUND");
@@ -143,6 +174,60 @@ test("management product hrefs use the same keys as the catalog for every catego
     routes.getProductStorefrontHref("en", "owner category", "a/b?c"),
     "/en/store/owner%20category/a%2Fb%3Fc",
   );
+});
+
+test("product category paths isolate labels and breadcrumbs encode the literal child slug", async () => {
+  const ProductCategoryPath = productCategoryPath.ProductCategoryPath;
+  assert.equal(
+    renderToStaticMarkup(
+      jsx.jsx(ProductCategoryPath, {
+        product: {
+          category: "root",
+          categoryLabel: "Root & label",
+          subcategoryLabel: "ילד / Child",
+        },
+      }),
+    ),
+    '<span class="sf-category-path"><bdi>Root &amp; label</bdi> / <bdi>ילד / Child</bdi></span>',
+  );
+  assert.equal(
+    renderToStaticMarkup(
+      jsx.jsx(ProductCategoryPath, { product: { category: "root" } }),
+    ),
+    '<span class="sf-category-path"><bdi>root</bdi></span>',
+  );
+
+  const hrefs = (node) => {
+    if (Array.isArray(node)) return node.flatMap(hrefs);
+    if (!node || typeof node !== "object") return [];
+    return [
+      ...(typeof node.props?.href === "string" ? [node.props.href] : []),
+      ...hrefs(node.props?.children),
+    ];
+  };
+  for (const locale of ["he", "en"]) {
+    const props = {
+      params: Promise.resolve({ locale, category: "tools", slug: "5586793" }),
+      searchParams: Promise.resolve({}),
+    };
+    const detail = loadPages("accessories", {
+      subcategoryLabel: "ילד / Child",
+      subcategorySlug: "child / & raw",
+    })[1];
+    const links = hrefs(await detail.default(props));
+    assert.ok(
+      links.includes(
+        `/${locale}/store/accessories?subcategory=child%20%2F%20%26%20raw`,
+      ),
+    );
+    const rootOnly = loadPages("accessories")[1];
+    assert.equal(
+      hrefs(await rootOnly.default(props)).some((href) =>
+        href.includes("?subcategory="),
+      ),
+      false,
+    );
+  }
 });
 
 test("category/detail pages and metadata accept both database aliases and catalog keys", async () => {

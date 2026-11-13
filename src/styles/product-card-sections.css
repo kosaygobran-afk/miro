@@ -841,7 +841,7 @@
   :root[data-appearance-version="2"] {
     .sf-hover-preview-gallery[data-multiple-images] {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) 64px;
+      grid-template-rows: minmax(0, 1fr) 76px;
       gap: 0.4rem;
     }
 
@@ -851,6 +851,7 @@
       overflow-x: auto;
       overflow-y: hidden;
       scrollbar-gutter: auto;
+      padding-block-end: 0.75rem;
     }
 
     .sf-hover-preview-thumbnail {
@@ -879,6 +880,7 @@
       overflow-x: hidden;
       overflow-y: auto;
       scrollbar-gutter: stable;
+      padding-block-end: 2px;
     }
 
     .sf-hover-preview-gallery[data-multiple-images] .sf-hover-preview-media {

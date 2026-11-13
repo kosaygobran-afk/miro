@@ -964,7 +964,7 @@
   margin-inline: auto;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 0.2rem;
+  padding: 0.2rem 0.2rem 0.75rem;
 }
 :root[data-appearance-version="2"] .sf-hover-preview-thumbnail {
   flex: 0 0 32px;

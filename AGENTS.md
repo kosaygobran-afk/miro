@@ -8,6 +8,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Storefront and scrollbar follow-up — 2026-11-13
+
+- The owner requested publishing all pending follow-ups to the existing `0.1.5` branch and merging them into `main`. The complete scope, file map, repeatable checks and remaining owners are in `docs/releases/0.1.5-follow-up-2026-11-13.md`; the dated evidence is in `docs/PROJECT_STATUS.md`. Continue to exclude environment exports, private archive history and generated QA/build output.
+- Version 2 catalog list mode now uses at most two columns based on actual catalog width. At sufficient card width, the image/stock/SKU region sits beside the summary and price, with four joined action cells below; narrow cards stack. Preserve the full card contract, both languages, honest stock/prices, keyboard actions and the Version 1/grid/rail layouts. See `docs/DESIGN_SYSTEM.md` before changing it.
+- Product cards, quick previews and product headings show the existing root and optional subcategory through `ProductCategoryPath`; detail breadcrumbs link children using the literal encoded subcategory slug. This label addition applies to both appearance versions. Preserve direction isolation, wrapping and the two-level route/data rules in `docs/CATALOG_CATEGORIES.md`.
+- Native scrolling controls now reserve space for scrollbars and focus outlines; do not remove the clearance or hide scrolling when adjusting category chips, thumbnails, POS tabs, management navigation or tables. Joined card-action hover paint reaches the cell edges with rounding only at the card's outer lower corners. The new browser regressions and their data requirements are documented in the follow-up handoff.
+- On 2026-11-13, the owner's existing `node_modules` contained Next.js 16.3.8 while the manifest/lockfile specified 16.4.3. Verify the actual installed version before relying on local results; the release was separately checked with an isolated clean install from the lockfile. Do not replace the owner's dependencies while their server is running.
+
 ## Version 0.1.5 source release — 2026-11-06
 
 - Owner requested committing the current pending source, pushing the next sequential branch `0.1.5` and merging it into `main`. Package/lockfile versions are `0.1.5`; scope, evidence and remaining owners live in `docs/releases/0.1.5.md` and the latest `docs/PROJECT_STATUS.md` entry. Keep private archive history, environment exports and generated QA/build output out of publication.

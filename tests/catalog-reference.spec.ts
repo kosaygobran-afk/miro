@@ -271,7 +271,7 @@ for (const locale of ["he", "en"] as const) {
           .evaluate(
             (e) => getComputedStyle(e).gridTemplateColumns.split(" ").length,
           ),
-      ).toBe(1);
+      ).toBe(width === 320 ? 1 : 2);
       await catalog
         .getByRole("button", {
           name: locale === "he" ? "תצוגת רשת" : "Grid view",
@@ -907,6 +907,68 @@ for (const locale of ["he", "en"] as const) {
 }
 
 for (const locale of ["he", "en"] as const) {
+  test(`${locale}: joined card actions fill their cells up to the outer corners`, async ({
+    page,
+  }) => {
+    await page.goto(`/${locale}`);
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-motion-ready",
+      "true",
+    );
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.locator("html").evaluate((root) => {
+      root.dataset.theme = "dark";
+    });
+    for (const selector of [
+      ".sf-catalog-grid .sf-reference-card",
+      ".sf-moving-rail-segment .sf-reference-rail",
+    ]) {
+      const actions = page
+        .locator(selector)
+        .first()
+        .locator(".sf-product-actions > .sf-card-action-hint > :is(button, a)");
+      await expect(actions).toHaveCount(4);
+      for (let index = 0; index < 4; index++) {
+        const corners = await actions.nth(index).evaluate((element) => {
+          const style = getComputedStyle(element);
+          return [
+            style.borderStartStartRadius,
+            style.borderStartEndRadius,
+            style.borderEndStartRadius,
+            style.borderEndEndRadius,
+          ].map(parseFloat);
+        });
+        expect(corners[0]).toBe(0);
+        expect(corners[1]).toBe(0);
+        expect(corners[2] > 0).toBe(index === 0);
+        expect(corners[3] > 0).toBe(index === 3);
+
+        // Check painted pixels as well as computed radii: the hover fill
+        // must reach both side edges and the upper corners of each cell.
+        const action = actions.nth(index);
+        await action.hover();
+        const { data, info } = await sharp(await action.screenshot())
+          .removeAlpha()
+          .raw()
+          .toBuffer({ resolveWithObject: true });
+        const pixel = (x: number, y: number) => {
+          const offset = (y * info.width + x) * info.channels;
+          return Array.from(data.subarray(offset, offset + 3));
+        };
+        const fill = pixel(Math.floor(info.width / 2), 3);
+        for (const x of [3, info.width - 4]) {
+          for (const y of [3, 20]) {
+            pixel(x, y).forEach((channel, channelIndex) => {
+              expect(
+                Math.abs(channel - fill[channelIndex]),
+              ).toBeLessThanOrEqual(3);
+            });
+          }
+        }
+      }
+    }
+  });
+
   test(`${locale}: SKU copies in full and its overflow rail starts only on intent`, async ({
     page,
     context,

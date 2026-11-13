@@ -28,6 +28,7 @@ import type { Product } from "@/features/catalog/product-data";
 import { PromoBadge } from "@/features/catalog/product-promo-badge";
 import { PriceAmount, DiscountBadge } from "./price-amount";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
+import { ProductCategoryPath } from "./product-category-path";
 import {
   ProductIdentifiers,
   getProductIdentifierVariant,
@@ -740,7 +741,7 @@ export function ProductHoverPreview({
             }
           >
             <p className="sf-hover-preview-category">
-              {product.categoryLabel ?? product.category}
+              <ProductCategoryPath product={product} />
             </p>
             <h3 id={titleId} className="sf-hover-preview-title" dir="auto">
               {product.name}
