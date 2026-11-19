@@ -1368,9 +1368,9 @@ body:has(.sf-product-dialog[open]) {
   .sf-category-filters {
     flex-wrap: nowrap;
     overflow-x: auto;
-    padding: 3px 2px 8px;
+    padding: 0.35rem 0.35rem 1rem;
     margin-top: 0.8rem;
-    scrollbar-width: thin;
+    scrollbar-width: auto;
   }
   .sf-category-filters button {
     flex-shrink: 0;
@@ -1765,7 +1765,7 @@ body:has(.sf-product-dialog[open]) {
     flex-direction: row;
     max-height: none;
     overflow-x: auto;
-    padding-block-end: 0.35rem;
+    padding-block-end: 1rem;
   }
   .sf-thumbnail {
     width: 4.25rem;

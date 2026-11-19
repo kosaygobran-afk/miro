@@ -233,7 +233,7 @@
   will-change: auto;
 }
 .sf-company-viewport[data-static] .sf-company-segment {
-  padding-bottom: 0.5rem;
+  padding-block-end: 1rem;
 }
 @keyframes sf-company-loop {
   to {

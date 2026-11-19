@@ -22,6 +22,8 @@ Version 2 category controls center labels using equal reserved edge slots, with 
 
 `StoreCatalog.categories` and global navigation contain roots only; `StoreCatalog.subcategories` contains children separately. Public products require a visible main category and, when assigned, a visible matching child. Never flatten children into root navigation or apply root aliases to child slugs.
 
+Product cards, quick previews and detail headings display the main category followed by its assigned subcategory, if any. Card paths wrap so long labels stay visible. The detail breadcrumb links the child to the root category route with its literal `subcategory` query parameter; products without a child show only the root.
+
 ## Database and verification
 
 Migration `20261017010000_two_level_catalog_categories.sql` adds the optional FK without rewriting rows. Triggers enforce two levels, required roots for new products, matching assignments, active publication and safe deletion/reparenting. `update_product` clears an omitted old child atomically when changing roots. Keep PostgREST relationships explicit (`products_category_id_fkey` / `products_subcategory_id_fkey`) because products have two foreign keys to categories. Preserve authorization, private-column grants and audits.

@@ -1,5 +1,18 @@
 # Design System
 
+## Responsive product list view — 2026-11-13
+
+- Version 2's catalog list uses at most two columns, with each column at least 28rem when space permits; the actual catalog width determines when the second column fits. Each sufficiently wide card places the image/badges and joined stock/SKU halves beside a vertically balanced category/title/model and price panel, with the four joined action cells spanning the full card below. A card-width container query switches to the stacked composition for narrow phones, where the list's image stage is shorter. Long values must grow or use their existing accessible overflow treatment; never clip pricing, stock, controls or product imagery to force equal heights.
+- Preserve the card's logical reading direction, price/stock truth, independent SKU copying, preview triggers and 48px actions. The layout only applies to the catalog's list view; ordinary grid cards, moving/related rails and Version 1 retain their own composition. Keep the preview source separate from the action footer.
+
+## Scrollable control clearance — 2026-11-13
+
+- Horizontal control rails must reserve room below their controls for native overlay scrollbars and focus outlines; the storefront root/category chips and commerce navigation use a full 1rem bottom inset and normal-width native scrollbars. Preserve native touch, wheel and keyboard scrolling in both directions. Thumbnail rails and compact POS tabs also retain their own scrollbar clearance; do not remove their padding when changing gallery or tab geometry. Existing hidden-scrollbar rails keep their own navigation controls.
+
+## Joined action-cell corners — 2026-11-13
+
+- Version 2's four joined grid and rail footer controls paint all the way to their shared seams. Their inner corners are square; only the first and last controls follow the card's outer lower corners. The final public refinement layer intentionally overrides older important standalone-button radii. Preserve the independent controls, inset focus, theme-gold hover, accessible names and portaled hints; verify actual painted pixels as well as computed radii.
+
 ## Compact price panel and four joined footer cells — 2026-11-06 follow-up
 
 - The owner moved Version 2's price panel below the product category/title/brand/model summary, immediately above footer actions. The photo/SKU-stock halves stay together above that summary. This supersedes the earlier photo-attached price position. Keep the canonical renderer shared by grid, moving and related cards, with the same truthful price/stock conditions and complete illustration disclosure.

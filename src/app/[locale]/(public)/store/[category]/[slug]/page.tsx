@@ -23,6 +23,7 @@ import type { PublicOptionalOffer } from "@/lib/catalog/product-options";
 import { CatalogUnavailable } from "@/components/products/catalog-unavailable";
 import { RelatedProductsRail } from "@/features/catalog/related-products-rail";
 import { getRelatedProducts } from "@/lib/catalog/related-products";
+import { ProductCategoryPath } from "@/features/catalog/product-category-path";
 import {
   getPublicContactConfig,
   toPublicContactActions,
@@ -231,6 +232,16 @@ export default async function ProductDetailPage({
                 {catalog.categories.find((c) => c.key === category)?.label ??
                   category}
               </Link>
+              {product.subcategorySlug && product.subcategoryLabel && (
+                <>
+                  <Arrow size={14} aria-hidden="true" />
+                  <Link
+                    href={`${withLocale(locale, `store/${category}`)}?subcategory=${encodeURIComponent(product.subcategorySlug)}`}
+                  >
+                    <bdi>{product.subcategoryLabel}</bdi>
+                  </Link>
+                </>
+              )}
               <Arrow size={14} aria-hidden="true" />
               <span aria-current="page">{product.name}</span>
             </nav>
@@ -264,7 +275,7 @@ export default async function ProductDetailPage({
               header={
                 <>
                   <p className="sf-product-category">
-                    {product.categoryLabel ?? product.category}
+                    <ProductCategoryPath product={product} />
                   </p>
                   <h1 id="product-title" dir="auto">
                     {product.name}

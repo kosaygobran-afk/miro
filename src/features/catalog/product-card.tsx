@@ -42,6 +42,7 @@ import { StickerCluster } from "@/features/catalog/product-promo-badge";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import { CardActionHint } from "./card-action-hint";
 import { ProductCardSku } from "./product-card-sku";
+import { ProductCategoryPath } from "./product-category-path";
 
 export type { Product } from "@/features/catalog/product-data";
 
@@ -556,13 +557,7 @@ export function ProductCard({
           >
             <p className="sf-product-category">
               {enhancedBadges && <Tag size={14} aria-hidden="true" />}
-              {enhancedBadges ? (
-                <span title={product.categoryLabel ?? product.category}>
-                  {product.categoryLabel ?? product.category}
-                </span>
-              ) : (
-                (product.categoryLabel ?? product.category)
-              )}
+              <ProductCategoryPath product={product} />
             </p>
             <h3
               dir={enhancedBadges ? (locale === "he" ? "rtl" : "ltr") : "auto"}

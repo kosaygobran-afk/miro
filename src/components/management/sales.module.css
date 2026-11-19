@@ -258,6 +258,7 @@
 
 .reviewTableWrap {
   overflow-x: auto;
+  padding-block-end: 0.75rem;
 }
 
 .reviewTable {
