@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    agentUpgrade: "security",
+  },
   // Support the same loopback hosts as the Supabase recovery allowlist.
   allowedDevOrigins: ["127.0.0.1"],
   // Keep development status badges out of storefront previews. Compile/runtime
