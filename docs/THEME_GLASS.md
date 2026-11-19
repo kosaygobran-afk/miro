@@ -17,6 +17,8 @@ visit. Pages already open elsewhere are not pushed or polled.
 
 ## Design contract
 
+The 2026-11-19 owner follow-up gives the CEO and admin topbar the management page’s opaque background in every theme. The management account popover still follows the optional glass setting.
+
 - Every enhancement requires `data-appearance-version="2"`, `data-glass="on"` and `data-theme="dark"`.
   Version 1 retains its existing appearance. No enhancement changes header sizes,
   card widths, control radii, product fitting, text layout or motion settings.

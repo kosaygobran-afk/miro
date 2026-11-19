@@ -272,6 +272,26 @@ try {
           await page.evaluate((theme) => {
             document.documentElement.dataset.theme = theme;
           }, theme);
+          const topbar = page.locator(".mgmt-topbar");
+          await expect(topbar.locator(":scope > *")).toHaveCount(2);
+          await expect(
+            topbar.locator(".navbar-text-link, form[role='search']"),
+          ).toHaveCount(0);
+          const paint = await topbar.evaluate((node) => {
+            const bar = getComputedStyle(node);
+            const shell = getComputedStyle(node.closest(".mgmt-shell"));
+            return {
+              fill: bar.backgroundColor,
+              page: shell.backgroundColor,
+              image: bar.backgroundImage,
+              backdrop: bar.backdropFilter,
+            };
+          });
+          assert.deepEqual(
+            [paint.fill, paint.image, paint.backdrop],
+            [paint.page, "none", "none"],
+            `${role}/${locale}/${width}/${theme}: navbar matches the management page`,
+          );
           await expect
             .poll(() =>
               page
@@ -889,8 +909,22 @@ try {
         })
         .click();
       await expect(dialog).toBeVisible();
+      await page.evaluate(() => {
+        const desktop = matchMedia("(min-width: 1200px)");
+        window.waitForNavbarResize = new Promise((resolve) =>
+          desktop.addEventListener("change", resolve, { once: true }),
+        );
+      });
       await page.setViewportSize({ width: 390, height: 900 });
+      await page.evaluate(async () => {
+        await window.waitForNavbarResize;
+        delete window.waitForNavbarResize;
+      });
       await expect(dialog).toBeVisible();
+      await expect(page.locator(".mgmt-topbar__controls")).toHaveAttribute(
+        "data-open",
+        "true",
+      );
       await page.keyboard.press("Escape");
       await expect(dialog).toHaveCount(0);
       await expect(page.locator(".mgmt-topbar__controls")).toBeVisible();

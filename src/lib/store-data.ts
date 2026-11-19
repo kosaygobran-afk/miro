@@ -112,7 +112,7 @@ export type StoreViewer = {
   savedProductIds: string[];
 };
 
-async function getInventoryDefaults(
+export async function getInventoryDefaults(
   signal: AbortSignal,
 ): Promise<InventoryDefaults> {
   try {
@@ -149,7 +149,7 @@ async function getInventoryDefaults(
   }
 }
 
-function resolveOutOfStockPolicy(
+export function resolveOutOfStockPolicy(
   policy: OutOfStockPolicy,
   defaults: InventoryDefaults,
 ): ResolvedOutOfStockPolicy {
@@ -166,7 +166,7 @@ function computeStockState(
   return "in_stock";
 }
 
-function shouldHideFromPublic(
+export function shouldHideFromPublic(
   policy: ResolvedOutOfStockPolicy,
   stockQty: number,
 ): boolean {
@@ -668,6 +668,8 @@ export async function getStoreCatalog(
             locale === "he"
               ? (product.name_he ?? product.name_en ?? "Product")
               : (product.name_en ?? product.name_he ?? "Product"),
+          alternateName:
+            (locale === "he" ? product.name_en : product.name_he) ?? undefined,
           description:
             locale === "he"
               ? (product.short_description_he ??

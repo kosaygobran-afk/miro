@@ -158,9 +158,7 @@
   color: var(--foreground);
 }
 .mgmt-topbar {
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
   border-block-end-color: var(--border-subtle);
-  backdrop-filter: blur(16px);
 }
 .mgmt-topbar__title {
   font-size: 0.95rem;
@@ -518,9 +516,6 @@
   .mgmt-shell .mgmt-form-section__body,
   #mgmt-overlay-portal-host :is(.mgmt-drawer__body, .mgmt-dialog__body) {
     padding: 1rem;
-  }
-  .mgmt-topbar {
-    backdrop-filter: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

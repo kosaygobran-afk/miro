@@ -14,7 +14,6 @@ import {
   House,
   Info,
   Phone,
-  Search,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -27,6 +26,7 @@ import { StoreCategoryMenu } from "@/components/layout/store-category-menu";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { NavigationThemeSelector } from "./navigation-theme-selector";
 import { HeaderCartLink } from "@/features/cart/header-cart-link";
+import { NavbarProductSearch } from "./navbar-product-search";
 
 export type HeaderLabels = {
   logo: string;
@@ -84,6 +84,7 @@ export function HeaderClient({
   const he = locale === "he";
   const Arrow = he ? ArrowLeft : ArrowRight;
   const productsHref = withLocale(locale);
+  const storeHref = withLocale(locale, "store");
   const navLinks = [
     { href: productsHref, label: labels.nav.products, icon: Store },
     {
@@ -159,7 +160,7 @@ export function HeaderClient({
   useEffect(() => {
     if (!open && !productsOpen) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
+      if (event.key !== "Escape" || event.defaultPrevented) return;
       // Escape dismisses the top account popup before its parent navigation.
       if (document.querySelector(".premium-account-dropdown")) return;
       if (productsOpen) {
@@ -236,35 +237,13 @@ export function HeaderClient({
     setOpen(false);
     setProductsOpen(false);
   }
-  function searchForm(className: string) {
-    return (
-      <form
-        action={`${productsHref}#store-items`}
-        method="get"
-        role="search"
-        className={className}
-        onSubmit={closeNavigation}
-      >
-        <input
-          name="q"
-          type="search"
-          maxLength={120}
-          aria-label={he ? "חיפוש בחנות" : "Search the store"}
-          placeholder={he ? "מה תרצו למצוא?" : "Find your security solution"}
-        />
-        <button type="submit" aria-label={he ? "חיפוש" : "Search"}>
-          <Search size={18} aria-hidden="true" />
-        </button>
-      </form>
-    );
-  }
   function navLinksView(mobile = false) {
     return navLinks.map((link) => {
       const exact = pathname === link.href;
       const active =
         exact ||
         (link.href === productsHref
-          ? pathname.startsWith(`${productsHref}/store/`)
+          ? pathname === storeHref || pathname.startsWith(`${storeHref}/`)
           : pathname.startsWith(`${link.href}/`));
       const Icon = link.icon;
       const linkElement = (
@@ -272,12 +251,14 @@ export function HeaderClient({
           href={link.href}
           aria-current={exact ? "page" : active ? "location" : undefined}
           onClick={closeNavigation}
-          className={`premium-nav-link ${active ? "is-active" : ""}`}
+          className={`premium-nav-link navbar-text-link${active ? " is-active" : ""}`}
         >
           {animationSettings.appearanceVersion === "2" && (
             <Icon className="premium-nav-icon" size={17} aria-hidden="true" />
           )}
-          <span>{link.label}</span>
+          <span className="navbar-text-label" data-label={link.label}>
+            <span>{link.label}</span>
+          </span>
         </Link>
       );
       if (link.href !== productsHref || mobile)
@@ -312,7 +293,10 @@ export function HeaderClient({
               );
             }}
           >
-            <ChevronDown size={13} aria-hidden="true" />
+            <ChevronDown
+              size={animationSettings.appearanceVersion === "2" ? 18 : 13}
+              aria-hidden="true"
+            />
           </button>
           {productsOpen && (
             <div
@@ -387,7 +371,11 @@ export function HeaderClient({
             SECURE. SMART. CONNECTED.
           </span>
           <Link href={withLocale(locale, "services/business")}>
-            {he ? "פתרון שמתאים לעסק שלכם" : "Security that fits your business"}
+            <span>
+              {he
+                ? "פתרון שמתאים לעסק שלכם"
+                : "Security that fits your business"}
+            </span>
             <Arrow size={13} aria-hidden="true" />
           </Link>
         </div>
@@ -409,15 +397,22 @@ export function HeaderClient({
           <nav className="premium-desktop-nav" aria-label={labels.navLabel}>
             {navLinksView()}
           </nav>
-          {searchForm("premium-header-search")}
+          <NavbarProductSearch
+            locale={locale}
+            className="premium-header-search"
+            onNavigate={closeNavigation}
+          />
           <div className="premium-header-actions">
             <div className="premium-header-action-group premium-header-action-group--shopping">
-              <HeaderCartLink locale={locale} />
+              <HeaderCartLink
+                locale={locale}
+                current={pathname === withLocale(locale, "cart")}
+              />
               <Link
                 href={withLocale(locale, "contact")}
                 className="miro-button miro-button-primary premium-quote-action"
               >
-                {labels.actions.requestQuote}
+                <span>{labels.actions.requestQuote}</span>
                 <Arrow size={16} aria-hidden="true" />
               </Link>
             </div>
@@ -525,7 +520,11 @@ export function HeaderClient({
               }}
             >
               <div className="miro-container">
-                {searchForm("premium-mobile-search")}
+                <NavbarProductSearch
+                  locale={locale}
+                  className="premium-mobile-search"
+                  onNavigate={closeNavigation}
+                />
                 <nav aria-label={labels.navLabel}>{navLinksView(true)}</nav>
                 <div className="premium-mobile-shortcuts">
                   <Link
@@ -577,7 +576,7 @@ export function HeaderClient({
                   className="miro-button miro-button-primary"
                   onClick={closeNavigation}
                 >
-                  {labels.actions.requestQuote}
+                  <span>{labels.actions.requestQuote}</span>
                   <Check size={16} aria-hidden="true" />
                 </Link>
               </div>

@@ -9,6 +9,7 @@ export default defineConfig(base, {
     "product-list-layout.spec.ts",
     "product-image-magnifier.spec.ts",
     "navigation-bar.spec.ts",
+    "storefront-navbar-search.spec.ts",
     "navigation-loading-bar.spec.ts",
     "motion.spec.ts",
     "customer-evolution.spec.ts",

@@ -162,9 +162,8 @@
     .experience-tags > span,
     .sf-department-icon,
     .sf-bundle-tags > span,
-    .premium-category-menu__number,
     .premium-account-avatar,
-    .premium-theme-selector
+    .premium-theme-selector:not(:where(.premium-header .premium-theme-selector))
   ) {
     background-image: linear-gradient(
       145deg,
@@ -217,25 +216,17 @@
   }
 }
 
-/* Management receives restrained chrome depth only. No sidebar, data/table,
-   financial-status, input or palette overrides. Portaled account panels share
-   the same root preference without entering the sticky header's blur context. */
-:root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]
-  :is(.mgmt-topbar, .mgmt-account__popover) {
-  background:
-    linear-gradient(145deg, var(--glass-sheen), transparent 48%),
-    var(--glass-fill);
-  border-color: var(--border-control);
-  box-shadow: var(--glass-shadow);
-  -webkit-backdrop-filter: var(--glass-filter);
-  backdrop-filter: var(--glass-filter);
-}
-
+/* The portaled management account panel uses the same optional glass treatment
+   as other elevated surfaces. The topbar uses the management page background. */
 :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]
   .mgmt-account__popover {
   background:
     linear-gradient(145deg, var(--glass-sheen), transparent 48%),
     var(--glass-menu-fill);
+  border-color: var(--border-control);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
 }
 
 /* Shared management panels retain opaque data backgrounds and semantic tones.

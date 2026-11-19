@@ -110,10 +110,20 @@ export function ProductsClient({
           const matchSubcategory =
             !activeSubcategoryId ||
             product.subcategoryId === activeSubcategoryId;
-          const haystack =
-            `${product.name} ${product.description} ${product.category} ${product.categoryLabel ?? ""} ${product.subcategoryLabel ?? ""}`.toLocaleLowerCase(
-              locale,
-            );
+          const haystack = [
+            product.name,
+            product.alternateName,
+            product.description,
+            product.category,
+            product.categoryLabel,
+            product.subcategoryLabel,
+            product.brand,
+            product.modelNumber,
+            product.slug,
+            ...product.variants.flatMap(({ sku, barcode }) => [sku, barcode]),
+          ]
+            .join(" ")
+            .toLocaleLowerCase(locale);
           return (
             matchCategory &&
             matchSubcategory &&

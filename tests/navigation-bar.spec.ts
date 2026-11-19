@@ -256,11 +256,17 @@ for (const locale of ["en", "he"] as const) {
                 .evaluate((node) => node.getBoundingClientRect().width),
             ).toBeGreaterThanOrEqual(280);
           }
-          for (const [top, right, bottom, left] of labelPadding) {
+          for (const [
+            index,
+            [top, right, bottom, left],
+          ] of labelPadding.entries()) {
             expect(top).toBeGreaterThanOrEqual(14);
             expect(bottom).toBe(top);
-            expect(left).toBeGreaterThanOrEqual(16);
-            expect(right).toBe(left);
+            const [start, end] =
+              locale === "en" ? [left, right] : [right, left];
+            expect(start).toBeGreaterThanOrEqual(width < 1440 ? 10 : 16);
+            if (index === 0) expect(end).toBeLessThan(start);
+            else expect(end).toBe(start);
           }
         } else expect(separation.actionGap).toBeGreaterThanOrEqual(6);
         if (width === 1920) {

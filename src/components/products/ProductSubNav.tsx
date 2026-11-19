@@ -69,14 +69,24 @@ export function ProductSubNav({
   const isRtl = isLocale(locale) ? locale === "he" : false;
   useLayoutEffect(() => {
     const rail = railRef.current;
-    const current = rail?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (!enhanced || !rail || !current) return;
-    const bounds = rail.getBoundingClientRect();
-    const chip = current.getBoundingClientRect();
-    if (chip.left < bounds.left || chip.right > bounds.right) {
-      rail.scrollLeft +=
-        chip.left + chip.width / 2 - bounds.left - bounds.width / 2;
-    }
+    if (!enhanced || !rail) return;
+    const current = rail.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!current) return;
+
+    const revealCurrent = () => {
+      const bounds = rail.getBoundingClientRect();
+      const chip = current.getBoundingClientRect();
+      if (chip.left < bounds.left - 1 || chip.right > bounds.right + 1) {
+        rail.scrollLeft +=
+          chip.left + chip.width / 2 - bounds.left - bounds.width / 2;
+      }
+    };
+
+    revealCurrent();
+    const observer = new ResizeObserver(revealCurrent);
+    observer.observe(rail);
+    observer.observe(current);
+    return () => observer.disconnect();
   }, [currentCategory, enhanced]);
   const Arrow = enhanced
     ? isRtl

@@ -50,6 +50,34 @@ for (const locale of ["en", "he"] as const) {
       ),
     ).toEqual(firstNames);
 
+    const filters = catalog.locator(".sf-category-filters");
+    const toolbar = catalog.locator(".sf-catalog-toolbar");
+    await page.setViewportSize({ width: 1279, height: 900 });
+    const filtersBefore = (await filters.boundingBox())!;
+    await page.setViewportSize({ width: 1280, height: 900 });
+    const filtersAfter = (await filters.boundingBox())!;
+    expect(filtersAfter.width).toBeGreaterThanOrEqual(filtersBefore.width - 2);
+    expect((await toolbar.boundingBox())!.y).toBeGreaterThanOrEqual(
+      filtersAfter.y + filtersAfter.height - 1,
+    );
+    const searchSpace = await toolbar
+      .locator("input")
+      .evaluate(async (element) => {
+        await document.fonts.ready;
+        const input = element as HTMLInputElement;
+        const style = getComputedStyle(input);
+        const placeholder = getComputedStyle(input, "::placeholder");
+        const context = document.createElement("canvas").getContext("2d")!;
+        context.font = `${placeholder.fontWeight} ${placeholder.fontSize} ${placeholder.fontFamily}`;
+        return (
+          input.clientWidth -
+          parseFloat(style.paddingInlineStart) -
+          parseFloat(style.paddingInlineEnd) -
+          context.measureText(input.placeholder).width
+        );
+      });
+    expect(searchSpace).toBeGreaterThanOrEqual(0);
+
     for (const width of [320, 390, 480, 600, 950, 976, 980, 1077, 1440, 1920]) {
       await page.setViewportSize({ width, height: 900 });
       const layout = await grid.evaluate((element) => {

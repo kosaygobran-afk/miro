@@ -63,21 +63,36 @@ for (const locale of ["he", "en"] as const) {
       await trigger.click();
       await expectInViewport(panel);
       await expect(trigger).toHaveAttribute("aria-expanded", "true");
-      const disclosureFrame = await trigger.evaluate((node) => {
+      const disclosure = await trigger.evaluate((node) => {
         const style = getComputedStyle(node);
         return {
           border: parseFloat(style.borderTopWidth),
+          background: style.backgroundColor,
+          underline: getComputedStyle(node, "::after").opacity,
           width: node.getBoundingClientRect().width,
           height: node.getBoundingClientRect().height,
-          gap: parseFloat(getComputedStyle(node.parentElement!).columnGap),
         };
       });
-      expect(disclosureFrame.border).toBeGreaterThan(0);
-      expect(disclosureFrame.width).toBeGreaterThanOrEqual(32);
-      expect(disclosureFrame.height).toBeGreaterThanOrEqual(44);
-      expect(disclosureFrame.gap).toBeGreaterThanOrEqual(4);
+      expect(disclosure.border).toBe(0);
+      expect(disclosure.background).toBe("rgba(0, 0, 0, 0)");
+      expect(disclosure.underline).toBe("1");
+      expect(disclosure.width).toBeGreaterThanOrEqual(44);
+      expect(disclosure.height).toBeGreaterThanOrEqual(44);
       const links = panel.locator(".premium-category-menu__link");
       expect(await links.count()).toBeGreaterThan(0);
+      const list = panel.locator(".premium-category-menu__list");
+      if (viewport.height > 480) {
+        await expect(
+          panel.locator(".premium-category-menu__footer"),
+        ).toBeInViewport();
+        expect(
+          await list.evaluate((node) => getComputedStyle(node).overflowY),
+        ).toBe("auto");
+      } else {
+        expect(
+          await panel.evaluate((node) => getComputedStyle(node).overflowY),
+        ).toBe("auto");
+      }
       await links.last().focus();
       await expect(links.last()).toBeInViewport();
       await page.keyboard.press("Home");
@@ -107,6 +122,25 @@ for (const locale of ["he", "en"] as const) {
       .toBe(true);
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await first.hover();
+    expect(
+      await first.evaluate((node) => {
+        const row = getComputedStyle(node);
+        const label = getComputedStyle(
+          node.querySelector(".premium-category-menu__label")!,
+        );
+        return {
+          underlined: label.textDecorationLine === "underline",
+          bold: Number(label.fontWeight) >= 750,
+          border: parseFloat(row.borderTopWidth),
+          background: row.backgroundColor,
+        };
+      }),
+    ).toEqual({
+      underlined: true,
+      bold: true,
+      border: 0,
+      background: "rgba(0, 0, 0, 0)",
+    });
     const arrow = first.locator("svg");
     await expect
       .poll(() => arrow.evaluate((node) => getComputedStyle(node).transform))

@@ -1,5 +1,21 @@
 # Design System
 
+## CEO and admin navbar restored — 2026-11-19
+
+- The CEO and admin topbar use the original management breadcrumb, workspace finder and control groups. Public headline styles and live navbar product search belong to the storefront.
+- The management topbar uses the same opaque background color as the management shell in each theme, with the existing management divider. The optional glass setting still applies to the account popover.
+
+## Storefront navbar visual refinement — 2026-11-19
+
+- Version 2 uses text and glyphs for storefront navigation. The header quote is a bold gold text action, the search field has a thin border on all four sides, and the cart, account, language, theme, search and menu controls use frameless glyphs. Hover, focus and selected states use gold underlines, stronger glyphs and a soft white highlight. Keyboard focus keeps its visible outline. Spacing separates the desktop and phone headlines.
+- The Store label and larger category chevron remain separate controls. The category window has an unboxed list of live root categories with hairline separators and text-only active styling. The list owns native scrolling while the heading and Explore the store link stay visible at normal desktop heights. Short windows scroll the whole panel so every link stays reachable. Preserve RTL placement, keyboard navigation and category routes.
+
+## Storefront navbar product search — 2026-11-19
+
+- Horizontal storefront page links use gold text underlines, heavier labels and a subtle white text highlight for hover, keyboard focus and the current page or section. The separate Store category disclosure and other icon controls retain their own behavior.
+- The storefront navbar search uses a maximum of five items per page, with physical-left Previous and physical-right Next in both directions. The lookup reads public catalog products and opens the localized product detail.
+- The collection intro below the category controls and rails anchors its eyebrow, title and description to the physical left in both languages. The surrounding catalog and the Hebrew copy retain their natural reading direction.
+
 ## Responsive product list view — 2026-11-13
 
 - Version 2's catalog list uses at most two columns, with each column at least 28rem when space permits; the actual catalog width determines when the second column fits. Each sufficiently wide card places the image/badges and joined stock/SKU halves beside a vertically balanced category/title/model and price panel, with the four joined action cells spanning the full card below. A card-width container query switches to the stacked composition for narrow phones, where the list's image stage is shorter. Long values must grow or use their existing accessible overflow treatment; never clip pricing, stock, controls or product imagery to force equal heights.
@@ -8,6 +24,7 @@
 ## Scrollable control clearance — 2026-11-13
 
 - Horizontal control rails must reserve room below their controls for native overlay scrollbars and focus outlines; the storefront root/category chips and commerce navigation use a full 1rem bottom inset and normal-width native scrollbars. Preserve native touch, wheel and keyboard scrolling in both directions. Thumbnail rails and compact POS tabs also retain their own scrollbar clearance; do not remove their padding when changing gallery or tab geometry. Existing hidden-scrollbar rails keep their own navigation controls.
+- The Version 2 all-products filter rail shares its row with the result count on desktop. Search, sort and view controls sit below the rail, including at 1280px and above, so enlarging the window across that breakpoint preserves category space. The desktop search field fits the complete placeholder in both languages. The main-category rail reveals its selected chip on navigation and when the rail or chip resizes. Normal user scrolling remains independent of this resize behavior.
 
 ## Joined action-cell corners — 2026-11-13
 

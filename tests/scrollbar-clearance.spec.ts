@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { DEFAULT_ANIMATION_SETTINGS } from "../src/lib/animation-settings";
 
 // Synthetic content guarantees overflow without changing the owner's catalog.
 const styles = [
@@ -140,3 +141,49 @@ test("compact preview thumbnails retain room for scrolling", async ({
   expect(geometry.bottom).toBeGreaterThanOrEqual(10);
   expect(geometry.top).toBeGreaterThanOrEqual(0);
 });
+
+for (const locale of ["he", "en"] as const) {
+  test(`${locale}: active category stays in view after narrowing the storefront`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.route("**/api/track", (route) => route.fulfill({ status: 204 }));
+    await page.goto(`/${locale}`);
+    const rail = page.locator(".sf-department-grid");
+    const categories = rail.locator(".sf-department");
+    await expect(categories.first()).toBeVisible();
+    const href = (await categories.last().getAttribute("href"))!;
+    await page.goto(href);
+    const html = page.locator("html");
+    await expect(html).toHaveAttribute("data-motion-ready", "true");
+    await page.evaluate(
+      (detail) =>
+        window.dispatchEvent(
+          new CustomEvent("miro-animation-settings-change", { detail }),
+        ),
+      { ...DEFAULT_ANIMATION_SETTINGS, enabled: false, appearanceVersion: "2" },
+    );
+
+    const selected = rail.locator('[aria-current="page"]');
+    const isSelectedInsideRail = () =>
+      selected.evaluate((chip) => {
+        const bounds = chip.parentElement!.getBoundingClientRect();
+        const item = chip.getBoundingClientRect();
+        return item.left >= bounds.left - 1 && item.right <= bounds.right + 1;
+      });
+    await expect.poll(isSelectedInsideRail).toBe(true);
+    await page.setViewportSize({ width: 320, height: 900 });
+    await expect.poll(isSelectedInsideRail).toBe(true);
+
+    const position = () => rail.evaluate((element) => element.scrollLeft);
+    await rail.hover();
+    const beforeWheel = Math.abs(await position());
+    await page.mouse.wheel(locale === "he" ? 200 : -200, 0);
+    await expect
+      .poll(async () => Math.abs(await position()))
+      .toBeLessThan(beforeWheel);
+    await selected.focus();
+    await expect.poll(isSelectedInsideRail).toBe(true);
+  });
+}

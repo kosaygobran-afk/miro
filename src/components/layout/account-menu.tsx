@@ -205,6 +205,9 @@ export function AccountMenu({
           onClick={onNavigate}
           className={compact ? "premium-account-action" : undefined}
           aria-label={labels.account}
+          aria-current={
+            pathname === withLocale(locale, "login") ? "page" : undefined
+          }
           title={labels.account}
         >
           <UserRound size={19} aria-hidden="true" />

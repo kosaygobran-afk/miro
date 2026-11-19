@@ -38,6 +38,7 @@ export type PublicPromotion = {
 export interface Product {
   id: string;
   name: string;
+  alternateName?: string;
   description: string;
   shortDescription?: string;
   priceIls: number | null;
