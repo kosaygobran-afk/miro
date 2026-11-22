@@ -1,8 +1,15 @@
+## 0.1.6 storefront follow-up — 2026-11-23
+
+- Consolidated the published storefront, checkout and document changes with the pending theme persistence fix on the existing `0.1.6` version line. The release notes explain the full scope and verification. [MIRO 0.1.6 release notes](releases/0.1.6.md)
+- Lint, scoped formatting, staged whitespace checks, all 487 unit tests and the production build with 156 prerender tasks passed. After development-server timeouts, the isolated production build passed eight theme tests and the bilingual populated Cart check. The navbar regression now waits for the mobile account session to resolve before simulating sign-out, and six repeated English and Hebrew runs passed. A production-build smoke check verified locale changes across all three themes, both shopping pages, footer links and health.
+- Checkout remains in preview. The business and accountant own payment and fiscal readiness, operations owns the PDF scheduler check, and QA and privacy own the manual accessibility and retention reviews.
+
 ## Shopping pages and signed-in navigation — 2026-11-23
 
 - Updated the Cart and Wishlist with shared headings, icons, item counts, catalog links and bilingual empty states. The Cart distinguishes unit prices, item totals and the estimated subtotal. The Wishlist explains where its products are saved and gives retry and pagination controls clear labels.
 - Guests see About and Contact in the storefront navigation. Signed-in users use the About us and Contact us footer links. The contact-based quote shortcut follows the same visibility rule. Desktop and mobile use the verified account session and refresh after sign-in and sign-out.
 - Validated all 13 Cart and Wishlist Chromium cases, both reading directions at 320 and 1440 px across the three themes, and scoped axe scans. All 12 focused navigation regressions and eight overlay, headline and utility checks passed. The navbar checks now account for the existing Wishlist shortcut in desktop spacing and mobile labels. All 487 unit tests, lint, the isolated production build and Vercel Preview passed.
+- Vercel Production deployed `d310651967`. Public checks verified the account header and footer in both locales, the signed-in mobile menu, restoration of guest links after real sign-out, guest Wishlist across locale navigation, keyboard quantity controls and cross-page navigation. Guest selections transferred into Supabase and reopened in a fresh signed-in browser. The disposable customer was removed. The linked migration dry run reported an up-to-date database.
 - The navigation change uses the existing session and public page links. QA retains the manual device and screen-reader review.
 
 ## Cart, Wishlist and checkout rollout — 2026-11-23
@@ -42,6 +49,12 @@
 - Updated the shared draft renderer to `miro-draft-4` for all eight document types. Narrow A4 screens stack line-item values, while A4 desktop and print retain aligned numeric columns. Standard A4 samples fit on one page in PDF and Chromium print. Thermal pages center the full vector logo, including continuations. Each tender keeps its method, amount, timestamp and reference together. Receipts distinguish document total, paid amount and any balance.
 - All 21 focused renderer and preview API tests and the 485-test unit suite passed. Poppler checked printed margins, real numeric anchors, pagination and maximum-length text and amounts. Visually inspected synthetic Hebrew and English PDF and native-print samples, including a thermal continuation. The isolated Next.js 16.4.6 production build and preview harness passed. The harness exercised authorized, read-only preview routes, all 32 type/language/paper combinations, long identity data, draft snapshot preservation and scoped accessibility. Poppler passed 42 renderer PDFs across 97 pages and 72 production/native-print PDFs across 118 pages, with zero geometry or completeness findings.
 - Business/accountant retains approval of printable legal identity, wording and official issuance. QA retains physical printing and manual bilingual accessibility review. The previews use synthetic fixtures and the existing private management access controls.
+
+## Storefront theme persistence on language changes — 2026-11-19
+
+- Fixed a reset to Dark when the client replaces the locale layout, even though the selected theme was in browser storage. The layout now restores the preference before paint. Theme selection saves immediately, so a language change during the visual transition also carries the new choice.
+- Both regressions reproduced before the fix. Nine focused Chromium checks and two WebKit checks passed on the local server. Three production Chromium checks passed, and a phone-sized Hebrew-to-English production check kept Medium in all sampled frames. Lint, typecheck, scoped Prettier, `git diff --check`, all 483 unit tests and the isolated 152-task production build passed.
+- The fix uses the existing browser-local preference. No new privacy or legal impact surfaced. QA retains manual device and screen-reader review, and the existing launch approvals stay with their assigned owners.
 
 ## Version 0.1.6 source release — 2026-11-19
 

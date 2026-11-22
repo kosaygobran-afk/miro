@@ -179,6 +179,49 @@ test("rapid theme changes settle on the last selection and every mode persists",
   }
 });
 
+test("storefront language changes preserve each selected theme", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.emulateMedia({ colorScheme: "light", reducedMotion: "reduce" });
+  await gotoReady(page, "/en/about?navigation=theme");
+  for (const theme of ["medium", "dark", "light"]) {
+    await page.locator(`[data-theme-option="${theme}"]`).click();
+    await settledTheme(page, theme);
+    for (const locale of ["he", "en"]) {
+      await page.locator(".premium-language").click();
+      await expect(page).toHaveURL(`/${locale}/about?navigation=theme`);
+      await expect(page.locator("html")).toHaveAttribute("lang", locale);
+      await settledTheme(page, theme);
+    }
+  }
+});
+
+test("a theme choice saves before an anchored language switch", async ({
+  page,
+}) => {
+  await page.emulateMedia({ colorScheme: "light" });
+  await gotoReady(page, "/en/about?navigation=theme#main-content");
+  await applySettings(page, DEFAULT_ANIMATION_SETTINGS);
+  await page.evaluate(() => {
+    // Hold the visual update to simulate navigation before the reveal starts.
+    const pending = new Promise<void>(() => {});
+    Object.defineProperty(document, "startViewTransition", {
+      value: () => ({
+        ready: pending,
+        finished: pending,
+        skipTransition() {},
+      }),
+    });
+    document
+      .querySelector<HTMLButtonElement>('[data-theme-option="medium"]')!
+      .click();
+    document.querySelector<HTMLButtonElement>(".premium-language")!.click();
+  });
+  await expect(page).toHaveURL("/he/about?navigation=theme#main-content");
+  await settledTheme(page, "medium");
+});
+
 test("browsers without View Transitions still switch and persist themes", async ({
   page,
 }) => {

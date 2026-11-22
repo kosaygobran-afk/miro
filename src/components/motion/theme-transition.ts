@@ -3,7 +3,10 @@
 import type { AnimationSettings } from "@/lib/animation-settings";
 import { MOTION_EASING } from "@/lib/motion";
 
-export type ThemeMode = "dark" | "medium" | "light";
+export const THEME_MODES = ["dark", "medium", "light"] as const;
+export const THEME_STORAGE_KEY = "miro-theme";
+export type ThemeMode = (typeof THEME_MODES)[number];
+let requestedTheme: ThemeMode | undefined;
 let requestId = 0;
 let activeTransition: ViewTransition | undefined;
 let fallbackTimer: ReturnType<typeof setTimeout> | undefined;
@@ -14,12 +17,36 @@ export function finishThemeTransition() {
 
 function applyTheme(theme: ThemeMode) {
   document.documentElement.dataset.theme = theme;
+  window.dispatchEvent(new Event("miro-theme-change"));
+}
+
+function saveTheme(theme: ThemeMode) {
+  requestedTheme = theme;
   try {
-    localStorage.setItem("miro-theme", theme);
+    localStorage.setItem(THEME_STORAGE_KEY, theme);
   } catch {
     /* Storage is optional. */
   }
-  window.dispatchEvent(new Event("miro-theme-change"));
+}
+
+function readPreferredTheme(): ThemeMode {
+  try {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    const preferred =
+      THEME_MODES.find((mode) => mode === saved) ?? requestedTheme;
+    if (preferred) return preferred;
+    if (matchMedia("(prefers-color-scheme: dark)").matches) return "dark";
+    return matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "medium";
+  } catch {
+    return requestedTheme ?? "dark";
+  }
+}
+
+export function restoreTheme() {
+  const theme = readPreferredTheme();
+  if (document.documentElement.dataset.theme !== theme) applyTheme(theme);
 }
 
 /** The button's current viewport rectangle works for keyboard, mobile and portaled controls. */
@@ -34,6 +61,8 @@ export function transitionTheme(
   const root = document.documentElement;
   delete root.dataset.motionThemeFallback;
   delete root.dataset.motionThemeTransition;
+  // Navigation can replace the layout before the visual transition updates it.
+  saveTheme(theme);
   if (root.dataset.theme === theme) return;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (settings.enabled && settings.features.themeIcon && !reduced) {

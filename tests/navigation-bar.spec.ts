@@ -50,6 +50,7 @@ for (const locale of ["en", "he"] as const) {
     await page.locator(".premium-mobile-toggle").click();
     const mobileNav = page.locator(".premium-mobile-navigation");
     await expect(mobileNav).toBeVisible();
+    await expect(mobileNav.locator(".premium-account-trigger")).toBeVisible();
     await expect(mobileNav.locator(about)).toHaveCount(0);
     await expect(mobileNav.locator(contact)).toHaveCount(0);
     authenticated = false;

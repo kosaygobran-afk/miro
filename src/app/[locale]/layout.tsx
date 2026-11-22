@@ -118,7 +118,7 @@ export default async function LocaleLayout({
       style={motionStyle(animationSettings)}
     >
       <body>
-        <ThemeBootstrap nonce={nonce} />
+        <ThemeBootstrap key={locale} nonce={nonce} />
         <AnimationProvider settings={animationSettings}>
           <Suspense fallback={null}>
             <NavigationProgress />

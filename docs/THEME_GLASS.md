@@ -15,6 +15,11 @@ personal choice. A shared-setting save takes effect in the saving window after
 server confirmation; other visitors receive it after refreshing or on their next
 visit. Pages already open elsewhere are not pushed or polled.
 
+The browser stores the theme choice in `miro-theme` as soon as the user
+selects it. The nonce-bearing bootstrap applies the preference on document
+loads. A layout effect restores it before paint when English and Hebrew
+layouts switch in the same document.
+
 ## Design contract
 
 The 2026-11-19 owner follow-up gives the CEO and admin topbar the management page’s opaque background in every theme. The management account popover still follows the optional glass setting.
