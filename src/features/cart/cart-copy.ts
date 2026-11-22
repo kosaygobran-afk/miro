@@ -1,15 +1,19 @@
 export const cartCopy = {
   en: {
     cartTitle: "Your cart",
-    cartIntro: "Review your selected products before continuing.",
     emptyTitle: "Your cart is empty",
-    emptyText: "Explore the collection and add products to begin.",
+    emptyText:
+      "Add products from the store to see their prices and quantities here.",
     browse: "Browse products",
     quantity: "Quantity",
+    decreaseQuantity: "Decrease quantity",
+    increaseQuantity: "Increase quantity",
     remove: "Remove",
+    unitPrice: "Per unit",
+    lineTotal: "Item total",
     subtotal: "Estimated subtotal",
     estimateNote:
-      "Final availability, delivery cost and pricing are confirmed before payment.",
+      "Choose delivery or pickup at checkout. MIRO will confirm availability and the final price, including any delivery charges.",
     checkout: "Continue to checkout",
     tooManyLines:
       "An order can contain up to 100 product lines, including selected options. Remove a product or a configured selection before continuing.",
@@ -45,14 +49,18 @@ export const cartCopy = {
   },
   he: {
     cartTitle: "סל הקניות שלכם",
-    cartIntro: "בדקו את המוצרים שבחרתם לפני שממשיכים.",
     emptyTitle: "סל הקניות ריק",
-    emptyText: "אפשר לבחור מוצרים מהחנות ולהוסיף אותם לסל.",
+    emptyText: "הוסיפו מוצרים מהחנות כדי לראות כאן את המחירים והכמויות.",
     browse: "לכל המוצרים",
     quantity: "כמות",
+    decreaseQuantity: "הפחתת כמות",
+    increaseQuantity: "הגדלת כמות",
     remove: "הסרה",
+    unitPrice: "ליחידה",
+    lineTotal: "סך הכול לפריט",
     subtotal: "סכום ביניים משוער",
-    estimateNote: "זמינות, עלות משלוח ומחיר סופי יאושרו לפני תשלום.",
+    estimateNote:
+      "בקופה תוכלו לבחור משלוח או איסוף עצמי. צוות MIRO יאשר זמינות ומחיר סופי, כולל דמי משלוח אם יחולו.",
     checkout: "המשך לקופה",
     tooManyLines:
       "הזמנה יכולה לכלול עד 100 שורות מוצר, כולל התוספות שנבחרו. הסירו מוצר או בחירה עם תוספות לפני ההמשך.",

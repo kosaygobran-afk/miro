@@ -1,6 +1,7 @@
 import { ShoppingBag } from "lucide-react";
 import { FormSkeleton, Skeleton } from "@/components/management/ui/skeleton";
 import { cartCopy } from "./cart-copy";
+import { ShoppingPageHeading } from "./shopping-page";
 
 /** Keep the cart/checkout heading stable while the local cart hydrates. */
 export function CartSkeleton({
@@ -20,16 +21,28 @@ export function CartSkeleton({
       <span className="sr-only" role="status">
         {locale === "he" ? "טוען סל…" : "Loading cart…"}
       </span>
-      <div className="miro-container">
-        <header className="sf-cart-heading">
-          <span className="sf-cart-heading-icon" aria-hidden="true">
-            <ShoppingBag size={24} />
-          </span>
-          <div>
-            <h1>{checkout ? copy.checkoutTitle : copy.cartTitle}</h1>
-            <p>{checkout ? copy.checkoutIntro : copy.cartIntro}</p>
-          </div>
-        </header>
+      <div
+        className={
+          checkout ? "miro-container" : "miro-container sf-shopping-container"
+        }
+      >
+        {checkout ? (
+          <header className="sf-cart-heading">
+            <span className="sf-cart-heading-icon" aria-hidden="true">
+              <ShoppingBag size={24} />
+            </span>
+            <div>
+              <h1>{copy.checkoutTitle}</h1>
+              <p>{copy.checkoutIntro}</p>
+            </div>
+          </header>
+        ) : (
+          <ShoppingPageHeading
+            locale={locale}
+            page="cart"
+            title={copy.cartTitle}
+          />
+        )}
         <div className={checkout ? "sf-checkout-layout" : "sf-cart-layout"}>
           {checkout ? (
             <FormSkeleton
@@ -53,7 +66,10 @@ export function CartSkeleton({
                     <Skeleton width="md" />
                     <Skeleton width="8rem" height="2rem" />
                   </div>
-                  <Skeleton width="4rem" />
+                  <div className="sf-cart-item-footer">
+                    <Skeleton width="7rem" height="2.75rem" />
+                    <Skeleton width="4rem" />
+                  </div>
                 </article>
               ))}
             </section>

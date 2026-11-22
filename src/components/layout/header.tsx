@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { cookies } from "next/headers";
 import {
   HeaderClient,
   type HeaderLabels,
@@ -7,9 +8,10 @@ import type { Locale } from "@/lib/i18n";
 import { getStoreNavigationCategories } from "@/lib/store-data";
 
 export async function Header({ locale }: { locale: Locale }) {
-  const [t, categories] = await Promise.all([
+  const [t, categories, cookieStore] = await Promise.all([
     getTranslations({ locale, namespace: "layout.header" }),
     getStoreNavigationCategories(locale),
+    cookies(),
   ]);
   const labels: HeaderLabels = {
     logo: t("logo"),
@@ -44,6 +46,13 @@ export async function Header({ locale }: { locale: Locale }) {
   };
 
   return (
-    <HeaderClient locale={locale} labels={labels} categories={categories} />
+    <HeaderClient
+      locale={locale}
+      labels={labels}
+      categories={categories}
+      hasAuthCookie={cookieStore
+        .getAll()
+        .some(({ name }) => name.startsWith("sb-"))}
+    />
   );
 }

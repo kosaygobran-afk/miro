@@ -1,12 +1,21 @@
 "use client";
 
+import { useRef } from "react";
 import { RevealImage as Image } from "@/components/ui/reveal-image";
 import { CartSkeleton } from "./cart-skeleton";
 import Link from "@/components/motion/motion-link";
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import {
+  ArrowRight,
+  Minus,
+  Plus,
+  ReceiptText,
+  ShoppingBag,
+  Trash2,
+} from "lucide-react";
 import { useCart } from "@/features/cart/cart-context";
 import { cartCopy } from "@/features/cart/cart-copy";
 import { withLocale } from "@/lib/i18n";
+import { ShoppingEmptyState, ShoppingPageHeading } from "./shopping-page";
 import {
   cartLineId,
   cartUnitTotal,
@@ -16,9 +25,17 @@ import {
 } from "./cart-items";
 
 export function CartPageClient({ locale }: { locale: "he" | "en" }) {
-  const { items, subtotal, hydrated, syncIssue, updateQuantity, removeItem } =
-    useCart();
+  const {
+    items,
+    itemCount,
+    subtotal,
+    hydrated,
+    syncIssue,
+    updateQuantity,
+    removeItem,
+  } = useCart();
   const copy = cartCopy[locale];
+  const heading = useRef<HTMLHeadingElement>(null);
   const lineLimitExceeded =
     checkoutCartLines(items).length > MAX_CHECKOUT_LINES;
 
@@ -28,35 +45,23 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
 
   return (
     <div className="sf-cart-page">
-      <div className="miro-container">
-        <header className="sf-cart-heading">
-          <span className="sf-cart-heading-icon" aria-hidden="true">
-            <ShoppingBag size={24} />
-          </span>
-          <div>
-            <h1>{copy.cartTitle}</h1>
-            <p>{copy.cartIntro}</p>
-            <Link
-              href={withLocale(locale, "wishlist")}
-              className="miro-inline-link"
-            >
-              {locale === "he" ? "לרשימת המשאלות" : "View wishlist"}
-            </Link>
-          </div>
-        </header>
+      <div className="miro-container sf-shopping-container">
+        <ShoppingPageHeading
+          locale={locale}
+          page="cart"
+          title={copy.cartTitle}
+          itemCount={itemCount}
+          headingRef={heading}
+        />
 
         {items.length === 0 ? (
-          <section className="sf-cart-empty" aria-labelledby="empty-cart-title">
-            <ShoppingBag size={38} aria-hidden="true" />
-            <h2 id="empty-cart-title">{copy.emptyTitle}</h2>
-            <p>{copy.emptyText}</p>
-            <Link
-              href={withLocale(locale)}
-              className="miro-button miro-button-primary"
-            >
-              {copy.browse}
-            </Link>
-          </section>
+          <ShoppingEmptyState
+            locale={locale}
+            icon={<ShoppingBag size={34} />}
+            title={copy.emptyTitle}
+          >
+            {copy.emptyText}
+          </ShoppingEmptyState>
         ) : (
           <div className="sf-cart-layout">
             <section className="sf-cart-items" aria-label={copy.cartTitle}>
@@ -66,6 +71,10 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                   locale,
                   `store/${item.category}/${item.slug}`,
                 );
+                const removeLine = () => {
+                  removeItem(item.productId, item.variantId, key);
+                  heading.current?.focus();
+                };
                 return (
                   <article className="sf-cart-item" key={key}>
                     <Link
@@ -78,7 +87,7 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                           src={item.imageUrl}
                           alt=""
                           fill
-                          sizes="96px"
+                          sizes="(max-width: 520px) 72px, 104px"
                           className="sf-cart-item-image"
                           unoptimized={item.imageUrl
                             .toLowerCase()
@@ -90,14 +99,17 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                     </Link>
                     <div className="sf-cart-item-copy">
                       <h2>
-                        <Link href={productHref}>{item.name}</Link>
+                        <Link href={productHref}>
+                          <bdi>{item.name}</bdi>
+                        </Link>
                       </h2>
-                      <strong>
-                        {formatPrice(item.unitPrice, locale, "—")}
-                      </strong>
-                      {Boolean(item.optionalOffers?.length) && (
+                      <p className="sf-cart-unit-price">
+                        <bdi>{formatPrice(item.unitPrice, locale, "—")}</bdi>
+                        <span>{copy.unitPrice}</span>
+                      </p>
+                      {!!item.optionalOffers?.length && (
                         <ul className="sf-cart-optional-offers">
-                          {item.optionalOffers!.map((offer) => (
+                          {item.optionalOffers.map((offer) => (
                             <li key={offer.id}>
                               <Link
                                 href={withLocale(
@@ -105,30 +117,42 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                                   `store/${offer.category}/${offer.slug}`,
                                 )}
                               >
-                                {offer.label || offer.name}
+                                <bdi>{offer.label || offer.name}</bdi>
                               </Link>
-                              <span>
-                                {formatPrice(offer.unitPrice, locale, "—")} ×{" "}
+                              <span dir="ltr">
+                                <bdi>
+                                  {formatPrice(offer.unitPrice, locale, "—")}
+                                </bdi>
+                                {" × "}
                                 {item.quantity}
                               </span>
                             </li>
                           ))}
                         </ul>
                       )}
+                    </div>
+                    <div className="sf-cart-item-footer">
                       <div className="sf-cart-item-controls">
-                        <span>{copy.quantity}</span>
-                        <div className="sf-cart-stepper">
+                        <div
+                          className="sf-cart-stepper"
+                          role="group"
+                          aria-label={copy.quantity}
+                        >
                           <button
                             type="button"
-                            onClick={() =>
+                            onClick={() => {
+                              if (item.quantity === 1) {
+                                removeLine();
+                                return;
+                              }
                               updateQuantity(
                                 item.productId,
                                 item.variantId,
                                 item.quantity - 1,
                                 key,
-                              )
-                            }
-                            aria-label={`${copy.quantity}: ${item.quantity - 1}`}
+                              );
+                            }}
+                            aria-label={copy.decreaseQuantity}
                           >
                             <Minus size={16} aria-hidden="true" />
                           </button>
@@ -143,7 +167,7 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                                 key,
                               )
                             }
-                            aria-label={`${copy.quantity}: ${item.quantity + 1}`}
+                            aria-label={copy.increaseQuantity}
                           >
                             <Plus size={16} aria-hidden="true" />
                           </button>
@@ -151,32 +175,40 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                         <button
                           type="button"
                           className="sf-cart-remove"
-                          onClick={() =>
-                            removeItem(item.productId, item.variantId, key)
-                          }
+                          onClick={removeLine}
                         >
                           <Trash2 size={16} aria-hidden="true" />
                           {copy.remove}
                         </button>
                       </div>
+                      <div className="sf-cart-item-total">
+                        <span>{copy.lineTotal}</span>
+                        <strong className="sf-cart-line-total">
+                          <bdi>
+                            {formatPrice(
+                              cartUnitTotal(item) * item.quantity,
+                              locale,
+                              "—",
+                            )}
+                          </bdi>
+                        </strong>
+                      </div>
                     </div>
-                    <strong className="sf-cart-line-total">
-                      {formatPrice(
-                        cartUnitTotal(item) * item.quantity,
-                        locale,
-                        "—",
-                      )}
-                    </strong>
                   </article>
                 );
               })}
             </section>
 
             <aside className="sf-cart-summary">
-              <h2>{copy.summary}</h2>
+              <h2>
+                <ReceiptText size={20} aria-hidden="true" />
+                {copy.summary}
+              </h2>
               <div>
                 <span>{copy.subtotal}</span>
-                <strong>{formatPrice(subtotal, locale, "—")}</strong>
+                <strong>
+                  <bdi>{formatPrice(subtotal, locale, "—")}</bdi>
+                </strong>
               </div>
               <p>{copy.estimateNote}</p>
               {lineLimitExceeded ? (
@@ -198,6 +230,11 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                   className="miro-button miro-button-primary"
                 >
                   {copy.checkout}
+                  <ArrowRight
+                    className="sf-shopping-arrow"
+                    size={18}
+                    aria-hidden="true"
+                  />
                 </Link>
               )}
             </aside>

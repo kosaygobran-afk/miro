@@ -1,8 +1,17 @@
-## Cart, Wishlist and checkout rollout — 2026-11-22
+## Shopping pages and signed-in navigation — 2026-11-23
 
-- Prepared the public release for account Cart and Wishlist, browser fallback, guest and signed-in checkout requests, and the eight bilingual draft templates. The release excludes the pending theme repair and private or generated files.
+- Updated the Cart and Wishlist with shared headings, icons, item counts, catalog links and bilingual empty states. The Cart distinguishes unit prices, item totals and the estimated subtotal. The Wishlist explains where its products are saved and gives retry and pagination controls clear labels.
+- Guests see About and Contact in the storefront navigation. Signed-in users use the About us and Contact us footer links. The contact-based quote shortcut follows the same visibility rule. Desktop and mobile use the verified account session and refresh after sign-in and sign-out.
+- Validated all 13 Cart and Wishlist Chromium cases, both reading directions at 320 and 1440 px across the three themes, and scoped axe scans. The navigation regressions cover bilingual guest and signed-in menus, footer destinations, account roles and appearance switching. Account-session unit tests and the isolated production build passed.
+- The navigation change uses the existing session and public page links. QA retains the manual device and screen-reader review.
+
+## Cart, Wishlist and checkout rollout — 2026-11-23
+
+- Published the account Cart and Wishlist, browser fallback, guest and signed-in checkout requests, and eight bilingual draft templates in `2eb482a29`. The release excludes the pending theme repair and private or generated files.
 - Split checkout database cutover into an additive writer migration and a legacy write closure. In a rolled-back linked preflight, the existing public writer still accepted a checkout and the service-only writer returned the same reference on a retry. The complete migration chain and database suites passed in disposable PostgreSQL.
-- Deployment sequence: apply `20261122020000_checkout_request_customer.sql` first, verify the public deployment can reach the new writer, then apply `20261122030000_close_legacy_checkout_writes.sql`. The business and accountant still own live payment and official document approvals. The earlier scheduler follow-up remains open.
+- Applied `20261122020000_checkout_request_customer.sql`, then verified the production deployment before applying `20261122030000_close_legacy_checkout_writes.sql`. The linked postflight confirmed the legacy checkout source is rejected and the new checkout writer is executable only by the service role.
+- First release verification passed lint, typecheck, 487 unit tests, the isolated production build, 63 migrations, 30 SQL suites and nine concurrency checks. On production, the service-only checkout path rejected a stale cart, private document previews rejected guests, and a disposable account imported guest selections, reopened its cart in a fresh browser and showed the pickup form with its contact email. The account and its saved rows were removed.
+- Checkout is a request flow. The business and accountant still own live payment and official document approvals. The scheduler follow-up and manual bilingual device and screen-reader review remain open. The privacy owner retains checkout and contact retention review.
 
 ## Signed-in Wishlist recovery — 2026-11-22
 

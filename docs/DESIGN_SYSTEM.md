@@ -582,3 +582,14 @@ This entry supersedes the earlier admin table wrapping and cosmetic-control note
 - The owner-selected name is `מירו גרופ.` with the י and dot in deep yellow `#e5b526`. Use the shared path-based `BrandArtwork` / `BrandMark`; the complete source/export map and font attribution are in `docs/BRANDING.md`.
 - Keep natural subtitle proportions and balanced tracking. Navbar centering follows the visible vector ink, with equal view-box margins and a flex link that removes the inline baseline gap. Never mirror lettering in RTL layouts. At narrow 320px headers use the matching compact mark to preserve reachable controls.
 - This explicit branding update applies to both appearance versions and all themes. It includes public/customer/worker/management/POS/payment chrome and the two owner-approved PNG campaign replacements. Preserve other uploaded media, theme colors, permissions and financial document identity.
+
+## Cart and Wishlist page layout — 2026-11-23
+
+- The shared heading links directly between Cart and Wishlist. Populated pages show the actual count and a store link. Empty pages use an illustrated icon, a short instruction and a direct link to the product catalog. Wishlist copy distinguishes guest browser storage from the signed-in account.
+- Cart rows keep the product and unit price above a separate quantity and item-total band. Price and product text use direction isolation, mirrors follow the active locale, and the checkout summary stacks below the items on compact screens. Quantity buttons retain 44 px targets, and keyboard removal returns focus to the page heading.
+- Wishlist keeps the catalog card contract for saved products and uses localized loading, retry and pagination controls. The shared frame uses existing public theme tokens and logical layout properties in both appearance versions.
+
+## Public navigation by session — 2026-11-23
+
+- About, Contact and the contact-based quote shortcut appear in the guest desktop and mobile navigation. The verified session drives their visibility. Keep the localized About us and Contact us links in the footer for everyone.
+- The server uses the presence of an auth cookie as an initial rendering hint. The navbar and account menu share overlapping reads from the existing session endpoint, with fresh verification on focus, navigation and auth-change notifications.

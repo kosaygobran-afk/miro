@@ -3533,6 +3533,297 @@
   line-height: 1.65;
 }
 
+/* Cart and Wishlist share the shopping page frame and reading direction. */
+.miro-container.sf-shopping-container {
+  max-width: 84rem;
+}
+
+.sf-shopping-container .sf-shopping-heading {
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.2rem 2rem;
+  max-width: none;
+  margin-block-end: clamp(1.25rem, 3vw, 2.5rem);
+  padding-block-end: clamp(1rem, 2vw, 1.75rem);
+  border-block-end: 1px solid var(--border-subtle);
+}
+
+.sf-shopping-heading-main,
+.sf-shopping-links,
+.sf-shopping-heading-copy {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.sf-shopping-heading-main {
+  align-items: start;
+  gap: clamp(0.75rem, 2vw, 1.25rem);
+}
+
+.sf-shopping-heading .sf-cart-heading-icon {
+  flex: none;
+  width: clamp(2.9rem, 6vw, 4rem);
+  height: clamp(2.9rem, 6vw, 4rem);
+  border-color: color-mix(
+    in srgb,
+    var(--accent-text) 45%,
+    var(--border-control)
+  );
+}
+
+.sf-shopping-heading-copy {
+  flex-wrap: wrap;
+  align-content: center;
+  min-block-size: clamp(2.9rem, 6vw, 4rem);
+  gap: 0.4rem 0.85rem;
+}
+
+.sf-shopping-heading-copy h1 {
+  font-size: clamp(1.875rem, 4vw, 3.2rem);
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+}
+
+.sf-shopping-heading-copy p {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.sf-shopping-count {
+  align-self: center;
+  padding: 0.22rem 0.62rem;
+  border: 1px solid var(--border-control);
+  border-radius: var(--public-icon-radius, 0.65rem);
+  background: var(--surface-muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.sf-shopping-links {
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+}
+
+.sf-shopping-links .miro-button,
+.sf-shopping-store-link,
+.sf-shopping-empty .miro-button,
+.sf-wishlist-status .miro-button,
+.sf-wishlist-pagination .miro-button {
+  min-height: 44px;
+}
+
+.sf-shopping-store-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--accent-text);
+  font-size: 0.85rem;
+  font-weight: 750;
+}
+
+.sf-shopping-store-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.sf-shopping-arrow:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+.sf-shopping-container .sf-shopping-empty {
+  min-height: clamp(18rem, 36vw, 25rem);
+  gap: 0.8rem;
+  padding: clamp(1.25rem, 5vw, 3rem);
+  background:
+    radial-gradient(
+      ellipse at center top,
+      color-mix(in srgb, var(--primary) 9%, transparent),
+      transparent 70%
+    ),
+    var(--surface);
+}
+
+.sf-shopping-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  aspect-ratio: 1;
+  margin-block-end: 0.4rem;
+  border: 1px solid
+    color-mix(in srgb, var(--accent-text) 45%, var(--border-control));
+  border-radius: 1rem;
+  background: var(--background);
+  color: var(--accent-text);
+}
+
+.sf-shopping-empty h2 {
+  line-height: 1.2;
+}
+
+.sf-shopping-empty p {
+  max-width: 36ch;
+  line-height: 1.55;
+}
+
+.sf-shopping-empty .miro-button {
+  margin-block-start: 0.45rem;
+}
+
+.sf-shopping-container .sf-cart-item {
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: start;
+  gap: 0.85rem clamp(0.75rem, 2vw, 1.2rem);
+}
+
+.sf-shopping-container .sf-cart-item-media {
+  width: 100%;
+  border: 1px solid var(--border-subtle);
+}
+
+.sf-shopping-container .sf-cart-item-copy h2 {
+  font-size: clamp(1rem, 1.5vw, 1.2rem);
+  overflow-wrap: anywhere;
+}
+
+.sf-cart-unit-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.15rem 0.45rem;
+  margin-block-start: 0.3rem;
+  color: var(--muted-foreground);
+  font-size: 0.84rem;
+}
+
+.sf-cart-unit-price bdi {
+  color: var(--foreground);
+  font-weight: 700;
+}
+
+.sf-cart-item-footer {
+  display: flex;
+  grid-column: 1 / -1;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 0.85rem;
+  padding-block-start: 0.75rem;
+  border-block-start: 1px solid var(--border-subtle);
+}
+
+.sf-cart-item-footer .sf-cart-item-controls {
+  gap: 0.4rem;
+  margin-block-start: 0;
+}
+
+.sf-cart-item-footer .sf-cart-stepper {
+  grid-template-columns: 44px 2.1rem 44px;
+  min-height: 46px;
+}
+
+.sf-cart-item-footer .sf-cart-stepper button:focus-visible {
+  outline-offset: -3px;
+}
+
+.sf-cart-item-footer .sf-cart-remove {
+  min-height: 44px;
+  border-radius: var(--public-icon-radius, 0.6rem);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sf-cart-item-total {
+  display: grid;
+  gap: 0.1rem;
+  margin-inline-start: auto;
+  color: var(--muted-foreground);
+  font-size: 0.77rem;
+  text-align: end;
+}
+
+.sf-cart-item-total strong {
+  grid-column: 1;
+  color: var(--foreground);
+  font-size: 1.05rem;
+}
+
+.sf-shopping-container .sf-cart-summary {
+  gap: 1rem;
+  padding: clamp(1rem, 2vw, 1.5rem);
+  border-block-start: 2px solid
+    color-mix(in srgb, var(--accent-text) 60%, var(--border-control));
+}
+
+.sf-shopping-container .sf-cart-summary h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.sf-shopping-container .sf-cart-summary h2 svg,
+.sf-wishlist-status svg {
+  flex: none;
+  color: var(--accent-text);
+}
+
+.sf-shopping-container .sf-cart-summary > div {
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+}
+
+.sf-shopping-container .sf-cart-summary > div strong {
+  margin-inline-start: auto;
+  font-size: clamp(1.2rem, 2vw, 1.5rem);
+  white-space: nowrap;
+}
+
+.sf-shopping-container .sf-cart-summary > p {
+  font-size: 0.85rem;
+}
+
+.sf-shopping-container .sf-cart-summary .miro-button {
+  min-height: 48px;
+}
+
+.sf-wishlist-status,
+.sf-wishlist-status > p {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sf-wishlist-status {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-block-end: 1rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.85rem;
+  background: var(--surface);
+  color: var(--muted-foreground);
+}
+
+.sf-wishlist-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem 0.85rem;
+  margin-block-start: 1.5rem;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 520px) {
+  .sf-shopping-container .sf-cart-item {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+}
+
 /* Keep the wishlist open to guests without crowding phone header controls. */
 @media (max-width: 1199px) {
   .premium-header-actions .premium-wishlist-link {

@@ -10,8 +10,8 @@ export function Footer({ locale }: { locale: Locale }) {
     ["", he ? "חנות המוצרים" : "Explore the store"],
     ["services", he ? "הפתרונות שלנו" : "Our solutions"],
     ["home", he ? "בית" : "Home"],
-    ["about", he ? "אודות מירו גרופ" : "About MIRO Group"],
-    ["contact", he ? "יצירת קשר" : "Get in touch"],
+    ["about", he ? "אודותינו" : "About us"],
+    ["contact", he ? "צרו קשר" : "Contact us"],
   ];
   const solutions = [
     ["services/home", he ? "אבטחה לבית" : "Home security"],

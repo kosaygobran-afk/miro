@@ -206,6 +206,73 @@ test("the cart and wishlist fit at the first desktop breakpoint in both language
   }
 });
 
+test("populated cart controls, totals and wishlist navigation fit in both reading directions", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 760 });
+  await page.route("**/api/track", (route) => route.fulfill({ status: 204 }));
+  await page.goto("/en/store", { waitUntil: "domcontentloaded" });
+  const product = page
+    .locator(".sf-product-card")
+    .filter({ has: page.locator(".sf-add-cart-button") })
+    .first();
+  await product.locator(".sf-add-cart-button").click();
+  await product.locator(".sf-save-button").click();
+
+  for (const locale of ["en", "he"]) {
+    const he = locale === "he";
+    await page.goto(`/${locale}/cart`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator("html")).toHaveAttribute(
+      "dir",
+      he ? "rtl" : "ltr",
+    );
+    await expect(page.locator(".sf-cart-item-total")).toContainText(
+      he ? "סך הכול לפריט" : "Item total",
+    );
+    await expect(page.locator(".sf-cart-unit-price")).toContainText(
+      he ? "ליחידה" : "Per unit",
+    );
+    const plus = page.getByRole("button", {
+      name: he ? "הגדלת כמות" : "Increase quantity",
+    });
+    const minus = page.getByRole("button", {
+      name: he ? "הפחתת כמות" : "Decrease quantity",
+    });
+    expect((await plus.boundingBox())?.width).toBeGreaterThanOrEqual(44);
+    await plus.press("Enter");
+    await expect(page.locator(".sf-cart-stepper output")).toHaveText("2");
+    await minus.press("Enter");
+    await expect(page.locator(".sf-cart-stepper output")).toHaveText("1");
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(321);
+    await page
+      .getByRole("link", {
+        name: he ? "לרשימת המשאלות" : "View wishlist",
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.locator("main .sf-catalog-grid .sf-product-card"),
+    ).toHaveCount(1);
+    await page
+      .getByRole("link", { name: he ? "לסל הקניות" : "View cart", exact: true })
+      .click();
+    await expect(page.locator(".sf-cart-stepper output")).toHaveText("1");
+  }
+
+  await page.getByRole("button", { name: "הסרה", exact: true }).press("Enter");
+  await expect(
+    page.getByRole("heading", { name: "סל הקניות ריק", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "סל הקניות שלכם", exact: true }),
+  ).toBeFocused();
+  await expect(
+    page.getByRole("link", { name: "לכל המוצרים", exact: true }),
+  ).toHaveAttribute("href", "/he/store");
+});
+
 test("keeps browser cart and wishlist usable while the account read is unavailable", async ({
   page,
 }) => {
@@ -243,7 +310,7 @@ test("keeps browser cart and wishlist usable while the account read is unavailab
   await expect(page.locator(".premium-cart-count")).toHaveText("1");
   await page.goto("/en/wishlist", { waitUntil: "domcontentloaded" });
   await expect(
-    page.getByText("This wishlist is saved in this browser."),
+    page.getByText("Saved in this browser.", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Remove from wishlist" }),
@@ -253,7 +320,7 @@ test("keeps browser cart and wishlist usable while the account read is unavailab
   available = true;
   await page.getByRole("button", { name: "Try again" }).click();
   await expect(
-    page.getByText("This wishlist is saved to your account."),
+    page.getByText("Saved to your account.", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("button", { name: "Remove from wishlist" }),

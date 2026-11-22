@@ -6,6 +6,63 @@ import { DEFAULT_ANIMATION_SETTINGS } from "../src/lib/animation-settings";
 test.use({ reducedMotion: "reduce" });
 
 for (const locale of ["en", "he"] as const) {
+  test(`${locale}: About and Contact move from the signed-in navbar to the footer`, async ({
+    page,
+  }) => {
+    let authenticated = false;
+    await page.route("**/api/auth/session", (route) =>
+      route.fulfill({
+        json: {
+          authenticated,
+          role: authenticated ? "customer" : null,
+          name: authenticated ? "Synthetic customer" : null,
+        },
+      }),
+    );
+    await page.route("**/api/track", (route) => route.fulfill({ status: 204 }));
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(`/${locale}/cart`, { waitUntil: "domcontentloaded" });
+    const desktopNav = page.locator(".premium-desktop-nav");
+    const about = `a[href="/${locale}/about"]`;
+    const contact = `a[href="/${locale}/contact"]`;
+    const footer = page.locator("footer .premium-footer-column nav").first();
+    const refresh = () =>
+      page.evaluate(() =>
+        window.dispatchEvent(new Event("miro:account-session-refresh")),
+      );
+
+    await expect(desktopNav.locator(about)).toBeVisible();
+    await expect(desktopNav.locator(contact)).toBeVisible();
+    authenticated = true;
+    await refresh();
+    await expect(page.locator(".premium-header").locator(about)).toHaveCount(0);
+    await expect(page.locator(".premium-header").locator(contact)).toHaveCount(
+      0,
+    );
+    await expect(footer.locator(about)).toHaveText(
+      locale === "he" ? "אודותינו" : "About us",
+    );
+    await expect(footer.locator(contact)).toHaveText(
+      locale === "he" ? "צרו קשר" : "Contact us",
+    );
+
+    await page.setViewportSize({ width: 320, height: 760 });
+    await page.locator(".premium-mobile-toggle").click();
+    const mobileNav = page.locator(".premium-mobile-navigation");
+    await expect(mobileNav).toBeVisible();
+    await expect(mobileNav.locator(about)).toHaveCount(0);
+    await expect(mobileNav.locator(contact)).toHaveCount(0);
+    authenticated = false;
+    await refresh();
+    await expect(mobileNav.locator(`nav ${about}`)).toBeVisible();
+    await expect(mobileNav.locator(`nav ${contact}`)).toBeVisible();
+    await page.keyboard.press("Escape");
+    await footer.locator(contact).click();
+    await expect(page).toHaveURL(`/${locale}/contact`);
+    await footer.locator(about).click();
+    await expect(page).toHaveURL(`/${locale}/about`);
+  });
+
   test(`${locale}: switching appearance restores original category arrows and account chevron`, async ({
     page,
   }) => {

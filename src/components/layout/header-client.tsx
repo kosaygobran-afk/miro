@@ -28,6 +28,7 @@ import { AccountMenu } from "@/components/layout/account-menu";
 import { NavigationThemeSelector } from "./navigation-theme-selector";
 import { HeaderCartLink } from "@/features/cart/header-cart-link";
 import { NavbarProductSearch } from "./navbar-product-search";
+import { useAccountSession } from "./use-account-session";
 
 export type HeaderLabels = {
   logo: string;
@@ -67,12 +68,16 @@ export function HeaderClient({
   locale,
   labels,
   categories,
+  hasAuthCookie,
 }: {
   locale: Locale;
   labels: HeaderLabels;
   categories: Array<{ key: string; label: string }>;
+  hasAuthCookie: boolean;
 }) {
   const pathname = usePathname();
+  const [session] = useAccountSession(pathname ?? "");
+  const showGuestLinks = session ? !session.authenticated : !hasAuthCookie;
   const router = useRouter();
   const animationSettings = useAnimationSettings();
   const [open, setOpen] = useState(false);
@@ -94,13 +99,21 @@ export function HeaderClient({
       icon: Wrench,
     },
     { href: withLocale(locale, "home"), label: labels.nav.home, icon: House },
-    { href: withLocale(locale, "about"), label: labels.nav.about, icon: Info },
-    {
-      href: withLocale(locale, "contact"),
-      label: labels.nav.contact,
-      icon: Phone,
-    },
   ];
+  if (showGuestLinks) {
+    navLinks.push(
+      {
+        href: withLocale(locale, "about"),
+        label: labels.nav.about,
+        icon: Info,
+      },
+      {
+        href: withLocale(locale, "contact"),
+        label: labels.nav.contact,
+        icon: Phone,
+      },
+    );
+  }
   // The floating panel scrolls with the document, outside the sticky header.
   // It never creates a second scroll container or expands the header offset.
   useLayoutEffect(() => {
@@ -422,13 +435,15 @@ export function HeaderClient({
                 locale={locale}
                 current={pathname === withLocale(locale, "cart")}
               />
-              <Link
-                href={withLocale(locale, "contact")}
-                className="miro-button miro-button-primary premium-quote-action"
-              >
-                <span>{labels.actions.requestQuote}</span>
-                <Arrow size={16} aria-hidden="true" />
-              </Link>
+              {showGuestLinks && (
+                <Link
+                  href={withLocale(locale, "contact")}
+                  className="miro-button miro-button-primary premium-quote-action"
+                >
+                  <span>{labels.actions.requestQuote}</span>
+                  <Arrow size={16} aria-hidden="true" />
+                </Link>
+              )}
             </div>
             <div className="premium-header-action-group premium-header-action-group--personal">
               <AccountMenu
@@ -604,14 +619,16 @@ export function HeaderClient({
                     onNavigate={closeNavigation}
                   />
                 </div>
-                <Link
-                  href={withLocale(locale, "contact")}
-                  className="miro-button miro-button-primary"
-                  onClick={closeNavigation}
-                >
-                  <span>{labels.actions.requestQuote}</span>
-                  <Check size={16} aria-hidden="true" />
-                </Link>
+                {showGuestLinks && (
+                  <Link
+                    href={withLocale(locale, "contact")}
+                    className="miro-button miro-button-primary"
+                    onClick={closeNavigation}
+                  >
+                    <span>{labels.actions.requestQuote}</span>
+                    <Check size={16} aria-hidden="true" />
+                  </Link>
+                )}
               </div>
             </div>,
             document.body,

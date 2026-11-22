@@ -10,12 +10,10 @@ import { withLocale, type Locale } from "@/lib/i18n";
 import { roleLabel } from "@/lib/roles";
 import { useAnimationSettings } from "@/components/motion/animation-provider";
 import {
-  ACCOUNT_SESSION_REFRESH_EVENT,
   ANONYMOUS_ACCOUNT_SESSION,
   invalidateAccountSession,
-  readAccountSession,
-  type AccountSession,
 } from "@/lib/account-session";
+import { useAccountSession } from "./use-account-session";
 
 type AccountMenuLabels = {
   account: string;
@@ -43,9 +41,8 @@ export function AccountMenu({
   const animationSettings = useAnimationSettings();
   const pathname = usePathname();
   const router = useRouter();
-  const [session, setSession] = useState<AccountSession>(
-    ANONYMOUS_ACCOUNT_SESSION,
-  );
+  const [resolvedSession, setSession] = useAccountSession(pathname ?? "");
+  const session = resolvedSession ?? ANONYMOUS_ACCOUNT_SESSION;
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -95,25 +92,6 @@ export function AccountMenu({
       window.visualViewport?.removeEventListener("scroll", place);
     };
   }, [open, locale, animationSettings.appearanceVersion]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    let active = true;
-    let latestRead = 0;
-    const refresh = async () => {
-      const read = ++latestRead;
-      const data = await readAccountSession(pathname ?? "");
-      if (active && read === latestRead) setSession(data);
-    };
-    void refresh();
-    window.addEventListener("focus", refresh);
-    window.addEventListener(ACCOUNT_SESSION_REFRESH_EVENT, refresh);
-    return () => {
-      active = false;
-      window.removeEventListener("focus", refresh);
-      window.removeEventListener(ACCOUNT_SESSION_REFRESH_EVENT, refresh);
-    };
-  }, [pathname]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !open) return;
