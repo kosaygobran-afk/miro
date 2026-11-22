@@ -2,7 +2,7 @@
 
 - Updated the Cart and Wishlist with shared headings, icons, item counts, catalog links and bilingual empty states. The Cart distinguishes unit prices, item totals and the estimated subtotal. The Wishlist explains where its products are saved and gives retry and pagination controls clear labels.
 - Guests see About and Contact in the storefront navigation. Signed-in users use the About us and Contact us footer links. The contact-based quote shortcut follows the same visibility rule. Desktop and mobile use the verified account session and refresh after sign-in and sign-out.
-- Validated all 13 Cart and Wishlist Chromium cases, both reading directions at 320 and 1440 px across the three themes, and scoped axe scans. The navigation regressions cover bilingual guest and signed-in menus, footer destinations, account roles and appearance switching. Account-session unit tests and the isolated production build passed.
+- Validated all 13 Cart and Wishlist Chromium cases, both reading directions at 320 and 1440 px across the three themes, and scoped axe scans. All 12 focused navigation regressions and eight overlay, headline and utility checks passed. The navbar checks now account for the existing Wishlist shortcut in desktop spacing and mobile labels. All 487 unit tests, lint, the isolated production build and Vercel Preview passed.
 - The navigation change uses the existing session and public page links. QA retains the manual device and screen-reader review.
 
 ## Cart, Wishlist and checkout rollout — 2026-11-23

@@ -96,14 +96,16 @@ for (const locale of ["en", "he"] as const) {
     expect(headlineDividers).toBe(0);
 
     const field = page.locator(".premium-header-search");
-    const cart = page.locator(".premium-cart-link");
+    const wishlist = page.locator(".premium-wishlist-link");
     for (const width of [1200, 1440, 1600, 1920]) {
       await page.setViewportSize({ width, height: 1000 });
-      const [searchBox, contactBox, cartBox] = await Promise.all(
-        [field, contact, cart].map((locator) => locator.boundingBox()),
+      const [searchBox, contactBox, wishlistBox] = await Promise.all(
+        [field, contact, wishlist].map((locator) => locator.boundingBox()),
       );
       expect(searchBox).toBeTruthy();
-      const [left, right] = [contactBox!, cartBox!].sort((a, b) => a.x - b.x);
+      const [left, right] = [contactBox!, wishlistBox!].sort(
+        (a, b) => a.x - b.x,
+      );
       const gaps = [
         searchBox!.x - (left.x + left.width),
         right.x - (searchBox!.x + searchBox!.width),
@@ -147,6 +149,7 @@ for (const locale of ["en", "he"] as const) {
 
     const header = page.locator(".premium-header");
     const cart = header.locator(".premium-cart-link");
+    const wishlist = header.locator(".premium-wishlist-link");
     const quote = header.locator(".premium-quote-action");
     const theme = header.locator(".premium-theme-selector");
     const buttons = theme.locator("button");
@@ -158,7 +161,7 @@ for (const locale of ["en", "he"] as const) {
         shadow: style.boxShadow,
       };
     };
-    for (const locator of [cart, quote, theme, buttons.first()]) {
+    for (const locator of [wishlist, cart, quote, theme, buttons.first()]) {
       expect(await locator.evaluate(frame)).toEqual({
         border: 0,
         background: "rgba(0, 0, 0, 0)",
@@ -219,7 +222,7 @@ for (const locale of ["en", "he"] as const) {
             return range.getClientRects().length;
           }),
         ),
-    ).toEqual([1, 1]);
+    ).toEqual([1, 1, 1]);
   });
 
   test(`${locale}: navbar suggestions page forward and back in physical order`, async ({
