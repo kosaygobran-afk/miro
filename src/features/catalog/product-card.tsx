@@ -10,9 +10,6 @@ import {
   ArrowLeft,
   ArrowRight,
   ArrowUpRight,
-  Heart,
-  HeartOff,
-  Loader2,
   Eye,
   ShoppingCart,
   Slash,
@@ -42,6 +39,8 @@ import { StickerCluster } from "@/features/catalog/product-promo-badge";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import { CardActionHint } from "./card-action-hint";
 import { ProductCardSku } from "./product-card-sku";
+import { useCart } from "@/features/cart/cart-context";
+import { WishlistButton } from "@/features/wishlist/wishlist-button";
 import { ProductCategoryPath } from "./product-category-path";
 
 export type { Product } from "@/features/catalog/product-data";
@@ -61,6 +60,7 @@ export function ProductCard({
   variant = "grid",
   isDuplicate = false,
   onPreviewVisibilityChange,
+  onWishlistRemove,
 }: {
   product: Product;
   index?: number;
@@ -70,13 +70,13 @@ export function ProductCard({
   variant?: "grid" | "rail";
   isDuplicate?: boolean;
   onPreviewVisibilityChange?: (open: boolean) => void;
+  onWishlistRemove?: () => void;
 }) {
   const enhancedBadges = useAnimationSettings().appearanceVersion === "2";
   const copy = storeCopy[locale] as StoreCopy;
-  const [saved, setSaved] = useState(isSaved);
+  const { hydrated, wishlist } = useCart();
+  const saved = hydrated ? wishlist.includes(product.id) : isSaved;
   const [impressionFired, setImpressionFired] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [showHoverPreview, setShowHoverPreview] = useState(false);
   const [previewOpenedExplicitly, setPreviewOpenedExplicitly] = useState(false);
   const cardRef = useRef<HTMLElement | null>(null);
@@ -144,60 +144,6 @@ export function ProductCard({
   // Don't render card if product should be hidden from public
   if (shouldHideFromPublic(product.outOfStockPolicy, product.stockQty)) {
     return null;
-  }
-
-  async function handleSave(event: React.MouseEvent) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (isSaving) return;
-    const nextSaved = !saved;
-    setIsSaving(true);
-    setSaveError(null);
-    setSaved(nextSaved);
-
-    try {
-      const response = await fetch(
-        nextSaved
-          ? "/api/account/saved-products"
-          : `/api/account/saved-products?productId=${encodeURIComponent(product.id)}`,
-        nextSaved
-          ? {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ productId: product.id }),
-            }
-          : { method: "DELETE" },
-      );
-
-      if (!response.ok) {
-        // Revert on failure
-        setSaved(!nextSaved);
-        if (response.status === 401) {
-          setSaveError(
-            locale === "he"
-              ? "יש להתחבר כדי לשמור מוצרים"
-              : "Please sign in to save products",
-          );
-        } else {
-          setSaveError(
-            locale === "he"
-              ? "שמירה נכשלה. נסה שוב."
-              : "Failed to save. Please try again.",
-          );
-        }
-      }
-    } catch (error) {
-      setSaved(!nextSaved);
-      setSaveError(
-        locale === "he"
-          ? "שגיאת רשת. נסה שוב."
-          : "Network error. Please try again.",
-      );
-      console.error("Failed to save/unsave product", error);
-    } finally {
-      setIsSaving(false);
-    }
   }
 
   const altText =
@@ -268,26 +214,16 @@ export function ProductCard({
     ) : null;
 
   const saveAction = (descriptionId?: string) => (
-    <button
-      type="button"
-      className="miro-button miro-button-secondary sf-save-button"
-      onClick={handleSave}
-      aria-label={saved ? copy.removeFromSaved : copy.saveForLater}
-      aria-describedby={descriptionId}
-      aria-pressed={saved}
-      disabled={isSaving}
+    <WishlistButton
+      productId={product.id}
+      locale={locale}
+      initialSaved={isSaved}
+      iconOnly
+      legacyIcon={!enhancedBadges}
+      onRemove={onWishlistRemove}
+      descriptionId={descriptionId}
       tabIndex={isDuplicate ? -1 : undefined}
-    >
-      {isSaving ? (
-        <Loader2 size={18} className="animate-spin" aria-hidden="true" />
-      ) : saved ? (
-        <Heart size={18} className="text-accent-text" aria-hidden="true" />
-      ) : enhancedBadges ? (
-        <Heart size={18} aria-hidden="true" />
-      ) : (
-        <HeartOff size={18} aria-hidden="true" />
-      )}
-    </button>
+    />
   );
   const previewLabel = locale === "he" ? "תצוגה מקדימה" : "Quick preview";
   const previewAction = (descriptionId?: string) => (
@@ -731,7 +667,7 @@ export function ProductCard({
             </CardActionHint>
             <CardActionHint
               locale={locale}
-              label={saved ? copy.removeFromSaved : copy.saveForLater}
+              label={saved ? copy.removeFromWishlist : copy.addToWishlist}
             >
               {saveAction}
             </CardActionHint>
@@ -762,12 +698,6 @@ export function ProductCard({
         {/* Save/Favorite - independently interactive */}
         {!enhancedBadges && saveAction()}
         {!enhancedBadges && previewAction()}
-
-        {saveError && (
-          <span className="sf-save-error" role="alert" aria-live="polite">
-            {saveError}
-          </span>
-        )}
       </div>
     </article>
   );

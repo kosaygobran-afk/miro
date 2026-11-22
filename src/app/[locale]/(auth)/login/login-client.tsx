@@ -8,6 +8,7 @@ import { Mail, CheckCircle2, AlertCircle } from "lucide-react";
 interface LoginClientProps {
   locale: Locale;
   prefilledEmail?: string;
+  returnToCheckout?: boolean;
   emailLabel: string;
   passwordLabel: string;
   submitLabel: string;
@@ -16,6 +17,7 @@ interface LoginClientProps {
 export function LoginClient({
   locale,
   prefilledEmail,
+  returnToCheckout,
   emailLabel,
   passwordLabel,
   submitLabel,
@@ -79,12 +81,17 @@ export function LoginClient({
       setShowSuccess(true);
       setMessage(
         locale === "he"
-          ? "התחברת בהצלחה. מעביר אותך לחשבון..."
-          : "Signed in successfully. Redirecting to your account...",
+          ? "התחברת בהצלחה. מעבירים אותך לעמוד הבא…"
+          : "Signed in successfully. Redirecting…",
       );
 
       // Read the authoritative role on a fresh server request after cookies land.
-      window.location.assign(withLocale(locale, "workspace"));
+      window.location.assign(
+        withLocale(
+          locale,
+          returnToCheckout ? "workspace?next=checkout" : "workspace",
+        ),
+      );
     } catch (error) {
       setMessage(
         error instanceof Error

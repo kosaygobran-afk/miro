@@ -14,6 +14,7 @@ const secret =
   process.env.COMMERCE_TEST_SECRET_KEY || "sb_secret_commerce_fixture";
 const allowedRpcs = new Set([
   "check_rate_limit",
+  "customer_shopping",
   "commerce_read",
   "commerce_write",
   "commerce_create_intent",
@@ -108,6 +109,8 @@ function callRpc(name, args, actor, privileged) {
     expression = `public.commerce_read(${textLiteral(args.p_section)},${literal(args.p_filters)});`;
   else if (name === "commerce_write")
     expression = `public.commerce_write(${textLiteral(args.p_action)},${literal(args.p_payload)});`;
+  else if (name === "customer_shopping")
+    expression = `public.customer_shopping(${textLiteral(args.p_owner)}::uuid);`;
   else if (name === "commerce_cancel_intent")
     expression = `public.commerce_cancel_intent(${textLiteral(args.p_intent_id)}::uuid,${args.p_capability ? textLiteral(args.p_capability) : "null"});`;
   else if (name === "commerce_pos_available_stock")

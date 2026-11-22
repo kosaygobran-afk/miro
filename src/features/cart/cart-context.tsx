@@ -8,6 +8,15 @@ import {
   useSyncExternalStore,
 } from "react";
 import {
+  changeCart,
+  getShoppingSnapshot,
+  getServerShoppingSnapshot,
+  retryShopping,
+  setWishlisted,
+  subscribeShopping,
+} from "./shopping-store";
+import type { ShoppingAccount, ShoppingData } from "./shopping-types";
+import {
   cartConfigurationKey,
   cartLineId,
   cartUnitTotal,
@@ -15,15 +24,20 @@ import {
 } from "./cart-items";
 export type { CartItem } from "./cart-items";
 
-const CART_STORAGE_KEY = "miro-cart-v1";
 const MAX_CART_QUANTITY = 99;
 
 type CartContextValue = {
+  wishlist: ShoppingData["wishlist"];
+  account: ShoppingAccount | null;
+  saving: boolean;
+  syncIssue: boolean;
+  retryShopping: () => void;
+  setWishlisted: (id: string, saved: boolean) => void;
   items: CartItem[];
   itemCount: number;
   subtotal: number;
   hydrated: boolean;
-  addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => void;
+  addItem: (item: Omit<CartItem, "quantity">, quantity?: number) => boolean;
   updateQuantity: (
     productId: string,
     variantId: string | null,
@@ -35,147 +49,32 @@ type CartContextValue = {
     variantId: string | null,
     lineId?: string,
   ) => void;
-  clearCart: () => void;
+  clearCart: (purchased?: CartItem[], expectedOwner?: string | null) => void;
 };
 
 const CartContext = createContext<CartContextValue | null>(null);
-const EMPTY_CART: CartItem[] = [];
-const cartListeners = new Set<() => void>();
-let cartItems: CartItem[] = EMPTY_CART;
-let cartInitialized = false;
-let storageListening = false;
-
-function isCartItem(value: unknown): value is CartItem {
-  if (!value || typeof value !== "object") return false;
-  const item = value as Partial<CartItem>;
-  return (
-    typeof item.productId === "string" &&
-    typeof item.slug === "string" &&
-    typeof item.category === "string" &&
-    typeof item.name === "string" &&
-    (item.variantId === null || typeof item.variantId === "string") &&
-    (item.imageUrl === null || typeof item.imageUrl === "string") &&
-    typeof item.unitPrice === "number" &&
-    Number.isFinite(item.unitPrice) &&
-    item.unitPrice >= 0 &&
-    typeof item.quantity === "number" &&
-    Number.isInteger(item.quantity) &&
-    item.quantity > 0 &&
-    (item.lineId === undefined ||
-      (typeof item.lineId === "string" && item.lineId.length <= 120)) &&
-    (item.optionalOffers === undefined ||
-      (Array.isArray(item.optionalOffers) &&
-        item.optionalOffers.length <= 99 &&
-        new Set(item.optionalOffers.map((offer) => offer?.id)).size ===
-          item.optionalOffers.length &&
-        item.optionalOffers.every(
-          (offer) =>
-            offer &&
-            typeof offer.id === "string" &&
-            typeof offer.productId === "string" &&
-            typeof offer.variantId === "string" &&
-            typeof offer.name === "string" &&
-            typeof offer.sku === "string" &&
-            typeof offer.slug === "string" &&
-            typeof offer.category === "string" &&
-            typeof offer.label === "string" &&
-            (offer.kind === "complementary" || offer.kind === "accompanying") &&
-            Number.isInteger(offer.revision) &&
-            offer.revision >= 0 &&
-            Number.isFinite(offer.unitPrice) &&
-            offer.unitPrice > 0 &&
-            (offer.imageUrl === null || typeof offer.imageUrl === "string"),
-        )))
+export function CartProvider({
+  children,
+  syncAccount = false,
+}: {
+  children: React.ReactNode;
+  syncAccount?: boolean;
+}) {
+  const subscribe = useCallback(
+    (listener: () => void) => subscribeShopping(listener, syncAccount),
+    [syncAccount],
   );
-}
-
-function readStoredCart(): CartItem[] {
-  try {
-    const raw = window.localStorage.getItem(CART_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isCartItem).map((item) => ({
-      ...item,
-      quantity: Math.min(item.quantity, MAX_CART_QUANTITY),
-    }));
-  } catch {
-    return [];
-  }
-}
-
-function emitCartChange() {
-  for (const listener of cartListeners) listener();
-}
-
-function initializeCart() {
-  if (cartInitialized || typeof window === "undefined") return;
-  cartItems = readStoredCart();
-  cartInitialized = true;
-}
-
-function onCartStorage(event: StorageEvent) {
-  if (event.key !== CART_STORAGE_KEY) return;
-  cartItems = readStoredCart();
-  emitCartChange();
-}
-
-function subscribeCart(listener: () => void) {
-  cartListeners.add(listener);
-  const wasInitialized = cartInitialized;
-  initializeCart();
-  if (!storageListening) {
-    window.addEventListener("storage", onCartStorage);
-    storageListening = true;
-  }
-  if (!wasInitialized) queueMicrotask(listener);
-
-  return () => {
-    cartListeners.delete(listener);
-    if (cartListeners.size === 0 && storageListening) {
-      window.removeEventListener("storage", onCartStorage);
-      storageListening = false;
-    }
-  };
-}
-
-function getCartSnapshot() {
-  return cartItems;
-}
-
-function getServerCartSnapshot() {
-  return EMPTY_CART;
-}
-
-function getHydratedSnapshot() {
-  return cartInitialized;
-}
-
-function getServerHydratedSnapshot() {
-  return false;
-}
-
-function changeCart(update: (current: CartItem[]) => CartItem[]) {
-  initializeCart();
-  cartItems = update(cartItems);
-  try {
-    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
-  } catch {
-    // The cart still works for this page view when storage is unavailable.
-  }
-  emitCartChange();
-}
-
-export function CartProvider({ children }: { children: React.ReactNode }) {
-  const items = useSyncExternalStore(
-    subscribeCart,
-    getCartSnapshot,
-    getServerCartSnapshot,
-  );
-  const hydrated = useSyncExternalStore(
-    subscribeCart,
-    getHydratedSnapshot,
-    getServerHydratedSnapshot,
+  const {
+    cart: items,
+    wishlist,
+    hydrated,
+    account,
+    issue: syncIssue,
+    saving,
+  } = useSyncExternalStore(
+    subscribe,
+    getShoppingSnapshot,
+    getServerShoppingSnapshot,
   );
 
   const addItem = useCallback(
@@ -184,7 +83,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         1,
         Math.min(Math.floor(quantity), MAX_CART_QUANTITY),
       );
-      changeCart((current) => {
+      return changeCart((current) => {
         const key = cartConfigurationKey(item);
         const existing = current.find(
           (entry) => cartConfigurationKey(entry) === key,
@@ -255,7 +154,29 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const clearCart = useCallback(() => changeCart(() => EMPTY_CART), []);
+  const clearCart = useCallback(
+    (purchased?: CartItem[], expectedOwner?: string | null) => {
+      if (
+        expectedOwner !== undefined &&
+        (getShoppingSnapshot().account?.id ?? null) !== expectedOwner
+      )
+        return;
+      const quantities = new Map(
+        purchased?.map((item) => [cartConfigurationKey(item), item.quantity]),
+      );
+      changeCart((current) =>
+        purchased
+          ? current.flatMap((item) => {
+              const remaining =
+                item.quantity -
+                (quantities.get(cartConfigurationKey(item)) ?? 0);
+              return remaining > 0 ? [{ ...item, quantity: remaining }] : [];
+            })
+          : [],
+      );
+    },
+    [],
+  );
   const itemCount = items.reduce(
     (total, item) =>
       total + item.quantity * (1 + (item.optionalOffers?.length ?? 0)),
@@ -270,6 +191,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo(
     () => ({
       items,
+      wishlist,
+      account,
+      saving,
+      syncIssue,
+      retryShopping,
+      setWishlisted,
       itemCount,
       subtotal,
       hydrated,
@@ -280,6 +207,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       items,
+      wishlist,
+      account,
+      saving,
+      syncIssue,
       itemCount,
       subtotal,
       hydrated,

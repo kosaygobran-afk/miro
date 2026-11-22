@@ -70,6 +70,10 @@ const LABELS: Record<DocumentLanguage, Record<string, string>> = {
     net: "לפני מע״מ",
     vat: "מע״מ",
     total: "סה״כ לתשלום",
+    summary: "סיכום סכומים",
+    receiptTotal: "סה״כ המסמך",
+    paymentTotal: "סה״כ שולם",
+    paymentAmount: "סכום ששולם",
     credit: "סה״כ לזיכוי",
     paid: "תשלומים מתועדים",
     balance: "יתרה",
@@ -115,6 +119,10 @@ const LABELS: Record<DocumentLanguage, Record<string, string>> = {
     net: "Net",
     vat: "VAT",
     total: "Total due",
+    summary: "Totals",
+    receiptTotal: "Document total",
+    paymentTotal: "Total paid",
+    paymentAmount: "Amount paid",
     credit: "Credit total",
     paid: "Recorded payments",
     balance: "Balance",
@@ -250,7 +258,12 @@ function summaryFields(document: FiscalDocumentSnapshot): DetailField[] {
     { label: l.net, value: money(document.net_agorot, lang), ltr: true },
     { label: l.vat, value: money(document.vat_agorot, lang), ltr: true },
     {
-      label: document.type === "credit_note" ? l.credit : l.total,
+      label:
+        document.type === "credit_note"
+          ? l.credit
+          : document.type === "receipt" || document.type === "invoice_receipt"
+            ? l.receiptTotal
+            : l.total,
       value: money(
         document.total_agorot,
         lang,
@@ -259,7 +272,7 @@ function summaryFields(document: FiscalDocumentSnapshot): DetailField[] {
       ltr: true,
     },
     ...(paid > 0
-      ? [{ label: l.paid, value: money(paid, lang), ltr: true }]
+      ? [{ label: l.paymentTotal, value: money(paid, lang), ltr: true }]
       : []),
     ...(paid > 0 && paid < document.total_agorot
       ? [
@@ -289,6 +302,52 @@ function itemDetails(
             ltr: true,
           },
         ]
+      : []),
+  ];
+}
+
+function receiptItemFields(
+  item: FiscalDocumentSnapshot["items"][number],
+  lang: DocumentLanguage,
+  credit: boolean,
+): DetailField[] {
+  const l = labels(lang);
+  return [
+    { label: l.quantity, value: String(item.quantity), ltr: true },
+    ...itemDetails(item, lang),
+    { label: l.net, value: money(item.net_agorot, lang), ltr: true },
+    { label: l.vat, value: money(item.vat_agorot, lang), ltr: true },
+    {
+      label: l.gross,
+      value: money(item.gross_agorot, lang, credit),
+      ltr: true,
+    },
+  ];
+}
+
+function paymentDetails(
+  payment: FiscalDocumentSnapshot["payment_references"][number],
+  lang: DocumentLanguage,
+): DetailField[] {
+  const l = labels(lang);
+  const stamp = payment.collected_at
+    ? formatDocumentTimestamp(payment.collected_at, lang)
+    : null;
+  return [
+    { label: l.payment, value: paymentMethod(payment.method, lang) },
+    {
+      label: l.paymentAmount,
+      value: money(payment.amount_agorot, lang),
+      ltr: true,
+    },
+    ...(stamp
+      ? [
+          { label: l.date, value: stamp.date, ltr: true },
+          { label: l.time, value: stamp.time, ltr: true },
+        ]
+      : []),
+    ...(payment.reference
+      ? [{ label: l.reference, value: payment.reference, wide: true }]
       : []),
   ];
 }
@@ -325,42 +384,32 @@ function accessibleHtml(
     `<dl class="detail-grid ${className}">${fields.map((field, index) => `<div class="field${className === "summary-grid" && index === 2 ? " total-field" : ""}" data-field="${escapeHtml(field.label)}" data-reading-anchor="start"${field.wide ? ' data-wide="true"' : ""}><dt>${field.icon ? paperIconSvg(field.icon) : ""}${escapeHtml(field.label)}</dt><dd>${bdi(field.value, field.ltr)}</dd></div>`).join("")}</dl>`;
   const sectionTitle = (icon: PaperIcon, value: string) =>
     `<h2>${paperIconSvg(icon)}<span>${escapeHtml(value)}</span></h2>`;
-  const rows = document.items
-    .map((item, index) => {
-      const amountFields = itemDetails(item, lang);
-      return layout === "a4"
-        ? `<tr><td><span class="item-description">${bdi(item.description)}</span>${amountFields.length ? `<div class="item-meta">${details(amountFields)}</div>` : ""}</td><td class="numeric">${bdi(String(item.quantity), true)}</td><td class="numeric">${bdi(money(item.net_agorot, lang), true)}</td><td class="numeric">${bdi(money(item.vat_agorot, lang), true)}</td><td class="numeric">${bdi(money(item.gross_agorot, lang, document.type === "credit_note"), true)}</td></tr>`
-        : `<article class="receipt-item"><h3>${bdi(item.description)}</h3>${details([{ label: l.quantity, value: String(item.quantity), ltr: true }, ...amountFields, { label: l.net, value: money(item.net_agorot, lang), ltr: true }, { label: l.vat, value: money(item.vat_agorot, lang), ltr: true }, { label: l.gross, value: money(item.gross_agorot, lang, document.type === "credit_note"), ltr: true }])}<span class="sr-only">${index + 1}</span></article>`;
-    })
-    .join("");
+  const credit = document.type === "credit_note";
+  const rows =
+    layout === "a4"
+      ? document.items
+          .map((item) => {
+            const amountFields = itemDetails(item, lang);
+            return `<tr><td><span class="item-description">${bdi(item.description)}</span>${amountFields.length ? `<div class="item-meta">${details(amountFields)}</div>` : ""}</td><td class="numeric">${bdi(String(item.quantity), true)}</td><td class="numeric">${bdi(money(item.net_agorot, lang), true)}</td><td class="numeric">${bdi(money(item.vat_agorot, lang), true)}</td><td class="numeric gross">${bdi(money(item.gross_agorot, lang, credit), true)}</td></tr>`;
+          })
+          .join("")
+      : "";
+  const itemCards = `<section class="item-cards" aria-label="${escapeHtml(l.description)}">${document.items
+    .map(
+      (item) =>
+        `<article class="receipt-item"><h3>${bdi(item.description)}</h3>${details(receiptItemFields(item, lang, credit))}</article>`,
+    )
+    .join("")}</section>`;
   const payments = document.payment_references
-    .map((payment) => {
-      const collected = payment.collected_at
-        ? formatDocumentTimestamp(payment.collected_at, lang)
-        : null;
-      return `<article class="payment">${details([
-        { label: l.payment, value: paymentMethod(payment.method, lang) },
-        {
-          label: l.gross,
-          value: money(payment.amount_agorot, lang),
-          ltr: true,
-        },
-        ...(payment.reference
-          ? [{ label: l.reference, value: payment.reference }]
-          : []),
-        ...(collected
-          ? [
-              { label: l.date, value: collected.date, ltr: true },
-              { label: l.time, value: collected.time, ltr: true },
-            ]
-          : []),
-      ])}</article>`;
-    })
+    .map(
+      (payment) =>
+        `<article class="payment">${details(paymentDetails(payment, lang))}</article>`,
+    )
     .join("");
   const paymentsHtml = payments
     ? `<section class="payments">${sectionTitle("payment", l.paid)}${payments}</section>`
     : "";
-  const summary = `<section class="summary" aria-label="${escapeHtml(l.total)}">${details(
+  const summary = `<section class="summary" aria-label="${escapeHtml(l.summary)}">${details(
     summaryFields(document).map((field, index) => ({
       ...field,
       wide: index === 2,
@@ -383,7 +432,7 @@ function accessibleHtml(
     ],
   )}</div><p class="number-note">${escapeHtml(document.number ? l.document : l.noNumber)}${document.number ? `: ${bdi(document.number, true)}` : ""}</p>${PAPER_RULE_SVG}</header>
 <section class="recipient">${sectionTitle("customer", l.customer)}${details(customerFields(document))}</section>
-${layout === "a4" ? `<table class="items"><caption>ILS</caption><thead><tr>${[l.description, l.quantity, l.net, l.vat, l.gross].map((label, index) => `<th scope="col"${index > 0 ? ' class="numeric"' : ""}>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>` : `<section aria-label="${escapeHtml(l.description)}">${rows}</section>`}
+${layout === "a4" ? `<table class="items"><caption>ILS</caption><thead><tr>${[l.description, l.quantity, l.net, l.vat, l.gross].map((label, index) => `<th scope="col"${index > 0 ? ' class="numeric"' : ""}>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>` : ""}${itemCards}
 ${payments ? `<div class="closing">${paymentsHtml}${summary}</div>` : summary}
 ${document.allocation_number || document.related_document_number ? `<section class="notes">${details([...(document.allocation_number ? [{ label: l.allocation, value: document.allocation_number, ltr: true }] : []), ...(document.related_document_number ? [{ label: l.related, value: document.related_document_number, ltr: true }] : [])])}</section>` : ""}
 ${document.note ? `<section class="notes">${sectionTitle("note", l.note)}<p>${bdi(document.note)}</p></section>` : ""}
@@ -684,7 +733,7 @@ async function renderLayout(
       .length *
       valueSize(field, size) *
       1.4 +
-    (layout === "a4" ? 5 : 7);
+    (layout === "a4" ? 4 : 5);
   const fieldAt = (
     field: DetailField,
     x: number,
@@ -838,7 +887,7 @@ async function renderLayout(
         size: layout === "a4" ? "A4" : [RECEIPT.width, RECEIPT.height],
         margin: 0,
       });
-    y = layout === "a4" ? 32 : 20;
+    y = layout === "a4" ? 30 : 20;
     if (pageNo === 1) {
       const businessW = layout === "a4" ? usable * 0.63 : usable;
       const bx = rtl ? margin + usable - businessW : margin;
@@ -872,20 +921,26 @@ async function renderLayout(
         Math.max(businessBottom, (layout === "a4" ? y : nameTop) + logoH) +
         (layout === "a4" ? 8 : 14);
     } else {
-      const logoW = layout === "a4" ? 96 : 108;
-      const logoX = rtl ? margin : margin + usable - logoW;
+      const narrow = layout === "receipt80";
+      const logoW = narrow ? 108 : 96;
+      const logoX = narrow
+        ? (doc.page.width - logoW) / 2
+        : rtl
+          ? margin
+          : margin + usable - logoW;
       const logoH = drawPaperBrand(doc, logoX, y, logoW);
-      const titleW = usable - logoW - 18;
-      const titleX = rtl ? margin + logoW + 18 : margin;
+      const titleW = narrow ? usable : usable - logoW - 18;
+      const titleX = !narrow && rtl ? margin + logoW + 18 : margin;
+      const titleTop = narrow ? y + logoH + 10 : y;
       const titleEnd = write(
         `${typeLabel(document)} - ${l.continued}`,
         titleX,
-        y,
+        titleTop,
         titleW,
-        layout === "a4" ? 14 : 11,
+        narrow ? 11 : 14,
         true,
       );
-      y = Math.max(titleEnd, y + logoH) + 12;
+      y = Math.max(titleEnd, y + logoH) + 10;
     }
     if (pageNo === 1 && layout === "a4") {
       const badgeW = 156,
@@ -973,6 +1028,12 @@ async function renderLayout(
         ) + 4;
     }
     rule(y + 2);
+    const accentX = rtl ? margin + usable * 0.9 : margin;
+    doc
+      .save()
+      .rect(accentX, y + 1, usable * 0.1, 2)
+      .fill(COLORS.gold)
+      .restore();
     y += layout === "a4" ? 12 : 17;
   };
   const ensure = (height: number) => {
@@ -1016,7 +1077,7 @@ async function renderLayout(
     y += 10;
   }
   const customer = customerFields(document);
-  const customerH = gridHeight(customer, usable - 24, 2, 8.8) + 40;
+  const customerH = gridHeight(customer, usable - 24, 2, 8.8) + 34;
   if (customerH < 400) {
     ensure(customerH + 12);
     const top = y;
@@ -1040,8 +1101,8 @@ async function renderLayout(
       9.5,
       true,
     );
-    gridAt(customer, margin + 12, top + 34, usable - 24, 2, 8.8);
-    y = top + customerH + (layout === "a4" ? 12 : 16);
+    gridAt(customer, margin + 12, top + 28, usable - 24, 2, 8.8);
+    y = top + customerH + (layout === "a4" ? 10 : 12);
   } else {
     heading("customer", l.customer);
     flowGrid(customer, 2, 8.8);
@@ -1093,21 +1154,11 @@ async function renderLayout(
   if (layout === "a4") tableHeading();
   for (const item of document.items) {
     if (layout === "receipt80") {
-      const fields: DetailField[] = [
-        { label: l.quantity, value: String(item.quantity), ltr: true },
-        ...itemDetails(item, lang),
-        { label: l.net, value: money(item.net_agorot, lang), ltr: true },
-        { label: l.vat, value: money(item.vat_agorot, lang), ltr: true },
-        {
-          label: l.gross,
-          value: money(
-            item.gross_agorot,
-            lang,
-            document.type === "credit_note",
-          ),
-          ltr: true,
-        },
-      ];
+      const fields = receiptItemFields(
+        item,
+        lang,
+        document.type === "credit_note",
+      );
       const itemHeight =
         measure(item.description, usable, 9.5).length * 14.25 +
         18 +
@@ -1150,7 +1201,14 @@ async function renderLayout(
     const numericHeight = Math.max(
       ...values.map(
         (value, index) =>
-          measure(value, columns[index + 1].width - 10, 8).length * 11.2 + 12,
+          measure(
+            value,
+            columns[index + 1].width - 10,
+            8,
+            index === values.length - 1,
+          ).length *
+            11.2 +
+          12,
       ),
     );
     let offset = 0;
@@ -1204,7 +1262,7 @@ async function renderLayout(
           y + 6,
           col.width - 10,
           8,
-          false,
+          index === values.length - 1,
           true,
           COLORS.ink,
           undefined,
@@ -1222,7 +1280,7 @@ async function renderLayout(
     }
   }
 
-  y += 16;
+  y += 12;
   const summary = summaryFields(document).map((field, index) => ({
       ...field,
       wide: index === 2,
@@ -1232,36 +1290,22 @@ async function renderLayout(
   const summaryX =
     layout === "a4" && !rtl ? margin + usable - summaryW : margin;
   const summaryH = 24 + gridHeight(summary, summaryW - 24, 2, 9);
-  const paymentFields = document.payment_references.flatMap(
-    (payment): DetailField[] => {
-      const stamp = payment.collected_at
-        ? formatDocumentTimestamp(payment.collected_at, lang)
-        : null;
-      return [
-        { label: l.payment, value: paymentMethod(payment.method, lang) },
-        {
-          label: l.gross,
-          value: money(payment.amount_agorot, lang),
-          ltr: true,
-        },
-        ...(payment.reference
-          ? [{ label: l.reference, value: payment.reference }]
-          : []),
-        ...(stamp
-          ? [
-              { label: l.date, value: stamp.date, ltr: true },
-              { label: l.time, value: stamp.time, ltr: true },
-            ]
-          : []),
-      ];
-    },
+  const payments = document.payment_references.map((payment) =>
+    paymentDetails(payment, lang),
   );
   const paymentW = layout === "a4" ? usable - summaryW - 20 : usable;
-  const paymentH = 28 + gridHeight(paymentFields, paymentW, 2, 8.2);
+  const paymentGap = 10;
+  const paymentH =
+    24 +
+    payments.reduce(
+      (height, fields, index) =>
+        height +
+        gridHeight(fields, paymentW, 2, 8.2) +
+        (index ? paymentGap : 0),
+      0,
+    );
   const parallelPayments =
-    layout === "a4" &&
-    paymentFields.length > 0 &&
-    Math.max(paymentH, summaryH) < 500;
+    layout === "a4" && payments.length > 0 && paymentH < 390;
   ensure(parallelPayments ? Math.max(summaryH, paymentH) : summaryH);
   const summaryTop = y;
   doc
@@ -1273,15 +1317,28 @@ async function renderLayout(
   if (parallelPayments) {
     const px = rtl ? margin + summaryW + 20 : margin;
     drawPaperIcon(doc, "payment", rtl ? px + paymentW - 12 : px, y + 1);
-    const paymentTop =
-      write(l.paid, rtl ? px : px + 18, y, paymentW - 18, 9, true) + 10;
-    const py = gridAt(paymentFields, px, paymentTop, paymentW, 2, 8.2);
-    y = Math.max(summaryTop + summaryH, py) + 18;
+    let py = write(l.paid, rtl ? px : px + 18, y, paymentW - 18, 9, true) + 8;
+    for (const [index, fields] of payments.entries()) {
+      if (index > 0) {
+        rule(py + 2, px, paymentW);
+        py += paymentGap;
+      }
+      py = gridAt(fields, px, py, paymentW, 2, 8.2);
+    }
+    y = Math.max(summaryTop + summaryH, py) + 12;
   } else {
-    y += summaryH + 18;
-    if (paymentFields.length) {
+    y += summaryH + 12;
+    if (payments.length) {
+      ensure(26 + gridHeight(payments[0], usable, 2, 8.2));
       heading("payment", l.paid);
-      flowGrid(paymentFields, 2, 8.2);
+      for (const [index, fields] of payments.entries()) {
+        if (index > 0) {
+          ensure(paymentGap + gridHeight(fields, usable, 2, 8.2));
+          rule(y + 2);
+          y += paymentGap;
+        }
+        flowGrid(fields, 2, 8.2);
+      }
     }
   }
   if (document.allocation_number)
@@ -1297,7 +1354,8 @@ async function renderLayout(
       ltr: true,
     });
   if (document.note) {
-    y += 8;
+    y += 6;
+    ensure(24 + Math.min(2, measure(document.note, usable, 8).length) * 11.2);
     heading("note", l.note);
     flowingText(document.note, 8, COLORS.muted);
   }

@@ -513,7 +513,7 @@ const cartOffer = {
 const enquiryBody = () => ({
   name: "Fixture",
   email: "fixture@example.com",
-  phone: "",
+  phone: "0500000000",
   message: "Fixture request",
   locale: "en",
   source: "checkout_page",
@@ -535,6 +535,10 @@ function enquiryHarness(options = {}) {
   const calls = [],
     offers = offerHarness(options);
   const route = load("src/app/api/enquiries/route.ts", {
+    "@/features/cart/cart-validation": load(
+      "src/features/cart/cart-validation.ts",
+    ),
+    "@/features/cart/cart-items": load("src/features/cart/cart-items.ts"),
     "next/server": next,
     "@/lib/supabase/server": {
       createServerSupabaseClient: async () => ({
@@ -547,6 +551,24 @@ function enquiryHarness(options = {}) {
         },
       }),
     },
+    "@/lib/supabase/admin": {
+      createAdminClient: () => ({
+        async rpc(name, payload) {
+          calls.push({ name, payload });
+          if (!payload.p_request) {
+            return {
+              data: options.replay ?? null,
+              error: options.replayError ?? null,
+            };
+          }
+          return {
+            data: options.emptyWrite ? null : "request-id",
+            error: null,
+          };
+        },
+      }),
+    },
+    "@/lib/auth": { getAuthContext: async () => options.actor ?? null },
     "@/lib/request-origin": origin,
     "@/lib/store-data": {
       getStoreViewer: async () => ({ role: null }),
@@ -565,9 +587,9 @@ test("quote-only enquiry rebuilds selected product metadata and exact totals fro
   const response = await h.POST(request("enquiries", enquiryBody()));
   assert.equal(response.status, 200);
   const write = h.calls.find(
-    (entry) => entry.name === "create_service_request",
+    (entry) => entry.name === "record_checkout_request",
   );
-  const checkout = write.payload.p_metadata.checkout;
+  const checkout = write.payload.p_request.checkout;
   assert.equal(checkout.estimated_subtotal, 38);
   assert.equal(checkout.payment_collected, false);
   assert.equal(checkout.cart.length, 2);
@@ -592,8 +614,84 @@ test("enquiry rejects stale offers, forged target slugs and unknown reads withou
     const response = await h.POST(request("enquiries", body));
     assert.equal(response.status, status);
     assert.equal(
-      h.calls.some((entry) => entry.name === "create_service_request"),
+      h.calls.some((entry) => entry.name === "record_checkout_request"),
       false,
     );
   }
+});
+
+test("checkout enquiries accept pickup without an address and require contact details for either method", async () => {
+  const h = enquiryHarness();
+  const { shipping, ...fields } = enquiryBody();
+  const requested = { ...fields, fulfillment: "pickup", startedAt: Date.now() };
+  const submit = (body) =>
+    h.POST(
+      new Request("https://miro.example/api/enquiries", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          origin: "https://miro.example",
+        },
+        body: JSON.stringify(body),
+      }),
+    );
+
+  const pickup = await submit(requested);
+  assert.equal(pickup.status, 200);
+  const checkout = h.calls.find(
+    ({ name }) => name === "record_checkout_request",
+  ).payload.p_request.checkout;
+  assert.equal(checkout.fulfillment, "pickup");
+  assert.equal(checkout.shipping, undefined);
+  assert.equal((await submit({ ...requested, shipping })).status, 400);
+  assert.equal(
+    (await submit({ ...requested, fulfillment: "delivery" })).status,
+    400,
+  );
+  assert.equal((await submit({ ...requested, phone: "" })).status, 400);
+  assert.equal(
+    h.calls.filter(({ name }) => name === "record_checkout_request").length,
+    1,
+  );
+});
+
+test("an identical checkout retry reads the existing reference before catalog validation", async () => {
+  const h = enquiryHarness({ replay: "request-id", readFailure: true });
+  const response = await h.POST(
+    request("enquiries", {
+      ...enquiryBody(),
+      submissionId: "40000000-0000-4000-8000-000000000010",
+    }),
+  );
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).requestId, "request-id");
+  const [call] = h.calls.filter(
+    ({ name }) => name === "record_checkout_request",
+  );
+  assert.equal(call.payload.p_customer_id, null);
+  assert.match(call.payload.p_payload_hash, /^[a-f0-9]{64}$/);
+  assert.equal(call.payload.p_request, undefined);
+  assert.equal(
+    h.calls.filter(({ name }) => name === "record_checkout_request").length,
+    1,
+  );
+});
+
+test("checkout fails closed when an authenticated session cannot be verified or a write returns no reference", async () => {
+  const brokenSession = enquiryHarness();
+  const base = request("enquiries", enquiryBody());
+  const headers = new Headers(base.headers);
+  headers.set("cookie", "sb-fixture-auth-token=fixture");
+  const response = await brokenSession.POST(new Request(base, { headers }));
+  assert.equal(response.status, 503);
+  assert.equal(
+    brokenSession.calls.some(({ name }) => name === "record_checkout_request"),
+    false,
+  );
+
+  const emptyWrite = enquiryHarness({ emptyWrite: true });
+  const missingReference = await emptyWrite.POST(
+    request("enquiries", enquiryBody()),
+  );
+  assert.equal(missingReference.status, 503);
 });

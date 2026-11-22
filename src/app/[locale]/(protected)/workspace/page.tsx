@@ -5,11 +5,21 @@ import { isLocale, withLocale } from "@/lib/i18n";
 
 export default async function WorkspaceEntry({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ next?: string }>;
 }) {
   const { locale: rawLocale } = await params;
   const locale = isLocale(rawLocale) ? rawLocale : "he";
   const actor = await requireAuth(locale);
-  redirect(withLocale(locale, roleHome(actor.role)));
+  const { next } = await searchParams;
+  redirect(
+    withLocale(
+      locale,
+      actor.role === "customer" && next === "checkout"
+        ? "checkout"
+        : roleHome(actor.role),
+    ),
+  );
 }

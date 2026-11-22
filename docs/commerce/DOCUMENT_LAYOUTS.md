@@ -1,6 +1,6 @@
 # Document previews and printable templates
 
-Updated 2026-11-02 after the owner’s premium-layout follow-up. These are draft
+Updated 2026-11-22 after the bilingual layout and pagination follow-up. These are draft
 templates, not approval for official issuance.
 
 ## Try a document
@@ -63,7 +63,9 @@ from the canonical PDF because browsers and printer drivers control printing.
   measured row bands so long names grow vertically and neighboring fields
   receive matching space. Numeric table headings/amounts use the same right
   anchor. Repeated business contacts occupy a measured footer reserve; the
-  template version is now `miro-draft-3`.
+  template version is now `miro-draft-4`. A4 browser previews at 600 px or
+  narrower use stacked line items, while A4 printing and desktop previews use
+  the numeric table. The full vector logo centers on every 80 mm page.
 - `paper-styles.ts` owns paper typography/spacing separately from application
   themes. Variable names, addresses, references, dates, units, discounts, amounts
   and notes remain escaped HTML text or embedded-font PDF text. Hebrew and English
@@ -83,7 +85,10 @@ from the canonical PDF because browsers and printer drivers control printing.
   duplicating row amounts. Each PDF page has a draft warning, full logo, draft
   ID and local date/time; continuation pages also identify themselves. Footers
   isolate page numbers. 80 mm items use stacked labeled values for readable
-  units, discounts, net, VAT and gross.
+  units, discounts, net, VAT and gross. Standard A4 samples fit on one page in
+  each language in generated PDFs and Chromium native print. The note heading stays with the opening lines. Separate tender
+  records keep their method, amount, local timestamp and reference together.
+  Receipts distinguish the document total, amount paid and any balance.
 - Financial values remain the immutable input amounts; rendering does not
   recompute tax, discounts or commerce prices. Zero discounts stay explicit.
   Number-series permissions, readiness checks and immutable issued artifacts

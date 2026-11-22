@@ -23,6 +23,7 @@ import {
   resolvePrice,
   type PricingInputs,
 } from "@/lib/catalog/pricing";
+import { WishlistButton } from "@/features/wishlist/wishlist-button";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
 import { ProductIdentifiers } from "@/features/catalog/product-identifiers";
@@ -525,6 +526,8 @@ export function ProductDetailInteractive({
               }}
             />
           )}
+
+          <WishlistButton productId={productId} locale={locale} />
 
           <ProductDetailActions
             productId={productId}

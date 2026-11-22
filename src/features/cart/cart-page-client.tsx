@@ -16,13 +16,14 @@ import {
 } from "./cart-items";
 
 export function CartPageClient({ locale }: { locale: "he" | "en" }) {
-  const { items, subtotal, hydrated, updateQuantity, removeItem } = useCart();
+  const { items, subtotal, hydrated, syncIssue, updateQuantity, removeItem } =
+    useCart();
   const copy = cartCopy[locale];
   const lineLimitExceeded =
     checkoutCartLines(items).length > MAX_CHECKOUT_LINES;
 
   if (!hydrated) {
-    return <CartSkeleton locale={locale} />;
+    return syncIssue ? null : <CartSkeleton locale={locale} />;
   }
 
   return (
@@ -35,6 +36,12 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
           <div>
             <h1>{copy.cartTitle}</h1>
             <p>{copy.cartIntro}</p>
+            <Link
+              href={withLocale(locale, "wishlist")}
+              className="miro-inline-link"
+            >
+              {locale === "he" ? "לרשימת המשאלות" : "View wishlist"}
+            </Link>
           </div>
         </header>
 

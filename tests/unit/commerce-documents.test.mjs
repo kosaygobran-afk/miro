@@ -484,3 +484,41 @@ test("issued and voided documents are never regenerated", async () => {
     );
   }
 });
+
+test("split tenders keep their amount, local time and reference in the same payment group", async () => {
+  const input = samples.createDocumentSample(
+    "receipt",
+    "en",
+    "2026-11-02T14:51:20.000Z",
+  );
+  input.payment_references = [
+    {
+      method: "cash",
+      amount_agorot: 12_500,
+      reference: "CASH-REF-01",
+      collected_at: "2026-11-02T14:51:20.000Z",
+    },
+    {
+      method: "card",
+      amount_agorot: 27_620,
+      reference: "CARD-REF-02",
+      collected_at: "2026-11-02T16:05:10.000Z",
+    },
+  ];
+  for (const layout of ["a4", "receipt80"]) {
+    const { accessibleHtml, pdfBytes } = await renderer.renderDraftDocument(
+      input,
+      layout,
+    );
+    const groups = [
+      ...accessibleHtml.matchAll(/<article class="payment">(.+?)<\/article>/g),
+    ].map((match) => match[1]);
+    assert.equal(groups.length, 2);
+    assert.match(groups[0], /Cash.+ILS 125\.00.+16:51:20.+CASH-REF-01/);
+    assert.match(groups[1], /Card.+ILS 276\.20.+18:05:10.+CARD-REF-02/);
+    assert.match(accessibleHtml, /Document total/);
+    assert.match(accessibleHtml, /Total paid/);
+    assert.doesNotMatch(accessibleHtml, /Total due/);
+    assert.ok(pdfBytes.length > 4000);
+  }
+});

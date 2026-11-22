@@ -24,6 +24,7 @@ import {
 } from "./types";
 import styles from "./requests-queue.module.css";
 import { reportingStyles } from "../ui/reporting-workspace";
+import { CheckoutRequestDetails } from "./checkout-request-details";
 import detailStyles from "./request-details.module.css";
 
 function isRequestStatus(status: string): status is RequestStatus {
@@ -261,6 +262,13 @@ export function RequestDrawer({
             />
           </div>
 
+          {request.source === "checkout_page" ? (
+            <CheckoutRequestDetails
+              metadata={request.metadata}
+              locale={locale}
+            />
+          ) : null}
+
           {request.product ? (
             <div className={styles.drawerSection}>
               <h3 className={styles.drawerSectionTitle}>
@@ -422,6 +430,13 @@ export function RequestDrawer({
                 {request.message || t(copyMap.emptyMessage)}
               </p>
             </section>
+
+            {request.source === "checkout_page" ? (
+              <CheckoutRequestDetails
+                metadata={request.metadata}
+                locale={locale}
+              />
+            ) : null}
 
             {request.product ? (
               <section

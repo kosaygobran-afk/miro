@@ -25,7 +25,7 @@ export function AddToCartButton({
   disabled = false,
   tabIndex,
 }: AddToCartButtonProps) {
-  const { addItem, items, updateQuantity } = useCart();
+  const { addItem, hydrated, items, updateQuantity } = useCart();
   const existing = items.find(
     (entry) => cartConfigurationKey(entry) === cartConfigurationKey(item),
   );
@@ -65,7 +65,7 @@ export function AddToCartButton({
         <button
           type="button"
           tabIndex={tabIndex}
-          disabled={disabled}
+          disabled={disabled || !hydrated}
           aria-label={`${locale === "he" ? "הפחתת כמות" : "Decrease quantity"}: ${item.name}`}
           onClick={(event) => {
             event.preventDefault();
@@ -89,7 +89,7 @@ export function AddToCartButton({
         <button
           type="button"
           tabIndex={tabIndex}
-          disabled={disabled || quantity >= 99}
+          disabled={disabled || !hydrated || quantity >= 99}
           aria-label={`${locale === "he" ? "הגדלת כמות" : "Increase quantity"}: ${item.name}`}
           onClick={(event) => {
             event.preventDefault();
@@ -111,13 +111,12 @@ export function AddToCartButton({
       aria-describedby={descriptionId}
       aria-disabled={atLimit || undefined}
       title={iconOnly ? undefined : added ? addedLabel : label}
-      disabled={disabled}
+      disabled={disabled || !hydrated}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
         if (atLimit) return;
-        addItem(item);
-        setAdded(true);
+        if (addItem(item)) setAdded(true);
       }}
     >
       <span className="sf-cart-icon" aria-hidden="true">

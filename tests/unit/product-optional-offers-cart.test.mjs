@@ -60,7 +60,25 @@ const offer = {
 };
 
 function cartHarness(initial = []) {
-  let stored = JSON.stringify(initial);
+  const storage = new Map([["miro-cart-v1", JSON.stringify(initial)]]);
+  const window = {
+    localStorage: {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+    },
+    addEventListener() {},
+  };
+  const shoppingStore = load(
+    "src/features/cart/shopping-store.ts",
+    {
+      "./cart-items": pure,
+      "./shopping-types": load("src/features/cart/shopping-types.ts"),
+      "@/lib/account-session": {
+        ACCOUNT_SESSION_REFRESH_EVENT: "account-refresh",
+      },
+    },
+    { window, queueMicrotask: (fn) => fn() },
+  );
   const react = {
     createContext: () => ({ Provider: "provider" }),
     useContext: () => null,
@@ -71,29 +89,15 @@ function cartHarness(initial = []) {
       return snapshot();
     },
   };
-  const context = load(
-    "src/features/cart/cart-context.tsx",
-    {
-      react,
-      "react/jsx-runtime": { jsx: (type, props) => ({ type, props }) },
-      "./cart-items": pure,
-    },
-    {
-      window: {
-        localStorage: {
-          getItem: () => stored,
-          setItem: (_, value) => {
-            stored = value;
-          },
-        },
-        addEventListener() {},
-        removeEventListener() {},
-      },
-    },
-  );
+  const context = load("src/features/cart/cart-context.tsx", {
+    react,
+    "react/jsx-runtime": { jsx: (type, props) => ({ type, props }) },
+    "./cart-items": pure,
+    "./shopping-store": shoppingStore,
+  });
   return {
     read: () => context.CartProvider({ children: null }).props.value,
-    stored: () => JSON.parse(stored),
+    stored: () => JSON.parse(storage.get("miro-cart-v1")),
   };
 }
 

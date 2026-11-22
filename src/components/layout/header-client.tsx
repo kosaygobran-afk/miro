@@ -4,6 +4,7 @@ import Link from "@/components/motion/motion-link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "@/components/motion/use-motion-router";
 import {
+  Heart,
   ArrowLeft,
   ArrowRight,
   Check,
@@ -404,6 +405,19 @@ export function HeaderClient({
           />
           <div className="premium-header-actions">
             <div className="premium-header-action-group premium-header-action-group--shopping">
+              <Link
+                href={withLocale(locale, "wishlist")}
+                className="premium-wishlist-link premium-icon-button"
+                aria-current={
+                  pathname === withLocale(locale, "wishlist")
+                    ? "page"
+                    : undefined
+                }
+                aria-label={locale === "he" ? "רשימת משאלות" : "Wishlist"}
+                title={locale === "he" ? "רשימת משאלות" : "Wishlist"}
+              >
+                <Heart size={20} aria-hidden="true" />
+              </Link>
               <HeaderCartLink
                 locale={locale}
                 current={pathname === withLocale(locale, "cart")}
@@ -550,6 +564,25 @@ export function HeaderClient({
                       {labels.nav.business}
                     </span>
                     <Arrow
+                      className="miro-control-end"
+                      size={16}
+                      aria-hidden="true"
+                    />
+                  </Link>
+                  <Link
+                    href={withLocale(locale, "wishlist")}
+                    onClick={closeNavigation}
+                    className="miro-centered-control"
+                    aria-current={
+                      pathname === withLocale(locale, "wishlist")
+                        ? "page"
+                        : undefined
+                    }
+                  >
+                    <span className="miro-control-label">
+                      {locale === "he" ? "רשימת משאלות" : "Wishlist"}
+                    </span>
+                    <Heart
                       className="miro-control-end"
                       size={16}
                       aria-hidden="true"

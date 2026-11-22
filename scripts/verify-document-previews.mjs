@@ -82,7 +82,7 @@ async function verifyPaperGeometry(tab, name) {
     }
     const fields = Array.from(
       document.querySelectorAll(".detail-grid > .field"),
-    );
+    ).filter((field) => field.getClientRects().length > 0);
     if (!fields.length) failures.push("missing stacked printable fields");
     for (const field of fields) {
       const label = field.querySelector("dt"),
@@ -143,7 +143,23 @@ async function verifyPaperGeometry(tab, name) {
             failures.push("field boxes collide");
         }
     }
-    const headers = Array.from(document.querySelectorAll(".items th.numeric"));
+    const itemTable = document.querySelector(".items");
+    const itemCards = document.querySelector(".item-cards");
+    if (receipt || matchMedia("screen and (max-width: 600px)").matches) {
+      if (
+        !itemCards?.getClientRects().length ||
+        itemTable?.getClientRects().length
+      )
+        failures.push("narrow paper does not display the stacked line items");
+    } else if (
+      !itemTable?.getClientRects().length ||
+      itemCards?.getClientRects().length
+    ) {
+      failures.push("wide paper does not display the item table");
+    }
+    const headers = Array.from(
+      document.querySelectorAll(".items th.numeric"),
+    ).filter((header) => header.getClientRects().length > 0);
     for (const row of document.querySelectorAll(".items tbody tr")) {
       const values = Array.from(row.querySelectorAll("td.numeric"));
       headers.forEach((header, index) => {

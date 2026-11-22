@@ -38,12 +38,28 @@ const initialFields: CheckoutFields = {
 };
 
 export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
-  const { items, subtotal, hydrated, clearCart } = useCart();
+  const { items, subtotal, hydrated, clearCart, account, saving, syncIssue } =
+    useCart();
   const copy = cartCopy[locale];
-  const [fields, setFields] = useState(initialFields);
+  const owner = account?.id ?? null;
+  const [draft, setDraft] = useState<{
+    owner: string | null;
+    changes: Partial<CheckoutFields>;
+  }>({ owner, changes: {} });
+  const fields = {
+    ...initialFields,
+    ...account?.contact,
+    ...(draft.owner === owner ? draft.changes : {}),
+  };
+  const [fulfillment, setFulfillment] = useState<"delivery" | "pickup">(
+    "delivery",
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
+  const [receipt, setReceipt] = useState<{ requestId: string | null } | null>(
+    null,
+  );
+  const inFlight = useRef(false);
   const eligibilityKey = JSON.stringify(checkoutCartLines(items));
   const lineLimitExceeded =
     checkoutCartLines(items).length > MAX_CHECKOUT_LINES;
@@ -59,17 +75,25 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
     }[];
   } | null>(null);
   const onlineItems =
-    onlineSelection?.key === eligibilityKey ? onlineSelection.items : null;
+    fulfillment === "delivery" && onlineSelection?.key === eligibilityKey
+      ? onlineSelection.items
+      : null;
   const paymentKey = useRef<string | null>(null);
-  const startedAt = useRef<number | null>(null);
+  const requestAttempt = useRef<{
+    key: string;
+    payload: string;
+    owner: string | null;
+  } | null>(null);
   const statusRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    startedAt.current = Date.now();
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated || !items.length || lineLimitExceeded) return;
+    if (
+      !hydrated ||
+      !items.length ||
+      lineLimitExceeded ||
+      fulfillment === "pickup"
+    )
+      return;
     const controller = new AbortController();
     void fetch("/api/commerce/eligibility", {
       method: "POST",
@@ -93,15 +117,21 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
         if (!controller.signal.aborted) setOnlineSelection(null);
       });
     return () => controller.abort();
-  }, [hydrated, items, eligibilityKey, locale, lineLimitExceeded]);
+  }, [hydrated, items, eligibilityKey, locale, lineLimitExceeded, fulfillment]);
 
   function setField(name: keyof CheckoutFields, value: string) {
-    setFields((current) => ({ ...current, [name]: value }));
+    setDraft((current) => ({
+      owner,
+      changes: {
+        ...(current.owner === owner ? current.changes : {}),
+        [name]: value,
+      },
+    }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (submitting || items.length === 0) return;
+    if (inFlight.current || saving || items.length === 0) return;
     if (lineLimitExceeded) {
       setError(copy.tooManyLines);
       requestAnimationFrame(() => statusRef.current?.focus());
@@ -112,20 +142,20 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
       fields.name,
       fields.email,
       fields.phone,
-      fields.address,
-      fields.city,
+      ...(fulfillment === "delivery" ? [fields.address, fields.city] : []),
     ];
     if (required.some((value) => !value.trim())) {
       setError(copy.requiredError);
       requestAnimationFrame(() => statusRef.current?.focus());
       return;
     }
-    if (!/^\S+@\S+\.\S+$/.test(fields.email)) {
+    if (!/^\S+@\S+\.\S+$/.test(fields.email.trim())) {
       setError(copy.emailError);
       requestAnimationFrame(() => statusRef.current?.focus());
       return;
     }
 
+    inFlight.current = true;
     setSubmitting(true);
     setError(null);
     try {
@@ -158,68 +188,101 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
         window.location.assign(result.next_url);
         return;
       }
+      const submission = {
+        name: fields.name,
+        email: fields.email,
+        phone: fields.phone,
+        message:
+          fields.notes.trim() ||
+          (locale === "he"
+            ? `בקשת הזמנה עבור ${items.length} מוצרים`
+            : `Checkout request for ${items.length} products`),
+        locale,
+        source: "checkout_page",
+        company: fields.company,
+        cart: items.map((item) => ({
+          productId: item.productId,
+          variantId: item.variantId,
+          slug: item.slug,
+          name: item.name,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          lineId: cartLineId(item),
+          optionalOffers: item.optionalOffers,
+        })),
+        fulfillment,
+        ...(fulfillment === "delivery"
+          ? {
+              shipping: {
+                address: fields.address,
+                city: fields.city,
+                postalCode: fields.postalCode,
+              },
+            }
+          : {}),
+      };
+      const payload = JSON.stringify(submission);
+      if (
+        requestAttempt.current?.payload !== payload ||
+        requestAttempt.current.owner !== owner
+      ) {
+        requestAttempt.current = { key: crypto.randomUUID(), payload, owner };
+      }
       const response = await fetch("/api/enquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: fields.name,
-          email: fields.email,
-          phone: fields.phone,
-          message:
-            fields.notes.trim() ||
-            (locale === "he"
-              ? `בקשת הזמנה עבור ${items.length} מוצרים`
-              : `Checkout request for ${items.length} products`),
-          locale,
-          source: "checkout_page",
-          company: fields.company,
-          startedAt: startedAt.current ?? undefined,
-          cart: items.map((item) => ({
-            productId: item.productId,
-            variantId: item.variantId,
-            slug: item.slug,
-            name: item.name,
-            unitPrice: item.unitPrice,
-            quantity: item.quantity,
-            lineId: cartLineId(item),
-            optionalOffers: item.optionalOffers,
-          })),
-          shipping: {
-            address: fields.address,
-            city: fields.city,
-            postalCode: fields.postalCode,
-          },
+          ...submission,
+          submissionId: requestAttempt.current.key,
         }),
       });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => null)) as {
-          message?: string;
-        } | null;
+      const body = (await response.json().catch(() => null)) as {
+        ok?: boolean;
+        message?: string;
+        requestId?: string;
+      } | null;
+      if (
+        !response.ok ||
+        body?.ok !== true ||
+        typeof body.requestId !== "string"
+      ) {
         throw new Error(body?.message || copy.unavailable);
       }
-      clearCart();
-      setSuccess(true);
+      clearCart(items, owner);
+      setReceipt({ requestId: body.requestId });
+      requestAnimationFrame(() => statusRef.current?.focus());
     } catch (submitError) {
       setError(
         submitError instanceof Error ? submitError.message : copy.unavailable,
       );
       requestAnimationFrame(() => statusRef.current?.focus());
     } finally {
+      inFlight.current = false;
       setSubmitting(false);
     }
   }
 
   if (!hydrated) {
-    return <CartSkeleton locale={locale} checkout />;
+    return syncIssue ? null : <CartSkeleton locale={locale} checkout />;
   }
 
-  if (success) {
+  if (receipt) {
     return (
       <div className="sf-checkout-page">
-        <div className="miro-container sf-checkout-success">
+        <div
+          className="miro-container sf-checkout-success"
+          ref={statusRef}
+          tabIndex={-1}
+        >
           <CheckCircle2 size={44} aria-hidden="true" />
           <h1>{copy.successTitle}</h1>
           <p>{copy.successText}</p>
+          {receipt.requestId ? (
+            <p className="break-all">
+              {locale === "he" ? "מספר פנייה" : "Request reference"}{" "}
+              <bdi>{receipt.requestId}</bdi>
+            </p>
+          ) : null}
           <Link
             href={withLocale(locale)}
             className="miro-button miro-button-primary"
@@ -257,8 +320,29 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
             <ShoppingBag size={24} />
           </span>
           <div>
-            <h1>{copy.checkoutTitle}</h1>
-            <p>{copy.checkoutIntro}</p>
+            <h1>
+              {onlineItems
+                ? locale === "he"
+                  ? "קופה"
+                  : "Checkout"
+                : copy.checkoutTitle}
+            </h1>
+            {!onlineItems ? <p>{copy.checkoutIntro}</p> : null}
+            {!account ? (
+              <p>
+                {locale === "he"
+                  ? "אפשר להמשיך כאורחים או "
+                  : "You can continue as a guest or "}
+                <Link
+                  href={withLocale(locale, "login?next=checkout")}
+                  className="miro-inline-link"
+                >
+                  {locale === "he"
+                    ? "להתחבר ולהמשיך בקופה"
+                    : "sign in and return to checkout"}
+                </Link>
+              </p>
+            ) : null}
             {onlineItems ? (
               <p>
                 {locale === "he"
@@ -288,7 +372,7 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
               </div>
             ) : null}
 
-            <fieldset>
+            <fieldset disabled={submitting}>
               <legend>{copy.contact}</legend>
               <div className="sf-checkout-fields">
                 <label>
@@ -320,7 +404,7 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
                     className="miro-input"
                     type="tel"
                     autoComplete="tel"
-                    maxLength={40}
+                    maxLength={30}
                     required
                     value={fields.phone}
                     onChange={(event) => setField("phone", event.target.value)}
@@ -329,54 +413,81 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
               </div>
             </fieldset>
 
-            <fieldset>
-              <legend>{copy.shipping}</legend>
+            <fieldset disabled={submitting}>
+              <legend>{copy.fulfillment}</legend>
               <div className="sf-checkout-fields">
                 <label className="sf-checkout-wide">
-                  <span>{copy.address}</span>
-                  <input
+                  <span>{copy.fulfillmentMethod}</span>
+                  <select
                     className="miro-input"
-                    autoComplete="street-address"
-                    maxLength={240}
-                    required
-                    value={fields.address}
+                    value={fulfillment}
                     onChange={(event) =>
-                      setField("address", event.target.value)
+                      setFulfillment(
+                        event.target.value === "pickup" ? "pickup" : "delivery",
+                      )
                     }
-                  />
+                  >
+                    <option value="delivery">{copy.delivery}</option>
+                    <option value="pickup">{copy.pickup}</option>
+                  </select>
                 </label>
-                <label>
-                  <span>{copy.city}</span>
-                  <input
-                    className="miro-input"
-                    autoComplete="address-level2"
-                    maxLength={120}
-                    required
-                    value={fields.city}
-                    onChange={(event) => setField("city", event.target.value)}
-                  />
-                </label>
-                <label>
-                  <span>{copy.postalCode}</span>
-                  <input
-                    className="miro-input"
-                    autoComplete="postal-code"
-                    maxLength={20}
-                    value={fields.postalCode}
-                    onChange={(event) =>
-                      setField("postalCode", event.target.value)
-                    }
-                  />
-                </label>
-                <label className="sf-checkout-wide">
-                  <span>{copy.notes}</span>
-                  <textarea
-                    className="miro-input"
-                    maxLength={1000}
-                    value={fields.notes}
-                    onChange={(event) => setField("notes", event.target.value)}
-                  />
-                </label>
+                {fulfillment === "delivery" ? (
+                  <>
+                    <label className="sf-checkout-wide">
+                      <span>{copy.address}</span>
+                      <input
+                        className="miro-input"
+                        autoComplete="street-address"
+                        maxLength={240}
+                        required
+                        value={fields.address}
+                        onChange={(event) =>
+                          setField("address", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>{copy.city}</span>
+                      <input
+                        className="miro-input"
+                        autoComplete="address-level2"
+                        maxLength={120}
+                        required
+                        value={fields.city}
+                        onChange={(event) =>
+                          setField("city", event.target.value)
+                        }
+                      />
+                    </label>
+                    <label>
+                      <span>{copy.postalCode}</span>
+                      <input
+                        className="miro-input"
+                        autoComplete="postal-code"
+                        maxLength={20}
+                        value={fields.postalCode}
+                        onChange={(event) =>
+                          setField("postalCode", event.target.value)
+                        }
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <p className="sf-checkout-wide">{copy.pickupNote}</p>
+                )}
+                {!onlineItems ? (
+                  <label className="sf-checkout-wide">
+                    <span>{copy.notes}</span>
+                    <textarea
+                      className="miro-input"
+                      maxLength={1000}
+                      value={fields.notes}
+                      onChange={(event) =>
+                        setField("notes", event.target.value)
+                      }
+                    />
+                  </label>
+                ) : null}
               </div>
             </fieldset>
 
@@ -395,7 +506,7 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
             <button
               type="submit"
               className="miro-button miro-button-primary sf-checkout-submit"
-              disabled={submitting || lineLimitExceeded}
+              disabled={submitting || saving || lineLimitExceeded}
             >
               {submitting
                 ? copy.submitting
@@ -405,10 +516,12 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
                     : "Continue to secure payment"
                   : copy.submit}
             </button>
-            <p className="sf-checkout-payment-note">
-              <LockKeyhole size={16} aria-hidden="true" />
-              {copy.noPayment}
-            </p>
+            {!onlineItems ? (
+              <p className="sf-checkout-payment-note">
+                <LockKeyhole size={16} aria-hidden="true" />
+                {copy.noPayment}
+              </p>
+            ) : null}
           </form>
 
           <aside className="sf-checkout-summary">

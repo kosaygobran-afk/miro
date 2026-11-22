@@ -25,11 +25,11 @@ export default async function LoginPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ email?: string }>;
+  searchParams: Promise<{ email?: string; next?: string }>;
 }) {
   const { locale: rawLocale } = await params;
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
-  const { email } = await searchParams;
+  const { email, next } = await searchParams;
   const t = await getTranslations({ locale, namespace: "pages.auth" });
 
   const noticeTitle = t("noticeTitle");
@@ -53,6 +53,7 @@ export default async function LoginPage({
           <LoginClient
             locale={locale}
             prefilledEmail={email}
+            returnToCheckout={next === "checkout"}
             emailLabel={emailLabel}
             passwordLabel={passwordLabel}
             submitLabel={submitLabel}

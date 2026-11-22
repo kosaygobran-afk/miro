@@ -8,6 +8,37 @@ The public storefront supports MIRO's dark/medium/light themes. Version 2 adds c
 
 Popup sizing clarification: smaller unified dimensions apply only to product preview windows. Static card widths remain responsive as before. Version 2 previews are capped at 416×560px and adapt to available viewport/source-footer space; long content scrolls in their existing details region. As of 2026-11-06, Version 2 cards/rails show a copyable SKU in the right half of a joined band above price, with honest stock in the left half; barcode stays in previews/product details. The previous below-summary code section is removed to shorten cards. The same-day owner follow-up moves the compact price panel below product details, with amount left/context right, inline savings text and four joined icon action cells with gold hover/focus. Full identifiers remain bold, labeled fields in previews/product details, and Version 1 retains its existing layout. Internal reference codes are labeled as such, and missing barcode values are omitted. No barcode is fabricated or certified as a supplier GTIN.
 
+## Preview checkout and wishlist
+
+Guests can use the Cart and Wishlist without an account. Guest selections stay in
+browser storage. After sign-in, the active account receives the wishlist union and
+the cart merges by variant and optional-offer configuration. Duplicate cart
+configurations keep the higher quantity. A failed transfer leaves guest selections
+in place for retry. When the account read is unavailable, both lists stay usable
+in browser storage. A successful retry imports those selections. The Cart and
+Wishlist are available from storefront navigation,
+with Wishlist also linked from the Cart and customer account.
+
+Both guest and signed-in checkout collect name, email and phone. Delivery also
+requires street and city, with optional postal code. Pickup asks MIRO to confirm
+the pickup location and time. Signed-in checkout prefills account contact details
+and stores the request under the customer’s history. The storefront revalidates
+prices and availability, then a service-only database function records the
+request and its audit entry together. An unchanged submission can be retried
+from the same checkout form and returns its original reference. The cart clears
+once a recorded reference comes back. Staff can review the method, address and
+verified cart in the protected request drawer. Preview checkout sends a request
+for MIRO to confirm before payment or stock reservation. Contact details stay
+out of shopping browser storage.
+
+Roll out checkout in two steps. Apply the additive writer migration
+`20261122020000_checkout_request_customer.sql` before deployment. The published
+storefront can continue using its original checkout writer during this step.
+After the new deployment reaches the service-only writer, apply
+`20261122030000_close_legacy_checkout_writes.sql`. The new deployment needs its
+private Supabase server key. Leave historical account links as recorded unless
+there is independent evidence of ownership.
+
 ## Animation controls and appearance restoration
 
 Open `/he/admin/settings#settings-animation` or `/en/admin/settings#settings-animation`. An active CEO can save; Admin can read. The master switch, 13 effect switches and enhanced-appearance switch have bilingual notes. Timing inputs control presentation durations, and styles choose radial/fade theme changes, lift/fade page reveals and easing. Defaults are enabled; reduced-motion preferences take priority. Existing Store Design controls still set rail speeds, hover intent and background intervals, with the global switches deciding whether those decorative effects run.

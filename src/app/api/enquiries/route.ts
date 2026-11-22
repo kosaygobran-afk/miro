@@ -1,8 +1,13 @@
+import { createHash, randomUUID } from "node:crypto";
+import { getAuthContext } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { hasSameOrigin } from "@/lib/request-origin";
-import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import { getStoreCatalog } from "@/lib/store-data";
+import { checkoutCartItemSchema } from "@/features/cart/cart-validation";
+import { MAX_CHECKOUT_LINES } from "@/features/cart/cart-items";
 import { resolvePrice } from "@/lib/catalog/pricing";
 import {
   OptionalOfferCartChanged,
@@ -15,39 +20,6 @@ const SOURCE_VALUES = [
   "store_page",
   "checkout_page",
 ] as const;
-
-const optionalCartOfferSchema = z
-  .object({
-    id: z.string().uuid(),
-    revision: z.number().int().nonnegative(),
-    kind: z.enum(["complementary", "accompanying"]),
-    label: z.string().max(300),
-    productId: z.string().uuid(),
-    variantId: z.string().uuid(),
-    name: z.string().min(1).max(300),
-    sku: z.string().max(200),
-    slug: z.string().min(1).max(200),
-    category: z.string().max(200),
-    imageUrl: z.string().max(2000).nullable(),
-    unitPrice: z.number().finite().positive(),
-  })
-  .strict();
-
-const checkoutCartItemSchema = z.object({
-  productId: z.string().uuid(),
-  variantId: z.string().uuid(),
-  slug: z.string().min(1).max(200),
-  name: z.string().min(1).max(300),
-  unitPrice: z.number().finite().nonnegative(),
-  quantity: z.number().int().min(1).max(99),
-  lineId: z
-    .string()
-    .min(1)
-    .max(120)
-    .regex(/^[A-Za-z0-9:_-]+$/)
-    .optional(),
-  optionalOffers: z.array(optionalCartOfferSchema).max(99).optional(),
-});
 
 const shippingSchema = z.object({
   address: z.string().trim().min(1).max(240),
@@ -69,7 +41,13 @@ const enquirySchema = z
     company: z.string().max(200).optional(),
     // Time-trap: ms epoch set when the form was rendered.
     startedAt: z.number().int().positive().optional(),
-    cart: z.array(checkoutCartItemSchema).min(1).max(50).optional(),
+    cart: z
+      .array(checkoutCartItemSchema)
+      .min(1)
+      .max(MAX_CHECKOUT_LINES)
+      .optional(),
+    fulfillment: z.enum(["delivery", "pickup"]).optional(),
+    submissionId: z.uuid().optional(),
     shipping: shippingSchema.optional(),
   })
   .superRefine((data, context) => {
@@ -81,11 +59,30 @@ const enquirySchema = z
         message: "Cart required",
       });
     }
-    if (!data.shipping) {
+    if ((data.fulfillment === "pickup") === Boolean(data.shipping)) {
       context.addIssue({
         code: "custom",
         path: ["shipping"],
-        message: "Shipping required",
+        message: "Shipping address is required for delivery only",
+      });
+    }
+    if (!data.phone) {
+      context.addIssue({
+        code: "custom",
+        path: ["phone"],
+        message: "Phone required",
+      });
+    }
+    if (
+      (data.cart?.reduce(
+        (count, item) => count + 1 + (item.optionalOffers?.length ?? 0),
+        0,
+      ) ?? 0) > MAX_CHECKOUT_LINES
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["cart"],
+        message: "Too many checkout lines",
       });
     }
   });
@@ -97,12 +94,15 @@ const failureCopy = {
     invalid_input: "חלק מהפרטים חסרים או שגויים. נסו שוב.",
     rate_limited: "נשלחו יותר מדי פניות. נסו שוב בעוד דקה.",
     unavailable: "השליחה אינה זמינה כרגע. נסו שוב מאוחר יותר.",
+    request_conflict: "פרטי הבקשה השתנו. נסו שוב עם הפרטים המעודכנים.",
     cart_changed: "המלאי או פרטי המוצר השתנו. עדכנו את הסל ונסו שוב.",
   },
   en: {
     invalid_input: "Some details are missing or invalid. Please try again.",
     rate_limited: "Too many enquiries were sent. Please try again in a minute.",
     unavailable: "Submission is unavailable right now. Please try again later.",
+    request_conflict:
+      "The checkout reference belongs to different details. Review your request and try again.",
     cart_changed:
       "A product or its stock changed. Refresh your cart and try again.",
   },
@@ -121,6 +121,20 @@ function failureResponse(
     { ok: false, code, message: failureCopy[locale][code], ...extra },
     { status, headers },
   );
+}
+
+function requestWriteFailure(error: { code: string }, locale: "he" | "en") {
+  if (error.code === "42001") {
+    return failureResponse("rate_limited", 429, locale, undefined, {
+      "Retry-After": "60",
+    });
+  }
+  if (error.code === "22023")
+    return failureResponse("invalid_input", 400, locale);
+  if (error.code === "PT409")
+    return failureResponse("request_conflict", 409, locale);
+  console.error("Enquiry persistence failed", error.code);
+  return failureResponse("unavailable", 503, locale);
 }
 
 function getClientIp(request: NextRequest): string {
@@ -218,7 +232,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Time-trap: submissions faster than a human can type are dropped silently.
-  if (data.startedAt && Date.now() - data.startedAt < MIN_SUBMIT_MS) {
+  if (
+    data.source !== "checkout_page" &&
+    data.startedAt &&
+    Date.now() - data.startedAt < MIN_SUBMIT_MS
+  ) {
     return NextResponse.json({ ok: true });
   }
 
@@ -226,33 +244,106 @@ export async function POST(request: NextRequest) {
     const supabase = await createServerSupabaseClient();
     const rateLimitKey = buildRateLimitKey(ip);
     const phone = data.phone?.trim() || null;
-    let verifiedCart:
-      | Array<{
-          productId: string;
-          variantId: string;
-          slug: string;
-          name: string;
-          unitPrice: number;
-          quantity: number;
-          lineId?: string;
-          offerId?: string;
-          parentLineId?: string;
-          offerRevision?: number;
-          offerKind?: "complementary" | "accompanying";
-          label?: string;
-        }>
-      | undefined;
     if (data.source === "checkout_page" && data.cart) {
-      const viewer = await getStoreViewer();
-      const catalog = await getStoreCatalog(data.locale, viewer.role);
+      const hasSession = /(?:^|;\s*)sb-[^=;]+-auth-token(?:\.\d+)?=/.test(
+        request.headers.get("cookie") ?? "",
+      );
+      const actor = hasSession ? await getAuthContext(supabase) : null;
+      if (hasSession && !actor)
+        return failureResponse("unavailable", 503, locale);
+      if (actor && actor.status !== "active")
+        return failureResponse("unavailable", 403, locale);
+      const customerId = actor?.role === "customer" ? actor.user.id : null;
+      const admin = createAdminClient();
+      const contact = {
+        name: data.name,
+        email: data.email,
+        phone,
+        message: data.message,
+        locale,
+      };
+      const fulfillment = data.fulfillment ?? "delivery";
+      const submissionId = data.submissionId ?? randomUUID();
+      const payloadHash = createHash("sha256")
+        .update(submissionId)
+        .update(
+          JSON.stringify({
+            contact,
+            fulfillment,
+            shipping: data.shipping,
+            cart: data.cart.map(
+              ({
+                productId,
+                variantId,
+                slug,
+                quantity,
+                lineId,
+                optionalOffers,
+              }) => ({
+                productId,
+                variantId,
+                slug,
+                quantity,
+                lineId,
+                optionalOffers: optionalOffers?.map(
+                  ({ id, revision, productId, variantId, slug }) => ({
+                    id,
+                    revision,
+                    productId,
+                    variantId,
+                    slug,
+                  }),
+                ),
+              }),
+            ),
+          }),
+        )
+        .digest("hex");
+      const submission = {
+        p_submission_id: submissionId,
+        p_payload_hash: payloadHash,
+        p_customer_id: customerId,
+      };
+
+      if (data.submissionId) {
+        const replay = await admin.rpc("record_checkout_request", submission);
+        if (replay.error) return requestWriteFailure(replay.error, locale);
+        if (typeof replay.data === "string")
+          return NextResponse.json({ ok: true, requestId: replay.data });
+      }
+
+      const verifiedCart: Array<{
+        productId: string;
+        variantId: string;
+        slug: string;
+        name: string;
+        unitPrice: number;
+        quantity: number;
+        lineId?: string;
+        offerId?: string;
+        parentLineId?: string;
+        offerRevision?: number;
+        offerKind?: "complementary" | "accompanying";
+        label?: string;
+      }> = [];
+      const catalog = await getStoreCatalog(data.locale, actor?.role ?? null);
       if (catalog.error) return failureResponse("unavailable", 503, locale);
       const requestedLines = data.cart.flatMap((item) => {
         const lineId = item.lineId ?? `${item.productId}:${item.variantId}`;
+        const variants =
+          item.variantId === null
+            ? catalog.products.find((entry) => entry.id === item.productId)
+                ?.variants
+            : undefined;
+        const variantId =
+          item.variantId ??
+          variants?.find((variant) => variant.isDefault)?.id ??
+          null;
         return [
           {
             line_id: lineId,
             product_id: item.productId,
-            variant_id: item.variantId,
+            variant_id: variantId,
             quantity: item.quantity,
             slug: item.slug,
             offer_id: undefined as string | undefined,
@@ -284,7 +375,6 @@ export async function POST(request: NextRequest) {
         throw error;
       }
       const requestedByVariant = new Map<string, number>();
-      verifiedCart = [];
       for (const item of requestedLines) {
         const product = catalog.products.find(
           (entry) => entry.id === item.product_id,
@@ -293,7 +383,8 @@ export async function POST(request: NextRequest) {
           (entry) => entry.id === item.variant_id,
         );
         const requested =
-          (requestedByVariant.get(item.variant_id) ?? 0) + item.quantity;
+          (variant ? (requestedByVariant.get(variant.id) ?? 0) : 0) +
+          item.quantity;
         if (
           !product ||
           !variant ||
@@ -302,7 +393,7 @@ export async function POST(request: NextRequest) {
         ) {
           return failureResponse("cart_changed", 409, locale);
         }
-        requestedByVariant.set(item.variant_id, requested);
+        requestedByVariant.set(variant.id, requested);
         const selectedOffer = optionalOffers.get(item.line_id);
         const price = selectedOffer
           ? selectedOffer.unitPrice
@@ -338,10 +429,31 @@ export async function POST(request: NextRequest) {
               : {}),
         });
       }
+      const saved = await admin.rpc("record_checkout_request", {
+        ...submission,
+        p_rate_limit_key: rateLimitKey,
+        p_request: {
+          ...contact,
+          checkout: {
+            cart: verifiedCart,
+            fulfillment,
+            ...(data.shipping ? { shipping: data.shipping } : {}),
+            estimated_subtotal:
+              verifiedCart.reduce(
+                (total, item) =>
+                  total + Math.round(item.unitPrice * 100) * item.quantity,
+                0,
+              ) / 100,
+            payment_collected: false,
+          },
+        },
+      });
+      if (saved.error) return requestWriteFailure(saved.error, locale);
+      if (typeof saved.data !== "string")
+        return failureResponse("unavailable", 503, locale);
+      return NextResponse.json({ ok: true, requestId: saved.data });
     }
 
-    // Call the RPC for service request creation (enforces validation, audit)
-    // Rate limiting already checked at API level; RPC provides defense in depth.
     const { data: requestId, error } = await supabase.rpc(
       "create_service_request",
       {
@@ -353,46 +465,12 @@ export async function POST(request: NextRequest) {
         p_source: data.source,
         p_product_id: data.productId ?? null,
         p_variant_id: data.variantId ?? null,
-        p_metadata:
-          data.source === "checkout_page"
-            ? {
-                checkout: {
-                  cart: verifiedCart,
-                  shipping: data.shipping,
-                  estimated_subtotal: verifiedCart
-                    ? verifiedCart.reduce(
-                        (total, item) =>
-                          total +
-                          Math.round(item.unitPrice * 100) * item.quantity,
-                        0,
-                      ) / 100
-                    : undefined,
-                  payment_collected: false,
-                },
-              }
-            : {},
         p_rate_limit_key: rateLimitKey,
       },
     );
-
-    if (error) {
-      // Map RPC errors to user-facing codes
-      if (error.code === "42001" || error.message?.includes("Rate limited")) {
-        return failureResponse("rate_limited", 429, locale, undefined, {
-          "Retry-After": "60",
-        });
-      }
-      if (error.code === "22023") {
-        return failureResponse("invalid_input", 400, locale);
-      }
-      console.error(
-        "create_service_request failed:",
-        error.code,
-        error.message,
-      );
+    if (error) return requestWriteFailure(error, locale);
+    if (typeof requestId !== "string")
       return failureResponse("unavailable", 503, locale);
-    }
-
     return NextResponse.json({ ok: true, requestId });
   } catch (error) {
     console.error("Enquiry submission failed", error);

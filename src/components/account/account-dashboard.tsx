@@ -52,7 +52,7 @@ export async function AccountDashboard({
       .limit(10),
     supabase
       .from("service_requests")
-      .select("id, status, created_at")
+      .select("id, status, created_at, source")
       .eq("customer_id", context.user.id)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -77,8 +77,8 @@ export async function AccountDashboard({
     ? "הנתונים אינם זמינים כרגע. רעננו את העמוד כדי לנסות שוב."
     : "This information is unavailable. Refresh the page to try again.";
   const scope = he
-    ? "עד 10 הרשומות האחרונות בכל אזור. מוצגים רק מוצרים שמורים הזמינים כעת בחנות."
-    : "Up to 10 latest entries per section. Saved products show items currently available in the store.";
+    ? "עד 10 רשומות בכל אזור. ברשימת המשאלות מוצגים מוצרים הזמינים כרגע בחנות."
+    : "Up to 10 latest entries per section. The wishlist preview shows items currently available in the store.";
   return (
     <section className="miro-section account-dashboard">
       <div className="miro-container space-y-6">
@@ -112,7 +112,7 @@ export async function AccountDashboard({
             locale={locale}
           />
           <SummaryCard
-            title={he ? "מוצרים שמורים" : "Saved products"}
+            title={he ? "רשימת משאלות" : "Wishlist"}
             value={savedProducts?.length ?? null}
             icon={Bookmark}
             locale={locale}
@@ -189,7 +189,15 @@ export async function AccountDashboard({
             {requests?.map((request) => (
               <li key={request.id} className="account-history-row">
                 <div>
-                  <strong>{he ? "פניית שירות" : "Service request"}</strong>
+                  <strong>
+                    {request.source === "checkout_page"
+                      ? he
+                        ? "בקשת הזמנה"
+                        : "Checkout request"
+                      : he
+                        ? "פניית שירות"
+                        : "Service request"}
+                  </strong>
                   <p className="text-muted-foreground">
                     {accountDate(request.created_at, locale)}
                   </p>
@@ -212,13 +220,13 @@ export async function AccountDashboard({
               className="text-xl font-black"
             >
               <Bookmark size={22} aria-hidden="true" />
-              {he ? "מוצרים שמורים" : "Saved products"}
+              {he ? "רשימת משאלות" : "Wishlist"}
             </h2>
             <Link
               className="miro-button miro-button-secondary text-sm"
-              href={withLocale(locale)}
+              href={withLocale(locale, "wishlist")}
             >
-              {he ? "המשך קנייה" : "Continue shopping"}
+              {he ? "לרשימת המשאלות" : "View wishlist"}
             </Link>
           </div>
           {savedProducts === null ? (
@@ -228,8 +236,8 @@ export async function AccountDashboard({
           ) : savedProducts.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               {he
-                ? "אין מוצרים שמורים הזמינים להצגה כרגע."
-                : "No saved products are available to display yet."}
+                ? "אין פריטים זמינים להצגה ברשימת המשאלות כרגע."
+                : "No wishlist items are available to display yet."}
             </p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -328,7 +336,7 @@ export async function AccountDashboard({
             <p className="mt-2 text-muted-foreground">
               {he
                 ? "עיינו במוצרים, שמרו מועדפים ושלחו בקשה לצוות. שליחת בקשה אינה תשלום או שמירת מלאי."
-                : "Explore products, save favourites and send a request to the team. Requests do not take payment or reserve stock."}
+                : "Explore products, add them to your wishlist and send a request to the team. Requests do not take payment or reserve stock."}
             </p>
           </div>
           <Link

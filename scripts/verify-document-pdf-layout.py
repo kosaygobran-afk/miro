@@ -100,6 +100,9 @@ def wrapped_marker_fragments(words, expected, rtl):
 for file in files:
     root = ET.fromstring(subprocess.check_output(["pdftotext", "-bbox-layout", str(file), "-"]))
     metadata = subprocess.check_output(["pdfinfo", str(file)], text=True)
+    if re.fullmatch(r"(?:print-)?(quote|proforma|transaction_invoice|tax_invoice|receipt|invoice_receipt|credit_note|correction)-(he|en)-a4\.pdf", file.name):
+        if not re.search(r"^Pages:\s+1\s*$", metadata, re.MULTILINE):
+            failures.append({"file": file.name, "problem": "standard A4 sample should fit on one page"})
     footer_marker = re.search(r"footer-reserve=([0-9]+(?:\.[0-9]+)?)", metadata)
     footer_reserve = float(footer_marker.group(1)) if footer_marker else 52
     document_words = []

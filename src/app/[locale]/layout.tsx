@@ -17,6 +17,7 @@ import { Header } from "@/components/layout/header";
 import { RecoveryRedirect } from "@/components/auth/recovery-redirect";
 import { SiteChrome } from "@/components/layout/site-chrome";
 import { ThemeBootstrap } from "@/components/theme-bootstrap";
+import { ShoppingSyncNotice } from "@/features/cart/shopping-sync-notice";
 import { CartProvider } from "@/features/cart/cart-context";
 import { Suspense } from "react";
 import { AnimationProvider } from "@/components/motion/animation-provider";
@@ -124,7 +125,7 @@ export default async function LocaleLayout({
             <PageReveal />
           </Suspense>
           <StoreDesignProvider design={storeDesign}>
-            <CartProvider>
+            <CartProvider syncAccount>
               <RecoveryRedirect locale={locale} />
               <a className="premium-skip-link" href="#main-content">
                 {locale === "he" ? "דילוג לתוכן הראשי" : "Skip to main content"}
@@ -133,6 +134,9 @@ export default async function LocaleLayout({
                 <Header locale={locale} />
               </SiteChrome>
               <main id="main-content" tabIndex={-1} className="miro-main">
+                <SiteChrome>
+                  <ShoppingSyncNotice locale={locale} />
+                </SiteChrome>
                 {children}
               </main>
               <SiteChrome>

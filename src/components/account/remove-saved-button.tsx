@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { LoaderCircle, Trash2 } from "lucide-react";
+import { refreshShopping } from "@/features/cart/shopping-store";
 import { useRouter } from "@/components/motion/use-motion-router";
 
 export function RemoveSavedButton({
@@ -55,7 +56,8 @@ export function RemoveSavedButton({
       if (!response.ok) throw new Error();
       if (pending.current !== controller) return;
       restoreFocus.current = wasFocused;
-      setMessage(he ? "המוצר הוסר מהשמורים." : "Removed from saved products.");
+      setMessage(he ? "המוצר הוסר מרשימת המשאלות." : "Removed from wishlist.");
+      void refreshShopping();
       router.refresh();
     } catch {
       if (pending.current === controller)

@@ -1,5 +1,6 @@
 "use client";
 
+import { invalidateAccountSession } from "@/lib/account-session";
 import { useRouter } from "@/components/motion/use-motion-router";
 import { useState } from "react";
 import { withLocale, type Locale } from "@/lib/i18n";
@@ -119,6 +120,7 @@ export function LiveAuthForm({
         setMessage(
           locale === "he" ? "נרשמת בהצלחה." : "Signed up successfully.",
         );
+        invalidateAccountSession();
         router.push(withLocale(locale, "account"));
         router.refresh();
         return;
