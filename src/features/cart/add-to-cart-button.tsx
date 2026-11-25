@@ -124,7 +124,7 @@ export function AddToCartButton({
         {!iconOnly && (added ? <Check size={11} /> : <Plus size={11} />)}
       </span>
       {iconOnly && quantity > 0 && (
-        <span className="sf-card-cart-count" aria-hidden="true">
+        <span key={quantity} className="sf-card-cart-count" aria-hidden="true">
           {quantity}
         </span>
       )}

@@ -166,6 +166,14 @@ for (const locale of ["he", "en"] as const) {
     );
 
     const selected = rail.locator('[aria-current="page"]');
+    await expect(selected).toHaveCSS("text-decoration-line", "underline");
+    await expect(selected).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    const rule = await selected.evaluate((link) => {
+      const divider = getComputedStyle(link, "::before");
+      return [divider.height, divider.fontSize, divider.borderInlineStartWidth];
+    });
+    expect(rule[0]).toBe(rule[1]);
+    expect(rule[2]).toBe("1px");
     const isSelectedInsideRail = () =>
       selected.evaluate((chip) => {
         const bounds = chip.parentElement!.getBoundingClientRect();

@@ -222,9 +222,11 @@ test("contact configuration caches only validated anonymous RPC data and recover
   let reads = 0;
   const publicPayload = {
     phone: "+972123456789",
-    email: "shop@example.test",
-    whatsapp: "972123456789",
+    email: null,
+    whatsapp: null,
     address_en: "Approved public address",
+    hours_en: "Approved public hours",
+    configured_fields: ["phone", "email"],
   };
   const loaded = await loadModule(
     "src/lib/contact-config.ts",
@@ -249,18 +251,27 @@ test("contact configuration caches only validated anonymous RPC data and recover
       },
     },
     {
-      process: { env: { NEXT_PUBLIC_CONTACT_PHONE: "+972987654321" } },
+      process: {
+        env: {
+          NEXT_PUBLIC_CONTACT_PHONE: "+972987654321",
+          NEXT_PUBLIC_CONTACT_EMAIL: "deployment@example.test",
+          NEXT_PUBLIC_CONTACT_WHATSAPP: "1234567",
+        },
+      },
       console: { warn: () => {} },
     },
   );
   const fallback = await loaded.getPublicContactConfig();
   assert.equal(fallback.phone, "+972987654321");
-  assert.equal(fallback.email, null);
+  assert.equal(fallback.email, "deployment@example.test");
   assert.equal(dataCache.entries.size, 0);
   const config = await loaded.getPublicContactConfig();
-  assert.equal(config.phone, "+972987654321");
-  assert.equal(config.email, "shop@example.test");
+  assert.equal(config.phone, publicPayload.phone);
+  assert.equal(config.phoneHref, publicPayload.phone);
+  assert.equal(config.email, null, "an intentional clear suppresses fallback");
+  assert.equal(config.whatsapp, "1234567", "an unset field uses fallback");
   assert.equal(config.addressEn, publicPayload.address_en);
+  assert.equal(config.hoursEn, publicPayload.hours_en);
   await loaded.getPublicContactConfig();
   assert.equal(reads, 2);
 });
@@ -382,12 +393,27 @@ test("contact refresh failures stay catchable in the installed Next cache and ne
   ]);
 });
 
-test("public contact save expires cache only after successful authorized write", async () => {
+test("settings saves return canonical merged values and only authorized contact saves expire the public cache", async () => {
   const { z } = await import("zod");
   let allowed = false,
-    sqlError = null,
-    writes = 0;
+    sqlError = null;
+  const writes = [];
   const invalidations = [];
+  const contactFallbacks = {
+    phone: "+972500000000",
+    whatsapp: null,
+    email: "legacy@example.test",
+  };
+  const rows = [
+    { key: "public_contact", value: { address_en: "Original street" } },
+    {
+      key: "inventory_defaults",
+      value: {
+        low_stock_threshold: 3,
+        out_of_stock_policy: "hide_from_public",
+      },
+    },
+  ];
   const loaded = await loadModule(
     "src/app/api/management/settings/route.ts",
     {
@@ -402,6 +428,9 @@ test("public contact save expires cache only after successful authorized write",
       "@/lib/public-presentation-cache": {
         PUBLIC_CONTACT_CONFIG_TAG: "contact",
       },
+      "@/lib/contact-config": {
+        getPublicContactEnvironmentFallbacks: () => contactFallbacks,
+      },
       "@/app/api/management/_shared": {
         withManagementAuth: async () =>
           allowed
@@ -409,7 +438,24 @@ test("public contact save expires cache only after successful authorized write",
                 ok: true,
                 admin: {
                   from: () => ({
-                    select: async () => ({ data: [], error: null }),
+                    select: () => ({
+                      in: (column, keys) => {
+                        assert.equal(column, "key");
+                        assert.deepEqual(
+                          [...keys],
+                          [
+                            "inventory_defaults",
+                            "finance",
+                            "storefront",
+                            "notifications",
+                            "public_contact",
+                          ],
+                        );
+                        return {
+                          order: async () => ({ data: rows, error: null }),
+                        };
+                      },
+                    }),
                   }),
                 },
               }
@@ -419,9 +465,16 @@ test("public contact save expires cache only after successful authorized write",
       },
       "@/lib/supabase/server": {
         createServerSupabaseClient: async () => ({
-          rpc: async () => {
-            writes++;
-            return { error: sqlError };
+          rpc: async (name, args) => {
+            writes.push({ name, ...JSON.parse(JSON.stringify(args)) });
+            const row = rows.find(({ key }) => key === args.p_key);
+            return {
+              error: sqlError,
+              data:
+                name === "patch_business_setting"
+                  ? { ...row.value, ...args.p_patch }
+                  : null,
+            };
           },
         }),
       },
@@ -431,16 +484,64 @@ test("public contact save expires cache only after successful authorized write",
   const request = {
     json: async () => ({
       key: "public_contact",
-      value: { phone: "+972123456789" },
+      value: { phone: null, email: "  NEW@EXAMPLE.TEST " },
     }),
   };
   assert.equal((await loaded.POST(request)).status, 403);
-  assert.equal(writes, 0);
+  assert.equal(writes.length, 0);
   allowed = true;
+  const management = (await loaded.GET({})).body;
+  assert.equal(management.publicContact.phone, null);
+  assert.deepEqual(management.publicContactFallbacks, contactFallbacks);
   sqlError = { code: "42501" };
   assert.equal((await loaded.POST(request)).status, 403);
   assert.equal(invalidations.length, 0);
   sqlError = null;
-  assert.equal((await loaded.POST(request)).body.ok, true);
+  const result = (await loaded.POST(request)).body;
+  assert.equal(result.ok, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.value)), {
+    address_en: "Original street",
+    phone: null,
+    email: "new@example.test",
+  });
+  assert.deepEqual(writes.at(-1), {
+    name: "patch_business_setting",
+    p_key: "public_contact",
+    p_patch: { phone: null, email: "new@example.test" },
+  });
+  assert.deepEqual(result.publicContactFallbacks, contactFallbacks);
+
+  const inventory = (
+    await loaded.POST({
+      json: async () => ({
+        key: "inventory_defaults",
+        value: { low_stock_threshold: 0 },
+      }),
+    })
+  ).body;
+  assert.equal(inventory.ok, true);
+  assert.deepEqual(writes.at(-1), {
+    name: "patch_business_setting",
+    p_key: "inventory_defaults",
+    p_patch: { low_stock_threshold: 0 },
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(inventory.value)), {
+    low_stock_threshold: 0,
+    out_of_stock_policy: "hide_from_public",
+  });
+  const legacy = (
+    await loaded.POST({
+      json: async () => ({
+        key: "finance",
+        value: { currency: "ILS" },
+      }),
+    })
+  ).body;
+  assert.equal(legacy.ok, true);
+  assert.deepEqual(writes.at(-1), {
+    name: "set_business_setting",
+    p_key: "finance",
+    p_value: { currency: "ILS" },
+  });
   assert.deepEqual(invalidations, [{ tag: "contact", expire: 0 }]);
 });

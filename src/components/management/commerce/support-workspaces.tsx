@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FormField, useConfirmDialog } from "../ui";
+import { FormField, Notice, useConfirmDialog } from "../ui";
 import {
   DocumentPreviewTester,
   StoredDraftPreviewLinks,
@@ -174,52 +174,62 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
   const { rows, payload, loading, error, notice, load } =
     useCommerceSection("integrations");
   const settings = useCommerceSection("settings");
-  const [revision, setRevision] = useState(0);
-  const [identity, setIdentity] = useState<Record<string, unknown>>({});
-  const set = (key: string, value: unknown) =>
-    setIdentity((old) => ({ ...old, [key]: value }));
+  const [draft, setDraft] = useState<{
+    revision: number;
+    patch: CommerceRow;
+  } | null>(null);
+  const [requiresRefresh, setRequiresRefresh] = useState(false);
   const current = settings.rows[0] ?? {};
+  const savedRevision = Number(
+    current.revision ?? settings.payload?.revision ?? 0,
+  );
   const savedIdentity = (
     current.identity && typeof current.identity === "object"
       ? current.identity
       : current
   ) as CommerceRow;
-  const field = (key: string) => identity[key] ?? savedIdentity[key] ?? "";
+  const patch = draft?.patch;
+  const field = (key: string) =>
+    patch && Object.hasOwn(patch, key) ? patch[key] : savedIdentity[key];
+  const set = (key: string, value: unknown) =>
+    setDraft((previous) => ({
+      revision: previous?.revision ?? savedRevision,
+      patch: { ...previous?.patch, [key]: value },
+    }));
+  const address = field("address");
+  const addressFields =
+    address && typeof address === "object" ? (address as CommerceRow) : {};
+  const staleDraft = draft !== null && draft.revision !== savedRevision;
   const canEdit = access.allowed("manageSettings");
-  const fields = [
-    "legal_name",
-    "trade_name",
-    "registration_number",
-    "vat_number",
-    "phone",
-    "email",
-  ];
+  const fields = {
+    legal_name: { he: "שם משפטי", en: "Legal name" },
+    trade_name: { he: "שם מסחרי", en: "Trade name" },
+    registration_number: { he: "מספר רישום", en: "Registration number" },
+    vat_number: { he: "מספר עוסק", en: "VAT number" },
+    phone: { he: "טלפון", en: "Phone" },
+    email: { he: "אימייל", en: "Email" },
+  };
+  const addressLabels = {
+    street: { he: "רחוב", en: "Street" },
+    city: { he: "עיר", en: "City" },
+    postal_code: { he: "מיקוד", en: "Postal code" },
+  };
+  const refresh = async () => {
+    const [, confirmed] = await Promise.all([load(), settings.load()]);
+    if (confirmed) setRequiresRefresh(false);
+  };
   const submit = async () => {
-    const address = {
-      street: "",
-      city: "",
-      postal_code: "",
-      country: "IL",
-      ...(savedIdentity.address && typeof savedIdentity.address === "object"
-        ? (savedIdentity.address as CommerceRow)
-        : {}),
-      ...(identity.address && typeof identity.address === "object"
-        ? (identity.address as CommerceRow)
-        : {}),
-    };
-    const normalizedPatch: CommerceRow = { ...identity, address };
+    if (!canEdit || !draft || staleDraft || settings.saving || requiresRefresh)
+      return;
     const result = await settings.runAction("settings_save", {
-      expected_revision:
-        revision ||
-        Number(current.revision) ||
-        Number(settings.payload?.revision) ||
-        0,
-      patch: normalizedPatch,
+      expected_revision: draft.revision,
+      patch: draft.patch,
     });
     if (result) {
-      setIdentity({});
-      setRevision(Number(result.revision) || Number(current.revision) + 1);
-      await Promise.all([load(), settings.load()]);
+      setDraft(null);
+      await load();
+    } else if (settings.lastWriteUncertainRef.current) {
+      setRequiresRefresh(true);
     }
   };
   const readiness =
@@ -239,8 +249,8 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
       actions={
         <RefreshAction
           locale={locale}
-          loading={loading || settings.loading}
-          onRefresh={() => void Promise.all([load(), settings.load()])}
+          loading={loading || settings.loading || settings.saving}
+          onRefresh={() => void refresh()}
         />
       }
     >
@@ -249,13 +259,13 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
         setNotice={settings.setNotice}
         locale={locale}
       />
-      <SectionState
-        loading={loading || settings.loading}
-        error={error ?? settings.error}
-        onRetry={() => void Promise.all([load(), settings.load()])}
-        locale={locale}
-      >
-        <div className={styles.stack}>
+      <div id="business-identity" className={styles.stack} tabIndex={-1}>
+        <SectionState
+          loading={loading || settings.loading}
+          error={error ?? settings.error}
+          onRetry={() => void refresh()}
+          locale={locale}
+        >
           <SectionCard
             title={he ? "זהות העסק במסמכים" : "Business identity for documents"}
             description={
@@ -266,8 +276,12 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
           >
             {canEdit ? (
               <div className={styles.grid3}>
-                {fields.map((key) => (
-                  <FormField key={key} label={key.replaceAll("_", " ")}>
+                {Object.entries(fields).map(([key, label]) => (
+                  <FormField
+                    key={key}
+                    label={label[locale]}
+                    disabled={settings.saving}
+                  >
                     {(p) => (
                       <input
                         {...p}
@@ -279,7 +293,10 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
                     )}
                   </FormField>
                 ))}
-                <FormField label={he ? "סוג ישות" : "Entity kind"}>
+                <FormField
+                  label={he ? "סוג ישות" : "Entity kind"}
+                  disabled={settings.saving}
+                >
                   {(p) => (
                     <select
                       {...p}
@@ -300,23 +317,24 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
                     </select>
                   )}
                 </FormField>
-                {["street", "city", "postal_code"].map((key) => (
-                  <FormField key={key} label={key.replaceAll("_", " ")}>
+                {Object.entries(addressLabels).map(([key, label]) => (
+                  <FormField
+                    key={key}
+                    label={label[locale]}
+                    disabled={settings.saving}
+                  >
                     {(p) => (
                       <input
                         {...p}
                         className={styles.fieldInput}
-                        value={String(
-                          (field("address") as CommerceRow | undefined)?.[
-                            key
-                          ] ?? "",
-                        )}
+                        value={String(addressFields[key] ?? "")}
                         onChange={(e) =>
                           set("address", {
-                            ...((identity.address as CommerceRow | undefined) ??
-                              (savedIdentity.address as
-                                CommerceRow | undefined) ??
-                              {}),
+                            street: String(addressFields.street ?? ""),
+                            city: String(addressFields.city ?? ""),
+                            postal_code: String(
+                              addressFields.postal_code ?? "",
+                            ),
                             [key]: e.target.value,
                             country: "IL",
                           })
@@ -325,7 +343,10 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
                     )}
                   </FormField>
                 ))}
-                <FormField label={he ? "שפת מסמכים" : "Document language"}>
+                <FormField
+                  label={he ? "שפת מסמכים" : "Document language"}
+                  disabled={settings.saving}
+                >
                   {(p) => (
                     <select
                       {...p}
@@ -340,6 +361,7 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
                 </FormField>
                 <FormField
                   label={he ? "המחירים כוללים מע״מ" : "Prices include VAT"}
+                  disabled={settings.saving}
                 >
                   {(p) => (
                     <select
@@ -359,7 +381,7 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
             ) : (
               <dl className={styles.grid2}>
                 {[
-                  ...fields,
+                  ...Object.keys(fields),
                   "entity_kind",
                   "address",
                   "document_language",
@@ -377,12 +399,35 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
               </dl>
             )}
             {canEdit ? (
-              <ActionButton
-                label={he ? "שמירת זהות עסקית" : "Save business identity"}
-                kind="primary"
-                disabled={settings.saving || Object.keys(identity).length === 0}
-                onClick={() => void submit()}
-              />
+              <>
+                {staleDraft && (
+                  <Notice tone="warning">
+                    {he
+                      ? "פרטי העסק השמורים השתנו. בטלו את הטיוטה כדי לעיין בגרסה העדכנית."
+                      : "Saved business details changed. Discard this draft to review the latest details."}
+                  </Notice>
+                )}
+                <div className="flex flex-wrap gap-3">
+                  <ActionButton
+                    label={he ? "שמירת זהות עסקית" : "Save business identity"}
+                    kind="primary"
+                    disabled={
+                      !draft || staleDraft || settings.saving || requiresRefresh
+                    }
+                    onClick={() => void submit()}
+                  />
+                  {draft && (
+                    <ActionButton
+                      label={he ? "ביטול טיוטה" : "Discard draft"}
+                      disabled={settings.saving}
+                      onClick={() => {
+                        setDraft(null);
+                        if (!requiresRefresh) settings.setNotice(null);
+                      }}
+                    />
+                  )}
+                </div>
+              </>
             ) : null}
           </SectionCard>
           <SectionCard
@@ -445,8 +490,8 @@ export function IntegrationsWorkspace({ locale }: { locale: Locale }) {
                 : "Terminal credentials and environment secrets are configured outside this interface. Ask the technical owner to rotate them; never paste secrets into this screen or support messages."}
             </p>
           </SectionCard>
-        </div>
-      </SectionState>
+        </SectionState>
+      </div>
     </CommercePage>
   );
 }

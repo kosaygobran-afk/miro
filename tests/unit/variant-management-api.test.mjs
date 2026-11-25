@@ -113,6 +113,19 @@ test("creation rejects fractional, negative, missing-kind and unknown stock writ
     assert.equal(route.calls.length, 0);
   }
 });
+test("variant creation forwards the business default omission and preserves explicit thresholds", async () => {
+  for (const threshold of [undefined, 0, 8]) {
+    const route = load("variants");
+    const value =
+      threshold === undefined ? {} : { low_stock_threshold: threshold };
+    assert.equal(
+      (await route.invoke("POST", { product_id: pid, sku: "QA", ...value }))
+        .status,
+      200,
+    );
+    assert.equal(route.calls[0].args.p_data.low_stock_threshold, threshold);
+  }
+});
 test("image assignment and clearing use the self-authorizing wrapper", async () => {
   for (const variant_id of [vid, null]) {
     const route = load("product-images");

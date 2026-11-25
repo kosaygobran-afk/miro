@@ -145,13 +145,6 @@ export const mgmtNavSections: MgmtNavSection[] = [
         ceoOnly: false,
       },
       {
-        key: "storeDesign",
-        href: "/admin/store-design",
-        section: "commerce",
-        icon: Palette,
-        ceoOnly: true,
-      },
-      {
         key: "storefrontMerchandising",
         href: "/admin/storefront-merchandising",
         section: "commerce",
@@ -248,7 +241,7 @@ export const mgmtNavSections: MgmtNavSection[] = [
         href: "/admin/users",
         section: "governance",
         icon: ShieldCheck,
-        ceoOnly: true,
+        ceoOnly: false,
       },
       {
         key: "audit",
@@ -262,7 +255,14 @@ export const mgmtNavSections: MgmtNavSection[] = [
         href: "/admin/settings",
         section: "governance",
         icon: Settings,
-        ceoOnly: true,
+        ceoOnly: false,
+      },
+      {
+        key: "storeDesign",
+        href: "/admin/settings/website-images",
+        section: "governance",
+        icon: Palette,
+        ceoOnly: false,
       },
     ],
   },
@@ -305,7 +305,7 @@ const itemLabels: Record<MgmtNavItemKey, LocalizedText> = {
   users: { he: "משתמשים", en: "Users" },
   audit: { he: "יומן פעולות", en: "Audit" },
   settings: { he: "הגדרות", en: "Settings" },
-  storeDesign: { he: "עיצוב החנות", en: "Store design" },
+  storeDesign: { he: "תמונות האתר", en: "Website images" },
   storefrontMerchandising: { he: "מוצרים בבר הזז", en: "Moving product rail" },
 };
 
@@ -399,8 +399,8 @@ const itemSubtitles: Record<MgmtNavItemKey, LocalizedText> = {
     en: "Workspace and business settings.",
   },
   storeDesign: {
-    he: "רקעים, סמלי חברות ותנועת החנות.",
-    en: "Backgrounds, company logos and store motion.",
+    he: "גלריות, רקעים, תמונות שירותים וסמלי חברות.",
+    en: "Galleries, backgrounds, service images and company logos.",
   },
   storefrontMerchandising: {
     he: "בחירת המוצרים שיופיעו בפס המוצרים הזז בחנות, סדר ההצגה, מבצעים ומדבקות.",

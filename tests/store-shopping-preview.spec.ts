@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { DEFAULT_ANIMATION_SETTINGS } from "../src/lib/animation-settings";
 
 test.setTimeout(60_000);
 
@@ -17,11 +18,10 @@ test("guest wishlist survives locale changes on a small phone", async ({
   await save.click();
   await expect(save).toHaveAttribute("aria-pressed", "true");
   await page.locator(".premium-mobile-toggle").click();
-  await expect(
-    page
-      .locator(".premium-mobile-navigation")
-      .getByRole("link", { name: "Wishlist" }),
-  ).toBeVisible();
+  const shortcut = page
+    .locator(".premium-mobile-navigation")
+    .getByRole("link", { name: "Wishlist: 1", exact: true });
+  await expect(shortcut.locator(".premium-shopping-count")).toBeVisible();
 
   await page.goto("/he/cart", { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "לרשימת המשאלות", exact: true }).click();
@@ -53,6 +53,49 @@ test("guest wishlist survives locale changes on a small phone", async ({
   await expect(
     page.getByRole("heading", { name: "רשימת המשאלות ריקה" }),
   ).toBeVisible();
+});
+
+test("cart quantities and unique wishlist selections update their own badges", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("/en", { waitUntil: "domcontentloaded" });
+  const card = page
+    .locator(".sf-catalog-grid .sf-product-card")
+    .filter({ has: page.locator(".sf-add-cart-button") })
+    .first();
+  const save = card.locator(".sf-save-button");
+  const add = card.locator(".sf-add-cart-button");
+  const cart = page.locator(".premium-cart-link");
+  const wishlist = page.locator(".premium-wishlist-link");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-motion-ready",
+    "true",
+  );
+  await page.evaluate(
+    (detail) =>
+      window.dispatchEvent(
+        new CustomEvent("miro-animation-settings-change", { detail }),
+      ),
+    DEFAULT_ANIMATION_SETTINGS,
+  );
+  await expect(add).toBeEnabled();
+  await add.press("Enter");
+  await add.press("Enter");
+  await save.press("Space");
+  await expect(cart).toHaveAccessibleName("Shopping cart: 2");
+  await expect(cart.locator(".premium-shopping-count")).toHaveText("2");
+  await expect(wishlist.locator(".premium-shopping-count")).toHaveText("1");
+  await expect(save.locator("svg")).toHaveCSS(
+    "animation-name",
+    "sf-shopping-confirm",
+  );
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await save.press("Space");
+  await expect(save.locator("svg")).toHaveCSS("animation-name", "none");
+  await expect(wishlist).toHaveAccessibleName("Wishlist: 0");
+  await expect(wishlist.locator(".premium-shopping-count")).toHaveCount(0);
+  await expect(cart.locator(".premium-shopping-count")).toHaveText("2");
 });
 
 test("guest pickup sends contact details without a shipping address", async ({

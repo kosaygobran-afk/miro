@@ -97,6 +97,7 @@ export type StoreCatalog = {
 };
 
 const CATALOG_TIMEOUT_MS = 12_000;
+const STOREFRONT_VAT_TIMEOUT_MS = 2_000;
 
 function unavailableCatalog(): StoreCatalog {
   // An upstream outage is an expected availability state, not a render error.
@@ -358,12 +359,44 @@ const getRolePrices = cache(async (role: UserRole, anonymous: boolean) => {
   );
 });
 
+const getStorefrontVatRate = cache(async (): Promise<number | null> => {
+  try {
+    const { data, error } = await createPublicServerClient()
+      .rpc("get_public_storefront_vat_rate")
+      .abortSignal(AbortSignal.timeout(STOREFRONT_VAT_TIMEOUT_MS));
+    return !error && typeof data === "number" && data >= 0 && data < 100
+      ? data
+      : null;
+  } catch {
+    return null;
+  }
+});
+
+/** Add today's VAT rate only where the storefront displays net prices. */
+export async function getStoreCatalogForDisplay(
+  locale: "he" | "en",
+  role: UserRole,
+  anonymous = false,
+): Promise<StoreCatalog> {
+  const [catalog, vatRate] = await Promise.all([
+    getStoreCatalog(locale, role, anonymous),
+    getStorefrontVatRate(),
+  ]);
+  return vatRate === null
+    ? catalog
+    : {
+        ...catalog,
+        products: catalog.products.map((product) => ({ ...product, vatRate })),
+      };
+}
+
 /** Start independent catalog reads while the request's viewer is resolved. */
 export const getStorePageData = cache(async (locale: "he" | "en") => {
   // This is request-only React deduplication. Keep cookie-bound rows, live
   // stock and role pricing outside persistent/shared caches. Handle an early
   // preload rejection here; getStoreCatalog still reports the read failure.
   void getCatalogRows(false).catch(() => undefined);
+  void getStorefrontVatRate();
   const viewerRead = await getStoreViewerRead();
   // A slow saved-products read must not delay independent role pricing. Only
   // this page pipeline preloads it; route-handler callers of getStoreViewer
@@ -372,7 +405,7 @@ export const getStorePageData = cache(async (locale: "he" | "en") => {
     .then((role) => getRolePrices(role, false))
     .catch(() => undefined);
   const viewer = await viewerRead.viewer;
-  const catalog = await getStoreCatalog(locale, viewer.role);
+  const catalog = await getStoreCatalogForDisplay(locale, viewer.role);
   return { viewer, catalog };
 });
 

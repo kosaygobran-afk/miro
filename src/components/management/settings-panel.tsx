@@ -1,10 +1,15 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
+import { withLocale, type Locale } from "@/lib/i18n";
+import {
+  validateInventoryDefaults,
+  type InventoryDefaults,
+} from "@/features/catalog/inventory-types";
+import { useState, useEffect, useCallback, useId, useRef } from "react";
 import { AnimationSettings } from "./animation-settings";
 import { GlobalGlassSettings } from "@/components/glass-preference";
 import {
-  RotateCcw,
   ShieldCheck,
   Save,
   DollarSign,
@@ -14,7 +19,6 @@ import {
   Building2,
 } from "lucide-react";
 import {
-  PageHeader,
   Dialog,
   FormSection,
   FormField,
@@ -44,20 +48,9 @@ type TaxRate = {
 
 type TaxFormData = {
   name: string;
-  rate: number;
+  rate: number | null;
   valid_from: string;
   valid_until: string | null;
-};
-
-type InventoryDefaults = {
-  low_stock_threshold: number;
-  out_of_stock_policy:
-    "keep_visible_contact" | "keep_visible_restock" | "hide_from_public";
-};
-
-type FinanceSettings = {
-  currency: string;
-  prices_include_vat: boolean;
 };
 
 type PublicContactForm = {
@@ -69,594 +62,461 @@ type PublicContactForm = {
   hours_he: string;
   hours_en: string;
 };
+type PublicContactFallbacks = Partial<
+  Record<keyof PublicContactForm, string | null>
+>;
+
+type SettingsValues = {
+  inventory_defaults: InventoryDefaults;
+  public_contact: PublicContactForm;
+};
+
+type SettingsSection = keyof SettingsValues;
+type SectionState<T> = {
+  saved: T;
+  draft: Partial<T>;
+  notice: { text: string; tone: "success" | "danger" } | null;
+};
+type SettingsState = {
+  [Key in SettingsSection]: SectionState<SettingsValues[Key]>;
+};
+type SettingsRow = { key: string; value: unknown };
+
+function reloadSection<T extends object>(
+  section: SectionState<T>,
+  saved: T,
+): SectionState<T> {
+  const draft = { ...section.draft };
+  for (const field of Object.keys(draft) as Array<keyof T>) {
+    if (draft[field] === saved[field]) delete draft[field];
+  }
+  return { saved, draft, notice: null };
+}
+
+function readContactForm(
+  value: unknown,
+  fallbacks?: PublicContactFallbacks,
+): PublicContactForm {
+  const fields =
+    value && typeof value === "object"
+      ? (value as Record<string, unknown>)
+      : {};
+  function read(key: keyof PublicContactForm) {
+    if (!Object.hasOwn(fields, key)) return fallbacks?.[key] ?? "";
+    return typeof fields[key] === "string" ? fields[key] : "";
+  }
+  return {
+    phone: read("phone"),
+    whatsapp: read("whatsapp"),
+    email: read("email"),
+    address_he: read("address_he"),
+    address_en: read("address_en"),
+    hours_he: read("hours_he"),
+    hours_en: read("hours_en"),
+  };
+}
+
+function newTaxForm(): TaxFormData {
+  return {
+    name: "",
+    rate: null,
+    valid_from: new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jerusalem",
+    }).format(new Date()),
+    valid_until: null,
+  };
+}
+
+function SettingsFormActions({
+  locale,
+  dirty,
+  saving,
+  saveLabel,
+  onDiscard,
+}: {
+  locale: Locale;
+  dirty: boolean;
+  saving: boolean;
+  saveLabel: string;
+  onDiscard: () => void;
+}) {
+  const he = locale === "he";
+  return (
+    <div className="mt-4 flex flex-wrap justify-end gap-2">
+      <button
+        type="button"
+        className="mgmt-button mgmt-button--ghost"
+        onClick={onDiscard}
+        disabled={!dirty || saving}
+      >
+        {he ? "ביטול שינויים" : "Discard changes"}
+      </button>
+      <button
+        type="submit"
+        className="mgmt-button mgmt-button--primary gap-2"
+        disabled={!dirty || saving}
+        aria-busy={saving || undefined}
+      >
+        {saving ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+            {he ? "שומר…" : "Saving…"}
+          </>
+        ) : (
+          <>
+            <Save className="h-4 w-4" aria-hidden="true" />
+            {saveLabel}
+          </>
+        )}
+      </button>
+    </div>
+  );
+}
 
 export function SettingsPanel({
   locale,
   isCeo,
 }: {
-  locale: "he" | "en";
+  locale: Locale;
   isCeo: boolean;
 }) {
   const he = locale === "he";
-
-  // State
-  const [globalNotice, setGlobalNotice] = useState<{
-    text: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  // Tax state
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [taxLoading, setTaxLoading] = useState(true);
   const [taxError, setTaxError] = useState("");
+  const [taxSaved, setTaxSaved] = useState(false);
+  const [taxSaveError, setTaxSaveError] = useState("");
   const [showTaxForm, setShowTaxForm] = useState(false);
-  const [taxForm, setTaxForm] = useState<TaxFormData>({
-    name: "",
-    rate: 0,
-    valid_from: new Date().toISOString().split("T")[0],
-    valid_until: null,
-  });
+  const [taxForm, setTaxForm] = useState(newTaxForm);
   const [taxSubmitting, setTaxSubmitting] = useState(false);
-  const taxTriggerRef = useRef<HTMLButtonElement>(null);
-  const closeTaxModal = useCallback(() => {
-    setShowTaxForm(false);
-    taxTriggerRef.current?.focus();
-  }, []);
+  const taxRequest = useRef(false);
+  const taxFormId = useId();
 
-  useEffect(() => {
-    if (!showTaxForm) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeTaxModal();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [showTaxForm, closeTaxModal]);
-
-  // Business settings state - split into saved and draft for each section
-  type SettingsSection = "inventory_defaults" | "finance" | "public_contact";
-  type SettingsSectionState<T> = {
-    saved: T;
-    draft: T;
-    loading: boolean;
-    error: string;
-    submitting: boolean;
-    dirty: boolean;
-    loaded: boolean;
-  };
-
-  const initialInventoryDefaults: InventoryDefaults = {
-    low_stock_threshold: 3,
-    out_of_stock_policy: "keep_visible_contact",
-  };
-  const initialFinanceSettings: FinanceSettings = {
-    currency: "ILS",
-    prices_include_vat: true,
-  };
-  const initialPublicContactForm: PublicContactForm = {
-    phone: "",
-    whatsapp: "",
-    email: "",
-    address_he: "",
-    address_en: "",
-    hours_he: "",
-    hours_en: "",
-  };
-
-  const [inventoryState, setInventoryState] = useState<
-    SettingsSectionState<InventoryDefaults>
-  >({
-    saved: initialInventoryDefaults,
-    draft: initialInventoryDefaults,
-    loading: true,
-    error: "",
-    submitting: false,
-    dirty: false,
-    loaded: false,
-  });
-  const [financeState, setFinanceState] = useState<
-    SettingsSectionState<FinanceSettings>
-  >({
-    saved: initialFinanceSettings,
-    draft: initialFinanceSettings,
-    loading: true,
-    error: "",
-    submitting: false,
-    dirty: false,
-    loaded: false,
-  });
-  const [publicContactState, setPublicContactState] = useState<
-    SettingsSectionState<PublicContactForm>
-  >({
-    saved: initialPublicContactForm,
-    draft: initialPublicContactForm,
-    loading: true,
-    error: "",
-    submitting: false,
-    dirty: false,
-    loaded: false,
-  });
-
-  // Helper to update draft state
-  const updateDraft = useCallback(
-    (
-      section: SettingsSection,
-      updater: (
-        prev: InventoryDefaults | FinanceSettings | PublicContactForm,
-      ) => InventoryDefaults | FinanceSettings | PublicContactForm,
-    ) => {
-      if (section === "inventory_defaults") {
-        setInventoryState((prev) => ({
-          ...prev,
-          draft: updater(prev.draft) as InventoryDefaults,
-          dirty: true,
-        }));
-      } else if (section === "finance") {
-        setFinanceState((prev) => ({
-          ...prev,
-          draft: updater(prev.draft) as FinanceSettings,
-          dirty: true,
-        }));
-      } else if (section === "public_contact") {
-        setPublicContactState((prev) => ({
-          ...prev,
-          draft: updater(prev.draft) as PublicContactForm,
-          dirty: true,
-        }));
-      }
+  const [settings, setSettings] = useState<SettingsState>({
+    inventory_defaults: {
+      saved: validateInventoryDefaults({}),
+      draft: {},
+      notice: null,
     },
-    [],
-  );
+    public_contact: { saved: readContactForm(null), draft: {}, notice: null },
+  });
+  const [settingsLoading, setSettingsLoading] = useState(true);
+  const [settingsError, setSettingsError] = useState("");
+  const [saving, setSaving] = useState<
+    Partial<Record<SettingsSection, boolean>>
+  >({});
+  const saveRequests = useRef(new Set<SettingsSection>());
+  const settingsRead = useRef<AbortController | null>(null);
 
-  // Helper to set submitting for a section
-  const setSectionSubmitting = useCallback(
-    (section: SettingsSection, submitting: boolean) => {
-      if (section === "inventory_defaults") {
-        setInventoryState((prev) => ({ ...prev, submitting }));
-      } else if (section === "finance") {
-        setFinanceState((prev) => ({ ...prev, submitting }));
-      } else if (section === "public_contact") {
-        setPublicContactState((prev) => ({ ...prev, submitting }));
-      }
-    },
-    [],
-  );
-
-  const showNotice = useCallback(
-    (text: string, type: "success" | "error" = "success") => {
-      setGlobalNotice({ text, type });
-      setTimeout(() => setGlobalNotice(null), 5000);
-    },
-    [],
-  );
-
-  // Shared loader utility
-  const loadResource = useCallback(
-    async <T,>(
-      url: string,
-      onSuccess: (data: T) => void,
-      onError: (error: string) => void,
-      setLoadingState: (loading: boolean) => void,
-    ) => {
-      setLoadingState(true);
+  const fetchTaxRates = useCallback(
+    async (signal?: AbortSignal) => {
       try {
-        const response = await fetch(url, { cache: "no-store" });
-        const data = await response.json();
-        if (response.ok) {
-          onSuccess(data);
-        } else {
-          onError(data.error || (he ? "טעינה נכשלה" : "Failed to load"));
+        const response = await fetch("/api/management/tax", {
+          cache: "no-store",
+          signal,
+        });
+        if (!response.ok) throw new Error("load_failed");
+        const result: { taxRates: TaxRate[] } = await response.json();
+        if (!Array.isArray(result.taxRates))
+          throw new Error("invalid_response");
+        if (!signal?.aborted) {
+          setTaxRates(result.taxRates);
+          setTaxError("");
         }
       } catch {
-        onError(he ? "שגיאת חיבור" : "Connection error");
+        if (!signal?.aborted) {
+          setTaxError(
+            he ? "לא ניתן לטעון שיעורי מס" : "Unable to load tax rates",
+          );
+        }
       } finally {
-        setLoadingState(false);
+        if (!signal?.aborted) setTaxLoading(false);
       }
     },
     [he],
   );
 
-  // Fetch tax rates
-  const fetchTaxRates = useCallback(async () => {
-    await loadResource(
-      "/api/management/tax",
-      (data: { taxRates?: TaxRate[] }) => setTaxRates(data.taxRates ?? []),
-      (error) => setTaxError(error),
-      setTaxLoading,
-    );
-  }, [loadResource]);
-
-  // Fetch business settings - load each section independently
   const fetchBusinessSettings = useCallback(async () => {
-    await loadResource(
-      "/api/management/settings",
-      (data: { settings?: Array<{ key: string; value: unknown }> }) => {
-        setInventoryState((prev) => ({
-          ...prev,
-          loading: false,
-          loaded: true,
-          error: "",
+    if (saveRequests.current.size) return;
+    settingsRead.current?.abort();
+    const request = new AbortController();
+    settingsRead.current = request;
+    try {
+      const response = await fetch("/api/management/settings", {
+        cache: "no-store",
+        signal: request.signal,
+      });
+      if (!response.ok) throw new Error("load_failed");
+      const result: {
+        settings: SettingsRow[];
+        publicContactFallbacks?: PublicContactFallbacks;
+      } = await response.json();
+      const inventory = result.settings.find(
+        ({ key }) => key === "inventory_defaults",
+      );
+      const contact = result.settings.find(
+        ({ key }) => key === "public_contact",
+      );
+      if (!request.signal.aborted) {
+        const inventoryDefaults = validateInventoryDefaults(
+          inventory?.value ?? {},
+        );
+        const contactForm = readContactForm(
+          contact?.value,
+          result.publicContactFallbacks,
+        );
+        setSettings((previous) => ({
+          inventory_defaults: reloadSection(
+            previous.inventory_defaults,
+            inventoryDefaults,
+          ),
+          public_contact: reloadSection(previous.public_contact, contactForm),
         }));
-        setFinanceState((prev) => ({
-          ...prev,
-          loading: false,
-          loaded: true,
-          error: "",
-        }));
-        setPublicContactState((prev) => ({
-          ...prev,
-          loading: false,
-          loaded: true,
-          error: "",
-        }));
-        // Parse known settings - only update saved state, never overwrite dirty drafts
-        for (const s of data.settings ?? []) {
-          if (s.key === "inventory_defaults" && typeof s.value === "object") {
-            const saved = s.value as Partial<InventoryDefaults>;
-            setInventoryState((prev) => ({
-              ...prev,
-              saved: { ...prev.saved, ...saved },
-              // Only update draft if not dirty (user hasn't made changes)
-              draft: prev.dirty ? prev.draft : { ...prev.draft, ...saved },
-              loading: false,
-              loaded: true,
-            }));
-          }
-          if (s.key === "finance" && typeof s.value === "object") {
-            const saved = s.value as Partial<FinanceSettings>;
-            setFinanceState((prev) => ({
-              ...prev,
-              saved: { ...prev.saved, ...saved },
-              draft: prev.dirty ? prev.draft : { ...prev.draft, ...saved },
-              loading: false,
-              loaded: true,
-            }));
-          }
-          if (s.key === "public_contact" && typeof s.value === "object") {
-            const value = s.value as Record<string, unknown>;
-            const saved: PublicContactForm = {
-              phone: (value.phone as string) ?? "",
-              whatsapp: (value.whatsapp as string) ?? "",
-              email: (value.email as string) ?? "",
-              address_he: (value.address_he as string) ?? "",
-              address_en: (value.address_en as string) ?? "",
-              hours_he: (value.hours_he as string) ?? "",
-              hours_en: (value.hours_en as string) ?? "",
-            };
-            setPublicContactState((prev) => ({
-              ...prev,
-              saved,
-              draft: prev.dirty ? prev.draft : saved,
-              loading: false,
-              loaded: true,
-            }));
-          }
-        }
-      },
-      (error) => {
-        // Error will be set per-section via the individual loading states
-        setInventoryState((prev) => ({
-          ...prev,
-          error,
-          loading: false,
-          loaded: true,
-        }));
-        setFinanceState((prev) => ({
-          ...prev,
-          error,
-          loading: false,
-          loaded: true,
-        }));
-        setPublicContactState((prev) => ({
-          ...prev,
-          error,
-          loading: false,
-          loaded: true,
-        }));
-      },
-      () => {}, // We handle loading per-section
-    );
-  }, [loadResource]);
+        setSettingsError("");
+      }
+    } catch {
+      if (!request.signal.aborted) {
+        setSettingsError(
+          he
+            ? "לא ניתן לטעון את ההגדרות השמורות"
+            : "Unable to load saved settings",
+        );
+      }
+    } finally {
+      if (!request.signal.aborted) {
+        settingsRead.current = null;
+        setSettingsLoading(false);
+      }
+    }
+  }, [he]);
 
   useEffect(() => {
     const controller = new AbortController();
-    let mounted = true;
-    const loadTax = async () => {
-      try {
-        const response = await fetch("/api/management/tax", {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (!response.ok) throw new Error("load_failed");
-        const data = await response.json();
-        if (mounted) setTaxRates(data.taxRates ?? []);
-      } catch {
-        if (mounted)
-          setTaxError(
-            he ? "לא ניתן לטעון שיעורי מס" : "Unable to load tax rates",
-          );
-      } finally {
-        if (mounted) setTaxLoading(false);
-      }
-    };
-    const loadSettings = async () => {
-      try {
-        const settingsRes = await fetch("/api/management/settings", {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        if (settingsRes.ok) {
-          const settingsData = await settingsRes.json();
-          if (mounted) {
-            for (const s of settingsData.settings ?? []) {
-              if (
-                s.key === "inventory_defaults" &&
-                typeof s.value === "object" &&
-                s.value !== null
-              ) {
-                const saved = s.value as Partial<InventoryDefaults>;
-                setInventoryState((prev) => ({
-                  ...prev,
-                  saved: { ...prev.saved, ...saved },
-                  draft: { ...prev.draft, ...saved },
-                  loading: false,
-                  loaded: true,
-                }));
-              }
-              if (
-                s.key === "finance" &&
-                typeof s.value === "object" &&
-                s.value !== null
-              ) {
-                const saved = s.value as Partial<FinanceSettings>;
-                setFinanceState((prev) => ({
-                  ...prev,
-                  saved: { ...prev.saved, ...saved },
-                  draft: { ...prev.draft, ...saved },
-                  loading: false,
-                  loaded: true,
-                }));
-              }
-              if (
-                s.key === "public_contact" &&
-                typeof s.value === "object" &&
-                s.value !== null
-              ) {
-                const value = s.value as Record<string, unknown>;
-                const saved: PublicContactForm = {
-                  phone: (value.phone as string) ?? "",
-                  whatsapp: (value.whatsapp as string) ?? "",
-                  email: (value.email as string) ?? "",
-                  address_he: (value.address_he as string) ?? "",
-                  address_en: (value.address_en as string) ?? "",
-                  hours_he: (value.hours_he as string) ?? "",
-                  hours_en: (value.hours_en as string) ?? "",
-                };
-                setPublicContactState((prev) => ({
-                  ...prev,
-                  saved,
-                  draft: saved,
-                  loading: false,
-                  loaded: true,
-                }));
-              }
-            }
-          }
-        } else if (mounted) {
-          setInventoryState((prev) => ({
-            ...prev,
-            error: he ? "טעינה נכשלה" : "Failed to load",
-            loading: false,
-            loaded: true,
-          }));
-          setFinanceState((prev) => ({
-            ...prev,
-            error: he ? "טעינה נכשלה" : "Failed to load",
-            loading: false,
-            loaded: true,
-          }));
-          setPublicContactState((prev) => ({
-            ...prev,
-            error: he ? "טעינה נכשלה" : "Failed to load",
-            loading: false,
-            loaded: true,
-          }));
-        }
-      } catch {
-        if (mounted) {
-          setInventoryState((prev) => ({
-            ...prev,
-            error: he ? "שגיאת חיבור" : "Connection error",
-            loading: false,
-            loaded: true,
-          }));
-          setFinanceState((prev) => ({
-            ...prev,
-            error: he ? "שגיאת חיבור" : "Connection error",
-            loading: false,
-            loaded: true,
-          }));
-          setPublicContactState((prev) => ({
-            ...prev,
-            error: he ? "שגיאת חיבור" : "Connection error",
-            loading: false,
-            loaded: true,
-          }));
-        }
-      } finally {
-        if (mounted) {
-          setInventoryState((prev) => ({
-            ...prev,
-            loading: false,
-            loaded: true,
-          }));
-          setFinanceState((prev) => ({
-            ...prev,
-            loading: false,
-            loaded: true,
-          }));
-          setPublicContactState((prev) => ({
-            ...prev,
-            loading: false,
-            loaded: true,
-          }));
-        }
-      }
-    };
-    // These independent regions settle separately, keeping the settings shell and CEO controls interactive.
-    void Promise.allSettled([loadTax(), loadSettings()]);
+    queueMicrotask(() => {
+      if (controller.signal.aborted) return;
+      void fetchTaxRates(controller.signal);
+      void fetchBusinessSettings();
+    });
     return () => {
-      mounted = false;
       controller.abort();
+      settingsRead.current?.abort();
     };
-  }, [he]);
+  }, [fetchBusinessSettings, fetchTaxRates]);
 
-  // Tax form handlers
-  const handleTaxFormChange = (
-    field: keyof TaxFormData,
-    value: string | number | null,
-  ) => {
-    setTaxForm((prev) => ({ ...prev, [field]: value }));
-  };
+  function updateSection<Key extends SettingsSection>(
+    key: Key,
+    update: (current: SettingsState[Key]) => SettingsState[Key],
+  ) {
+    setSettings((previous) => ({ ...previous, [key]: update(previous[key]) }));
+  }
 
-  const handleTaxSubmit = async () => {
+  function updateDraft<
+    Key extends SettingsSection,
+    Field extends keyof SettingsValues[Key],
+  >(key: Key, field: Field, value: SettingsValues[Key][Field]) {
+    updateSection(key, (section) => {
+      const draft = { ...section.draft };
+      if (section.saved[field] === value) {
+        delete draft[field];
+      } else {
+        draft[field] = value;
+      }
+      return { ...section, draft, notice: null };
+    });
+  }
+
+  function discardDraft(key: SettingsSection) {
+    updateSection(key, (section) => ({ ...section, draft: {}, notice: null }));
+  }
+
+  function reloadSavedSettings() {
+    if (saveRequests.current.size) return;
+    setSettingsLoading(true);
+    void fetchBusinessSettings();
+  }
+
+  function reloadTaxRates() {
+    setTaxLoading(true);
+    void fetchTaxRates();
+  }
+
+  function handleTaxFormChange<Key extends keyof TaxFormData>(
+    field: Key,
+    value: TaxFormData[Key],
+  ) {
+    setTaxForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function closeTaxModal() {
+    if (!taxRequest.current) setShowTaxForm(false);
+  }
+
+  function openTaxModal() {
+    setTaxSaveError("");
+    setShowTaxForm(true);
+  }
+
+  async function handleTaxSubmit() {
+    if (!isCeo || taxRequest.current) return;
     if (
       !taxForm.name.trim() ||
+      taxForm.rate === null ||
+      !Number.isFinite(taxForm.rate) ||
       taxForm.rate < 0 ||
       taxForm.rate > 99.99 ||
       !taxForm.valid_from
     ) {
-      showNotice(
-        he ? "מלא את כל השדות הנדרשים" : "Fill all required fields",
-        "error",
+      setTaxSaveError(
+        he ? "מלאו את כל השדות הנדרשים" : "Fill all required fields",
       );
       return;
     }
+    taxRequest.current = true;
     setTaxSubmitting(true);
+    setTaxSaveError("");
+    setTaxSaved(false);
     try {
       const response = await fetch("/api/management/tax", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(taxForm),
       });
-      const data = await response.json();
-      if (response.ok) {
-        showNotice(he ? "שיעור מס נוסף" : "Tax rate added");
-        closeTaxModal();
-        setTaxForm({
-          name: "",
-          rate: 0,
-          valid_from: new Date().toISOString().split("T")[0],
-          valid_until: null,
-        });
-        await fetchTaxRates();
-      } else if (response.status === 403) {
-        showNotice(
-          he
-            ? "נדרש מנכ״ל כדי לשנות שיעור מס"
-            : "CEO required to change tax rate",
-          "error",
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        setTaxSaveError(
+          data?.error ||
+            (he ? "הוספת שיעור המס נכשלה" : "Unable to add the tax rate"),
         );
-      } else {
-        showNotice(data.error || (he ? "הוספה נכשלה" : "Add failed"), "error");
+        return;
       }
+      setShowTaxForm(false);
+      setTaxForm(newTaxForm());
+      setTaxSaved(true);
+      reloadTaxRates();
     } catch {
-      showNotice(he ? "שגיאת חיבור" : "Connection error", "error");
+      setTaxSaveError(
+        he
+          ? "לא ניתן היה לאמת את השמירה. סגרו את הטופס ורעננו את העמוד לפני ניסיון נוסף."
+          : "The save could not be confirmed. Close the form and reload this page before trying again.",
+      );
     } finally {
       setTaxSubmitting(false);
+      taxRequest.current = false;
     }
-  };
+  }
 
-  // Business settings submit
-  const handleSettingsSubmit = async (
-    key: "inventory_defaults" | "finance",
-  ) => {
-    if (!isCeo) return;
-    setSectionSubmitting(key, true);
+  async function handleSettingsSubmit(key: SettingsSection) {
+    if (
+      !isCeo ||
+      settingsRead.current ||
+      settingsLoading ||
+      settingsError ||
+      saveRequests.current.has(key)
+    )
+      return;
+    const { draft } = settings[key];
+    if (Object.keys(draft).length === 0) return;
+
+    saveRequests.current.add(key);
+    setSaving((previous) => ({ ...previous, [key]: true }));
+    updateSection(key, (section) => ({ ...section, notice: null }));
     try {
-      const value =
-        key === "inventory_defaults"
-          ? inventoryState.draft
-          : financeState.draft;
+      const value = Object.fromEntries(
+        Object.entries(draft).map(([field, input]) => [
+          field,
+          input === "" ? null : input,
+        ]),
+      );
       const response = await fetch("/api/management/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key, value }),
       });
       const data = await response.json();
-      if (response.ok) {
-        showNotice(he ? "הגדרות נשמרו" : "Settings saved");
-        // Only update the saved state for this section from server response
-        // The fetchBusinessSettings will update saved state
-        await fetchBusinessSettings();
-      } else if (response.status === 403) {
-        showNotice(
-          he
-            ? "נדרש מנכ״ל כדי לשנות הגדרות עסקיות"
-            : "CEO required to change business settings",
-          "error",
-        );
-      } else {
-        showNotice(data.error || (he ? "שמירה נכשלה" : "Save failed"), "error");
+      if (!response.ok) {
+        const text =
+          response.status === 403
+            ? he
+              ? "נדרשת הרשאת מנכ״ל לשמירה"
+              : "Only the CEO can save these settings."
+            : data.error ||
+              (he ? "שמירת ההגדרות נכשלה" : "Unable to save these settings.");
+        updateSection(key, (section) => ({
+          ...section,
+          notice: { text, tone: "danger" },
+        }));
+        return;
       }
-    } catch {
-      showNotice(he ? "שגיאת חיבור" : "Connection error", "error");
-    } finally {
-      setSectionSubmitting(key, false);
-    }
-  };
+      if (!data.ok || !data.value || typeof data.value !== "object") {
+        throw new Error("save_unconfirmed");
+      }
 
-  // Public contact submit
-  const handlePublicContactSubmit = async () => {
-    if (!isCeo) return;
-    setSectionSubmitting("public_contact", true);
-    setPublicContactState((prev) => ({ ...prev, error: "" }));
-    try {
-      // Convert empty strings to null for optional fields
-      const value: Record<string, unknown> = {};
-      for (const [field, fieldValue] of Object.entries(
-        publicContactState.draft,
-      )) {
-        if (fieldValue !== undefined) {
-          value[field] = fieldValue === "" ? null : fieldValue;
-        }
-      }
-      const response = await fetch("/api/management/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "public_contact", value }),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        showNotice(he ? "פרטי קשר עודכנו" : "Contact info updated");
-        await fetchBusinessSettings();
-      } else if (response.status === 403) {
-        showNotice(
-          he
-            ? "נדרש מנכ״ל כדי לשנות פרטי קשר"
-            : "CEO required to change contact info",
-          "error",
-        );
+      const notice = {
+        text: he ? "ההגדרות נשמרו" : "Settings saved",
+        tone: "success",
+      } as const;
+      if (key === "inventory_defaults") {
+        updateSection(key, () => ({
+          saved: validateInventoryDefaults(data.value),
+          draft: {},
+          notice,
+        }));
       } else {
-        setPublicContactState((prev) => ({
-          ...prev,
-          error: data.error || (he ? "שמירה נכשלה" : "Save failed"),
+        updateSection(key, () => ({
+          saved: readContactForm(data.value, data.publicContactFallbacks),
+          draft: {},
+          notice,
         }));
       }
     } catch {
-      setPublicContactState((prev) => ({
-        ...prev,
-        error: he ? "שגיאת חיבור" : "Connection error",
+      const text = he
+        ? "לא ניתן היה לאמת את השמירה. יש לרענן את הערכים השמורים לפני ניסיון נוסף."
+        : "The save could not be confirmed. Reload the saved values before trying again.";
+      updateSection(key, (section) => ({
+        ...section,
+        notice: { text, tone: "danger" },
       }));
     } finally {
-      setSectionSubmitting("public_contact", false);
+      saveRequests.current.delete(key);
+      setSaving((previous) => ({ ...previous, [key]: false }));
     }
-  };
+  }
 
-  const getCurrentTaxRate = () => taxRates.find((t) => t.status === "current");
+  const inventoryState = settings.inventory_defaults;
+  const inventoryDraft = { ...inventoryState.saved, ...inventoryState.draft };
+  const publicContactState = settings.public_contact;
+  const publicContactDraft = {
+    ...publicContactState.saved,
+    ...publicContactState.draft,
+  };
+  const inventoryDirty = Object.keys(inventoryState.draft).length > 0;
+  const contactDirty = Object.keys(publicContactState.draft).length > 0;
+  const anySaving = saving.inventory_defaults || saving.public_contact;
+  const loadError = (
+    <ErrorState
+      title={he ? "שגיאה בטעינת הגדרות" : "Failed to load settings"}
+      description={settingsError}
+      onRetry={reloadSavedSettings}
+      retryLabel={he ? "נסו שוב" : "Retry"}
+    />
+  );
+  const refreshSaved = (
+    <button
+      type="button"
+      className="mgmt-button mgmt-button--ghost"
+      onClick={reloadSavedSettings}
+      disabled={settingsLoading || !!settingsError || anySaving}
+    >
+      {he ? "רענון ערכים שמורים" : "Reload saved values"}
+    </button>
+  );
+  const currentTaxRate = taxRates.find((rate) => rate.status === "current");
 
   const formatRate = (rate: number) => `${rate.toFixed(2)}%`;
   const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString(he ? "he-IL" : "en-IL");
+    new Date(iso).toLocaleDateString(he ? "he-IL" : "en-IL", {
+      timeZone: "Asia/Jerusalem",
+    });
 
   const getStatusLabel = (status: TaxRateStatus) => {
     switch (status) {
@@ -682,45 +542,6 @@ export function SettingsPanel({
 
   return (
     <div className="settings-panel space-y-6">
-      <PageHeader
-        title={he ? "הגדרות" : "Settings"}
-        subtitle={
-          he
-            ? "ניהול מס, מלאי, תצוגת מחירים, פרטי קשר, מראה והנפשות"
-            : "Manage tax, inventory, price display, contact details, appearance and animations"
-        }
-      />
-
-      <nav
-        className="mgmt-settings-index mgmt-section-switcher"
-        aria-label={he ? "חלקי הגדרות" : "Settings sections"}
-      >
-        <a href="#settings-tax">{he ? "שיעורי מס" : "Tax rates"}</a>
-        <a href="#settings-inventory">{he ? "מלאי" : "Inventory"}</a>
-        <a href="#settings-finance">{he ? "כספים" : "Finance"}</a>
-        <a href="#settings-contact">{he ? "פרטי קשר" : "Contact details"}</a>
-        <a href="#settings-glass">{he ? "מראה זכוכית" : "Glass appearance"}</a>
-        <a href="#settings-animation">{he ? "הנפשות" : "Animations"}</a>
-      </nav>
-
-      {globalNotice && (
-        <Notice
-          tone={globalNotice.type === "success" ? "success" : "danger"}
-          title={
-            globalNotice.type === "success"
-              ? he
-                ? "הצלחה"
-                : "Success"
-              : he
-                ? "שגיאה"
-                : "Error"
-          }
-          onDismiss={() => setGlobalNotice(null)}
-        >
-          {globalNotice.text}
-        </Notice>
-      )}
-
       <GlobalGlassSettings locale={locale} />
       <AnimationSettings locale={locale} isCeo={isCeo} />
 
@@ -737,9 +558,10 @@ export function SettingsPanel({
         actions={
           isCeo ? (
             <button
-              ref={taxTriggerRef}
+              type="button"
+              disabled={taxLoading || !!taxError}
               className="mgmt-button mgmt-button--primary"
-              onClick={() => setShowTaxForm(true)}
+              onClick={openTaxModal}
             >
               <Plus className="h-4 w-4 me-1" aria-hidden="true" />
               {he ? "הוסף שיעור מס" : "Add Tax Rate"}
@@ -749,6 +571,15 @@ export function SettingsPanel({
       >
         {/* Current Active Rate - Prominent Display */}
         <div className="settings-section-content">
+          {taxSaved && (
+            <Notice
+              tone="success"
+              onDismiss={() => setTaxSaved(false)}
+              dismissLabel={he ? "סגור" : "Dismiss"}
+            >
+              {he ? "שיעור המס נוסף" : "Tax rate added"}
+            </Notice>
+          )}
           {taxLoading ? (
             <TableSkeleton
               columns={
@@ -764,7 +595,7 @@ export function SettingsPanel({
             <ErrorState
               title={he ? "שגיאה בטעינת שיעורי מס" : "Failed to load tax rates"}
               description={taxError}
-              onRetry={fetchTaxRates}
+              onRetry={reloadTaxRates}
               retryLabel={he ? "נסה שוב" : "Retry"}
             />
           )}
@@ -777,22 +608,22 @@ export function SettingsPanel({
                 value={
                   <>
                     <span className="font-variant-numeric tabular-nums">
-                      {formatRate(getCurrentTaxRate()?.rate ?? 0)}
+                      {currentTaxRate ? formatRate(currentTaxRate.rate) : "—"}
                     </span>
                   </>
                 }
                 tone="accent"
                 icon={
-                  getCurrentTaxRate() && (
+                  currentTaxRate && (
                     <ShieldCheck className="h-5 w-5" aria-hidden="true" />
                   )
                 }
                 footer={
-                  getCurrentTaxRate() ? (
+                  currentTaxRate ? (
                     <>
                       {he ? "החל מ-" : "Effective from"}{" "}
-                      {formatDate(getCurrentTaxRate()!.valid_from)} —{" "}
-                      {getCurrentTaxRate()!.name}
+                      {formatDate(currentTaxRate.valid_from)} —{" "}
+                      {currentTaxRate.name}
                     </>
                   ) : (
                     <span className="text-error-text">
@@ -836,8 +667,9 @@ export function SettingsPanel({
                       action={
                         isCeo ? (
                           <button
+                            type="button"
                             className="mgmt-button mgmt-button--primary"
-                            onClick={() => setShowTaxForm(true)}
+                            onClick={openTaxModal}
                           >
                             <Plus className="h-4 w-4 me-1" aria-hidden="true" />
                             {he ? "הוסף שיעור מס" : "Add Tax Rate"}
@@ -894,9 +726,9 @@ export function SettingsPanel({
                         {he ? "ביטול" : "Cancel"}
                       </button>
                       <button
-                        type="button"
+                        type="submit"
+                        form={taxFormId}
                         className="mgmt-button mgmt-button--primary"
-                        onClick={() => void handleTaxSubmit()}
                         disabled={taxSubmitting}
                         aria-busy={taxSubmitting || undefined}
                       >
@@ -916,135 +748,147 @@ export function SettingsPanel({
                   }
                 >
                   <form
+                    id={taxFormId}
                     className="space-y-4"
                     onSubmit={(e) => {
                       e.preventDefault();
                       void handleTaxSubmit();
                     }}
                   >
-                    <FormField
-                      label={he ? "שם השיעור *" : "Rate Name *"}
-                      required
-                      error={
-                        taxForm.name && !taxForm.name.trim()
-                          ? he
-                            ? "נדרש שם"
-                            : "Name required"
-                          : undefined
-                      }
-                      description={he ? "למשל: מע״מ 2024" : "e.g. VAT 2024"}
-                    >
-                      {({
-                        id,
-                        required,
-                        "aria-invalid": ariaInvalid,
-                        "aria-describedby": ariaDescribedBy,
-                      }) => (
-                        <input
-                          type="text"
-                          id={id}
-                          required={required}
-                          aria-invalid={ariaInvalid}
-                          aria-describedby={ariaDescribedBy}
-                          value={taxForm.name}
-                          onChange={(e) =>
-                            handleTaxFormChange("name", e.target.value)
-                          }
-                          className="miro-input"
-                          placeholder={he ? "למשל: מע״מ 2024" : "e.g. VAT 2024"}
-                        />
-                      )}
-                    </FormField>
-                    <FormField
-                      label={he ? "שיעור (%) *" : "Rate (%) *"}
-                      required
-                      error={
-                        taxForm.rate < 0 || taxForm.rate > 99.99
-                          ? he
-                            ? "שיעור חייב להיות בין 0 ל-99.99"
-                            : "Rate must be between 0 and 99.99"
-                          : undefined
-                      }
-                    >
-                      {({
-                        id,
-                        required,
-                        "aria-invalid": ariaInvalid,
-                        "aria-describedby": ariaDescribedBy,
-                      }) => (
-                        <input
-                          type="number"
-                          min="0"
-                          max="99.99"
-                          step="0.01"
-                          id={id}
-                          required={required}
-                          aria-invalid={ariaInvalid}
-                          aria-describedby={ariaDescribedBy}
-                          value={taxForm.rate}
-                          onChange={(e) =>
-                            handleTaxFormChange(
-                              "rate",
-                              parseFloat(e.target.value) || 0,
-                            )
-                          }
-                          className="miro-input"
-                          placeholder="17.00"
-                        />
-                      )}
-                    </FormField>
-                    <FormField
-                      label={he ? "תאריך תחילה *" : "Effective From *"}
-                      required
-                    >
-                      {({
-                        id,
-                        required,
-                        "aria-invalid": ariaInvalid,
-                        "aria-describedby": ariaDescribedBy,
-                      }) => (
-                        <input
-                          type="date"
-                          id={id}
-                          required={required}
-                          aria-invalid={ariaInvalid}
-                          aria-describedby={ariaDescribedBy}
-                          value={taxForm.valid_from}
-                          onChange={(e) =>
-                            handleTaxFormChange("valid_from", e.target.value)
-                          }
-                          className="miro-input"
-                        />
-                      )}
-                    </FormField>
-                    <FormField
-                      label={
-                        he
-                          ? "תאריך תפוגה (אופציונלי)"
-                          : "Expiry Date (optional)"
-                      }
-                      description={
-                        he
-                          ? "השאר ריק לשיעור ללא תפוגה"
-                          : "Leave empty for no expiry"
-                      }
-                    >
-                      {({ id, "aria-describedby": ariaDescribedBy }) => (
-                        <input
-                          type="date"
-                          id={id}
-                          aria-describedby={ariaDescribedBy}
-                          value={taxForm.valid_until ?? ""}
-                          onChange={(e) =>
-                            handleTaxFormChange(
-                              "valid_until",
-                              e.target.value || null,
-                            )
-                          }
-                          className="miro-input"
-                        />
-                      )}
-                    </FormField>
+                    {taxSaveError && (
+                      <Notice tone="danger">{taxSaveError}</Notice>
+                    )}
+                    <fieldset disabled={taxSubmitting} className="space-y-4">
+                      <FormField
+                        label={he ? "שם השיעור" : "Rate Name"}
+                        required
+                        error={
+                          taxForm.name && !taxForm.name.trim()
+                            ? he
+                              ? "נדרש שם"
+                              : "Name required"
+                            : undefined
+                        }
+                        description={he ? "למשל: מע״מ 2024" : "e.g. VAT 2024"}
+                      >
+                        {({
+                          id,
+                          required,
+                          "aria-invalid": ariaInvalid,
+                          "aria-describedby": ariaDescribedBy,
+                        }) => (
+                          <input
+                            type="text"
+                            id={id}
+                            required={required}
+                            aria-invalid={ariaInvalid}
+                            aria-describedby={ariaDescribedBy}
+                            value={taxForm.name}
+                            onChange={(e) =>
+                              handleTaxFormChange("name", e.target.value)
+                            }
+                            className="miro-input"
+                            maxLength={100}
+                            placeholder={
+                              he ? "למשל: מע״מ 2024" : "e.g. VAT 2024"
+                            }
+                          />
+                        )}
+                      </FormField>
+                      <FormField
+                        label={he ? "שיעור (%)" : "Rate (%)"}
+                        required
+                        error={
+                          taxForm.rate !== null &&
+                          (taxForm.rate < 0 || taxForm.rate > 99.99)
+                            ? he
+                              ? "שיעור חייב להיות בין 0 ל-99.99"
+                              : "Rate must be between 0 and 99.99"
+                            : undefined
+                        }
+                      >
+                        {({
+                          id,
+                          required,
+                          "aria-invalid": ariaInvalid,
+                          "aria-describedby": ariaDescribedBy,
+                        }) => (
+                          <input
+                            type="number"
+                            min="0"
+                            max="99.99"
+                            step="0.01"
+                            id={id}
+                            required={required}
+                            aria-invalid={ariaInvalid}
+                            aria-describedby={ariaDescribedBy}
+                            value={taxForm.rate ?? ""}
+                            onChange={(e) =>
+                              handleTaxFormChange(
+                                "rate",
+                                e.target.value === ""
+                                  ? null
+                                  : Number(e.target.value),
+                              )
+                            }
+                            className="miro-input"
+                            placeholder="17.00"
+                          />
+                        )}
+                      </FormField>
+                      <FormField
+                        label={he ? "תאריך תחילה" : "Effective From"}
+                        required
+                      >
+                        {({
+                          id,
+                          required,
+                          "aria-invalid": ariaInvalid,
+                          "aria-describedby": ariaDescribedBy,
+                        }) => (
+                          <input
+                            type="date"
+                            id={id}
+                            required={required}
+                            aria-invalid={ariaInvalid}
+                            aria-describedby={ariaDescribedBy}
+                            value={taxForm.valid_from}
+                            onChange={(e) =>
+                              handleTaxFormChange("valid_from", e.target.value)
+                            }
+                            className="miro-input"
+                          />
+                        )}
+                      </FormField>
+                      <FormField
+                        label={
+                          he
+                            ? "תאריך תפוגה (אופציונלי)"
+                            : "Expiry Date (optional)"
+                        }
+                        description={
+                          he
+                            ? "השאר ריק לשיעור ללא תפוגה"
+                            : "Leave empty for no expiry"
+                        }
+                      >
+                        {({ id, "aria-describedby": ariaDescribedBy }) => (
+                          <input
+                            type="date"
+                            id={id}
+                            aria-describedby={ariaDescribedBy}
+                            value={taxForm.valid_until ?? ""}
+                            onChange={(e) =>
+                              handleTaxFormChange(
+                                "valid_until",
+                                e.target.value || null,
+                              )
+                            }
+                            className="miro-input"
+                          />
+                        )}
+                      </FormField>
+                    </fieldset>
                   </form>
                 </Dialog>
               )}
@@ -1060,242 +904,150 @@ export function SettingsPanel({
         title={he ? "ברירות מחדל למלאי" : "Inventory Defaults"}
         description={
           he
-            ? "הגדרות סף מלאי נמוך ומדיניות חוסר במלאי"
-            : "Configure low stock threshold and out of stock policy"
+            ? "ברירות מחדל לגרסאות חדשות ולמוצרים שיורשים את מדיניות החנות."
+            : "Defaults for new variants and products that inherit the store’s stock policy."
         }
+        actions={refreshSaved}
       >
         <div className="settings-section-content">
-          {inventoryState.loading ? (
+          {settingsLoading ? (
             <FormSkeleton
               fields={2}
               label={he ? "טוען הגדרות…" : "Loading settings…"}
             />
-          ) : null}
-
-          {inventoryState.error && !inventoryState.loading && (
-            <ErrorState
-              title={he ? "שגיאה בטעינת הגדרות" : "Failed to load settings"}
-              description={inventoryState.error}
-              onRetry={fetchBusinessSettings}
-              retryLabel={he ? "נסה שוב" : "Retry"}
-            />
-          )}
-
-          {!inventoryState.loading && !inventoryState.error && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                label={he ? "סף מלאי נמוך" : "Low Stock Threshold"}
-                description={
-                  he
-                    ? "מתחת לערך זה יסומן כמלאי נמוך"
-                    : "Below this value will be flagged as low stock"
-                }
+          ) : settingsError ? (
+            loadError
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleSettingsSubmit("inventory_defaults");
+              }}
+            >
+              <fieldset
+                disabled={!isCeo || saving.inventory_defaults}
+                className="grid gap-4 md:grid-cols-2"
               >
-                {({ id, "aria-describedby": ariaDescribedBy }) => (
-                  <input
-                    type="number"
-                    min="0"
-                    id={id}
-                    aria-describedby={ariaDescribedBy}
-                    value={inventoryState.draft.low_stock_threshold}
-                    onChange={(e) =>
-                      updateDraft("inventory_defaults", (prev) => ({
-                        ...prev,
-                        low_stock_threshold: parseInt(e.target.value, 10) || 0,
-                      }))
-                    }
-                    className="miro-input"
-                    disabled={!isCeo}
-                    aria-disabled={!isCeo}
-                  />
-                )}
-              </FormField>
-              <FormField
-                label={he ? "מדיניות חוסר במלאי" : "Out of Stock Policy"}
-                description={
-                  he ? "התנהגות כשמלאי אוזל" : "Behavior when stock runs out"
-                }
-              >
-                {({ id, "aria-describedby": ariaDescribedBy }) => (
-                  <select
-                    id={id}
-                    aria-describedby={ariaDescribedBy}
-                    value={inventoryState.draft.out_of_stock_policy}
-                    onChange={(e) =>
-                      updateDraft("inventory_defaults", (prev) => ({
-                        ...prev,
-                        out_of_stock_policy: e.target
-                          .value as InventoryDefaults["out_of_stock_policy"],
-                      }))
-                    }
-                    className="miro-input"
-                    disabled={!isCeo}
-                    aria-disabled={!isCeo}
-                  >
-                    <option value="keep_visible_contact">
-                      {he
-                        ? "הצג עם 'צור קשר לזמינות'"
-                        : "Show with 'Contact for availability'"}
-                    </option>
-                    <option value="keep_visible_restock">
-                      {he
-                        ? "הצג עם תאריך חידוש מלאי צפוי"
-                        : "Show with expected restock date"}
-                    </option>
-                    <option value="hide_from_public">
-                      {he ? "הסתר מהחנות" : "Hide from storefront"}
-                    </option>
-                  </select>
-                )}
-              </FormField>
-            </div>
-          )}
-          {isCeo && (
-            <div className="mt-4 flex justify-end">
-              <button
-                className="mgmt-button mgmt-button--primary gap-2"
-                onClick={() => handleSettingsSubmit("inventory_defaults")}
-                disabled={inventoryState.submitting || !inventoryState.loaded}
-              >
-                {inventoryState.submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {he ? "שומר..." : "Saving..."}
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    {he ? "שמור הגדרות מלאי" : "Save Inventory Settings"}
-                  </>
-                )}
-              </button>
-            </div>
+                <FormField
+                  label={
+                    he
+                      ? "סף מלאי נמוך לגרסאות חדשות"
+                      : "Default low-stock threshold for new variants"
+                  }
+                  required
+                  description={
+                    he
+                      ? "מלאי חיובי עד לסף יסומן כנמוך. הערך 0 מבטל את הסימון. אפשר לשנות את הסף בכל גרסה. ספים קיימים נשמרים."
+                      : "Positive stock at or below the threshold is flagged. Zero turns off the flag. Each variant can override the default, and existing variants keep their thresholds."
+                  }
+                >
+                  {({ id, required, "aria-describedby": ariaDescribedBy }) => (
+                    <input
+                      type="number"
+                      min="0"
+                      max="10000"
+                      id={id}
+                      required={required}
+                      aria-describedby={ariaDescribedBy}
+                      value={
+                        Number.isNaN(inventoryDraft.low_stock_threshold)
+                          ? ""
+                          : inventoryDraft.low_stock_threshold
+                      }
+                      onChange={(e) =>
+                        updateDraft(
+                          "inventory_defaults",
+                          "low_stock_threshold",
+                          e.target.valueAsNumber,
+                        )
+                      }
+                      className="miro-input"
+                    />
+                  )}
+                </FormField>
+                <FormField
+                  label={he ? "מדיניות חוסר במלאי" : "Out of Stock Policy"}
+                  description={
+                    he
+                      ? "חל על מוצרים המוגדרים לרשת את ברירת המחדל של החנות."
+                      : "Applies to products set to inherit the store default."
+                  }
+                >
+                  {({ id, "aria-describedby": ariaDescribedBy }) => (
+                    <select
+                      id={id}
+                      aria-describedby={ariaDescribedBy}
+                      value={inventoryDraft.out_of_stock_policy}
+                      onChange={(e) =>
+                        updateDraft(
+                          "inventory_defaults",
+                          "out_of_stock_policy",
+                          e.target
+                            .value as InventoryDefaults["out_of_stock_policy"],
+                        )
+                      }
+                      className="miro-input"
+                    >
+                      <option value="keep_visible_contact">
+                        {he
+                          ? "הצג עם 'צור קשר לזמינות'"
+                          : "Show with 'Contact for availability'"}
+                      </option>
+                      <option value="keep_visible_restock">
+                        {he
+                          ? "הצג עם תאריך חידוש מלאי צפוי"
+                          : "Show with expected restock date"}
+                      </option>
+                      <option value="hide_from_public">
+                        {he ? "הסתר מהחנות" : "Hide from storefront"}
+                      </option>
+                    </select>
+                  )}
+                </FormField>
+              </fieldset>
+              {isCeo && (
+                <SettingsFormActions
+                  locale={locale}
+                  dirty={inventoryDirty}
+                  saving={!!saving.inventory_defaults}
+                  saveLabel={
+                    he ? "שמירת הגדרות מלאי" : "Save Inventory Settings"
+                  }
+                  onDiscard={() => discardDraft("inventory_defaults")}
+                />
+              )}
+              {inventoryState.notice && (
+                <Notice tone={inventoryState.notice.tone} className="mt-3">
+                  {inventoryState.notice.text}
+                </Notice>
+              )}
+            </form>
           )}
         </div>
       </FormSection>
 
-      {/* Business Settings Section - Finance Settings */}
       <FormSection
         sectionId="settings-finance"
         icon={<DollarSign size={19} aria-hidden="true" />}
-        title={he ? "הגדרות פיננסיות" : "Finance Settings"}
+        title={he ? "מדיניות מחירים ומסמכים" : "Pricing and document policy"}
         description={
           he
-            ? "מטבע ברירת מחדל ותצוגת מחירים (לצורכי תצוגה בלבד)"
-            : "Default currency and price display (display purposes only)"
+            ? "מחירי החנות מוצגים בשקלים חדשים וכוללים מע״מ כאשר הוא חל."
+            : "Storefront prices are displayed in Israeli shekels and include VAT where it applies."
         }
       >
-        <div className="settings-section-content">
-          {financeState.loading ? (
-            <FormSkeleton
-              fields={2}
-              label={he ? "טוען הגדרות…" : "Loading settings…"}
-            />
-          ) : null}
-
-          {financeState.error && !financeState.loading && (
-            <ErrorState
-              title={he ? "שגיאה בטעינת הגדרות" : "Failed to load settings"}
-              description={financeState.error}
-              onRetry={fetchBusinessSettings}
-              retryLabel={he ? "נסה שוב" : "Retry"}
-            />
-          )}
-
-          {!financeState.loading && !financeState.error && (
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                label={he ? "מטבע ברירת מחדל" : "Default Currency"}
-                description={
-                  he
-                    ? "מטבע התצוגה - MIRO מוכר בש״ח בלבד"
-                    : "Display currency — MIRO sells in ILS only"
-                }
-              >
-                {({ id, "aria-describedby": ariaDescribedBy }) => (
-                  <select
-                    id={id}
-                    aria-describedby={ariaDescribedBy}
-                    value={financeState.draft.currency}
-                    onChange={(e) =>
-                      updateDraft("finance", (prev) => ({
-                        ...prev,
-                        currency: e.target.value,
-                      }))
-                    }
-                    className="miro-input"
-                    disabled={!isCeo}
-                    aria-disabled={!isCeo}
-                  >
-                    <option value="ILS">
-                      {he ? "שקל חדש (₪)" : "Israeli Shekel (₪)"}
-                    </option>
-                    <option value="USD">
-                      {he ? "דולר אמריקאי ($)" : "US Dollar ($)"}
-                    </option>
-                    <option value="EUR">{he ? "אירו (€)" : "Euro (€)"}</option>
-                    <option value="GBP">
-                      {he ? "לירה שטרלינג (£)" : "British Pound (£)"}
-                    </option>
-                  </select>
-                )}
-              </FormField>
-              <FormField
-                label=""
-                description={
-                  he
-                    ? "האם מחירי המוצרים כוללים מע״מ (לצורכי תצוגה בלבד)"
-                    : "Whether product prices include VAT (display only)"
-                }
-              >
-                {({ id, "aria-describedby": ariaDescribedBy }) => (
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      id={id}
-                      aria-describedby={ariaDescribedBy}
-                      checked={financeState.draft.prices_include_vat}
-                      onChange={(e) =>
-                        updateDraft("finance", (prev) => ({
-                          ...prev,
-                          prices_include_vat: e.target.checked,
-                        }))
-                      }
-                      className="rounded border-border-subtle"
-                      disabled={!isCeo}
-                    />
-                    <span>
-                      {he ? "מחירים כוללים מע״מ" : "Prices include VAT"}
-                    </span>
-                  </label>
-                )}
-              </FormField>
-            </div>
-          )}
-          {isCeo && (
-            <div className="mt-4 flex justify-end">
-              <button
-                className="mgmt-button mgmt-button--primary gap-2"
-                onClick={() => handleSettingsSubmit("finance")}
-                disabled={financeState.submitting || !financeState.loaded}
-              >
-                {financeState.submitting ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {he ? "שומר..." : "Saving..."}
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4" />
-                    {he ? "שמור הגדרות פיננסיות" : "Save Finance Settings"}
-                  </>
-                )}
-              </button>
-            </div>
-          )}
+        <div className="flex flex-wrap gap-2">
+          <a href="#settings-tax" className="mgmt-button mgmt-button--ghost">
+            {he ? "שיעורי מע״מ" : "VAT rates"}
+          </a>
+          <Link
+            href={withLocale(locale, "admin/integrations#business-identity")}
+            className="mgmt-button mgmt-button--ghost"
+          >
+            {he ? "זהות העסק ומסמכים" : "Business identity and documents"}
+          </Link>
         </div>
       </FormSection>
-
       {/* Public Contact Settings Section */}
       <FormSection
         sectionId="settings-contact"
@@ -1303,71 +1055,55 @@ export function SettingsPanel({
         title={he ? "פרטי קשר ציבוריים" : "Public Contact Info"}
         description={
           he
-            ? "פרטים שיוצגו באתר החנות ובחשבוניות"
-            : "Details shown on the storefront and invoices"
+            ? "טלפון, וואטסאפ, אימייל, כתובת ושעות הפתיחה שמוצגים ללקוחות באתר."
+            : "Phone, WhatsApp, email, address and opening hours shown to visitors."
         }
+        actions={refreshSaved}
       >
         <div className="settings-section-content">
-          {publicContactState.loading ? (
+          <p className="text-sm text-muted-foreground">
+            {he
+              ? "לפרטי התקשרות שמודפסים במסמכים רשמיים, פתחו את "
+              : "For contact details on official documents, open "}
+            <Link
+              href={withLocale(locale, "admin/integrations#business-identity")}
+              className="underline underline-offset-4"
+            >
+              {he ? "זהות העסק" : "Business identity"}
+            </Link>
+            {"."}
+          </p>
+          {isCeo && (
+            <p className="text-sm text-muted-foreground">
+              {he
+                ? "כדי להסתיר פרט באתר, נקו את השדה ושמרו."
+                : "Clear a field and save to hide it on the website."}
+            </p>
+          )}
+          {settingsLoading ? (
             <FormSkeleton
-              fields={8}
+              fields={7}
               label={he ? "טוען הגדרות…" : "Loading settings…"}
             />
-          ) : null}
-
-          {publicContactState.error && !publicContactState.loading && (
-            <Notice
-              tone="danger"
-              title={
-                he ? "שגיאה בטעינת פרטי קשר" : "Failed to load contact info"
-              }
-              onDismiss={() =>
-                setPublicContactState((prev) => ({ ...prev, error: "" }))
-              }
+          ) : settingsError ? (
+            loadError
+          ) : (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void handleSettingsSubmit("public_contact");
+              }}
             >
-              {publicContactState.error}
-              <button
-                className="mgmt-button mgmt-button--ghost text-sm mt-2"
-                onClick={fetchBusinessSettings}
+              <fieldset
+                disabled={!isCeo || saving.public_contact}
+                className="grid gap-4 md:grid-cols-2 lg:grid-cols-3"
               >
-                <RotateCcw className="h-4 w-4 me-1" aria-hidden="true" />
-                {he ? "נסה שוב" : "Retry"}
-              </button>
-            </Notice>
-          )}
-
-          {!publicContactState.loading && (
-            <>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <FormField
                   label={he ? "טלפון" : "Phone"}
-                  description={he ? "מספר טלפון ראשי" : "Primary phone number"}
-                >
-                  {({ id, "aria-describedby": ariaDescribedBy }) => (
-                    <input
-                      type="tel"
-                      id={id}
-                      aria-describedby={ariaDescribedBy}
-                      value={publicContactState.draft.phone}
-                      onChange={(e) =>
-                        updateDraft("public_contact", (prev) => ({
-                          ...prev,
-                          phone: e.target.value,
-                        }))
-                      }
-                      className="miro-input"
-                      disabled={!isCeo}
-                      aria-disabled={!isCeo}
-                      placeholder={he ? "050-1234567" : "050-1234567"}
-                    />
-                  )}
-                </FormField>
-                <FormField
-                  label={he ? "וואטסאפ" : "WhatsApp"}
                   description={
                     he
-                      ? "מספר וואטסאפ (ללא קידומת +)"
-                      : "WhatsApp number (no + prefix)"
+                      ? "ספרות בלבד, אפשר להתחיל ב-+"
+                      : "Digits with an optional leading +"
                   }
                 >
                   {({ id, "aria-describedby": ariaDescribedBy }) => (
@@ -1375,17 +1111,42 @@ export function SettingsPanel({
                       type="tel"
                       id={id}
                       aria-describedby={ariaDescribedBy}
-                      value={publicContactState.draft.whatsapp}
+                      dir="ltr"
+                      maxLength={20}
+                      value={publicContactDraft.phone}
                       onChange={(e) =>
-                        updateDraft("public_contact", (prev) => ({
-                          ...prev,
-                          whatsapp: e.target.value,
-                        }))
+                        updateDraft("public_contact", "phone", e.target.value)
                       }
                       className="miro-input"
-                      disabled={!isCeo}
-                      aria-disabled={!isCeo}
-                      placeholder={he ? "0501234567" : "0501234567"}
+                      placeholder="+972501234567"
+                    />
+                  )}
+                </FormField>
+                <FormField
+                  label={he ? "וואטסאפ" : "WhatsApp"}
+                  description={
+                    he
+                      ? "מספר בינלאומי עם קידומת מדינה, ספרות בלבד"
+                      : "International number with country code, digits only"
+                  }
+                >
+                  {({ id, "aria-describedby": ariaDescribedBy }) => (
+                    <input
+                      type="tel"
+                      id={id}
+                      aria-describedby={ariaDescribedBy}
+                      dir="ltr"
+                      maxLength={15}
+                      value={publicContactDraft.whatsapp}
+                      onChange={(e) =>
+                        updateDraft(
+                          "public_contact",
+                          "whatsapp",
+                          e.target.value,
+                        )
+                      }
+                      className="miro-input"
+                      placeholder="972501234567"
                     />
                   )}
                 </FormField>
@@ -1400,16 +1161,13 @@ export function SettingsPanel({
                       type="email"
                       id={id}
                       aria-describedby={ariaDescribedBy}
-                      value={publicContactState.draft.email}
+                      dir="ltr"
+                      maxLength={254}
+                      value={publicContactDraft.email}
                       onChange={(e) =>
-                        updateDraft("public_contact", (prev) => ({
-                          ...prev,
-                          email: e.target.value,
-                        }))
+                        updateDraft("public_contact", "email", e.target.value)
                       }
                       className="miro-input"
-                      disabled={!isCeo}
-                      aria-disabled={!isCeo}
                       placeholder="contact@example.com"
                     />
                   )}
@@ -1426,16 +1184,17 @@ export function SettingsPanel({
                       type="text"
                       id={id}
                       aria-describedby={ariaDescribedBy}
-                      value={publicContactState.draft.address_he}
+                      dir="rtl"
+                      maxLength={300}
+                      value={publicContactDraft.address_he}
                       onChange={(e) =>
-                        updateDraft("public_contact", (prev) => ({
-                          ...prev,
-                          address_he: e.target.value,
-                        }))
+                        updateDraft(
+                          "public_contact",
+                          "address_he",
+                          e.target.value,
+                        )
                       }
                       className="miro-input"
-                      disabled={!isCeo}
-                      aria-disabled={!isCeo}
                       placeholder={he ? "רחוב 1, עיר" : "Street 1, City"}
                     />
                   )}
@@ -1452,16 +1211,17 @@ export function SettingsPanel({
                       type="text"
                       id={id}
                       aria-describedby={ariaDescribedBy}
-                      value={publicContactState.draft.address_en}
+                      dir="ltr"
+                      maxLength={300}
+                      value={publicContactDraft.address_en}
                       onChange={(e) =>
-                        updateDraft("public_contact", (prev) => ({
-                          ...prev,
-                          address_en: e.target.value,
-                        }))
+                        updateDraft(
+                          "public_contact",
+                          "address_en",
+                          e.target.value,
+                        )
                       }
                       className="miro-input"
-                      disabled={!isCeo}
-                      aria-disabled={!isCeo}
                       placeholder="Street 1, City"
                     />
                   )}
@@ -1477,16 +1237,17 @@ export function SettingsPanel({
                       type="text"
                       id={id}
                       aria-describedby={ariaDescribedBy}
-                      value={publicContactState.draft.hours_he}
+                      dir="rtl"
+                      maxLength={200}
+                      value={publicContactDraft.hours_he}
                       onChange={(e) =>
-                        updateDraft("public_contact", (prev) => ({
-                          ...prev,
-                          hours_he: e.target.value,
-                        }))
+                        updateDraft(
+                          "public_contact",
+                          "hours_he",
+                          e.target.value,
+                        )
                       }
                       className="miro-input"
-                      disabled={!isCeo}
-                      aria-disabled={!isCeo}
                       placeholder={
                         he ? "א-ה 09:00-18:00" : "Sun-Thu 09:00-18:00"
                       }
@@ -1506,47 +1267,37 @@ export function SettingsPanel({
                       type="text"
                       id={id}
                       aria-describedby={ariaDescribedBy}
-                      value={publicContactState.draft.hours_en}
+                      dir="ltr"
+                      maxLength={200}
+                      value={publicContactDraft.hours_en}
                       onChange={(e) =>
-                        updateDraft("public_contact", (prev) => ({
-                          ...prev,
-                          hours_en: e.target.value,
-                        }))
+                        updateDraft(
+                          "public_contact",
+                          "hours_en",
+                          e.target.value,
+                        )
                       }
                       className="miro-input"
-                      disabled={!isCeo}
-                      aria-disabled={!isCeo}
                       placeholder="Mon-Fri 09:00-18:00"
                     />
                   )}
                 </FormField>
-              </div>
-
+              </fieldset>
               {isCeo && (
-                <div className="mt-4 flex justify-end">
-                  <button
-                    className="mgmt-button mgmt-button--primary gap-2"
-                    onClick={handlePublicContactSubmit}
-                    disabled={
-                      publicContactState.submitting ||
-                      !publicContactState.loaded
-                    }
-                  >
-                    {publicContactState.submitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {he ? "שומר..." : "Saving..."}
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        {he ? "שמור פרטי קשר" : "Save Contact Info"}
-                      </>
-                    )}
-                  </button>
-                </div>
+                <SettingsFormActions
+                  locale={locale}
+                  dirty={contactDirty}
+                  saving={!!saving.public_contact}
+                  saveLabel={he ? "שמירת פרטי קשר" : "Save Contact Info"}
+                  onDiscard={() => discardDraft("public_contact")}
+                />
               )}
-            </>
+              {publicContactState.notice && (
+                <Notice tone={publicContactState.notice.tone} className="mt-3">
+                  {publicContactState.notice.text}
+                </Notice>
+              )}
+            </form>
           )}
         </div>
       </FormSection>

@@ -8,6 +8,7 @@ import {
 } from "@/app/api/management/_shared";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { PUBLIC_CONTACT_CONFIG_TAG } from "@/lib/public-presentation-cache";
+import { getPublicContactEnvironmentFallbacks } from "@/lib/contact-config";
 
 const settingSchema = z
   .object({
@@ -26,7 +27,7 @@ const allowedSettingsKeys = [
 
 // Per-field validation for the public_contact business setting. This row is
 // the canonical source surfaced publicly via get_public_contact_config();
-// src/lib/contact-config.ts applies the env overlay on the public side.
+// src/lib/contact-config.ts applies the deployment fallback on the public side.
 const removableString = (schema: z.ZodString) =>
   z.preprocess(
     (value) =>
@@ -62,14 +63,14 @@ const publicContactSchema = z
 // since it's the fallback for products that use "inherit".
 const inventoryDefaultsSchema = z
   .object({
-    low_stock_threshold: z.number().int().min(0).max(10000).default(3),
+    low_stock_threshold: z.number().int().min(0).max(10000).optional(),
     out_of_stock_policy: z
       .enum([
         "keep_visible_contact",
         "keep_visible_restock",
         "hide_from_public",
       ])
-      .default("keep_visible_contact"),
+      .optional(),
   })
   .strict();
 
@@ -83,10 +84,9 @@ type PublicContactFields = {
   hours_en: string | null;
 };
 
-function extractPublicContact(rows: { key: string; value: unknown }[]): {
-  publicContact: PublicContactFields;
-  rawContact: Record<string, unknown>;
-} {
+function extractPublicContact(
+  rows: { key: string; value: unknown }[],
+): PublicContactFields {
   const row = rows.find((entry) => entry.key === "public_contact");
   const rawContact =
     row && typeof row.value === "object" && row.value !== null
@@ -97,16 +97,13 @@ function extractPublicContact(rows: { key: string; value: unknown }[]): {
       ? (rawContact[field] as string)
       : null;
   return {
-    publicContact: {
-      phone: read("phone"),
-      whatsapp: read("whatsapp"),
-      email: read("email"),
-      address_he: read("address_he"),
-      address_en: read("address_en"),
-      hours_he: read("hours_he"),
-      hours_en: read("hours_en"),
-    },
-    rawContact,
+    phone: read("phone"),
+    whatsapp: read("whatsapp"),
+    email: read("email"),
+    address_he: read("address_he"),
+    address_en: read("address_en"),
+    hours_he: read("hours_he"),
+    hours_en: read("hours_en"),
   };
 }
 
@@ -118,19 +115,19 @@ export async function GET(request: Request) {
   const { data, error } = await admin
     .from("business_settings")
     .select("*")
+    .in("key", allowedSettingsKeys)
     .order("key");
 
   if (error) {
     return mapPostgresError(error);
   }
 
-  const { publicContact } = extractPublicContact(data ?? []);
-
   return NextResponse.json({
     settings: data ?? [],
     // Canonical business_settings.public_contact fields (DB value only; the
-    // env overlay for the public storefront lives in src/lib/contact-config.ts).
-    publicContact,
+    // deployed fallback for the storefront lives in src/lib/contact-config.ts).
+    publicContact: extractPublicContact(data ?? []),
+    publicContactFallbacks: getPublicContactEnvironmentFallbacks(),
     // MIRO sells in ILS only; the stored finance.currency value is cosmetic
     // configuration, so the UI must not offer a live currency picker.
     currencySupport: "ils_only",
@@ -151,82 +148,32 @@ export async function POST(request: Request) {
     return errorResponse("Invalid input", 400, parsed.error.flatten());
   }
 
-  if (!allowedSettingsKeys.includes(parsed.data.key)) {
+  const { key, value } = parsed.data;
+  if (!allowedSettingsKeys.includes(key)) {
     return errorResponse(
       `Unknown setting key. Allowed: ${allowedSettingsKeys.join(", ")}`,
       400,
     );
   }
 
-  let valueToSave: Record<string, unknown> = parsed.data.value;
-
-  if (parsed.data.key === "public_contact") {
-    const contactParsed = publicContactSchema.safeParse(parsed.data.value);
-    if (!contactParsed.success) {
-      return errorResponse("Invalid input", 400, contactParsed.error.flatten());
-    }
-
-    // Partial merge: omitted fields keep their stored values; fields sent as
-    // null or "" are removed.
-    const { data: existingRows, error: readError } = await auth.admin
-      .from("business_settings")
-      .select("key, value");
-    if (readError) {
-      console.error(
-        "settings POST read before merge failed:",
-        readError.code,
-        readError.message,
-      );
-      return errorResponse("Failed to save setting", 500);
-    }
-    const { rawContact } = extractPublicContact(existingRows ?? []);
-    const cleaned: Record<string, unknown> = {};
-    for (const [field, fieldValue] of Object.entries(contactParsed.data)) {
-      if (fieldValue !== undefined) cleaned[field] = fieldValue;
-    }
-    valueToSave = { ...rawContact, ...cleaned };
-  }
-
-  if (parsed.data.key === "inventory_defaults") {
-    const inventoryParsed = inventoryDefaultsSchema.safeParse(
-      parsed.data.value,
-    );
-    if (!inventoryParsed.success) {
-      return errorResponse(
-        "Invalid input",
-        400,
-        inventoryParsed.error.flatten(),
-      );
-    }
-    // Merge with existing values for any omitted fields
-    const { data: existingRows, error: readError } = await auth.admin
-      .from("business_settings")
-      .select("key, value");
-    if (readError) {
-      console.error(
-        "settings POST read before merge failed:",
-        readError.code,
-        readError.message,
-      );
-      return errorResponse("Failed to save setting", 500);
-    }
-    const existingRow = existingRows?.find(
-      (r) => r.key === "inventory_defaults",
-    );
-    const existingValue =
-      existingRow &&
-      typeof existingRow.value === "object" &&
-      existingRow.value !== null
-        ? (existingRow.value as Record<string, unknown>)
-        : {};
-    valueToSave = { ...existingValue, ...inventoryParsed.data };
+  const schema =
+    key === "public_contact"
+      ? publicContactSchema
+      : key === "inventory_defaults"
+        ? inventoryDefaultsSchema
+        : null;
+  const patch = schema?.safeParse(value);
+  if (patch && !patch.success) {
+    return errorResponse("Invalid input", 400, patch.error.flatten());
   }
 
   const client = await createServerSupabaseClient();
-  const { error } = await client.rpc("set_business_setting", {
-    p_key: parsed.data.key,
-    p_value: valueToSave,
-  });
+  const { data, error } = patch
+    ? await client.rpc("patch_business_setting", {
+        p_key: key,
+        p_patch: patch.data,
+      })
+    : await client.rpc("set_business_setting", { p_key: key, p_value: value });
 
   if (error) {
     if (error.code === "42501") {
@@ -235,15 +182,25 @@ export async function POST(request: Request) {
         { status: 403 },
       );
     }
-    console.error("set_business_setting failed:", error.code, error.message);
+    if (error.code === "22023" && patch) {
+      return errorResponse("Invalid input", 400);
+    }
+    console.error("business setting save failed:", error.code, error.message);
     return NextResponse.json(
       { error: "Failed to save setting" },
       { status: 500 },
     );
   }
 
-  if (parsed.data.key === "public_contact") {
+  if (key === "public_contact") {
     revalidateTag(PUBLIC_CONTACT_CONFIG_TAG, { expire: 0 });
+    return NextResponse.json({
+      ok: true,
+      value: data,
+      publicContactFallbacks: getPublicContactEnvironmentFallbacks(),
+    });
   }
-  return NextResponse.json({ ok: true });
+  return patch
+    ? NextResponse.json({ ok: true, value: data })
+    : NextResponse.json({ ok: true });
 }

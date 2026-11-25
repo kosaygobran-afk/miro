@@ -84,6 +84,11 @@
     padding-block: 0.85rem;
     border-block: 1px solid var(--border-subtle);
   }
+
+  .sf-hover-preview[dir="rtl"] .product-identifier-value {
+    /* The value reads LTR within the right-aligned Hebrew column. */
+    text-align: right;
+  }
 }
 
 @container product-identifiers (max-width: 250px) {

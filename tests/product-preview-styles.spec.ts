@@ -40,7 +40,9 @@ for (const locale of ["en", "he"]) {
       await page.setViewportSize({ width: 390, height: 850 });
       await page.goto(`/${locale}`);
       await configure(page, style);
-      const trigger = page.locator(".sf-product-quick-preview").first();
+      const trigger = page
+        .locator(".sf-catalog-grid .sf-product-quick-preview")
+        .first();
       await trigger.click();
       const preview = page.locator(".sf-hover-preview");
       await expect(preview).toBeVisible();
@@ -166,8 +168,12 @@ test("rail portal focus preserves explicit dismissal and source focus recovery",
   await page.setViewportSize({ width: 390, height: 850 });
   await page.goto("/en");
   await configure(page, "3d-pop-up-smooth");
-  const trigger = page.locator(".sf-moving-rail-preview-button").first();
-  await trigger.click();
+  const trigger = page
+    .locator(
+      '.sf-moving-rail-segment:not([aria-hidden="true"]) .sf-moving-rail-preview-button',
+    )
+    .first();
+  await trigger.press("Enter");
   const preview = page.locator(".sf-hover-preview");
   await expect(preview.locator(".sf-hover-preview-close")).toBeFocused();
   await preview.getByRole("region").focus();
@@ -187,7 +193,10 @@ test("soft preview stays inside a 320px phone and every theme", async ({
       (value) => (document.documentElement.dataset.theme = value),
       theme,
     );
-    await page.locator(".sf-product-quick-preview").first().click();
+    await page
+      .locator(".sf-catalog-grid .sf-product-quick-preview")
+      .first()
+      .click();
     const preview = page.locator(".sf-hover-preview");
     await expect(preview).toBeVisible();
     await expect(preview.locator(".sf-hover-preview-close")).toBeFocused();
@@ -234,7 +243,10 @@ for (const locale of ["he", "en"]) {
     await configure(page, "soft-reveal");
     const measurements = [];
     for (let index = 0; index < 3; index++) {
-      await page.locator(".sf-product-quick-preview").nth(index).click();
+      await page
+        .locator(".sf-catalog-grid .sf-product-quick-preview")
+        .nth(index)
+        .click();
       const preview = page.locator(".sf-hover-preview");
       await expect(preview.locator(".sf-hover-preview-close")).toBeFocused();
       measurements.push(
@@ -263,7 +275,10 @@ for (const locale of ["he", "en"]) {
     expect(measurements[1]).toEqual(measurements[0]);
     expect(measurements[2]).toEqual(measurements[0]);
     await page.setViewportSize({ width: 320, height: 480 });
-    await page.locator(".sf-product-quick-preview").first().click();
+    await page
+      .locator(".sf-catalog-grid .sf-product-quick-preview")
+      .first()
+      .click();
     const preview = page.locator(".sf-hover-preview");
     await expect(preview.locator(".sf-hover-preview-close")).toBeFocused();
     // Adversarial display-only copy fixture; never writes to the catalog.
@@ -297,8 +312,8 @@ for (const locale of ["he", "en"]) {
   });
 }
 
-for (const target of [".sf-product-body h3", ".sf-product-price"]) {
-  test(`smooth 3D eye preview keeps ${target} hover styling and source growth`, async ({
+for (const target of [".sf-product-body h3", ".sf-card-price-panel"]) {
+  test(`smooth 3D eye preview grows from the stationary catalog card after hovering ${target}`, async ({
     page,
     isMobile,
   }) => {
@@ -306,11 +321,11 @@ for (const target of [".sf-product-body h3", ".sf-product-price"]) {
     await page.setViewportSize({ width: 1440, height: 1100 });
     await page.goto("/en");
     await configure(page, "3d-pop-up-smooth");
-    const card = page.locator(".sf-product-card").first();
+    const card = page.locator(".sf-catalog-grid .sf-reference-card").first();
     await card.locator(target).hover();
     await expect(card.locator('[data-preview-source="true"]')).toHaveCSS(
       "transform",
-      "matrix(1, 0, 0, 1, 0, -3)",
+      "none",
     );
     await card.locator(".sf-product-quick-preview").click();
     const preview = page.locator(".sf-hover-preview");
@@ -335,7 +350,7 @@ for (const target of [".sf-product-body h3", ".sf-product-price"]) {
       const end = element.getBoundingClientRect();
       const frames = (animation.effect as KeyframeEffect).getKeyframes();
       const source = document
-        .querySelector(".sf-product-card")!
+        .querySelector(".sf-catalog-grid .sf-reference-card")!
         .getBoundingClientRect();
       const transform = new DOMMatrix(String(frames[0].transform));
       return {

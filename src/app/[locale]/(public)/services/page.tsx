@@ -1,4 +1,7 @@
 import { Suspense } from "react";
+import { WebsitePhotoSection } from "@/components/public/website-photo-section";
+import { getWebsitePageCopy } from "@/lib/website-page-copy-server";
+import { getPublicWebsiteImages } from "@/lib/website-images-server";
 import { ServiceGridSkeleton } from "@/features/catalog/catalog-skeleton";
 import Link from "@/components/motion/motion-link";
 import { getTranslations } from "next-intl/server";
@@ -46,12 +49,14 @@ export default async function ServicesPage({
 
   // Fetch published services from database
   const services = getPublishedServices();
+  const websiteImages = getPublicWebsiteImages();
+  const pageCopy = await getWebsitePageCopy("services", locale);
 
   return (
     <>
       <section className="experience-services-hero">
         <div className="miro-container experience-services-hero-inner">
-          <div>
+          <div data-page-heading-copy>
             <nav
               className="experience-breadcrumb"
               aria-label={he ? "פירורי לחם" : "Breadcrumb"}
@@ -61,29 +66,15 @@ export default async function ServicesPage({
               <span>{he ? "שירותים" : "Services"}</span>
             </nav>
             <p className="experience-overline">
-              {he
-                ? "פתרונות מיגון ותקשורת"
-                : "SECURITY & COMMUNICATION SOLUTIONS"}
+              {pageCopy.eyebrow}
             </p>
             <h1>
-              {he ? (
-                <>
-                  כל החיבורים.
-                  <br />
-                  <em>במקום אחד.</em>
-                </>
-              ) : (
-                <>
-                  Every connection.
-                  <br />
-                  <em>One considered plan.</em>
-                </>
-              )}
+              {pageCopy.title}
+              <br />
+              <em>{pageCopy.accent}</em>
             </h1>
             <p className="experience-description">
-              {he
-                ? "מתכנון הכניסה ועד לכיסוי הרשת. בונים תמונה שלמה של הצרכים שלכם, ומחברים בין הטכנולוגיה הנכונה למרחב הנכון."
-                : "From your front entrance to your network coverage. Build a complete picture of what you need and connect the right technology to the right space."}
+              {pageCopy.description}
             </p>
             <div className="experience-actions">
               <Link
@@ -136,6 +127,13 @@ export default async function ServicesPage({
           </Suspense>
         </div>
       </section>
+      <Suspense>
+        <WebsitePhotoSection
+          placement="services"
+          locale={locale}
+          settings={websiteImages}
+        />
+      </Suspense>
       <section className="experience-section experience-muted-section">
         <div className="miro-container">
           <div className="experience-section-heading">
@@ -168,6 +166,13 @@ export default async function ServicesPage({
           <ProcessSteps locale={locale} />
         </div>
       </section>
+      <Suspense>
+        <WebsitePhotoSection
+          placement="serviceDetails"
+          locale={locale}
+          settings={websiteImages}
+        />
+      </Suspense>
       <FaqSection locale={locale} />
       <ConsultationBand locale={locale} />
     </>

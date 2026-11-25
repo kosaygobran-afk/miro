@@ -1172,6 +1172,10 @@ export type Database = {
         Args: { p_from: string; p_to: string };
         Returns: Json;
       };
+      patch_business_setting: {
+        Args: { p_key: string; p_patch: Json };
+        Returns: Json;
+      };
       publish_product: { Args: { p_product: string }; Returns: undefined };
       record_sale: {
         Args: {

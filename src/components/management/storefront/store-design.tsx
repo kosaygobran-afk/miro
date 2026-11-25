@@ -222,6 +222,7 @@ export function StoreDesign({
   return (
     <div className={styles.page}>
       <PageHeader
+        headingLevel={2}
         title={text("Store design studio", "סטודיו עיצוב החנות")}
         subtitle={text(
           "Backgrounds, brand marks and motion — connected to the customer storefront.",
@@ -344,8 +345,8 @@ export function StoreDesign({
             title={text("Store backgrounds", "רקעי החנות")}
             icon={<ImagePlus size={20} />}
             description={text(
-              "Five coordinated scenes. Reorder, replace or add images using a local image path or an HTTPS image URL.",
-              "חמש סצנות מתואמות. אפשר לסדר, להחליף או להוסיף תמונות באמצעות נתיב מקומי או כתובת תמונה מאובטחת.",
+              "Use a wide 16:9 image with room for the headline. Upload or paste an HTTPS URL, then arrange the slides in playback order.",
+              "מומלצת תמונה רוחבית ביחס 16:9 עם שטח פנוי לכותרת. העלו תמונה או הדביקו כתובת HTTPS וסדרו את השקופיות לפי סדר ההצגה.",
             )}
           >
             <div className={styles.options}>
@@ -547,8 +548,8 @@ export function StoreDesign({
             title={text("Company logo rail", "פס סמלי החברות")}
             icon={<Building2 size={20} />}
             description={text(
-              "Equal-size logo slots below the categories. Brand names identify technologies; they do not imply a partnership.",
-              "סמלים בגודל אחיד מתחת לקטגוריות. שמות המותגים מזהים טכנולוגיות ואינם מציינים שותפות.",
+              "Use clear logos on transparent backgrounds for the equal-size slots below the categories. Display marks you have permission to use.",
+              "מומלץ להשתמש בסמלים ברורים עם רקע שקוף עבור התאים האחידים מתחת לקטגוריות. הציגו סמלים שיש לכם רשות להשתמש בהם.",
             )}
           >
             <div className={styles.options}>

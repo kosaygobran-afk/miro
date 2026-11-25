@@ -51,7 +51,7 @@ test.describe("deployment smoke", () => {
     await expect(page.locator("#store-title")).toBeVisible();
   });
 
-  test("store is canonical and appears before Services and Home", async ({
+  test("store is canonical and the navbar starts with Store, Home and Services", async ({
     page,
   }) => {
     for (const locale of ["he", "en"] as const) {
@@ -63,8 +63,8 @@ test.describe("deployment smoke", () => {
       );
       const links = page.locator(".premium-desktop-nav .premium-nav-link");
       await expect(links.nth(0)).toHaveAttribute("href", `/${locale}`);
-      await expect(links.nth(1)).toHaveAttribute("href", `/${locale}/services`);
-      await expect(links.nth(2)).toHaveAttribute("href", `/${locale}/home`);
+      await expect(links.nth(1)).toHaveAttribute("href", `/${locale}/home`);
+      await expect(links.nth(2)).toHaveAttribute("href", `/${locale}/services`);
 
       await page.goto(`/${locale}/store`);
       await expect(page).toHaveURL(new RegExp(`/${locale}$`));

@@ -13,6 +13,26 @@
 - Run `npm run test:e2e` for production-backed Playwright smoke coverage. By default it builds and starts its own server on port 3000 and requires that port to be free. Server reuse is opt-in: set `PLAYWRIGHT_REUSE=1` (`reuseExistingServer` in playwright.config.ts) to run against an already-running server instead. On a fresh machine, install the browser cache with `npx playwright install chromium` if Playwright reports a missing executable.
 - Confirm no local process is left listening on port 3000 after manual `npm run dev` or `npm run start` checks.
 
+## CEO settings and propagation
+
+Open `/he/admin/settings` or `/en/admin/settings`. Search the directory in either language by control or task. The directory links to existing management workspaces and to the settings forms on the same page.
+
+| Area | Where to manage it | Where the saved value is used |
+| --- | --- | --- |
+| Website openings | **Website page text** | The opening copy on Store, Home, Services, About and Contact. Publish both languages together. The default action prepares a draft for review before publication. |
+| Photos and design | **Website images** | Home and Services galleries, public service images, the Home hero background, Store backgrounds and the company logo rail. |
+| Service records | **Service page content** | The public list and published service detail pages. Visibility follows the service record. |
+| Contact | **Public contact details** | The public Contact page and shared public contact actions. Saved fields override deployment defaults. Official document contacts are under **Business & integrations**. |
+| Catalog | **Products, variants and prices**, **Categories**, **Moving product rail** | Catalog publishing, categories, role pricing, variant options, rail ordering, promotions and badges. |
+| Stock | **Inventory defaults**, **Inventory** | New variants inherit the saved threshold when it is omitted. Explicit variant thresholds and existing variants retain their value. Products using the inherited out-of-stock policy follow the saved global policy. |
+| Appearance | **Glass appearance**, **Animations and appearance version** | The shared public presentation on refresh or the next visit. The glass switch applies to Version 2 Dark for supported surfaces. Active admins can save glass. The CEO controls animation and appearance versions. |
+| Price display and documents | **Tax rates**, **Pricing and currency policy**, **Business & integrations**, **Documents and previews** | The effective tax schedule drives existing storefront net breakdowns and commerce tax calculations. Gross catalog amounts remain in ILS. Official document identity has its own audited revision. |
+| Accounts and roles | **Users, roles and access**, **CEO account security**, **Audit** | Role and status changes are enforced on authenticated requests. CEO security actions follow verification and account protection rules. |
+
+Customer profile details and saved shopping belong to the signed-in customer. Theme, language and accessibility preferences follow the visitor or device. Deployment credentials, provider activation, draft legal notices, base branding, navigation structure, and fixed page body and interface copy still use their existing release or approval workflows.
+
+Release operations applies the five settings migrations from `20261125050000` through `20261125090000` before deploying the new settings UI. Verify with disposable roles and synthetic page text. The business owner approves text and image publication, finance confirms the effective VAT schedule, and QA reviews both languages with a screen reader.
+
 ## Deployment
 
 - Build with `npm run build`

@@ -74,7 +74,7 @@ end $$;
 
 -- Whitelisted public contact config (verified later as anon)
 insert into public.business_settings(key, value) values
-('public_contact', '{"phone": "+972-50-0000000", "whatsapp": "972500000000", "email": "info@example.invalid", "address_he": "רחוב 1", "internal_note": "must not leak"}'::jsonb);
+('public_contact', '{"phone": "+972-50-0000000", "whatsapp": null, "address_he": "רחוב 1", "internal_note": "must not leak"}'::jsonb);
 
 -- ============================================================
 -- 3. Sales identity: customer vs recorded_by, guest sale, invalid customer
@@ -331,6 +331,11 @@ begin
   end if;
   if v_config ? 'internal_note' then
     raise exception 'Contact config leaked non-whitelisted field';
+  end if;
+  if v_config->'configured_fields' is distinct from '["phone", "whatsapp"]'::jsonb
+    or v_config->'whatsapp' is distinct from 'null'::jsonb
+    or v_config->'email' is distinct from 'null'::jsonb then
+    raise exception 'Contact config lost the distinction between a cleared and unset action';
   end if;
 end $$;
 

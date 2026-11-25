@@ -6,6 +6,10 @@
 .experience-section-last {
   padding-top: 0;
 }
+[data-page-heading-copy] > :is(h1, p) {
+  overflow-wrap: anywhere;
+}
+
 .experience-overline {
   display: flex;
   align-items: center;
@@ -51,6 +55,12 @@ html[dir="rtl"] .experience-overline {
 .experience-section-heading > .experience-description {
   max-width: 24rem;
   margin: 0;
+}
+html[dir="rtl"] .experience-process-heading {
+  flex-direction: column;
+  align-items: start;
+  gap: 1rem;
+  text-align: start;
 }
 .experience-text-link {
   display: inline-flex;

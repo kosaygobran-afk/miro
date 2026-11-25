@@ -4,7 +4,6 @@ import Link from "@/components/motion/motion-link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "@/components/motion/use-motion-router";
 import {
-  Heart,
   ArrowLeft,
   ArrowRight,
   Check,
@@ -26,7 +25,7 @@ import { Brand } from "@/components/layout/brand";
 import { StoreCategoryMenu } from "@/components/layout/store-category-menu";
 import { AccountMenu } from "@/components/layout/account-menu";
 import { NavigationThemeSelector } from "./navigation-theme-selector";
-import { HeaderCartLink } from "@/features/cart/header-cart-link";
+import { HeaderShoppingLink } from "@/features/cart/header-shopping-link";
 import { NavbarProductSearch } from "./navbar-product-search";
 import { useAccountSession } from "./use-account-session";
 
@@ -93,12 +92,12 @@ export function HeaderClient({
   const storeHref = withLocale(locale, "store");
   const navLinks = [
     { href: productsHref, label: labels.nav.products, icon: Store },
+    { href: withLocale(locale, "home"), label: labels.nav.home, icon: House },
     {
       href: withLocale(locale, "services"),
       label: labels.nav.services,
       icon: Wrench,
     },
-    { href: withLocale(locale, "home"), label: labels.nav.home, icon: House },
   ];
   if (showGuestLinks) {
     navLinks.push(
@@ -418,20 +417,13 @@ export function HeaderClient({
           />
           <div className="premium-header-actions">
             <div className="premium-header-action-group premium-header-action-group--shopping">
-              <Link
-                href={withLocale(locale, "wishlist")}
-                className="premium-wishlist-link premium-icon-button"
-                aria-current={
-                  pathname === withLocale(locale, "wishlist")
-                    ? "page"
-                    : undefined
-                }
-                aria-label={locale === "he" ? "רשימת משאלות" : "Wishlist"}
-                title={locale === "he" ? "רשימת משאלות" : "Wishlist"}
-              >
-                <Heart size={20} aria-hidden="true" />
-              </Link>
-              <HeaderCartLink
+              <HeaderShoppingLink
+                destination="wishlist"
+                locale={locale}
+                current={pathname === withLocale(locale, "wishlist")}
+              />
+              <HeaderShoppingLink
+                destination="cart"
                 locale={locale}
                 current={pathname === withLocale(locale, "cart")}
               />
@@ -584,25 +576,13 @@ export function HeaderClient({
                       aria-hidden="true"
                     />
                   </Link>
-                  <Link
-                    href={withLocale(locale, "wishlist")}
-                    onClick={closeNavigation}
-                    className="miro-centered-control"
-                    aria-current={
-                      pathname === withLocale(locale, "wishlist")
-                        ? "page"
-                        : undefined
-                    }
-                  >
-                    <span className="miro-control-label">
-                      {locale === "he" ? "רשימת משאלות" : "Wishlist"}
-                    </span>
-                    <Heart
-                      className="miro-control-end"
-                      size={16}
-                      aria-hidden="true"
-                    />
-                  </Link>
+                  <HeaderShoppingLink
+                    destination="wishlist"
+                    locale={locale}
+                    current={pathname === withLocale(locale, "wishlist")}
+                    inMenu
+                    onNavigate={closeNavigation}
+                  />
                   <AccountMenu
                     locale={locale}
                     labels={{

@@ -8,6 +8,12 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## CEO settings coverage — 2026-11-25
+
+- Keep new operational website controls discoverable in the bilingual `SettingsDirectory`. Reuse the canonical workspaces for catalog, service content, users and commerce identity. See the settings coverage and rollout path in `docs/OPERATIONS.md`.
+- Website page text publishes versioned bilingual opening copy for Store, Home, Services, About and Contact. Keep the dedicated CEO writer, explicit publication, revision and atomic audit. Anonymous reads are projected and public text renders as plain text.
+- General inventory/contact saves merge validated field patches in the database. New variants snapshot the global threshold on omission, and explicit variant thresholds stay authoritative. The public VAT breakdown uses the active schedule for the date in Israel and omits derived amounts when no trustworthy rate is available.
+
 ## Preview checkout recording — 2026-11-22
 
 - The storefront verifies the live catalog and authenticated customer before invoking the service-only `record_checkout_request` RPC. The database writes the request and its audit event together. Keep submission identity, payload and customer checks on retries. Show confirmation and clear the cart only after a recorded reference returns.

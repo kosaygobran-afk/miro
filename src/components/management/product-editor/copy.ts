@@ -423,6 +423,14 @@ export const variantCopy = {
   noSupplier: { he: "ללא ספק", en: "No supplier" },
   supplierSku: { he: "מק״ט ספק", en: "Supplier SKU" },
   lowStockThreshold: { he: "סף מלאי נמוך", en: "Low stock threshold" },
+  lowStockThresholdDefault: {
+    he: "השאירו ריק כדי להשתמש בברירת המחדל של העסק. הזינו 0 כדי לכבות התראות מלאי נמוך לווריאנט זה.",
+    en: "Leave blank to use the business default. Enter 0 to turn off low-stock warnings for this variant.",
+  },
+  lowStockThresholdDisable: {
+    he: "הזינו 0 כדי לכבות התראות מלאי נמוך לווריאנט זה.",
+    en: "Enter 0 to turn off low-stock warnings for this variant.",
+  },
   isActive: { he: "וריאנט פעיל", en: "Active variant" },
   isDefault: { he: "וריאנט ברירת מחדל", en: "Default variant" },
   defaultBadge: { he: "ברירת מחדל", en: "Default" },

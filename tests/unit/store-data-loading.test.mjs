@@ -108,6 +108,10 @@ function harness({
           request.signals ??= [];
           request.signals.push(signal);
           request.events.push(`rpc:${name}`);
+          if (name === "get_public_storefront_vat_rate") {
+            assert.ok(publicRead, "VAT reads use the anonymous client");
+            return { data: request.vatRate ?? null, error: request.vatError };
+          }
           return {
             data: { out_of_stock_policy: "keep_visible_contact" },
             error: null,
@@ -264,6 +268,54 @@ const visitor = (overrides = {}) => ({
   events: [],
   serverClients: 0,
   ...overrides,
+});
+
+test("VAT display uses the effective rate without changing role or gross prices", async () => {
+  const h = harness();
+  const request = visitor({
+    user: { id: "customer" },
+    role: "customer",
+    rolePrice: 95,
+    vatRate: 23.5,
+  });
+  const { catalog } = await h.run(request, () =>
+    h.exports.getStorePageData("en"),
+  );
+  assert.equal(catalog.products[0].vatRate, 23.5);
+  assert.equal(catalog.products[0].priceIls, 95);
+  assert.equal(catalog.products[0].basePriceIls, 100);
+
+  const later = await h.run(visitor({ vatRate: 0 }), () =>
+    h.exports.getStoreCatalogForDisplay("he", null, true),
+  );
+  assert.equal(later.products[0].vatRate, 0);
+  assert.equal(later.products[0].priceIls, 100);
+
+  const nonDisplayRequest = visitor({ vatRate: 23.5 });
+  const nonDisplayCatalog = await h.run(nonDisplayRequest, () =>
+    h.exports.getStoreCatalog("en", null, true),
+  );
+  assert.equal(nonDisplayCatalog.products[0].vatRate, undefined);
+  assert.ok(
+    !nonDisplayRequest.events.includes("rpc:get_public_storefront_vat_rate"),
+  );
+});
+
+test("missing, invalid or unavailable VAT leaves the live gross catalog usable", async () => {
+  const h = harness();
+  for (const input of [
+    { vatRate: null },
+    { vatRate: -1 },
+    { vatRate: "18" },
+    { vatRate: 18, vatError: { code: "unavailable" } },
+  ]) {
+    const catalog = await h.run(visitor(input), () =>
+      h.exports.getStoreCatalogForDisplay("en", null, true),
+    );
+    assert.equal(catalog.error, undefined);
+    assert.equal(catalog.products[0].priceIls, 100);
+    assert.equal(catalog.products[0].vatRate, undefined);
+  }
 });
 
 test("catalog reads overlap auth, and role prices start before a slow catalog settles", async () => {

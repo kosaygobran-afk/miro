@@ -16,8 +16,9 @@ import type { Product } from "@/features/catalog/product-data";
 function Harness() {
   const params = useSearchParams();
   const locale = params.get("locale") === "he" ? "he" : "en";
+  const availabilityUnconfirmed = params.get("availability") === "unconfirmed";
   const rolePrice =
-    params.get("price") === "none"
+    availabilityUnconfirmed || params.get("price") === "none"
       ? undefined
       : Number(params.get("price") || 100);
   const mode = params.get("mode") || "detail";
@@ -32,14 +33,20 @@ function Harness() {
     id: "11111111-1111-4111-8111-111111111111",
     name: "QA product",
     description: "QA only",
-    priceIls: 180,
-    basePriceIls: params.get("base") === "none" ? null : 100,
+    priceIls: availabilityUnconfirmed ? null : 180,
+    vatRate:
+      params.get("vat") === "none"
+        ? undefined
+        : Number(params.get("vat") ?? 18),
+    basePriceIls:
+      availabilityUnconfirmed || params.get("base") === "none" ? null : 100,
     rolePrice,
     slug: "qa-variants",
     category: "qa",
     categorySlug: "qa",
-    stockQty: 5,
-    stockState: "in_stock",
+    stockQty: availabilityUnconfirmed ? 0 : 5,
+    stockState: availabilityUnconfirmed ? "out" : "in_stock",
+    availabilityUnconfirmed,
     outOfStockPolicy: "keep_visible_contact",
     trackingMode: "none",
     expectedRestockDate: null,
@@ -59,8 +66,8 @@ function Harness() {
       {
         id: "b",
         sku: "QA-B",
-        colorHe: "לבן",
-        colorEn: "White",
+        colorHe: "",
+        colorEn: "",
         colorHex: "#eeeeee",
         price: 300,
         stockQty: 0,
@@ -70,13 +77,17 @@ function Harness() {
         id: "c",
         sku: "QA-C",
         colorHe: "כללי",
-        colorEn: "General",
+        colorEn: "",
         colorHex: "#777777",
         price: null,
         stockQty: 2,
         lowStockThreshold: 0,
       },
-    ],
+    ].map((variant) =>
+      availabilityUnconfirmed
+        ? { ...variant, price: null, stockQty: 0 }
+        : variant,
+    ),
     images: [
       { id: "g", url: "https://variant-qa.invalid/general.svg", sortOrder: 0 },
       {
@@ -159,6 +170,7 @@ function Harness() {
                   productCategory={product.category}
                   productName={product.name}
                   locale={locale}
+                  vatRate={product.vatRate}
                   basePrice={
                     product.basePriceIls !== undefined
                       ? product.basePriceIls
@@ -171,7 +183,8 @@ function Harness() {
                   contact={null}
                   header={<h1>QA product</h1>}
                   stockBadge={<span>Aggregate in stock</span>}
-                  stockQty={5}
+                  stockQty={product.stockQty}
+                  availabilityUnconfirmed={product.availabilityUnconfirmed}
                   description={<p>QA only</p>}
                   footer={null}
                   roleOverride={rolePrice ?? null}

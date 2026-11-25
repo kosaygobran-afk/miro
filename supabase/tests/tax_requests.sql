@@ -51,15 +51,19 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000302'
 
 do $$
 declare
-  v_seed uuid; v_future uuid; v_mid uuid;
+  v_seed uuid; v_future uuid; v_mid uuid; v_version bigint;
 begin
   -- Seeded 18% VAT (valid from 2025-01-01) is today's rate
   select id into v_seed from public.tax_rates where rate = 18.00 and valid_from = '2025-01-01';
   if public.current_tax_rate() <> 18.00 then raise exception 'Seeded VAT not current'; end if;
 
   -- Schedule a FUTURE 19% rate: today must keep 18%
+  select version into v_version from public.store_catalog_version where id = 1;
   v_future := public.set_tax_rate('Future VAT', 19.00, current_date + 30);
 
+  if (select version from public.store_catalog_version where id = 1) <= v_version then
+    raise exception 'A tax schedule save did not signal the storefront';
+  end if;
   if public.current_tax_rate() <> 18.00 then
     raise exception 'Current VAT broke after scheduling a future rate';
   end if;
@@ -126,8 +130,47 @@ begin
   ) then raise exception 'Tax rate audit missing'; end if;
 end $$;
 
--- Table-level backstop: direct overlapping insert also rejected
+set local role anon;
+do $$ begin
+  if public.get_public_storefront_vat_rate() is distinct from 18.00 then
+    raise exception 'Anonymous storefront returned the wrong effective rate';
+  end if;
+  if has_table_privilege('anon', 'public.tax_rates', 'SELECT')
+    or has_function_privilege('anon', 'public.current_tax_rate(date)', 'EXECUTE') then
+    raise exception 'Anonymous storefront gained access to the tax schedule';
+  end if;
+end $$;
+
 reset role;
+
+savepoint current_public_vat;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000302',true);
+select public.set_tax_rate(
+  'Today VAT',
+  23.50,
+  (now() at time zone 'Asia/Jerusalem')::date,
+  (now() at time zone 'Asia/Jerusalem')::date
+);
+set local role anon;
+do $$ begin
+  if public.get_public_storefront_vat_rate() is distinct from 23.50 then
+    raise exception 'Storefront did not adopt the effective CEO-saved rate';
+  end if;
+end $$;
+rollback to savepoint current_public_vat;
+
+savepoint no_effective_vat;
+update public.tax_rates set is_active = false;
+set local role anon;
+do $$ begin
+  if public.get_public_storefront_vat_rate() is not null then
+    raise exception 'An uncovered day implied a storefront VAT rate';
+  end if;
+end $$;
+rollback to savepoint no_effective_vat;
+
+-- Table-level backstop: direct overlapping insert also rejected
 do $$ begin
   begin
     insert into public.tax_rates(name, rate, valid_from, valid_until, is_active)

@@ -84,10 +84,12 @@ await context.route("**/api/management/**", async (route) => {
 });
 try {
   for (const locale of ["en", "he"]) {
+    const netLabel = locale === "he" ? "ללא מע״מ" : "excl. VAT";
     for (const version of ["1", "2"]) {
+      const outOfStock = locale === "he" ? "אזל מהמלאי" : "Out of stock";
       for (const rolePrice of [100, 120, 130, 140, 150]) {
         await page.goto(
-          `${base}/catalog-preview/variants?locale=${locale}&price=${rolePrice}&version=${version}`,
+          `${base}/catalog-preview/variants?locale=${locale}&price=${rolePrice}&version=${version}&vat=25`,
         );
         const info = page.locator(".sf-product-info");
         await expect(info).toHaveAttribute("data-selected-variant", "a");
@@ -98,10 +100,17 @@ try {
         await expect(info.locator(".sf-price-display strong")).toContainText(
           "180",
         );
-        await page
+        const net = info
+          .locator(".sf-price-display small")
+          .filter({ hasText: netLabel });
+        await expect(net).toContainText("144");
+        const soldOutChoice = info
           .locator('.sf-variant-chip-label input[value="b"]')
-          .locator("..")
-          .click();
+          .locator("..");
+        await expect(soldOutChoice.locator(".sf-variant-stock")).toHaveText(
+          outOfStock,
+        );
+        await soldOutChoice.click();
         await expect(
           page.locator(".sf-main-image img").first(),
         ).toHaveAttribute("src", /b1.svg/);
@@ -109,6 +118,7 @@ try {
         await expect(info.locator(".sf-price-display strong")).toContainText(
           "270",
         );
+        await expect(net).toContainText("216");
         await expect(info.locator(".sf-stock-indicator__number")).toHaveText(
           "0",
         );
@@ -134,18 +144,42 @@ try {
         `PASS ${locale} v${version}: detail media/price/stock for guest + four role fallbacks`,
       );
       await page.goto(
-        `${base}/catalog-preview/variants?locale=${locale}&mode=preview&version=${version}`,
+        `${base}/catalog-preview/variants?locale=${locale}&mode=preview&version=${version}&vat=25`,
       );
       await page.getByRole("button", { name: "Open preview" }).click();
       const preview = page.locator(".sf-hover-preview");
       await expect(preview).toBeVisible();
-      await preview.locator('input[value="b"]').locator("..").click();
-      await expect(preview.locator(".sf-stock-indicator__number")).toHaveText(
-        "0",
+      const previewNet = preview
+        .locator(".sf-hover-preview-price small")
+        .filter({ hasText: netLabel });
+      await expect(previewNet).toContainText("144");
+      await expect(
+        preview
+          .locator('input[value="a"]')
+          .locator("..")
+          .locator(".sf-variant-stock"),
+      ).toHaveText(locale === "he" ? "3 במלאי" : "3 in stock");
+      const soldOutChoice = preview.locator('input[value="b"]').locator("..");
+      await expect(soldOutChoice.locator(".sf-variant-stock")).toHaveText(
+        outOfStock,
       );
+      await soldOutChoice.click();
+      if (version === "2") {
+        await expect(
+          preview.locator(".sf-stock-indicator"),
+        ).toHaveAccessibleName(outOfStock);
+        await expect(
+          preview.locator(".sf-stock-indicator__number"),
+        ).toHaveCount(0);
+      } else {
+        await expect(preview.locator(".sf-stock-indicator__number")).toHaveText(
+          "0",
+        );
+      }
       await expect(
         preview.locator(".sf-hover-preview-price strong"),
       ).toContainText("270");
+      await expect(previewNet).toContainText("216");
       await expect(
         preview.getByRole("button", {
           name: locale === "he" ? /^הוספה לסל/ : /^Add to cart/,
@@ -159,6 +193,51 @@ try {
       console.log(
         `PASS ${locale} v${version}: eye preview follows selected zero-stock variant`,
       );
+    }
+    for (const mode of ["detail", "preview"]) {
+      await page.goto(
+        `${base}/catalog-preview/variants?locale=${locale}&mode=${mode}&vat=none`,
+      );
+      if (mode === "preview") {
+        await expect(page.locator("html")).toHaveAttribute(
+          "data-motion-ready",
+          "true",
+        );
+        await page.getByRole("button", { name: "Open preview" }).click();
+      }
+      const price = page.locator(
+        mode === "preview" ? ".sf-hover-preview-price" : ".sf-price-display",
+      );
+      await expect(price.locator("strong")).toContainText("180");
+      await expect(
+        price.locator("small").filter({ hasText: netLabel }),
+      ).toHaveCount(0);
+
+      await page.goto(
+        `${base}/catalog-preview/variants?locale=${locale}&mode=${mode}&availability=unconfirmed`,
+        { waitUntil: "domcontentloaded" },
+      );
+      if (mode === "preview") {
+        await expect(page.locator("html")).toHaveAttribute(
+          "data-motion-ready",
+          "true",
+        );
+        await page.getByRole("button", { name: "Open preview" }).click();
+      }
+      const product = page.locator(
+        mode === "preview" ? ".sf-hover-preview" : ".sf-product-info",
+      );
+      const pending =
+        locale === "he" ? "זמינות לפי בירור" : "Availability on request";
+      await expect(product.locator(".sf-availability-pending")).toHaveText(
+        pending,
+      );
+      await expect(product.locator(".sf-variant-stock")).toHaveText([
+        pending,
+        pending,
+        pending,
+      ]);
+      await expect(product.locator(".sf-product-stock")).toHaveCount(0);
     }
     for (const width of [320, 390]) {
       await page.setViewportSize({ width, height: 844 });
@@ -301,9 +380,23 @@ try {
     );
     await page.getByRole("button", { name: "Open preview" }).click();
     const preview = page.locator(".sf-hover-preview");
+    await expect(preview.locator(".sf-hover-preview-discount")).toContainText(
+      "10%",
+    );
+    await expect(preview.locator(".sf-hover-preview-compare-at")).toContainText(
+      "200",
+    );
+    await expect(
+      preview.locator(".sf-hover-preview-compare-at .sf-money-number"),
+    ).toHaveCSS("text-decoration-line", "line-through");
+    await expect(preview.locator(".sf-add-cart-button")).toBeEnabled();
     await preview.locator('input[value="b"]').focus();
     await preview.locator('input[value="b"]').press("Space");
     await expect(preview.locator('input[value="b"]')).toBeChecked();
+    await expect(preview.locator(".sf-add-cart-button")).toBeDisabled();
+    await expect(preview.locator(".sf-price-display__amount")).toContainText(
+      "270",
+    );
     const choiceIsVisible = await preview
       .locator('input[value="b"]')
       .evaluate((input) => {
@@ -320,6 +413,34 @@ try {
       true,
       "Focused variant label must be visible in the details scroller",
     );
+    const mixedDirectionOption = preview
+      .locator(locale === "he" ? 'input[value="b"]' : 'input[value="c"]')
+      .locator("..");
+    const geometry = await mixedDirectionOption.evaluate((option) => {
+      const textBox = (selector) => {
+        const range = document.createRange();
+        range.selectNodeContents(option.querySelector(selector));
+        return range.getBoundingClientRect();
+      };
+      const rtl = getComputedStyle(option).direction === "rtl";
+      const name = textBox(".sf-variant-name");
+      const stock = textBox(".sf-variant-stock");
+      const swatch = option
+        .querySelector(".sf-variant-swatch")
+        .getBoundingClientRect();
+      return {
+        nameToSwatch: rtl ? swatch.left - name.right : name.left - swatch.right,
+        nameToStockEdge: rtl
+          ? name.right - stock.right
+          : name.left - stock.left,
+        valueDirection: getComputedStyle(
+          option.querySelector(".sf-variant-name bdi"),
+        ).direction,
+      };
+    });
+    assert.ok(geometry.nameToSwatch >= 0 && geometry.nameToSwatch <= 16);
+    assert.ok(Math.abs(geometry.nameToStockEdge) <= 1);
+    assert.equal(geometry.valueDirection, locale === "he" ? "ltr" : "rtl");
     for (const theme of ["dark", "medium", "light"]) {
       await page.evaluate(
         (theme) => (document.documentElement.dataset.theme = theme),

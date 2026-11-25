@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useId,
@@ -20,7 +21,13 @@ import {
 } from "@/components/motion/animation-provider";
 import { useStoreDesign } from "@/features/store-design/design-context";
 import Link from "@/components/motion/motion-link";
-import { ArrowUpRight, ChevronLeft, ChevronRight, X } from "lucide-react";
+import {
+  ArrowUpLeft,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from "lucide-react";
 import { storeCopy, type StoreCopy } from "@/features/catalog/store-copy";
 import { getVariantImages } from "@/lib/catalog/variant-media";
 import { VariantChoices } from "./variant-choices";
@@ -87,6 +94,7 @@ export function ProductHoverPreview({
 }: ProductHoverPreviewProps) {
   const copy = storeCopy[locale] as StoreCopy;
   const { products: motion } = useStoreDesign();
+  const DetailArrow = locale === "he" ? ArrowUpLeft : ArrowUpRight;
   const PreviousArrow = locale === "he" ? ChevronRight : ChevronLeft;
   const NextArrow = locale === "he" ? ChevronLeft : ChevronRight;
   const titleId = useId();
@@ -174,6 +182,7 @@ export function ProductHoverPreview({
     ...Object.entries(product.specifications ?? {}),
   ];
   const effectivePrice = pricingResult.effectivePrice;
+  const netPrice = priceBeforeVat(effectivePrice, product.vatRate);
   const identifierVariant = selectedVariant;
   const compareAtPrice =
     pricingResult.compareAtPrice ?? product.compareAtPrice ?? null;
@@ -257,7 +266,10 @@ export function ProductHoverPreview({
     const maximumHeight = enhanced ? 592 : 600;
     const width =
       preview?.offsetWidth ??
-      Math.min(enhanced ? 416 : 420, window.innerWidth - gutter * 2);
+      Math.min(
+        enhanced ? (focusOnOpen && window.innerWidth >= 900 ? 736 : 416) : 420,
+        window.innerWidth - gutter * 2,
+      );
     const sourceScale = Math.min(1, triggerRect.width / width);
     const actionsRect = actionsRef.current?.getBoundingClientRect();
     const separation = 16;
@@ -362,7 +374,7 @@ export function ProductHoverPreview({
             availableHeight,
           },
     );
-  }, [triggerRef, actionsRef, enhanced, preserveSourceActions]);
+  }, [triggerRef, actionsRef, enhanced, focusOnOpen, preserveSourceActions]);
 
   const finishClose = useCallback(
     (restoreFocus: boolean) => {
@@ -550,12 +562,151 @@ export function ProductHoverPreview({
     locale === "he"
       ? (allImages[activeImageIndex]?.altHe ?? product.name)
       : (allImages[activeImageIndex]?.altEn ?? product.name);
+  const priceExcludingVat =
+    netPrice === null ? null : (
+      <small className={enhanced ? "sf-hover-preview-vat" : undefined}>
+        {enhanced ? (
+          <PriceAmount amount={netPrice} locale={locale} />
+        ) : (
+          <bdi dir="ltr">
+            {formatPrice(netPrice, locale, copy.priceUnpublished)}
+          </bdi>
+        )}{" "}
+        {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
+      </small>
+    );
+
+  const identifiers = (
+    <ProductIdentifiers
+      sku={identifierVariant?.sku}
+      barcode={identifierVariant?.barcode}
+      locale={locale}
+    />
+  );
+  const visibleBadges = enhanced
+    ? product.promoBadges
+    : product.promoBadges?.slice(0, 2);
+  const badges = visibleBadges?.length ? (
+    <div
+      className="sf-hover-preview-badges"
+      role="group"
+      aria-label={copy.promoBadgesLabel || "Promotions"}
+    >
+      {visibleBadges.map((badge) => (
+        <PromoBadge key={badge.id} badge={badge} locale={locale} size="sm" />
+      ))}
+      {!enhanced && product.promoBadges && product.promoBadges.length > 2 ? (
+        <span className="sf-hover-preview-badge-more">
+          +{product.promoBadges.length - 2}
+        </span>
+      ) : null}
+    </div>
+  ) : null;
+  const Information = enhanced ? "div" : Fragment;
+  const gallery = (
+    <div
+      className="sf-hover-preview-gallery"
+      data-multiple-images={allImages.length > 1 || undefined}
+      role="group"
+      aria-label={locale === "he" ? "תמונות המוצר" : "Product images"}
+      onKeyDown={(event) => {
+        if (
+          allImages.length < 2 ||
+          event.altKey ||
+          event.ctrlKey ||
+          event.metaKey
+        )
+          return;
+        const nextKey = locale === "he" ? "ArrowLeft" : "ArrowRight";
+        const previousKey = locale === "he" ? "ArrowRight" : "ArrowLeft";
+        if (event.key === nextKey || event.key === previousKey) {
+          event.preventDefault();
+          if (event.key === nextKey) showNextImage();
+          else showPreviousImage();
+        } else if (event.key === "Home" || event.key === "End") {
+          event.preventDefault();
+          setActiveImageIndex(event.key === "Home" ? 0 : allImages.length - 1);
+        }
+      }}
+    >
+      {allImages.length > 1 ? (
+        <div ref={thumbnailsRef} className="sf-hover-preview-thumbnails">
+          {allImages.map((image, index) => (
+            <button
+              key={image.id}
+              type="button"
+              className="sf-hover-preview-thumbnail"
+              data-active={index === activeImageIndex || undefined}
+              onClick={() => setActiveImageIndex(index)}
+              aria-label={`${copy.thumbnailLabel} ${index + 1}`}
+              aria-current={index === activeImageIndex ? "true" : undefined}
+              aria-controls={imageId}
+            >
+              <ProductMedia
+                product={product}
+                src={image.url}
+                alt=""
+                sizes="52px"
+                loading="eager"
+              />
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div id={imageId} className="sf-hover-preview-media">
+        {enhanced ? (
+          <ProductImageMagnifier
+            key={product.id}
+            imageKey={allImages[activeImageIndex]?.id}
+            product={product}
+            src={allImages[activeImageIndex]?.url}
+            alt={imageAlt}
+            locale={locale}
+            active={phase === "open"}
+            counter={imageCounter}
+            togglePortalTarget={magnifierSlot}
+          />
+        ) : (
+          <ProductMedia
+            product={product}
+            src={allImages[activeImageIndex]?.url}
+            alt={imageAlt}
+            sizes="(max-width: 380px) calc(100vw - 5rem), (max-width: 512px) calc(100vw - 9rem), 360px"
+            loading="eager"
+            className="sf-hover-preview-image"
+          />
+        )}
+        {allImages.length > 1 ? (
+          <>
+            <button
+              type="button"
+              className="sf-hover-preview-arrow sf-hover-preview-arrow-previous"
+              onClick={showPreviousImage}
+              aria-label={locale === "he" ? "התמונה הקודמת" : "Previous image"}
+            >
+              <PreviousArrow size={20} aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="sf-hover-preview-arrow sf-hover-preview-arrow-next"
+              onClick={showNextImage}
+              aria-label={locale === "he" ? "התמונה הבאה" : "Next image"}
+            >
+              <NextArrow size={20} aria-hidden="true" />
+            </button>
+          </>
+        ) : null}
+        {!enhanced ? imageCounter : null}
+      </div>
+    </div>
+  );
 
   return createPortal(
     <div
       ref={previewRef}
       className="sf-hover-preview"
       data-state={phase}
+      data-expanded-preview={(enhanced && focusOnOpen) || undefined}
       data-preserve-source-actions={preserveSourceActions || undefined}
       data-compact-source-preview={
         (preserveSourceActions && position.availableHeight < 240) || undefined
@@ -607,8 +758,20 @@ export function ProductHoverPreview({
     >
       <div className="sf-hover-preview-inner">
         <div className="sf-hover-preview-toolbar">
-          <span className="sf-hover-preview-eyebrow">
-            {locale === "he" ? "מבט מקרוב" : "A closer look"}
+          <span
+            className={
+              enhanced
+                ? "sf-hover-preview-eyebrow sf-hover-preview-category"
+                : "sf-hover-preview-eyebrow"
+            }
+          >
+            {enhanced ? (
+              <ProductCategoryPath product={product} />
+            ) : locale === "he" ? (
+              "מבט מקרוב"
+            ) : (
+              "A closer look"
+            )}
           </span>
           <div className="sf-hover-preview-toolbar-actions">
             <div
@@ -627,106 +790,7 @@ export function ProductHoverPreview({
           </div>
         </div>
 
-        <div
-          className="sf-hover-preview-gallery"
-          data-multiple-images={allImages.length > 1 || undefined}
-          role="group"
-          aria-label={locale === "he" ? "תמונות המוצר" : "Product images"}
-          onKeyDown={(event) => {
-            if (
-              allImages.length < 2 ||
-              event.altKey ||
-              event.ctrlKey ||
-              event.metaKey
-            )
-              return;
-            const nextKey = locale === "he" ? "ArrowLeft" : "ArrowRight";
-            const previousKey = locale === "he" ? "ArrowRight" : "ArrowLeft";
-            if (event.key === nextKey || event.key === previousKey) {
-              event.preventDefault();
-              if (event.key === nextKey) showNextImage();
-              else showPreviousImage();
-            } else if (event.key === "Home" || event.key === "End") {
-              event.preventDefault();
-              setActiveImageIndex(
-                event.key === "Home" ? 0 : allImages.length - 1,
-              );
-            }
-          }}
-        >
-          {allImages.length > 1 ? (
-            <div ref={thumbnailsRef} className="sf-hover-preview-thumbnails">
-              {allImages.map((image, index) => (
-                <button
-                  key={image.id}
-                  type="button"
-                  className="sf-hover-preview-thumbnail"
-                  data-active={index === activeImageIndex || undefined}
-                  onClick={() => setActiveImageIndex(index)}
-                  aria-label={`${copy.thumbnailLabel} ${index + 1}`}
-                  aria-current={index === activeImageIndex ? "true" : undefined}
-                  aria-controls={imageId}
-                >
-                  <ProductMedia
-                    product={product}
-                    src={image.url}
-                    alt=""
-                    sizes="52px"
-                    loading="eager"
-                  />
-                </button>
-              ))}
-            </div>
-          ) : null}
-          <div id={imageId} className="sf-hover-preview-media">
-            {enhanced ? (
-              <ProductImageMagnifier
-                key={product.id}
-                imageKey={allImages[activeImageIndex]?.id}
-                product={product}
-                src={allImages[activeImageIndex]?.url}
-                alt={imageAlt}
-                locale={locale}
-                active={phase === "open"}
-                counter={imageCounter}
-                togglePortalTarget={magnifierSlot}
-              />
-            ) : (
-              <ProductMedia
-                product={product}
-                src={allImages[activeImageIndex]?.url}
-                alt={imageAlt}
-                sizes="(max-width: 380px) calc(100vw - 5rem), (max-width: 512px) calc(100vw - 9rem), 360px"
-                loading="eager"
-                className="sf-hover-preview-image"
-              />
-            )}
-            {allImages.length > 1 ? (
-              <>
-                <button
-                  type="button"
-                  className="sf-hover-preview-arrow sf-hover-preview-arrow-previous"
-                  onClick={showPreviousImage}
-                  aria-label={
-                    locale === "he" ? "התמונה הקודמת" : "Previous image"
-                  }
-                >
-                  <PreviousArrow size={20} aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className="sf-hover-preview-arrow sf-hover-preview-arrow-next"
-                  onClick={showNextImage}
-                  aria-label={locale === "he" ? "התמונה הבאה" : "Next image"}
-                >
-                  <NextArrow size={20} aria-hidden="true" />
-                </button>
-              </>
-            ) : null}
-            {!enhanced ? imageCounter : null}
-          </div>
-        </div>
-
+        {!enhanced && gallery}
         <div className="sf-hover-preview-content">
           <div
             className="sf-hover-preview-details"
@@ -740,153 +804,146 @@ export function ProductHoverPreview({
                 : undefined
             }
           >
-            <p className="sf-hover-preview-category">
-              <ProductCategoryPath product={product} />
-            </p>
-            <h3 id={titleId} className="sf-hover-preview-title" dir="auto">
-              {product.name}
+            {!enhanced && (
+              <p className="sf-hover-preview-category">
+                <ProductCategoryPath product={product} />
+              </p>
+            )}
+            <h3 id={titleId} className="sf-hover-preview-title">
+              <bdi dir="auto">{product.name}</bdi>
             </h3>
-            <ProductIdentifiers
-              sku={identifierVariant?.sku}
-              barcode={identifierVariant?.barcode}
-              locale={locale}
-            />
-            <div className="sf-hover-preview-price">
-              <div className="sf-price-display__amount">
-                <strong dir="auto">
-                  {enhanced && effectivePrice !== null ? (
-                    <PriceAmount amount={effectivePrice} locale={locale} />
-                  ) : (
-                    formattedPrice
-                  )}
-                </strong>
-                {!enhanced && effectivePrice !== null && (
-                  <small>{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
-                )}
-                {!enhanced && effectivePrice !== null && (
-                  <small dir="auto">
-                    {formatPrice(
-                      priceBeforeVat(effectivePrice),
-                      locale,
-                      copy.priceUnpublished,
-                    )}{" "}
-                    {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
-                  </small>
-                )}
-              </div>
-              {!enhanced && (
-                <StockIndicator
-                  quantity={selectedVariant?.stockQty ?? product.stockQty}
-                  locale={locale}
-                  unconfirmed={product.availabilityUnconfirmed}
-                />
-              )}
-              {discountPercent !== null && formattedCompareAtPrice ? (
-                <span className="sf-hover-preview-promotion">
-                  <del className="sf-hover-preview-compare-at" dir="ltr">
-                    {enhanced && compareAtPrice !== null ? (
-                      <PriceAmount amount={compareAtPrice} locale={locale} />
+            {enhanced && gallery}
+            <Information
+              {...(enhanced ? { className: "sf-preview-information" } : {})}
+            >
+              <div className="sf-hover-preview-price">
+                <div className="sf-price-display__amount">
+                  <strong>
+                    {effectivePrice === null ? (
+                      formattedPrice
+                    ) : enhanced ? (
+                      <PriceAmount amount={effectivePrice} locale={locale} />
                     ) : (
-                      formattedCompareAtPrice
+                      <bdi dir="ltr">{formattedPrice}</bdi>
                     )}
-                  </del>
-                  <DiscountBadge
-                    percent={discountPercent}
+                  </strong>
+                  {!enhanced && effectivePrice !== null && (
+                    <small>{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
+                  )}
+                  {!enhanced && priceExcludingVat}
+                </div>
+                {!enhanced && (
+                  <StockIndicator
+                    quantity={selectedVariant?.stockQty ?? product.stockQty}
                     locale={locale}
-                    className="sf-hover-preview-discount"
+                    unconfirmed={product.availabilityUnconfirmed}
                   />
-                </span>
-              ) : null}
-              {enhanced && effectivePrice !== null && (
-                <>
-                  <small className="sf-hover-preview-vat">
-                    {locale === "he" ? "כולל מע״מ" : "incl. VAT"}
-                  </small>
-                  <small className="sf-hover-preview-vat" dir="auto">
-                    {formatPrice(
-                      priceBeforeVat(effectivePrice),
-                      locale,
-                      copy.priceUnpublished,
-                    )}{" "}
-                    {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
-                  </small>
-                </>
-              )}
-              {enhanced && (
-                <StockIndicator
-                  quantity={selectedVariant?.stockQty ?? product.stockQty}
-                  locale={locale}
-                  unconfirmed={product.availabilityUnconfirmed}
-                />
-              )}
-              {effectivePrice === null ? <span>{copy.demoPrice}</span> : null}
-            </div>
-
-            <VariantChoices
-              variants={product.variants}
-              selectedId={selectedVariant?.id ?? null}
-              locale={locale}
-              pricing={pricingInputs}
-              onSelect={(id) => {
-                setSelectedVariantId(id);
-                setActiveImageIndex(0);
-              }}
-            />
-            {product.promoBadges && product.promoBadges.length > 0 ? (
-              <div
-                className="sf-hover-preview-badges"
-                aria-label={copy.promoBadgesLabel || "Promotions"}
-              >
-                {product.promoBadges.slice(0, 2).map((badge) => (
-                  <PromoBadge
-                    key={badge.id}
-                    badge={badge}
-                    locale={locale}
-                    size="sm"
-                  />
-                ))}
-                {product.promoBadges.length > 2 ? (
-                  <span className="sf-hover-preview-badge-more">
-                    +{product.promoBadges.length - 2}
+                )}
+                {discountPercent !== null && formattedCompareAtPrice ? (
+                  <span className="sf-hover-preview-promotion">
+                    <del className="sf-hover-preview-compare-at" dir="ltr">
+                      {enhanced && compareAtPrice !== null ? (
+                        <PriceAmount amount={compareAtPrice} locale={locale} />
+                      ) : (
+                        formattedCompareAtPrice
+                      )}
+                    </del>
+                    <DiscountBadge
+                      percent={discountPercent}
+                      locale={locale}
+                      className="sf-hover-preview-discount"
+                    />
                   </span>
                 ) : null}
-              </div>
-            ) : null}
-
-            {product.images[0]?.url.match(
-              /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
-            ) ? (
-              <p className="sf-hover-preview-illustration">
-                {copy.illustration}
-              </p>
-            ) : null}
-            <p className="sf-hover-preview-description" dir="auto">
-              {product.description ||
-                product.shortDescription ||
-                (locale === "he"
-                  ? "צריכים מפרט או פרטי תאימות? פתחו את עמוד המוצר לפנייה ולקבלת מידע נוסף."
-                  : "Need specifications or compatibility details? Open the product page to enquire.")}
-            </p>
-            {detailRows.length ? (
-              <dl className="sf-hover-preview-specs">
-                {detailRows.map(([key, value], index) => (
-                  <div
-                    key={`${key}-${index}`}
-                    data-product-field={
-                      product.brand && index === 0 ? "brand" : undefined
-                    }
-                  >
-                    <dt dir="auto">{key}</dt>
-                    <dd dir="auto">{value}</dd>
+                {enhanced && effectivePrice !== null && (
+                  <div className="sf-hover-preview-tax">
+                    <small className="sf-hover-preview-vat">
+                      {locale === "he" ? "כולל מע״מ" : "incl. VAT"}
+                    </small>
+                    {priceExcludingVat}
                   </div>
-                ))}
-              </dl>
-            ) : null}
+                )}
+                {enhanced && (
+                  <StockIndicator
+                    variant="preview"
+                    quantity={selectedVariant?.stockQty ?? product.stockQty}
+                    locale={locale}
+                    unconfirmed={product.availabilityUnconfirmed}
+                  />
+                )}
+                {effectivePrice === null ? <span>{copy.demoPrice}</span> : null}
+              </div>
+
+              {enhanced && badges}
+              {!enhanced && identifiers}
+              <VariantChoices
+                preview={enhanced}
+                variants={product.variants}
+                selectedId={selectedVariant?.id ?? null}
+                locale={locale}
+                pricing={pricingInputs}
+                availabilityUnconfirmed={product.availabilityUnconfirmed}
+                onSelect={(id) => {
+                  setSelectedVariantId(id);
+                  setActiveImageIndex(0);
+                }}
+              />
+              {!enhanced && badges}
+              {product.images[0]?.url.match(
+                /(?:^\/images\/catalog\/|\/storage\/v1\/object\/public\/product-media\/storefront\/catalog\/)/,
+              ) ? (
+                <p className="sf-hover-preview-illustration">
+                  {copy.illustration}
+                </p>
+              ) : null}
+              {enhanced && (
+                <h4 className="sf-preview-section-title">
+                  {locale === "he" ? "תיאור המוצר" : "Description"}
+                </h4>
+              )}
+              <p className="sf-hover-preview-description">
+                <bdi dir="auto">
+                  {product.description ||
+                    product.shortDescription ||
+                    (locale === "he"
+                      ? "צריכים מפרט או פרטי תאימות? פתחו את עמוד המוצר לפנייה ולקבלת מידע נוסף."
+                      : "Need specifications or compatibility details? Open the product page to enquire.")}
+                </bdi>
+              </p>
+              {enhanced &&
+                (identifierVariant?.sku ||
+                  identifierVariant?.barcode ||
+                  detailRows.length > 0) && (
+                  <h4 className="sf-preview-section-title">
+                    {locale === "he" ? "מפרט טכני" : "Specifications"}
+                  </h4>
+                )}
+              {enhanced && identifiers}
+              {detailRows.length ? (
+                <dl className="sf-hover-preview-specs">
+                  {detailRows.map(([key, value], index) => (
+                    <div
+                      key={`${key}-${index}`}
+                      data-product-field={
+                        product.brand && index === 0 ? "brand" : undefined
+                      }
+                    >
+                      <dt>
+                        <bdi dir="auto">{key}</bdi>
+                      </dt>
+                      <dd>
+                        <bdi dir="auto">{value}</bdi>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
+            </Information>
           </div>
           <div className="sf-hover-preview-footer">
             {effectivePrice !== null && product.stockState !== "out" ? (
               <AddToCartButton
-                compact
+                compact={!enhanced}
                 disabled={
                   selectedVariant
                     ? selectedVariant.stockQty <= 0
@@ -910,7 +967,7 @@ export function ProductHoverPreview({
               onClick={() => beginExit(true, false)}
             >
               <span>{copy.details}</span>
-              <ArrowUpRight size={15} aria-hidden="true" />
+              <DetailArrow size={16} aria-hidden="true" />
             </Link>
           </div>
         </div>

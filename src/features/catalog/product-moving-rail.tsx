@@ -144,6 +144,7 @@ function LegacyRailProduct({
   const primaryImage = product.images[0] ?? null;
   const identifierVariant = getProductIdentifierVariant(product.variants);
   const effectivePrice = product.priceIls;
+  const netPrice = priceBeforeVat(effectivePrice, product.vatRate);
   const compareAtPrice = product.compareAtPrice ?? null;
   const discountPercent = getDiscountPercent(compareAtPrice, effectivePrice);
   const formattedPrice = formatPrice(
@@ -292,13 +293,9 @@ function LegacyRailProduct({
               {effectivePrice !== null && (
                 <small>{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
               )}
-              {effectivePrice !== null && (
+              {netPrice !== null && (
                 <small dir="auto">
-                  {formatPrice(
-                    priceBeforeVat(effectivePrice),
-                    locale,
-                    copy.priceUnpublished,
-                  )}{" "}
+                  {formatPrice(netPrice, locale, copy.priceUnpublished)}{" "}
                   {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
                 </small>
               )}

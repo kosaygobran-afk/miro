@@ -1,5 +1,18 @@
 type Locale = "he" | "en";
 
+export const stockCopy = {
+  he: {
+    inStock: "במלאי",
+    outOfStock: "אזל מהמלאי",
+    availabilityOnRequest: "זמינות לפי בירור",
+  },
+  en: {
+    inStock: "in stock",
+    outOfStock: "Out of stock",
+    availabilityOnRequest: "Availability on request",
+  },
+} as const;
+
 export function StockIndicator({
   quantity,
   locale,
@@ -10,9 +23,10 @@ export function StockIndicator({
   quantity: number;
   locale: Locale;
   unconfirmed?: boolean;
-  variant?: "default" | "card" | "segment";
+  variant?: "default" | "card" | "segment" | "preview";
   tabIndex?: number;
 }) {
+  const copy = stockCopy[locale];
   if (unconfirmed)
     return (
       <span
@@ -20,14 +34,10 @@ export function StockIndicator({
         role={variant === "segment" ? "group" : undefined}
         tabIndex={variant === "segment" ? tabIndex : undefined}
         aria-label={
-          variant === "segment"
-            ? locale === "he"
-              ? "זמינות לפי בירור"
-              : "Availability on request"
-            : undefined
+          variant === "segment" ? copy.availabilityOnRequest : undefined
         }
       >
-        {locale === "he" ? "זמינות לפי בירור" : "Availability on request"}
+        {copy.availabilityOnRequest}
       </span>
     );
   const count = Math.max(0, Math.floor(quantity));
@@ -45,36 +55,37 @@ export function StockIndicator({
     limited: locale === "he" ? "מלאי מוגבל" : "Limited stock",
     critical:
       count === 0
-        ? locale === "he"
-          ? "אזל מהמלאי"
-          : "Out of stock"
+        ? copy.outOfStock
         : locale === "he"
           ? "נותרו מעט"
           : "Few left",
   }[level];
-  const label = `${count} ${locale === "he" ? "יחידות במלאי" : "units in stock"} — ${wording}`;
+  const showQuantity = variant !== "preview" || count > 0;
+  const label = showQuantity
+    ? `${count} ${locale === "he" ? "יחידות במלאי" : "units in stock"} — ${wording}`
+    : wording;
 
   return (
     <span
-      className={`sf-stock-indicator sf-stock-indicator--${level}${variant !== "default" ? " sf-card-stock" : ""}`}
+      className={`sf-stock-indicator sf-stock-indicator--${level}${variant === "card" || variant === "segment" ? " sf-card-stock" : ""}`}
       role="group"
       tabIndex={tabIndex}
       aria-label={label}
       data-tooltip={wording}
     >
       <span className="sf-stock-indicator__light" aria-hidden="true" />
-      <span className="sf-stock-indicator__number" aria-hidden="true">
-        {count}
-      </span>
+      {showQuantity && (
+        <span className="sf-stock-indicator__number" aria-hidden="true">
+          {count}
+        </span>
+      )}
       <span className="sf-stock-indicator__caption" aria-hidden="true">
         {variant !== "default"
           ? count === 0
-            ? locale === "he"
-              ? "אזל מהמלאי"
-              : "Out of stock"
-            : locale === "he"
-              ? "במלאי"
-              : "In stock"
+            ? copy.outOfStock
+            : locale === "en" && variant !== "preview"
+              ? "In stock"
+              : copy.inStock
           : locale === "he"
             ? "נותרו"
             : "left"}

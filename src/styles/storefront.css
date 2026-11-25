@@ -223,13 +223,13 @@
 }
 .sf-section-heading {
   display: grid;
-  justify-items: left;
+  justify-items: start;
   gap: 0.6rem;
   margin-bottom: 1.9rem;
-  text-align: left;
+  text-align: start;
 }
 .sf-section-heading .sf-eyebrow {
-  justify-content: left;
+  justify-content: start;
   margin-bottom: 0.55rem;
 }
 .sf-section-heading > p {

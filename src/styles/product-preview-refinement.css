@@ -47,7 +47,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    padding: 0.5rem 0.75rem 0.25rem;
+    padding: 0.375rem 0.75rem;
   }
 
   .sf-hover-preview-eyebrow {
@@ -363,6 +363,20 @@
   .sf-hover-preview-toolbar-actions
   .sf-image-magnifier-toggle {
   display: none;
+}
+
+:root[data-appearance-version="2"]
+  .sf-hover-preview
+  :is(
+    .sf-hover-preview-close,
+    .sf-hover-preview-arrow,
+    .sf-image-magnifier-toggle
+  )
+  > svg {
+  display: block;
+  inline-size: 1.125rem;
+  block-size: 1.125rem;
+  flex: none;
 }
 
 :root[data-appearance-version="2"] .sf-hover-preview .sf-hover-preview-content {

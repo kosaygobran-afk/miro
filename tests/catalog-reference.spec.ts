@@ -27,7 +27,7 @@ const { PriceAmount } = loadDisplayComponent(
 const { StockIndicator } = loadDisplayComponent(
   "src/features/catalog/stock-indicator.tsx",
 ) as typeof import("../src/features/catalog/stock-indicator");
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { DEFAULT_ANIMATION_SETTINGS } from "../src/lib/animation-settings";
 
 test.beforeEach(async ({ page }) => {
@@ -131,7 +131,7 @@ for (const locale of ["he", "en"] as const) {
             .slice(1)
             .map((r, index) => r.left - controls[index].right);
           const title = element.querySelector(".sf-product-summary h3")!;
-          const titleStyle = getComputedStyle(title);
+          const titleLink = title.querySelector(".sf-product-title-link")!;
           const rtl = getComputedStyle(element).direction === "rtl";
           const codeLabel = element
             .querySelector(".sf-card-sku-label")!
@@ -139,6 +139,16 @@ for (const locale of ["he", "en"] as const) {
           const codeValue = element
             .querySelector(".sf-card-sku-value")!
             .getBoundingClientRect();
+          const sectionInsets = [
+            ".sf-card-tags",
+            ".sf-product-summary",
+            ".sf-card-price-panel",
+          ].map((selector) =>
+            parseFloat(
+              getComputedStyle(element.querySelector(selector)!)
+                .paddingInlineStart,
+            ),
+          );
           return {
             controlCount: controls.length,
             tagsAbove: tags.bottom <= media.top + 1,
@@ -163,11 +173,14 @@ for (const locale of ["he", "en"] as const) {
             ),
             centeredActionIcons: controlElements.every((control) => {
               const frame = control.getBoundingClientRect();
-              const icon = control
-                .querySelector("svg:not(.sf-card-cart-slash)")
-                ?.getBoundingClientRect();
+              const glyph = control.querySelector(
+                "svg:not(.sf-card-cart-slash)",
+              )!;
+              const icon = glyph.getBoundingClientRect();
               return (
-                !!icon &&
+                Math.abs(icon.width - 18) < 1 &&
+                Math.abs(icon.height - 18) < 1 &&
+                parseFloat(getComputedStyle(glyph).strokeWidth) === 1.75 &&
                 Math.abs(
                   icon.left + icon.width / 2 - frame.left - frame.width / 2,
                 ) < 1 &&
@@ -176,9 +189,14 @@ for (const locale of ["he", "en"] as const) {
                 ) < 1
               );
             }),
-            twoLineTitleReservation:
-              parseFloat(titleStyle.minHeight) >=
-              2 * parseFloat(titleStyle.lineHeight) - 1,
+            consistentSectionInsets: sectionInsets.every(
+              (inset) => inset > 0 && inset === sectionInsets[0],
+            ),
+            titleFitsItsText:
+              Math.abs(
+                title.getBoundingClientRect().height -
+                  titleLink.getBoundingClientRect().height,
+              ) < 1,
             identifiersAligned:
               codeLabel.bottom <= codeValue.top + 1 &&
               Math.abs(
@@ -226,7 +244,8 @@ for (const locale of ["he", "en"] as const) {
           balancedActions: true,
           equalActionFrames: true,
           centeredActionIcons: true,
-          twoLineTitleReservation: true,
+          consistentSectionInsets: true,
+          titleFitsItsText: true,
           identifiersAligned: true,
           purchaseBandSizing: true,
           splitBand: true,
@@ -284,6 +303,91 @@ for (const locale of ["he", "en"] as const) {
 }
 
 for (const locale of ["he", "en"] as const) {
+  test(`${locale}: brand and model sit directly under one- and two-line card titles`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto(`/${locale}`);
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-motion-ready",
+      "true",
+    );
+
+    const catalog = page.locator('.sf-catalog[data-catalog-scope="all"]');
+    const metadata = page.locator(".sf-card-model-line");
+    const gridCard = catalog
+      .locator(".sf-reference-card")
+      .filter({ has: metadata })
+      .first();
+    const railCard = page
+      .locator(
+        '.sf-moving-rail-segment:not([aria-hidden="true"]) .sf-reference-rail',
+      )
+      .filter({ has: metadata })
+      .first();
+
+    async function expectTextStack(card: Locator) {
+      await expect(card).toBeVisible();
+      const samples = await card.evaluate(async (element, locale) => {
+        await document.fonts.ready;
+        const title = element.querySelector(".sf-product-title-link")!;
+        const name = title.querySelector("bdi")!;
+        const modelLine = element.querySelector(".sf-card-model-line")!;
+        const firstValue = modelLine.querySelector("bdi")!;
+        const originalName = name.textContent;
+        const shortName = locale === "he" ? "מצלמה" : "Camera";
+        const longName = (
+          locale === "he" ? "מצלמת אבטחה עמידה " : "Weather-resistant camera "
+        ).repeat(8);
+        try {
+          return [shortName, longName].map((text) => {
+            name.textContent = text;
+            const heading = title.getBoundingClientRect();
+            const line = modelLine.getBoundingClientRect();
+            const leadingValue = firstValue.getBoundingClientRect();
+            const titleStyle = getComputedStyle(title);
+            const rtl = locale === "he";
+            return {
+              titleLines: heading.height / parseFloat(titleStyle.lineHeight),
+              gap: line.top - heading.bottom,
+              alignment: rtl
+                ? heading.right - leadingValue.right
+                : leadingValue.left - heading.left,
+              modelFontSize: parseFloat(getComputedStyle(modelLine).fontSize),
+            };
+          });
+        } finally {
+          name.textContent = originalName;
+        }
+      }, locale);
+
+      for (const [index, sample] of samples.entries()) {
+        expect(sample.titleLines).toBeCloseTo(index + 1, 1);
+        expect(sample.gap).toBeGreaterThanOrEqual(4);
+        expect(sample.gap).toBeLessThanOrEqual(8);
+        expect(Math.abs(sample.alignment)).toBeLessThan(1);
+        expect(sample.modelFontSize).toBeGreaterThanOrEqual(12);
+      }
+    }
+
+    await test.step("Catalog grid and moving rail", async () => {
+      await expectTextStack(gridCard);
+      await expectTextStack(railCard);
+    });
+    await catalog
+      .getByRole("button", {
+        name: locale === "he" ? "תצוגת רשימה" : "List view",
+      })
+      .click();
+    await expect(catalog).toHaveAttribute("data-catalog-view", "list");
+    await test.step("Side-by-side and stacked list cards", async () => {
+      await expectTextStack(gridCard);
+      await page.setViewportSize({ width: 320, height: 900 });
+      await expectTextStack(gridCard);
+    });
+  });
+
   test(`${locale}: root navigation restores Version 1 and keeps the Version 2 root visible`, async ({
     page,
   }) => {

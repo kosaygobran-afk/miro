@@ -23,6 +23,7 @@ import type { Metadata } from "next";
 import { getSiteUrl, pageMetadata } from "@/lib/seo";
 import type { Locale } from "@/lib/i18n";
 import { getStorePageData } from "@/lib/store-data";
+import { getWebsitePageCopy } from "@/lib/website-page-copy-server";
 import { StoreLiveRefresh } from "@/features/catalog/store-live-refresh";
 import { headers } from "next/headers";
 
@@ -55,7 +56,10 @@ export default async function ProductsPage({
   const copy = storeCopy[locale];
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
 
-  const { viewer, catalog } = await getStorePageData(locale);
+  const [{ viewer, catalog }, pageCopy] = await Promise.all([
+    getStorePageData(locale),
+    getWebsitePageCopy("store", locale),
+  ]);
   if (catalog.error) return <CatalogUnavailable locale={locale} />;
   const savedProductIds = new Set(viewer.savedProductIds);
 
@@ -88,16 +92,16 @@ export default async function ProductsPage({
         <StoreHeroBackdrop locale={locale} />
         <div className="sf-hero-grid" aria-hidden="true" />
         <div className="miro-container sf-hero-inner">
-          <div className="sf-hero-copy">
+          <div className="sf-hero-copy" data-page-heading-copy>
             <p className="sf-eyebrow">
               <span />
-              {copy.eyebrow}
+              {pageCopy.eyebrow}
             </p>
             <h1 id="store-title">
-              {copy.title}
-              <span>{copy.titleAccent}</span>
+              {pageCopy.title}
+              <span>{pageCopy.accent}</span>
             </h1>
-            <p className="sf-hero-intro">{copy.intro}</p>
+            <p className="sf-hero-intro">{pageCopy.description}</p>
             <div className="sf-hero-actions">
               <a
                 href="#store-items"
@@ -130,8 +134,8 @@ export default async function ProductsPage({
         ariaLabel={copy.category}
       />
 
-      <CompanyRail locale={locale} />
       <ProductMovingRail products={catalog.products} locale={locale} />
+      <CompanyRail locale={locale} />
 
       <section
         className="sf-collection-section"

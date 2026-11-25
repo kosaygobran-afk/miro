@@ -49,7 +49,17 @@ Implementation, timing bounds, security and final checks are in `docs/ANIMATION_
 
 ## Operating the design studio
 
-Open `/he/admin/store-design` or `/en/admin/store-design` as an active CEO. Admin can view the same page, but cannot change or upload its design.
+Open **Settings → Website images** at `/he/admin/settings/website-images` or `/en/admin/settings/website-images`. An active CEO can edit and publish. An active admin can review the published Home and Services galleries and image placements, as well as Store design. Older Store design links open the Store design section of this page.
+
+### Home and Services images
+
+- **Home · MIRO on site** sits before the installation process. **Services · Security systems** follows the expertise list. **Services · Network installation** follows the process steps. Every gallery uses a 4:5 frame. The supplied photos start in Full image mode at 100% zoom so the frame preserves the whole prepared photo. Use Fill frame and the horizontal and vertical focal points when a crop works better. Fit, border width and corner radius are independent of the source file.
+- Choose the placement, then add a still image by upload or HTTPS URL, enter its Hebrew and English alt text, and arrange the images. Select upward flip, right-to-left swipe, fade or instant with an optional color treatment. Test the current draft in Preview. Turn off automatic rotation for navigation by buttons and touch swipe only. The preview respects the device’s reduced-motion preference. Public automatic rotation and transitions also follow the global decorative motion setting.
+- The individual image placements include the Home background and images for published service detail pages. The service slot follows the service ID if its URL slug changes. Hide removes the image from the page. Restore default returns to the existing background or service record. Keep service content and catalog imagery in their established editors.
+- Publish saves a revision-checked draft and updates public reads. Leaving a gallery empty hides the gallery section. Removing an image removes its placement. Uploaded files get public URLs when prepared, so only upload media cleared for public use. Use owned uploads where possible. Third-party URL images make a browser request to their host.
+- Apply `20261125010000_website_images.sql` before enabling writes in a new environment. The linked database received it on 2026-11-25. Gallery uploads accept still JPEG, PNG, WebP and AVIF up to 4 MiB and 16 megapixels. Files are re-encoded as WebP with orientation normalized and embedded metadata removed. The new design is independently revisioned and audited with `update_website_images`. The limited public projection reads only website-image data. Before the migration or first save, the bundled design provides the initial galleries. A failed published-settings read with no cached value suppresses the galleries.
+
+### Store design
 
 1. Backgrounds: name, replace/upload, show/hide, add, remove or reorder slides. At least one background must remain enabled. Default rotation is ten seconds; the allowed interval is 5–60 seconds, with fade/slide/zoom/none and a 150–1500 ms transition. Up to 20 backgrounds.
 2. Brands: edit names, replace/upload marks, reorder, show/hide or remove entries. Up to 24 company slots; default loop duration is 38 seconds, adjustable to 15–120 seconds. All marks fit the same modest slot dimensions.
@@ -82,15 +92,15 @@ Product preview content can scroll within its bounded 3D dialog when necessary. 
 
 Automated checks include lint/typecheck/build, all local migration/access tests, cart/merchandising regression tests, overlay hit-testing in both locales and all themes at desktop/320/390px widths, and opt-in live CEO/admin/public design integration. Final command results and evidence are recorded in `docs/PROJECT_STATUS.md` and `docs/customer-design-evidence-2026-10-02/`.
 
-| Item                                                       | Status / owner action                                                                                                                       |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| CEO design publication, admin read-only, public projection | Verified: CEO publication/open-store refresh, admin denial and prompt stale-save 409; 19 live checks passed.                                |
-| Background/brand uploads and original catalog SVG hosting  | Implemented; owned public storage configured.                                                                                               |
-| Reference models, prices, stock, supplier barcodes, marks  | Business/inventory/legal owner approval required.                                                                                           |
-| Cart and checkout request                                  | Existing database-backed enquiry intake; no online payment or stock reservation.                                                            |
-| Outbound email/webhooks/notification delivery              | Integration owner must specify endpoint/provider/delivery contract and implement it; a toggle alone does not deliver messages.              |
-| Privacy and accessibility approval                         | Legal approves contact retention/claims; QA completes manual bilingual screen-reader, zoom and device review.                               |
-| Public VAT display                                         | Existing frontend rate is fixed at 18%; engineering must connect future scheduled CEO tax changes before using a different rate.            |
-| Public frontend release                                    | Source/build prepared locally; release through the established deployment workflow. Database migrations and catalog media are already live. |
+| Item                                                       | Status / owner action                                                                                                                                       |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CEO design publication, admin read-only, public projection | Verified: CEO publication/open-store refresh, admin denial and prompt stale-save 409; 19 live checks passed.                                                |
+| Background/brand uploads and original catalog SVG hosting  | Implemented; owned public storage configured.                                                                                                               |
+| Reference models, prices, stock, supplier barcodes, marks  | Business/inventory/legal owner approval required.                                                                                                           |
+| Cart and checkout request                                  | Existing database-backed enquiry intake; no online payment or stock reservation.                                                                            |
+| Outbound email/webhooks/notification delivery              | Integration owner must specify endpoint/provider/delivery contract and implement it; a toggle alone does not deliver messages.                              |
+| Privacy and accessibility approval                         | Legal approves contact retention/claims; QA completes manual bilingual screen-reader, zoom and device review.                                               |
+| Public VAT display                                         | Existing net labels use the effective CEO tax rate for the current date in Israel. Apply `20261125070000_public_storefront_vat_rate.sql` before deployment. |
+| Public frontend release                                    | Source/build prepared locally; release through the established deployment workflow. Database migrations and catalog media are already live.                 |
 
 No outbound messages were sent as part of this work. Test accounts, uploaded QA files and temporary public design edits are removed/restored by the live verification script.

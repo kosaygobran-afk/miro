@@ -17,7 +17,15 @@ function load(file) {
   return exports;
 }
 const { getVariantImages } = load("src/lib/catalog/variant-media.ts");
-const { resolvePrice } = load("src/lib/catalog/pricing.ts");
+const { priceBeforeVat, resolvePrice } = load("src/lib/catalog/pricing.ts");
+
+test("the storefront derives net from the effective rate only", () => {
+  assert.equal(priceBeforeVat(125, 25), 100);
+  assert.equal(priceBeforeVat(119.99, 19), 100.83);
+  assert.equal(priceBeforeVat(125, 0), 125);
+  assert.equal(priceBeforeVat(125, undefined), null);
+  assert.equal(priceBeforeVat(null, 25), null);
+});
 const variants = [
   { id: "a", price: 100, stockQty: 0, isDefault: true },
   { id: "b", price: 250, stockQty: 8 },

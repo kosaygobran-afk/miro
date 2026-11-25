@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { withLocale } from "@/lib/i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Plus, Pencil, Trash2, Wrench } from "lucide-react";
 import {
@@ -82,7 +84,6 @@ type ServiceForm = {
   description_he: string;
   description_en: string;
   visual_kind: VisualKind;
-  image_url: string;
   sort_order: string;
   is_active: boolean;
   seo_title_he: string;
@@ -103,7 +104,6 @@ const emptyForm: ServiceForm = {
   description_he: "",
   description_en: "",
   visual_kind: "generic_security",
-  image_url: "",
   sort_order: "0",
   is_active: true,
   seo_title_he: "",
@@ -146,7 +146,6 @@ function toForm(row: ServiceRow): ServiceForm {
     visual_kind: isVisualKind(row.visual_kind)
       ? row.visual_kind
       : "generic_security",
-    image_url: row.image_url ?? "",
     sort_order: String(row.sort_order ?? 0),
     is_active: row.is_active,
     seo_title_he: row.seo_title_he ?? "",
@@ -442,10 +441,6 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
     if (!SLUG_PATTERN.test(form.slug.trim())) {
       errors.slug = copy.errorSlug[locale];
     }
-    const imageUrl = form.image_url.trim();
-    if (imageUrl && !/^(https?:\/\/|products\/)/i.test(imageUrl)) {
-      errors.image_url = copy.errorImageUrl[locale];
-    }
     const sortOrder = Number.parseInt(form.sort_order, 10);
     if (form.sort_order.trim() === "" || !Number.isFinite(sortOrder)) {
       errors.sort_order = copy.errorSortOrder[locale];
@@ -487,7 +482,6 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
         description_he: form.description_he.trim() || null,
         description_en: form.description_en.trim() || null,
         visual_kind: form.visual_kind,
-        image_url: imageUrl || null,
         sort_order: Number.isFinite(sortOrder) ? sortOrder : 0,
         is_active: form.is_active,
         seo_title_he: form.seo_title_he.trim() || null,
@@ -675,10 +669,6 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
           {
             label: he ? "לא פעילים" : "Inactive",
             value: services.filter((row) => !row.is_active).length,
-          },
-          {
-            label: he ? "ללא תמונה" : "Without an image",
-            value: services.filter((row) => !row.image_url).length,
           },
         ]}
         scope={
@@ -955,28 +945,14 @@ export function ServicesManager({ locale }: { locale: "he" | "en" }) {
               locale={locale}
               value={form.visual_kind}
               onChange={(kind) => setField("visual_kind", kind)}
-              imageUrl={form.image_url.trim() || undefined}
+              imageUrl={editing?.image_url ?? undefined}
               disabled={saving}
             />
-            <FormField
-              id="service-image-url"
-              label={copy.fieldImageUrl[locale]}
-              error={fieldErrors.image_url}
-              description={copy.fieldImageUrlHint[locale]}
-            >
-              {(control) => (
-                <input
-                  {...control}
-                  type="text"
-                  className="miro-input"
-                  dir="ltr"
-                  value={form.image_url}
-                  maxLength={2000}
-                  onChange={(e) => setField("image_url", e.target.value)}
-                  disabled={saving}
-                />
-              )}
-            </FormField>
+            <Link href={withLocale(locale, "admin/settings/website-images")}>
+              {he
+                ? "עריכת תמונות לשירותים שפורסמו בהגדרות האתר"
+                : "Edit photos for published services in Website images"}
+            </Link>
             <label className={styles.checkboxRow} htmlFor="service-is-active">
               <input
                 id="service-is-active"

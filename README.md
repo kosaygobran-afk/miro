@@ -1,6 +1,6 @@
 # MIRO Website
 
-MIRO is a Next.js foundation for a Hebrew-first security and communications website. The public storefront is complete as a Phase 1 visual/structural foundation. Supabase authentication and database workflows are being introduced incrementally through the Phase 2 migration foundation.
+MIRO is a Hebrew-first security and communications storefront built with Next.js and Supabase. It supports bilingual browsing, guest and account shopping, and checkout requests that staff review in the management console.
 
 ## Requirements
 
@@ -44,4 +44,4 @@ Public pages work without Supabase credentials through the local fallback catalo
 
 ## Current Status
 
-Read `docs/PROJECT_STATUS.md` before continuing work. Phase 2 authentication, role authorization and account/service-request workflows are implemented. See the latest status entry for deployment verification and remaining owner actions.
+Start with the [MIRO project plan](docs/PROJECT_PLAN.md) for shipped features, pending work and the pilot checklist. See the [project status log](docs/PROJECT_STATUS.md) for dated verification and deployment details.

@@ -435,12 +435,19 @@ try {
   );
   await assignRole("admin");
   await visit("settings");
+  await expect(
+    page.getByRole("searchbox", { name: "Search settings" }),
+  ).toBeEnabled();
   const editable = await page
     .locator(
-      ".mgmt-shell__main input:enabled, .mgmt-shell__main select:enabled, .mgmt-shell__main textarea:enabled",
+      ":is(#settings-inventory, #settings-contact) :is(input, select, textarea):enabled",
     )
     .count();
-  assert.equal(editable, 0, "admin settings read-only");
+  assert.equal(
+    editable,
+    0,
+    "admin inventory and contact settings are read-only",
+  );
   // Auth is checked before body validation; empty JSON cannot change settings.
   const denied = await context.request.post(`${base}/api/management/settings`, {
     headers: { Origin: new URL(base).origin },

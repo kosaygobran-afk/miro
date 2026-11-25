@@ -316,7 +316,7 @@ body {
   );
   color: var(--accent-text);
 }
-.premium-cart-count {
+.premium-shopping-count {
   position: absolute;
   inset-block-start: -0.42rem;
   inset-inline-end: -0.42rem;

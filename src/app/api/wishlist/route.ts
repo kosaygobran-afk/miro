@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getStoreCatalog, getStoreViewer } from "@/lib/store-data";
+import { getStoreCatalogForDisplay, getStoreViewer } from "@/lib/store-data";
 import { hasSameOrigin } from "@/lib/request-origin";
 import { shouldHideFromPublic } from "@/lib/catalog/pricing";
 import { readCommerceJson } from "@/lib/commerce/http";
@@ -20,7 +20,11 @@ export async function POST(request: Request) {
   if (!parsed.success) return new NextResponse(null, { status: 400, headers });
 
   const { role } = await getStoreViewer();
-  const catalog = await getStoreCatalog(parsed.data.locale, role, !role);
+  const catalog = await getStoreCatalogForDisplay(
+    parsed.data.locale,
+    role,
+    !role,
+  );
   if (catalog.error) return new NextResponse(null, { status: 503, headers });
 
   const ids = new Set(parsed.data.ids);

@@ -42,7 +42,7 @@ const emptyVariantForm: VariantForm = {
   cost_override: "",
   supplier_id: "",
   supplier_sku: "",
-  low_stock_threshold: "0",
+  low_stock_threshold: "",
   initial_stock_qty: "0",
   is_active: true,
   is_default: false,
@@ -186,7 +186,7 @@ export function VariantsSection({
         costOverride = parsed;
       }
     }
-    let threshold = 0;
+    let threshold = editing ? 0 : undefined;
     if (form.low_stock_threshold.trim() !== "") {
       const parsed = Number(form.low_stock_threshold);
       if (!Number.isInteger(parsed) || parsed < 0) {
@@ -748,6 +748,11 @@ export function VariantsSection({
             <FormField
               id="variant-low-stock"
               label={variantCopy.lowStockThreshold[locale]}
+              description={
+                editing
+                  ? variantCopy.lowStockThresholdDisable[locale]
+                  : variantCopy.lowStockThresholdDefault[locale]
+              }
               error={fieldErrors.low_stock_threshold}
             >
               {(control) => (

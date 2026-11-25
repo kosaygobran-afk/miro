@@ -471,7 +471,7 @@ All paths below were created or modified for this task. Detailed central behavio
 | `src/features/cart/cart-page-client.tsx`                                  | Accepted internal navigation through MotionLink; Decode-ready images; Matched dynamic-region placeholders                      |
 | `src/features/cart/cart-skeleton.tsx`                                     | Cart/checkout hydration stages with actual item/summary/form geometry                                                          |
 | `src/features/cart/checkout-page-client.tsx`                              | Accepted internal navigation through MotionLink; Matched dynamic-region placeholders                                           |
-| `src/features/cart/header-cart-link.tsx`                                  | Accepted internal navigation through MotionLink                                                                                |
+| `src/features/cart/header-shopping-link.tsx`                              | Accepted internal navigation through MotionLink                                                                                |
 | `src/features/catalog/catalog-skeleton.tsx`                               | Product card/grid/category/detail and published-service loading geometry                                                       |
 | `src/features/catalog/overflow-label.tsx`                                 | Global long-label switch with static accessible fallback                                                                       |
 | `src/features/catalog/product-card.tsx`                                   | Motion navigation, decoded media and honest unpublished-price metadata                                                         |

@@ -106,6 +106,7 @@ export function ProductCard({
   // Use pre-computed prices from server (already includes role prices and promotions)
   // Do NOT call resolvePrice() again - server already computed final display price
   const effectivePrice = product.priceIls;
+  const netPrice = priceBeforeVat(effectivePrice, product.vatRate);
   const compareAtPrice = product.compareAtPrice ?? null;
   const discountPercent = getDiscountPercent(compareAtPrice, effectivePrice);
   const formattedPrice = formatPrice(
@@ -270,13 +271,9 @@ export function ProductCard({
       {!enhancedBadges && effectivePrice !== null && (
         <small dir="auto">{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
       )}
-      {!enhancedBadges && effectivePrice !== null && (
+      {!enhancedBadges && netPrice !== null && (
         <small dir="auto">
-          {formatPrice(
-            priceBeforeVat(effectivePrice),
-            locale,
-            copy.priceUnpublished,
-          )}{" "}
+          {formatPrice(netPrice, locale, copy.priceUnpublished)}{" "}
           {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
         </small>
       )}
@@ -520,12 +517,16 @@ export function ProductCard({
                     dir={locale === "he" ? "rtl" : "ltr"}
                   >
                     {product.brand && (
-                      <bdi dir="auto" title={product.brand}>
+                      <bdi
+                        className="sf-card-brand"
+                        dir="auto"
+                        title={product.brand}
+                      >
                         {product.brand}
                       </bdi>
                     )}
                     {product.brand && product.modelNumber && (
-                      <span aria-hidden="true">|</span>
+                      <span aria-hidden="true">{"\u00a0|\u00a0"}</span>
                     )}
                     {product.modelNumber && (
                       <bdi dir="auto" title={product.modelNumber}>

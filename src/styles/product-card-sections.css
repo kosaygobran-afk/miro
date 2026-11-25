@@ -841,7 +841,8 @@
   :root[data-appearance-version="2"] {
     .sf-hover-preview-gallery[data-multiple-images] {
       grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: minmax(0, 1fr) 76px;
+      /* Fit a 44px thumbnail, focus clearance and the native scrollbar. */
+      grid-template-rows: minmax(0, 1fr) 64px;
       gap: 0.4rem;
     }
 

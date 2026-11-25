@@ -443,6 +443,9 @@
 .sf-hover-preview-content {
   padding: 1rem 1.25rem 1.2rem;
 }
+.sf-hover-preview-details {
+  text-align: start;
+}
 .sf-hover-preview-title {
   max-width: none;
   font-size: 1.2rem;

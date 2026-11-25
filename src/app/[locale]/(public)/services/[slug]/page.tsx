@@ -1,6 +1,7 @@
 import Link from "@/components/motion/motion-link";
 import { notFound } from "next/navigation";
 import Image from "next/image";
+import { getPublicWebsiteImages } from "@/lib/website-images-server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
 import {
@@ -77,6 +78,7 @@ export default async function ServiceDetailPage({
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
   const he = locale === "he";
 
+  const websiteImages = getPublicWebsiteImages();
   let service;
   try {
     service = await getPublishedServiceBySlug(slug);
@@ -89,6 +91,8 @@ export default async function ServiceDetailPage({
   if (!service) notFound();
 
   const Icon = serviceIcons[service.slug];
+  const override = (await websiteImages).overrides[`service-${service.id}`];
+  const serviceImage = override ?? service.image_url;
 
   // Extract considerations from service content (process_steps or features)
   const considerations =
@@ -170,9 +174,13 @@ export default async function ServiceDetailPage({
                 <Icon aria-hidden="true" />
               </span>
             )}
-            {service.image_url && (
+            {serviceImage && (
               <Image
-                src={service.image_url}
+                src={serviceImage}
+                unoptimized={
+                  override !== undefined && /^https:/i.test(override)
+                }
+                referrerPolicy="no-referrer"
                 alt=""
                 width={400}
                 height={300}

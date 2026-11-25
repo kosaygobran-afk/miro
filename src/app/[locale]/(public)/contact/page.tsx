@@ -7,6 +7,7 @@ import { getPublicContactConfig } from "@/lib/contact-config";
 import { createPublicServerClient } from "@/lib/supabase/public-server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { getWebsitePageCopy } from "@/lib/website-page-copy-server";
 import { Mail, MessageCircle, Phone } from "lucide-react";
 
 const uuidSchema = z.string().uuid();
@@ -77,10 +78,11 @@ export default async function ContactPage({
   const productId = productParsed.success ? productParsed.data : null;
   const variantId = variantParsed.success ? variantParsed.data : null;
 
-  const [t, contactConfig, productName] = await Promise.all([
+  const [t, contactConfig, productName, pageCopy] = await Promise.all([
     getTranslations({ locale, namespace: "pages.contact" }),
     getPublicContactConfig(),
     productId ? getProductDisplayName(productId, locale) : null,
+    getWebsitePageCopy("contact", locale),
   ]);
 
   const contextItem =
@@ -132,27 +134,16 @@ export default async function ContactPage({
         <span>{he ? "יצירת קשר" : "Contact"}</span>
       </nav>
       <div className="experience-contact-layout">
-        <div className="experience-contact-copy">
+        <div className="experience-contact-copy" data-page-heading-copy>
           <p className="experience-overline">
-            {he
-              ? "מתחילים בחיבור אנושי"
-              : "A GOOD CONNECTION STARTS WITH A CONVERSATION"}
+            {pageCopy.eyebrow}
           </p>
           <h1>
-            {he ? (
-              <>
-                המרחב שלכם.<em>בואו נדבר עליו.</em>
-              </>
-            ) : (
-              <>
-                Your space.<em>Let’s talk about it.</em>
-              </>
-            )}
+            {pageCopy.title}
+            <em>{pageCopy.accent}</em>
           </h1>
           <p className="experience-description">
-            {he
-              ? "בית חדש, עסק בצמיחה או מערכת שצריכה שדרוג. ספרו לנו מה חשוב לכם, ונבנה את התמונה יחד."
-              : "A new home, a growing business or a system that needs an upgrade. Tell us what matters to you and we can start shaping the picture."}
+            {pageCopy.description}
           </p>
           <div className="experience-contact-prep">
             <h2>

@@ -343,8 +343,10 @@ export function ProductsClient({
       )}
       {!fixedCategory && enhanced ? (
         <>
-          {summary}
-          {categoryFilters}
+          <div className="sf-catalog-category-band">
+            {summary}
+            {categoryFilters}
+          </div>
           {toolbar}
         </>
       ) : (

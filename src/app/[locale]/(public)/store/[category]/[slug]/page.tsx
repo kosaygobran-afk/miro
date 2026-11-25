@@ -256,6 +256,7 @@ export default async function ProductDetailPage({
               productCategory={product.category}
               productName={product.name}
               locale={locale}
+              vatRate={product.vatRate}
               basePrice={
                 product.basePriceIls !== undefined
                   ? product.basePriceIls

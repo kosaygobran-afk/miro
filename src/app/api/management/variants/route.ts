@@ -28,7 +28,7 @@ const variantSchema = z
     supplier_sku: z.string().max(100).nullable().optional(),
     is_default: z.boolean().default(false),
     is_active: z.boolean().default(true),
-    low_stock_threshold: z.number().int().nonnegative().default(0),
+    low_stock_threshold: z.number().int().nonnegative().optional(),
     reorder_point: z.number().int().nonnegative().nullable().optional(),
     reorder_qty: z.number().int().positive().nullable().optional(),
   })

@@ -1,9 +1,101 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { DEFAULT_ANIMATION_SETTINGS } from "../src/lib/animation-settings";
 
+async function expectTextAtReadingEdge(field: Locator, rtl: boolean) {
+  const offset = await field.evaluate((node, rtl) => {
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const text = range.getBoundingClientRect();
+    const block = node.getBoundingClientRect();
+    return rtl ? block.right - text.right : text.left - block.left;
+  }, rtl);
+  expect(Math.abs(offset)).toBeLessThan(1);
+}
+
 for (const locale of ["en", "he"] as const) {
+  for (const appearanceVersion of ["1", "2"] as const) {
+    test(`${locale}: popup details follow the reading direction in Version ${appearanceVersion}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({
+        width: appearanceVersion === "2" ? 320 : 1440,
+        height: 900,
+      });
+      await page.route("**/api/track", (route) =>
+        route.fulfill({ status: 204 }),
+      );
+      await page.goto(`/${locale}`);
+      const html = page.locator("html");
+      await expect(html).toHaveAttribute("data-motion-ready", "true");
+      await page.evaluate(
+        (detail) => {
+          window.dispatchEvent(
+            new CustomEvent("miro-animation-settings-change", { detail }),
+          );
+        },
+        { ...DEFAULT_ANIMATION_SETTINGS, appearanceVersion, enabled: false },
+      );
+      await expect(html).toHaveAttribute(
+        "data-appearance-version",
+        appearanceVersion,
+      );
+      const trigger = page
+        .locator(".sf-product-card[data-product-price]")
+        .first()
+        .locator(".sf-product-quick-preview");
+      await trigger.click();
+      const popup = page.locator('.sf-hover-preview[data-state="open"]');
+      const rtl = locale === "he";
+      const direction = rtl ? "rtl" : "ltr";
+      const textDirection = rtl ? "ltr" : "rtl";
+      const fallbackText = rtl ? "Camera A-12" : "מצלמה A-12";
+      await expect(popup).toHaveAttribute("dir", direction);
+
+      const specs = popup.locator(".sf-hover-preview-specs > div").first();
+      const fields = [
+        popup.locator(".sf-hover-preview-title"),
+        popup.locator(".sf-hover-preview-description"),
+      ];
+      if (await specs.count()) fields.push(specs.locator("dt"));
+
+      for (const field of fields) {
+        // Simulate catalog content available only in the opposite language.
+        await field.evaluate((node, text) => {
+          (node.querySelector("bdi") ?? node).textContent = text;
+        }, fallbackText);
+        await expect(field).toHaveCSS("direction", direction);
+        await expect(field.locator("bdi")).toHaveCSS(
+          "direction",
+          textDirection,
+        );
+        await expectTextAtReadingEdge(field, rtl);
+      }
+
+      if (await specs.count()) {
+        const value = specs.locator("dd");
+        await expect(value).toHaveCSS("direction", direction);
+        await expect(value.locator("bdi")).toHaveAttribute("dir", "auto");
+      }
+
+      const vat = popup
+        .locator("small")
+        .filter({ hasText: rtl ? "ללא מע״מ" : "excl. VAT" });
+      await expect(vat).toHaveCSS("direction", direction);
+      await expect(vat.locator("bdi")).toHaveCSS("direction", "ltr");
+      const code = popup.locator(".product-identifier-value").first();
+      if (appearanceVersion === "2" && (await code.count())) {
+        await expect(code).toHaveCSS("direction", "ltr");
+        await expectTextAtReadingEdge(code, rtl);
+      }
+
+      await page.keyboard.press("Escape");
+      await expect(popup).toHaveCount(0);
+      await expect(trigger).toBeFocused();
+    });
+  }
+
   for (const width of [1440, 390, 320]) {
-    test(`${locale}: smaller popup and real identifiers at ${width}px`, async ({
+    test(`${locale}: responsive popup and real identifiers at ${width}px`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
@@ -69,8 +161,58 @@ for (const locale of ["en", "he"] as const) {
           const popup = page.locator('.sf-hover-preview[data-state="open"]');
           await expect(popup).toBeVisible();
           const inner = popup.locator(".sf-hover-preview-inner");
+          if (index === 0) {
+            const toolbar = popup.locator(".sf-hover-preview-toolbar");
+            const close = toolbar.locator(".sf-hover-preview-close");
+            const toolbarBox = (await toolbar.boundingBox())!;
+            const closeBox = (await close.boundingBox())!;
+            expect(closeBox.y - toolbarBox.y).toBeCloseTo(
+              toolbarBox.y + toolbarBox.height - closeBox.y - closeBox.height,
+              0,
+            );
+            const icons = await popup
+              .locator(
+                ":is(.sf-hover-preview-close, .sf-hover-preview-arrow, .sf-image-magnifier-toggle):visible > svg",
+              )
+              .evaluateAll((elements) =>
+                elements.map((icon) => {
+                  const bounds = icon.getBoundingClientRect();
+                  return [bounds.width, bounds.height];
+                }),
+              );
+            expect(icons.length).toBeGreaterThan(0);
+            for (const [iconWidth, iconHeight] of icons) {
+              expect(iconWidth).toBeCloseTo(18, 0);
+              expect(iconHeight).toBeCloseTo(18, 0);
+            }
+          }
+          const gallery = (await popup
+            .locator(".sf-hover-preview-gallery")
+            .boundingBox())!;
+          const information = (await popup
+            .locator(".sf-preview-information")
+            .boundingBox())!;
+          if (width >= 900) {
+            expect(Math.abs(gallery.y - information.y)).toBeLessThan(2);
+            if (locale === "he") {
+              expect(information.x + information.width).toBeLessThanOrEqual(
+                gallery.x,
+              );
+            } else {
+              expect(gallery.x + gallery.width).toBeLessThanOrEqual(
+                information.x,
+              );
+            }
+          } else {
+            expect(gallery.y + gallery.height).toBeLessThanOrEqual(
+              information.y,
+            );
+          }
           const box = (await popup.boundingBox())!;
-          expect(box.width).toBeCloseTo(Math.min(416, width - 32), 0);
+          expect(box.width).toBeCloseTo(
+            Math.min(width >= 900 ? 736 : 416, width - 32),
+            0,
+          );
           // 592px = the 37rem inner cap shared with product-hover-preview.tsx
           expect((await inner.boundingBox())!.height).toBeCloseTo(592, 0);
           expect(box.x).toBeGreaterThanOrEqual(15);
@@ -96,10 +238,10 @@ for (const locale of ["en", "he"] as const) {
           }
           const brand = popup.locator('[data-product-field="brand"] dd');
           if (await brand.count()) {
-            await expect(brand).toHaveAttribute("dir", "auto");
+            await expect(brand.locator("bdi")).toHaveAttribute("dir", "auto");
             expect(
               await brand.evaluate((node) => getComputedStyle(node).textAlign),
-            ).toBe("center");
+            ).toBe("start");
           }
           const before = await inner.boundingBox();
           await popup

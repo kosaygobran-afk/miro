@@ -1,0 +1,106 @@
+.directory {
+  display: grid;
+  gap: 1rem;
+  min-inline-size: 0;
+}
+
+.search {
+  display: grid;
+  gap: 0.375rem;
+  inline-size: min(100%, 24rem);
+  font-weight: 650;
+}
+
+.searchField {
+  position: relative;
+}
+
+.searchField > svg {
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 0.875rem;
+  transform: translateY(-50%);
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.searchField > input {
+  min-block-size: 2.75rem;
+  inline-size: 100%;
+  padding-inline-start: 2.5rem;
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 0.875rem;
+  align-items: start;
+}
+
+.group {
+  min-inline-size: 0;
+  padding: 0.875rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--mgmt-radius-card);
+  background: var(--surface);
+}
+
+.group h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 750;
+}
+
+.group h2 svg {
+  flex: none;
+  color: var(--accent-text);
+}
+
+.group ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.group li + li {
+  border-block-start: 1px solid var(--border-subtle);
+}
+
+.destination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-block-size: 2.75rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: var(--mgmt-radius-control);
+  color: var(--foreground);
+  font-size: 0.875rem;
+  overflow-wrap: anywhere;
+}
+
+.destination:hover {
+  background: var(--surface-muted);
+  color: var(--accent-text);
+}
+
+.destination:focus-visible {
+  outline: 2px solid var(--accent-text);
+  outline-offset: -2px;
+}
+
+.destination svg {
+  flex: none;
+}
+
+.destination[href^="/"]:dir(rtl) svg {
+  transform: scaleX(-1);
+}
+
+.empty {
+  margin: 0;
+  color: var(--muted-foreground);
+}

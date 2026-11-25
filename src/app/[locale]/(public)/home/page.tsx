@@ -1,5 +1,9 @@
 import Link from "@/components/motion/motion-link";
 import Image from "next/image";
+import { WebsitePhotoSection } from "@/components/public/website-photo-section";
+import { HOME_HERO_IMAGE } from "@/lib/website-images";
+import { getPublicWebsiteImages } from "@/lib/website-images-server";
+import { getWebsitePageCopy } from "@/lib/website-page-copy-server";
 import { ArrowDown, ShieldCheck } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { pageMetadata } from "@/lib/seo";
@@ -39,51 +43,45 @@ export default async function HomePage({
   const { locale: rawLocale } = await params;
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
   const he = locale === "he";
+  const websiteImages = getPublicWebsiteImages();
+  const [images, pageCopy] = await Promise.all([
+    websiteImages,
+    getWebsitePageCopy("home", locale),
+  ]);
+  const heroImage = images.overrides["home-hero"] ?? HOME_HERO_IMAGE;
 
   return (
     <>
       <section className="experience-hero">
-        <div className="experience-hero-media" aria-hidden="true">
-          <Image
-            src="/images/security-studio.png"
-            alt=""
-            fill
-            sizes="100vw"
-            preload
-            className="experience-hero-image"
-          />
-        </div>
+        {heroImage && (
+          <div className="experience-hero-media" aria-hidden="true">
+            <Image
+              src={heroImage}
+              alt=""
+              fill
+              sizes="100vw"
+              preload
+              unoptimized={/^https:/i.test(heroImage)}
+              referrerPolicy="no-referrer"
+              className="experience-hero-image"
+            />
+          </div>
+        )}
         <div className="miro-container experience-hero-inner">
-          <div className="experience-hero-copy">
+          <div className="experience-hero-copy" data-page-heading-copy>
             <p className="experience-overline">
               <span className="experience-live-dot" />
-              {he
-                ? "מיגון. תקשורת. שקט בראש."
-                : "SECURITY. CONNECTION. PEACE OF MIND."}
+              {pageCopy.eyebrow}
             </p>
             <h1>
-              {he ? (
-                <>
-                  העולם שלכם.
-                  <br />
-                  <em>בטוח יותר.</em>
-                  <br />
-                  מחובר יותר.
-                </>
-              ) : (
-                <>
-                  Your world.
-                  <br />
-                  <em>More secure.</em>
-                  <br />
-                  More connected.
-                </>
-              )}
+              {pageCopy.title}
+              <br />
+              <em>{pageCopy.accent}</em>
+              <br />
+              {pageCopy.closing}
             </h1>
             <p className="experience-hero-description">
-              {he
-                ? "מצלמות, אזעקות, בקרת כניסה ורשתות. פתרונות חכמים שמתחברים לבית שלכם, לעסק שלכם ולדרך שבה אתם חיים."
-                : "Cameras, alarms, smart access and networks. Thoughtful solutions for your home, your business and the way you live."}
+              {pageCopy.description}
             </p>
             <div className="experience-actions">
               <Link
@@ -209,9 +207,14 @@ export default async function HomePage({
           <ConnectedSystem locale={locale} />
         </div>
       </section>
+      <WebsitePhotoSection
+        placement="home"
+        locale={locale}
+        settings={websiteImages}
+      />
       <section className="experience-section">
         <div className="miro-container">
-          <div className="experience-section-heading">
+          <div className="experience-section-heading experience-process-heading">
             <div>
               <p className="experience-overline">
                 {he ? "מהרעיון למערכת" : "FROM IDEA TO INSTALLATION"}

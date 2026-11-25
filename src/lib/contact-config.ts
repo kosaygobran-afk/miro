@@ -9,14 +9,9 @@ import {
 /**
  * Public contact configuration for the storefront.
  *
- * Source of truth, in priority order per field:
- * 1. NEXT_PUBLIC_CONTACT_PHONE / NEXT_PUBLIC_CONTACT_WHATSAPP /
- *    NEXT_PUBLIC_CONTACT_EMAIL environment variables.
- * 2. The public.get_public_contact_config() Postgres RPC (anon-executable,
- *    managed by the owner).
- *
- * Every value is validated before it is returned. Invalid or missing values
- * become null so callers hide the action instead of rendering placeholders.
+ * Values saved in CEO Settings take precedence per field, including an
+ * explicit clear. Deployment defaults support fields that have never been set.
+ * The anonymous RPC also supplies the localized address and hours.
  */
 
 const phoneSchema = z
@@ -29,11 +24,12 @@ const phoneSchema = z
 const whatsappSchema = z
   .string()
   .trim()
-  .regex(/^\+?\d{8,15}$/, "WhatsApp number must be digits with country code");
+  .regex(/^\+?\d{7,15}$/, "WhatsApp number must be digits with country code");
 
 const emailSchema = z.string().trim().toLowerCase().email().max(254);
 
 const rpcConfigSchema = z.object({
+  configured_fields: z.array(z.enum(["phone", "whatsapp", "email"])).optional(),
   phone: z.string().nullish(),
   whatsapp: z.string().nullish(),
   email: z.string().nullish(),
@@ -85,6 +81,19 @@ function toWhatsAppNumber(value: string): string {
   return value.replace(/\D/g, "");
 }
 
+export function getPublicContactEnvironmentFallbacks() {
+  const phone = phoneSchema.safeParse(process.env.NEXT_PUBLIC_CONTACT_PHONE);
+  const whatsapp = whatsappSchema.safeParse(
+    process.env.NEXT_PUBLIC_CONTACT_WHATSAPP,
+  );
+  const email = emailSchema.safeParse(process.env.NEXT_PUBLIC_CONTACT_EMAIL);
+  return {
+    phone: phone.success ? phone.data : null,
+    whatsapp: whatsapp.success ? toWhatsAppNumber(whatsapp.data) : null,
+    email: email.success ? email.data : null,
+  };
+}
+
 function emptyConfig(): PublicContactConfig {
   return {
     phone: null,
@@ -98,57 +107,56 @@ function emptyConfig(): PublicContactConfig {
   };
 }
 
-function firstText(...values: Array<string | null | undefined>): string | null {
-  for (const value of values) {
-    const trimmed = value?.trim();
-    if (trimmed) return trimmed;
-  }
-  return null;
+function contactValue(
+  rpc: z.infer<typeof rpcConfigSchema> | null,
+  field: "phone" | "whatsapp" | "email",
+  fallback: string | null,
+): string | null {
+  if (rpc?.configured_fields?.includes(field)) return rpc[field] ?? null;
+  // Before the projection added presence metadata, null also represented an
+  // unset field. Existing nonempty values already take precedence.
+  return rpc?.[field]?.trim() || fallback || null;
 }
 
 export const getPublicContactConfig = cache(
   async (): Promise<PublicContactConfig> => {
     const config = emptyConfig();
-
-    const envPhone = process.env.NEXT_PUBLIC_CONTACT_PHONE?.trim();
-    const envWhatsapp = process.env.NEXT_PUBLIC_CONTACT_WHATSAPP?.trim();
-    const envEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim();
+    const fallback = getPublicContactEnvironmentFallbacks();
 
     let rpc: z.infer<typeof rpcConfigSchema> | null = null;
-    // The RPC also carries address/hours, so it is consulted unless every env
-    // override is set. A failing RPC never breaks rendering - values stay null.
-    if (!(envPhone && envWhatsapp && envEmail)) {
-      try {
-        rpc = await readPublicContactConfig();
-      } catch {
-        // This is an optional public read. Raw RPC/transport errors must not be
-        // forwarded to the browser's RSC error overlay or expose their details.
-        console.warn("Public contact configuration unavailable.");
-      }
+    try {
+      rpc = await readPublicContactConfig();
+    } catch {
+      // Keep optional public contact reads from breaking page rendering.
+      console.warn("Public contact configuration unavailable.");
     }
 
-    const phone = phoneSchema.safeParse(firstText(envPhone, rpc?.phone));
+    const phone = phoneSchema.safeParse(
+      contactValue(rpc, "phone", fallback.phone),
+    );
     if (phone.success) {
       config.phone = phone.data;
       config.phoneHref = toTelHref(phone.data);
     }
 
     const whatsapp = whatsappSchema.safeParse(
-      firstText(envWhatsapp, rpc?.whatsapp),
+      contactValue(rpc, "whatsapp", fallback.whatsapp),
     );
     if (whatsapp.success) {
       config.whatsapp = toWhatsAppNumber(whatsapp.data);
     }
 
-    const email = emailSchema.safeParse(firstText(envEmail, rpc?.email));
+    const email = emailSchema.safeParse(
+      contactValue(rpc, "email", fallback.email),
+    );
     if (email.success) {
       config.email = email.data;
     }
 
-    config.addressHe = firstText(rpc?.address_he);
-    config.addressEn = firstText(rpc?.address_en);
-    config.hoursHe = firstText(rpc?.hours_he);
-    config.hoursEn = firstText(rpc?.hours_en);
+    config.addressHe = rpc?.address_he?.trim() || null;
+    config.addressEn = rpc?.address_en?.trim() || null;
+    config.hoursHe = rpc?.hours_he?.trim() || null;
+    config.hoursEn = rpc?.hours_en?.trim() || null;
 
     return config;
   },

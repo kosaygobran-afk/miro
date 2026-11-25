@@ -29,6 +29,7 @@ export function FormSection({
   return (
     <section
       id={sectionId}
+      tabIndex={sectionId ? -1 : undefined}
       aria-labelledby={headingId}
       className={["mgmt-form-section", className].filter(Boolean).join(" ")}
     >

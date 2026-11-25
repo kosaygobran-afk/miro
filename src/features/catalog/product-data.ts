@@ -44,6 +44,8 @@ export interface Product {
   priceIls: number | null;
   /** Undiscounted catalog price used for interactive variant resolution. */
   basePriceIls?: number | null;
+  /** Effective VAT rate for the storefront net price, if available. */
+  vatRate?: number;
   category: string;
   categorySlug: string;
   badge?: string;

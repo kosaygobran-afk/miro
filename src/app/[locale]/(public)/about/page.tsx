@@ -7,6 +7,7 @@ import {
 } from "@/components/public/experience-sections";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
+import { getWebsitePageCopy } from "@/lib/website-page-copy-server";
 
 export async function generateMetadata({
   params,
@@ -31,6 +32,7 @@ export default async function AboutPage({
   const { locale: rawLocale } = await params;
   const locale: Locale = isLocale(rawLocale) ? rawLocale : "he";
   const he = locale === "he";
+  const pageCopy = await getWebsitePageCopy("about", locale);
   const values = he
     ? [
         {
@@ -77,25 +79,16 @@ export default async function AboutPage({
           <span>/</span>
           <span>{he ? "אודות" : "About"}</span>
         </nav>
-        <div className="experience-reading-heading">
+        <div className="experience-reading-heading" data-page-heading-copy>
           <p className="experience-overline">
-            {he ? "נעים להכיר. מירו." : "MEET MIRO"}
+            {pageCopy.eyebrow}
           </p>
           <h1>
-            {he ? (
-              <>
-                טכנולוגיה שמחברת.<em>אנשים שבמרכז.</em>
-              </>
-            ) : (
-              <>
-                Technology that connects.<em>People at the centre.</em>
-              </>
-            )}
+            {pageCopy.title}
+            <em>{pageCopy.accent}</em>
           </h1>
           <p className="experience-description">
-            {he
-              ? "הבית, העסק והדברים שחשובים לכם. מירו מחברת בין עולמות המיגון והתקשורת, עם גישה שמתחילה בהבנת המרחב וממשיכה לתכנון שלם."
-              : "Your home, your business and the things that matter to you. MIRO brings security and communications together, with an approach that starts by understanding the space."}
+            {pageCopy.description}
           </p>
         </div>
         <div className="experience-values">

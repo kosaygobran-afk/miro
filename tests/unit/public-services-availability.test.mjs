@@ -130,6 +130,9 @@ function pages(serviceExports) {
     "@/lib/i18n": { isLocale: (value) => ["en", "he"].includes(value) },
     "@/lib/seo": { pageMetadata: (input) => input },
     "@/lib/public-services": serviceExports,
+    "@/lib/website-images-server": {
+      getPublicWebsiteImages: async () => ({ overrides: {} }),
+    },
     "@/components/public/services-unavailable": { ServicesUnavailable },
   };
   const require = (name) => imports[name] ?? {};

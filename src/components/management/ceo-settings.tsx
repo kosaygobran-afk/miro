@@ -205,7 +205,12 @@ export function CeoSettings({ locale }: { locale: "he" | "en" }) {
   } as const;
 
   return (
-    <section className="ceo-security" aria-labelledby="ceo-security-title">
+    <section
+      id="settings-ceo-security"
+      className="ceo-security"
+      aria-labelledby="ceo-security-title"
+      tabIndex={-1}
+    >
       <div className="mgmt-card mgmt-card--padded flex items-start gap-3">
         <span className="mgmt-metric-card__icon" aria-hidden="true">
           <ShieldCheck className="h-5 w-5" />

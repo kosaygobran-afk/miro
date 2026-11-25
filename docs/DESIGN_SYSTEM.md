@@ -1,5 +1,37 @@
 # Design System
 
+## Website photo galleries — 2026-11-25
+
+The Home page shows installation work before its process section. The Services overview shows security systems after expertise and network installation after its process. Place the gallery beside the localized copy at desktop widths and stack it below the copy on small screens. Use a 4:5 media frame for the predominantly portrait photos. The shipped photos use Full image fit and 100% zoom. Preserve the logo, equipment and bilingual reading order when reframing. The carousel reserves its geometry, keeps manual controls available, and respects reduced motion. Manage the placements in CEO Settings → Website images.
+
+## Storefront product-card typography — 2026-11-24
+
+Version 2 product cards stack the category, title and gray brand/model text at the locale’s reading edge. The title takes one or two rendered lines. The brand and model follow within 0.375rem of the title, with 1rem vertical padding around the stack and the shared card inset on both sides. Grid, list, moving and related rails, and saved product cards share this treatment. Wide list cards center the stack beside the media.
+
+Use the existing Heebo typeface. Scale the bold title and smaller brand/model text with card width, using a slightly heavier weight for the brand. Brand and model retain independent text direction and their full native titles. They share one line where space permits and may wrap to a second line. The full values remain available in quick preview and on the product page.
+
+## Full product quick-preview layout — 2026-11-24
+
+Version 2 uses the category path in the toolbar and a single scrollable region for the complete product. The title leads. At 900px and wider an explicitly opened preview expands to 46rem and places the gallery alongside the information column. On narrower screens the gallery scrolls with the product text. Opening the eye control by keyboard uses the same layout as clicking it. Previews that share space with the original card actions keep the compact width. The footer stays reachable with the cart and product page as labeled actions.
+
+Present the current and previous price together with the discount. Follow with VAT, stock, promotional badges and product options. Group SKU, barcode, brand, model, warranty and catalog specifications under the localized specifications heading. Labels and values share column anchors, including the brand. Preserve LTR identifiers and currency amounts, wrapping for long text and native vertical scrolling. Opening the toolbar magnifier from the bottom of the sheet reveals its image.
+
+Keep the option name and stock text together beside the swatch at the locale’s reading edge, with the price on the opposite edge. Apply automatic direction to the name itself so a Latin SKU stays readable in a Hebrew preview and a Hebrew fallback name aligns correctly in English. Confirmed zero stock reads “Out of stock” or “אזל מהמלאי” in both the preview status and the option row. Reference products with unconfirmed quantities show the localized availability-on-request label.
+
+## Storefront category headlines and shopping feedback — 2026-11-24
+
+Version 2 presents the main category links, catalog filters and subcategories as single-line headlines. Separate adjacent labels with a one-em vertical rule. Underline the current selection, align counts with their labels and keep at least 44px of clickable height. Category bars share the Dark enhanced-glass surface with the navbar. At narrow widths the result count sits above its scrollable filter row.
+
+In quick preview, the product name leads into the current price and availability, followed by the promotion and VAT details. Product codes follow the price. The gallery counter is plain text, the cart is a secondary action and the product link points in the locale’s reading direction. Shopping badges show the actual cart quantity and number of distinct saved products. The mobile menu includes the wishlist count. Button feedback follows the shared animation setting and the OS reduced-motion preference.
+
+## Storefront card spacing and icon sizing — 2026-11-24
+
+- Keep the existing Version 2 card and popup composition. Use the shared card inset for the promotion rail, summary and price panel. The four joined actions retain their 48px cells and outer corner treatment with 18px glyphs. In the popup, split the toolbar's vertical padding evenly and center the 18px close, magnifier and gallery glyphs inside their existing controls.
+
+## Storefront quick-preview reading direction — 2026-11-24
+
+- In both appearance versions, the quick-preview dialog uses the storefront locale for block direction and alignment. Align titles, descriptions and specification labels to the reading edge. Isolate product text inside those blocks so untranslated descriptions, brand names and model numbers keep their natural reading order. Keep SKU, barcode and numeric price strings LTR, with VAT labels in the locale's reading order. Version 2 retains the centered brand value in its specification column.
+
 ## CEO and admin navbar restored — 2026-11-19
 
 - The CEO and admin topbar use the original management breadcrumb, workspace finder and control groups. Public headline styles and live navbar product search belong to the storefront.
@@ -14,7 +46,7 @@
 
 - Horizontal storefront page links use gold text underlines, heavier labels and a subtle white text highlight for hover, keyboard focus and the current page or section. The separate Store category disclosure and other icon controls retain their own behavior.
 - The storefront navbar search uses a maximum of five items per page, with physical-left Previous and physical-right Next in both directions. The lookup reads public catalog products and opens the localized product detail.
-- The collection intro below the category controls and rails anchors its eyebrow, title and description to the physical left in both languages. The surrounding catalog and the Hebrew copy retain their natural reading direction.
+- The collection and buying guide intros align their eyebrows, titles and descriptions to the locale’s reading edge (right in Hebrew, left in English).
 
 ## Responsive product list view — 2026-11-13
 
@@ -63,11 +95,11 @@
 
 ## Product-card alignment and reading rhythm — 2026-11-03
 
-- Version 2 grid, moving and related cards share a reading-start category/title/metadata stack. The category stays on one line with its complete native title; the title reserves two lines at the actual 1.4 line height. Brand/model rows follow the card locale, with independently isolated automatic text direction for each value. Keep the shared 8rem minimum summary and content-driven growth.
+- Version 2 grid, moving and related cards share a reading-start category/title/metadata stack. Brand/model rows follow the card locale, with independently isolated automatic text direction for each value. The 2026-11-24 card typography entry describes the current spacing, title height and wrapping.
 - Preserve the three shared pricing rows (price/SKU, promotion/barcode, VAT/stock), selectable LTR codes with reading-start label/value anchors, and full code disclosure in native titles and previews. Unpublished card prices use `Price on request` / `מחיר לפי בירור`; the source price remains null and the details/enquiry paths remain available. Compact copy keeps the pricing separators aligned alongside published-price cards.
 - The four existing 38×42px footer controls now form one centered group with equal 8–12px gaps, centered 18px glyphs and consistent stroke weights. This supersedes distributing them with `space-between`. Preserve the bordered 44px media band, portaled hints, cart quantities, unavailable-cart treatment, preview gestures, real media clipping and Version 1.
 - Scope stock dot, quantity and caption colors explicitly beneath the card. Broad legacy `.sf-product-price span` rules otherwise erase status colors. The dot uses the existing stock-level color; count and caption use the theme foreground for contrast. Preserve the actual quantities, thresholds and status border/fill.
-- `tests/catalog-reference.spec.ts` must measure the four hint-wrapped controls and assert their count before testing geometry, avoiding an empty selector passing containment checks. Check both directions, title reservation, identifier anchors and icon centers as well as large numeric prices.
+- `tests/catalog-reference.spec.ts` must measure the four hint-wrapped controls and assert their count before testing geometry, avoiding an empty selector passing containment checks. Check both directions, title-to-metadata spacing, identifier anchors and icon centers as well as large numeric prices.
 
 ## Four product-card actions — 2026-11-03
 
@@ -507,7 +539,7 @@ This entry supersedes the earlier admin table wrapping and cosmetic-control note
 ## Customer storefront refinement and glass navigation — 2026-10-02
 
 - Public identity stays black/charcoal/gold with the existing dark, medium and light tokens. Do not inherit CEO/admin neon colors. Refine shape, weight, spacing, arrows and icons through the final `customer-refinement.css` layer.
-- Eight category cards lead into the company rail and product collection rail. Company slots have identical dimensions and contain modest marks, with theme-aware monochrome treatment. The eight initial technology names do not establish reseller partnerships. Brand controls support visibility, ordering, replacement, removal and motion timing.
+- Eight category cards lead into MIRO Selection, followed by the Technology Index and then the catalog. Company slots have identical dimensions and contain modest marks, with theme-aware monochrome treatment. The eight initial technology names do not establish reseller partnerships. Brand controls support visibility, ordering, replacement, removal and motion timing.
 - Five original decorative studio backgrounds rotate every ten seconds by default. Keep typography readable through theme-aware gradients. Rotation pauses for focus, hidden tabs or the explicit pause button; reduced motion leaves a still image with manual navigation. CEO controls choose fade/slide/zoom/none, transition duration and interval.
 - Product media stages contain whole devices, side thumbnails and distinct RTL-aware arrows. SVG reference artwork is labeled as illustrative. Unpriced reference models show availability on request, without fabricated prices or stock claims. Card/cart/preview quantity controls use the same cart state and appear after the first add; zero returns to the add action.
 - 3D quick previews retain a stable anchored portal, fast configurable hover intent (default 200 ms), pointer grace, keyboard close/focus restoration and bounded mobile scrolling for actual product content. Product rails pause while their portal remains open, including pointer travel from the moving card into the portal.

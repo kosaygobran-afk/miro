@@ -174,7 +174,7 @@ export function ProductImageMagnifier({
           setImageState((current) => ({ ...current, enabled: !zoomed }));
           if (!zoomed) {
             requestAnimationFrame(() =>
-              stageRef.current?.focus({ preventScroll: true }),
+              stageRef.current?.focus({ preventScroll: !togglePortalTarget }),
             );
           }
         }}

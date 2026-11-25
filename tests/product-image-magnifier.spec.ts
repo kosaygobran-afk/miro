@@ -215,15 +215,28 @@ test("a product-page magnifier yields Escape to an account overlay outside its c
   await expect(toggle).toHaveAttribute("aria-pressed", "false");
 });
 
+// Owners can move this single-image fixture between storefront categories.
+async function openSingleImageProduct(page: Page) {
+  const sku = "5586793";
+  const response = await page.request.get("/api/catalog/product-search", {
+    params: { locale: "en", q: sku },
+  });
+  expect(response.ok()).toBeTruthy();
+  const { results } = (await response.json()) as {
+    results: { sku: string; href: string }[];
+  };
+  const product = results.find((item) => item.sku === sku);
+  if (!product) throw new Error(`Missing single-image catalog fixture ${sku}`);
+  await page.goto(product.href, { waitUntil: "domcontentloaded" });
+}
+
 test("a single-image product has magnification", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 1000 });
   await page.route("**/api/track", (route) => route.fulfill({ status: 204 }));
   await page.route("**/_next/image?**", (route) =>
     route.fulfill({ contentType: "image/svg+xml", body: imageFixture }),
   );
-  await page.goto("/en/store/accessories/5586793", {
-    waitUntil: "domcontentloaded",
-  });
+  await openSingleImageProduct(page);
   await expect(page.locator('[data-route-loading="true"]')).toHaveCount(0);
   const gallery = page.locator("#main-content .sf-product-gallery");
   await expect(gallery.locator(".sf-image-magnifier-toggle")).toBeVisible();
@@ -249,9 +262,7 @@ test("failed detail media has no active magnifier", async ({ page }) => {
     failedRequests += 1;
     return route.abort();
   });
-  await page.goto("/en/store/accessories/5586793", {
-    waitUntil: "domcontentloaded",
-  });
+  await openSingleImageProduct(page);
   await expect(page.locator('[data-route-loading="true"]')).toHaveCount(0);
   const gallery = page.locator("#main-content .sf-product-gallery");
   await expect(gallery.locator(".sf-product-visual-placeholder")).toBeVisible({
@@ -327,6 +338,12 @@ for (const locale of ["en", "he"] as const) {
           fit: "contain",
           position: "50% 50%",
         });
+        if (width === 320) {
+          const scroller = popup.locator(".sf-hover-preview-details");
+          await scroller.evaluate((el) => {
+            el.scrollTop = el.scrollHeight;
+          });
+        }
         await toggle.focus();
         await expect(popup.locator('input[type="range"]')).toHaveCount(0);
         await expect(
@@ -335,6 +352,7 @@ for (const locale of ["en", "he"] as const) {
         await page.keyboard.press("Enter");
         await expect(toggle).toHaveAttribute("aria-pressed", "true");
         await expect(stage).toBeFocused();
+        await expect(stage).toBeInViewport({ ratio: 0.8 });
         await expect(stage.locator(":scope > .sf-product-image-fit")).toHaveCSS(
           "transform",
           "none",

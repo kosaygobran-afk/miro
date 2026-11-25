@@ -1,0 +1,107 @@
+.editor,
+.imageEditor,
+.imageFields {
+  display: grid;
+  gap: 1rem;
+  min-inline-size: 0;
+}
+
+.editor {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+
+.editor:disabled :is(button, input, select) {
+  opacity: 0.65;
+}
+
+.fields,
+.workbench {
+  display: grid;
+  align-items: start;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+}
+
+.workbench {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+}
+
+.toolbar,
+.imageToolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.imageToolbar {
+  gap: 0.85rem;
+  align-items: end;
+}
+
+.imageToolbar > :first-child {
+  flex: 1 1 13rem;
+  min-inline-size: 0;
+}
+
+.movePanel summary {
+  width: fit-content;
+  max-inline-size: 100%;
+  cursor: pointer;
+  padding-block: 0.35rem;
+  color: var(--mgmt-text, var(--foreground));
+  font-size: 0.88rem;
+  font-weight: 650;
+}
+
+.movePanel .toolbar {
+  margin-block-start: 0.5rem;
+}
+
+.imageEditor {
+  border-block-start: 1px solid var(--mgmt-border, var(--border-subtle));
+  padding-block-start: 1rem;
+}
+
+.preview {
+  display: grid;
+  gap: 0.75rem;
+  min-inline-size: 0;
+  background: var(--mgmt-surface, var(--surface));
+  border: 1px solid var(--mgmt-border, var(--border-subtle));
+  border-radius: 0.9rem;
+  padding: 0.8rem;
+}
+
+.preview h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.hint {
+  color: var(--mgmt-text-secondary, var(--muted-foreground));
+  font-size: 0.87rem;
+  line-height: 1.65;
+}
+
+.range {
+  accent-color: var(--mgmt-accent, var(--primary));
+  min-block-size: 2rem;
+  inline-size: 100%;
+}
+
+.rangeValue {
+  font-variant-numeric: tabular-nums;
+  margin-inline-start: 0.2rem;
+}
+
+.sourceImage {
+  position: relative;
+  aspect-ratio: 16 / 9;
+}
+
+.sourceImage img {
+  object-fit: contain;
+}

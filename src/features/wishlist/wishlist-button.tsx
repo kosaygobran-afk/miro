@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Heart, HeartOff } from "lucide-react";
 import { useCart } from "@/features/cart/cart-context";
 import { storeCopy } from "@/features/catalog/store-copy";
@@ -25,6 +26,7 @@ export function WishlistButton({
   onRemove?: () => void;
 }) {
   const { hydrated, wishlist, setWishlisted } = useCart();
+  const [interacted, setInteracted] = useState(false);
   const saved = hydrated ? wishlist.includes(productId) : initialSaved;
   const copy = storeCopy[locale];
   const label = saved ? copy.removeFromWishlist : copy.addToWishlist;
@@ -33,7 +35,8 @@ export function WishlistButton({
   return (
     <button
       type="button"
-      className={`miro-button miro-button-secondary${iconOnly ? " sf-save-button" : ""}`}
+      data-shopping-feedback={interacted || undefined}
+      className={`sf-wishlist-button miro-button miro-button-secondary${iconOnly ? " sf-save-button" : ""}`}
       aria-label={label}
       aria-pressed={saved}
       aria-describedby={descriptionId}
@@ -42,11 +45,13 @@ export function WishlistButton({
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
+        setInteracted(true);
         if (saved) onRemove?.();
         setWishlisted(productId, !saved);
       }}
     >
       <Icon
+        key={String(saved)}
         size={18}
         className={saved ? "text-accent-text" : undefined}
         aria-hidden="true"

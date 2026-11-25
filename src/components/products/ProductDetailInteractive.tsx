@@ -46,6 +46,7 @@ interface ProductDetailInteractiveProps {
   productName: string;
   locale: "he" | "en";
   basePrice: number | null;
+  vatRate?: number;
   images: ProductImage[];
   variants: ProductVariant[];
   defaultVariantId: string | null;
@@ -72,6 +73,7 @@ export function ProductDetailInteractive({
   productName,
   locale,
   basePrice,
+  vatRate,
   images,
   variants,
   defaultVariantId,
@@ -136,6 +138,7 @@ export function ProductDetailInteractive({
   };
   const priceResult = resolvePrice(pricingInputs);
   const effectivePrice = priceResult.effectivePrice;
+  const netPrice = priceBeforeVat(effectivePrice, vatRate);
   const promoCompareAtPrice = priceResult.compareAtPrice ?? compareAtPrice;
   const discountPercent = getDiscountPercent(
     promoCompareAtPrice,
@@ -429,13 +432,9 @@ export function ProductDetailInteractive({
               {effectivePrice !== null && (
                 <small>{locale === "he" ? "כולל מע״מ" : "incl. VAT"}</small>
               )}
-              {effectivePrice !== null && (
+              {netPrice !== null && (
                 <small dir="auto">
-                  {formatPrice(
-                    priceBeforeVat(effectivePrice),
-                    locale,
-                    copy.priceUnpublished,
-                  )}{" "}
+                  {formatPrice(netPrice, locale, copy.priceUnpublished)}{" "}
                   {locale === "he" ? "ללא מע״מ" : "excl. VAT"}
                 </small>
               )}
@@ -473,7 +472,7 @@ export function ProductDetailInteractive({
           />
         </div>
 
-        {displayedStock <= 0 && (
+        {displayedStock <= 0 && !availabilityUnconfirmed && (
           <div className="sf-product-stock" aria-live="polite">
             {selectedVariant
               ? locale === "he"
@@ -489,6 +488,7 @@ export function ProductDetailInteractive({
           onSelect={selectVariant}
           locale={locale}
           pricing={pricingInputs}
+          availabilityUnconfirmed={availabilityUnconfirmed}
         />
 
         <ProductOptionalOffers
