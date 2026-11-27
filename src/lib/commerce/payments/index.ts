@@ -1,6 +1,6 @@
 import "server-only";
 
-export type PaymentMethod = "credit_card" | "bit";
+export type PaymentMethod = "credit_card" | "bit" | "apple_pay" | "google_pay";
 export type PaymentLocale = "he" | "en";
 export type PaymentState =
   | "pending"

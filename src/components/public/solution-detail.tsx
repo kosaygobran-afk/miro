@@ -198,8 +198,12 @@ export function SolutionDetail({
           {content.features.map(([Icon, title, copy]) => {
             const FeatureIcon = Icon as typeof Camera;
             return (
-              <article className="experience-value" key={title as string}>
-                <span className="experience-icon">
+              <article
+                className="experience-value"
+                key={title as string}
+                data-headline-group
+              >
+                <span className="experience-icon" data-headline-icon>
                   <FeatureIcon aria-hidden="true" />
                 </span>
                 <h2>{title as string}</h2>

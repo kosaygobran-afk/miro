@@ -11,6 +11,10 @@ export const categoriesCopy = {
   mainCategory: { he: "קטגוריה ראשית", en: "Main category" },
   subcategory: { he: "תת־קטגוריה", en: "Subcategory" },
   subcategories: { he: "תת־קטגוריות", en: "Subcategories" },
+  sharedNamesHint: {
+    he: "השמות בעברית ובאנגלית משמשים בכל תצוגות הקטגוריה בחנות.",
+    en: "The Hebrew and English names are shared by all storefront views of this category.",
+  },
   searchPlaceholder: {
     he: "חיפוש לפי שם או slug…",
     en: "Search name or slug…",

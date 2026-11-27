@@ -315,8 +315,12 @@ export function CheckoutPageClient({ locale }: { locale: "he" | "en" }) {
   return (
     <div className="sf-checkout-page">
       <div className="miro-container">
-        <header className="sf-cart-heading">
-          <span className="sf-cart-heading-icon" aria-hidden="true">
+        <header className="sf-cart-heading" data-headline-group>
+          <span
+            className="sf-cart-heading-icon"
+            aria-hidden="true"
+            data-headline-icon
+          >
             <ShoppingBag size={24} />
           </span>
           <div>

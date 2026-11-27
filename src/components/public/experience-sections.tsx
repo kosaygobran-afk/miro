@@ -171,9 +171,10 @@ export function ServiceCategoryGrid({
             href={withLocale(locale, `services/${getServiceSlug(service)}`)}
             key={getServiceSlug(service)}
             className="experience-category-card"
+            data-headline-group
           >
             <div className="experience-category-top">
-              <span className="experience-icon">
+              <span className="experience-icon" data-headline-icon>
                 <Icon aria-hidden="true" />
               </span>
               <span className="experience-card-index" aria-hidden="true">

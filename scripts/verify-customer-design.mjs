@@ -43,7 +43,6 @@ try {
   publicPage.on("pageerror", (error) => runtimeErrors.push(error.message));
   await publicPage.goto(`${base}/en`, { waitUntil: "networkidle" });
   await expect(publicPage.locator(".sf-department")).toHaveCount(8);
-  await expect(publicPage.locator(".sf-hero-slide")).toHaveCount(5);
   await expect(
     publicPage.locator(".sf-company-segment").first().locator("img"),
   ).toHaveCount(8);
@@ -56,7 +55,7 @@ try {
       })),
     );
   assert.equal(new Set(slots.map((s) => `${s.width}:${s.height}`)).size, 1);
-  pass("8 categories, 5 backgrounds, 8 equal-size local brand marks");
+  pass("8 categories and 8 equal-size local brand marks");
   const departments = await publicPage
     .locator(".sf-department")
     .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("href")));
@@ -65,11 +64,9 @@ try {
     assert.equal(response.status(), 200, href);
   }
   pass("all category routes return 200");
-  // Default interval really advances; manual pause really holds the same slide.
-  const firstSlide = await publicPage
-    .locator(".sf-hero-slide[data-active=true]")
-    .getAttribute("class");
-  void firstSlide;
+  // Default interval really advances on Home, and manual pause holds the slide.
+  await publicPage.goto(`${base}/en/home`, { waitUntil: "networkidle" });
+  await expect(publicPage.locator(".sf-hero-slide")).toHaveCount(5);
   await expect
     .poll(() => publicPage.locator(".sf-hero-controls>span").textContent(), {
       timeout: 13000,
@@ -86,7 +83,8 @@ try {
     await publicPage.locator(".sf-hero-controls>span").textContent(),
     pausedSlide,
   );
-  pass("10-second background rotation and pause work");
+  pass("5 Home backgrounds and 10-second rotation and pause work");
+  await publicPage.goto(`${base}/en`, { waitUntil: "networkidle" });
   await publicPage.locator(".sf-company-toggle").click();
   assert.equal(
     await publicPage

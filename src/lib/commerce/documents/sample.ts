@@ -15,6 +15,7 @@ export function createDocumentSample(
 ): FiscalDocumentSnapshot {
   const he = language === "he";
   const paid = type === "receipt" || type === "invoice_receipt";
+  const exempt = identity?.entity_kind === "exempt";
   const document: FiscalDocumentSnapshot = {
     schema_version: 1,
     id: `SAMPLE-${type}-${language}`,
@@ -64,9 +65,10 @@ export function createDocumentSample(
         description: he
           ? "מצלמת אבטחה לדוגמה - Camera IPC-42 (שחור)"
           : "Sample security camera - IPC-42 (שחור)",
+        sku: "EX-IPC-42",
         quantity: 2,
-        unit_agorot: 12500,
-        discount_agorot: 1000,
+        unit_agorot: exempt ? 12500 : 14750,
+        discount_agorot: exempt ? 1000 : 1180,
         net_agorot: 24000,
         vat_agorot: 4320,
         gross_agorot: 28320,
@@ -76,7 +78,7 @@ export function createDocumentSample(
           ? "התקנה וכיוון מערכת / Installation & setup"
           : "Installation & setup / התקנה וכיוון מערכת",
         quantity: 1,
-        unit_agorot: 10000,
+        unit_agorot: exempt ? 10000 : 11800,
         net_agorot: 10000,
         vat_agorot: 1800,
         gross_agorot: 11800,

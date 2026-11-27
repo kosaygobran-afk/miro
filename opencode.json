@@ -56,6 +56,15 @@
             }
           ]
         },
+        "nvidia/nemotron-3.5-super-vl-120b-a12b": {
+          "modelID": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+          "name": "Nemotron 3.5 Super VL 120B — Agent Workers",
+          "capabilities": {
+            "tools": true,
+            "input": ["text", "image"],
+            "output": ["text"]
+          }
+        },
         "nvidia/nemotron-3-ultra-550b-a55b": {
           "modelID": "nvidia/nemotron-3-ultra-550b-a55b",
           "name": "Nemotron 3 Ultra 550B — Maximum",
@@ -105,29 +114,20 @@
           "disabled": true
         },
         "openai/gpt-oss-20b": {
-          "name": "GPT OSS 20B",
-          "limit": {
-            "context": 131072,
-            "output": 32768
-          },
-          "capabilities": {
-            "tools": true,
-            "input": ["text", "image"],
-            "output": ["text"]
-          }
+          "disabled": true
         }
       }
     }
   },
   "agents": {
     "general": {
-      "model": "nvidia/openai/gpt-oss-20b"
+      "model": "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
     },
     "explore": {
-      "model": "nvidia/openai/gpt-oss-20b"
+      "model": "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
     },
     "scout": {
-      "model": "nvidia/openai/gpt-oss-20b"
+      "model": "nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b"
     }
   }
 }

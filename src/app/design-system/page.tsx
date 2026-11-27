@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "@/components/motion/motion-link";
 import { notFound } from "next/navigation";
-import { Lock, MonitorSmartphone, Palette } from "lucide-react";
+import { MonitorSmartphone, Palette } from "lucide-react";
 import { devPreviewRobots } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -28,10 +28,9 @@ export default function DesignSystemPage() {
           </p>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2">
           {[
             ["Account shell", "/en/account", MonitorSmartphone],
-            ["Worker shell", "/en/worker", Lock],
             ["CEO shell", "/en/admin", Palette],
           ].map(([title, href, Icon]) => (
             <div key={title as string} className="miro-card p-5">

@@ -1,5 +1,39 @@
 # Design System
 
+## Storefront section headings — 2026-11-27
+
+Version 2 storefront section labels use the gold accent at 16.8–18.4px, below the rendered brand wordmark height. Their secondary dark titles stay smaller at 16–16.8px and larger than supporting copy; do not enlarge or recolor the existing gray descriptions. Every section label ends with the same 22×2px gold rule; move Categories' existing rule to the trailing edge rather than duplicating it. Use the shared 0.35rem gap between label, title and supporting text, and a consistent 1rem gap after the heading group. Main content sections use equal top/bottom padding. The category and moving-product rails keep balanced insets, with at least 1rem inside the moving rail for native scrollbar/focus clearance. Version 1 remains unchanged.
+
+## MIRO Selection section spacing — 2026-11-27
+
+The storefront rail shares the Categories section’s compact inset. Match the clear space above the rail heading and below its cards. Keep the bottom inset inside the scrollport and at least 1rem deep for native scrollbars and focus outlines.
+
+## Compact product options — 2026-11-27
+
+Version 2 uses the same compact, wrapping variant tiles on the product page and in quick preview. Two choices fit the 320px preview, and a single choice keeps its compact width. Place the price on its own line at the reading end. Preserve the swatch, readable name and stock at the reading start, native radio controls, a visible selected state and focus outline, and at least 48px of target height. Allow long labels and prices to wrap within the tile.
+
+## Store category grid — 2026-11-27
+
+`#store-top-categories` uses the available width for compact equipment cards. The Categories heading shares the collection hero’s gold eyebrow, short leading rule, type size and responsive alignment. At desktop widths that fit the current main categories, they share one row. Phones and compact tablets start with one row and a bilingual **More categories** button with three downward chevrons. Expansion exposes all rows and collapse removes the other links from the focus order. Long bilingual names remain visible beneath the framed, text-free SVG or photo. Use the independent `store-top-category-nav.module.css` for card presentation. Give the grid equal space above and below its cards. Increase that clearance for active magnification and limit upward growth of tall cards so the heading stays readable. Magnification transforms the painted surface, including the name, while its link and all neighboring cells retain their layout. Keep the focus ring and honor shared micro-interactions and reduced motion.
+
+## Contact page — 2026-11-27
+
+The Contact page preserves the published bilingual opening copy and places the enquiry form beside it on desktops and directly beneath it on phones. The mobile shortcut jumps to the configured direct channels. Phone and email values keep their LTR direction at the locale’s reading edge. Show the address, hours and each contact method only when the public projection supplies that value. The installation checklist follows the contact section and links to Services.
+
+The shared layout lives in `experience.css`. Version 2 uses the framed icons, panel and width-dependent email/phone grid in the final `public-refinement.css` layer. Both appearances keep native field labels, a focusable error summary and confirmation, the message guidance and isolated product context. Preserve the existing enquiry endpoint, the optional phone field and the settings-backed contact details.
+
+## Saved product hearts — 2026-11-27
+
+Product wishlist buttons use a red-to-pink gradient at the start of a save pulse, then settle to the theme's yellow-gold accent. The product button and navbar heart pulse together. The navbar and mobile shortcut stay filled while the wishlist contains items. Unsaved products use an outline. The shared button's `aria-pressed` state keeps the product selection available to assistive technology.
+
+## Buyer Home and Services — 2026-11-27
+
+The localized root opens the product catalog beneath the category grid and rails. The separate Home page opens with the MIRO Group Collection hero directly below the navbar. Its browse action targets the localized `#store-items` catalog. The equipment guide follows, with links resolved against public root-category navigation. Use the existing Heebo family, readable line lengths, theme tokens and logical alignment in both locales.
+
+Services explains the active, sorted service list on the overview. Descriptions, features, process steps, answers and per-service image overrides come from the existing public projections. Bundled bilingual explanations supply missing copy for the current services. Match owner-created services by their descriptive English name because numeric slugs carry no subject information. Keep the empty and retry states distinct. Project notes use native keyboard-operable disclosures. Buyer navigation uses the overview, and existing indexed service URLs remain available.
+
+The Home installation gallery follows the buying guide. The Security & communications section sits beneath it and directly above the footer, with its configured photo and existing calls to action. Phone layouts stack its copy and framed photo. The two Services galleries share a responsive row after the service directory. Each gallery retains its published image order, focus, fit, border, radius and motion settings.
+
 ## Website photo galleries — 2026-11-25
 
 The Home page shows installation work before its process section. The Services overview shows security systems after expertise and network installation after its process. Place the gallery beside the localized copy at desktop widths and stack it below the copy on small screens. Use a 4:5 media frame for the predominantly portrait photos. The shipped photos use Full image fit and 100% zoom. Preserve the logo, equipment and bilingual reading order when reframing. The carousel reserves its geometry, keeps manual controls available, and respects reduced motion. Manage the placements in CEO Settings → Website images.
@@ -16,7 +50,7 @@ Version 2 uses the category path in the toolbar and a single scrollable region f
 
 Present the current and previous price together with the discount. Follow with VAT, stock, promotional badges and product options. Group SKU, barcode, brand, model, warranty and catalog specifications under the localized specifications heading. Labels and values share column anchors, including the brand. Preserve LTR identifiers and currency amounts, wrapping for long text and native vertical scrolling. Opening the toolbar magnifier from the bottom of the sheet reveals its image.
 
-Keep the option name and stock text together beside the swatch at the locale’s reading edge, with the price on the opposite edge. Apply automatic direction to the name itself so a Latin SKU stays readable in a Hebrew preview and a Hebrew fallback name aligns correctly in English. Confirmed zero stock reads “Out of stock” or “אזל מהמלאי” in both the preview status and the option row. Reference products with unconfirmed quantities show the localized availability-on-request label.
+Keep the option name and stock text together beside the swatch at the locale’s reading edge. Apply automatic direction to the name itself so a Latin SKU stays readable in a Hebrew preview and a Hebrew fallback name aligns correctly in English. Confirmed zero stock reads “Out of stock” or “אזל מהמלאי” in both the preview status and the option tile. Reference products with unconfirmed quantities show the localized availability-on-request label.
 
 ## Storefront category headlines and shopping feedback — 2026-11-24
 
@@ -578,7 +612,7 @@ This entry supersedes the earlier admin table wrapping and cosmetic-control note
 - `NavigationThemeSelector` is shared by public/customer, worker and management chrome. Preserve its three real theme states, shared motion transition, accessible pressed labels, existing per-surface classes and left-to-right theme sequence.
 - Worker navigation lives on the protected worker page because `SiteChrome` deliberately hides storefront chrome there. Task → account → storefront links precede locale/theme/account controls. Compact layouts place the navigation on a second row; controls stay reachable at 320px. Reuse the existing public account menu and authorization; do not expose management-only links to workers. Locale switches preserve query/hash and the route-progress edge follows the header.
 - Management tools remain mounted across responsive layouts. ArrowDown opens/focuses tools, native Tab exit closes compact tools, and breakpoint changes recover hidden focus. An open tool dialog keeps its compact opener reachable on resize. Preserve the existing sidebar and drawer design and behavior; the owner clarified that this work applies only to horizontal top navbars. Version 1 geometry remains intact.
-- Regressions: `navbar-panels.spec.ts`, `navigation-bar.spec.ts`, `store-overlays.spec.ts`, `verify-management-navbar.mjs` and `verify-worker-navigation.mjs`. Use disposable actors with cleanup and local evidence; never change owner business data for navbar QA.
+- Regressions: `navbar-panels.spec.ts`, `navigation-bar.spec.ts`, `store-overlays.spec.ts`, `verify-management-navbar.mjs` and `verify-role-workflows.mjs`. Use disposable actors with cleanup and local evidence; never change owner business data for navbar QA.
 
 ## Management component refinement and sidebar — 2026-10-29
 

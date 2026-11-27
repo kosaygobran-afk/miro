@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Check, Minus, Plus, ShoppingCart } from "lucide-react";
 import { useCart, type CartItem } from "@/features/cart/cart-context";
+import { playButtonFeedback } from "@/components/motion/button-feedback";
+import { ShoppingCount } from "./shopping-count";
 import { cartConfigurationKey, cartLineId } from "./cart-items";
 
 type AddToCartButtonProps = {
@@ -84,7 +86,7 @@ export function AddToCartButton({
           aria-live="polite"
           aria-label={locale === "he" ? "כמות" : "Quantity"}
         >
-          {quantity}
+          <ShoppingCount value={quantity} />
         </output>
         <button
           type="button"
@@ -116,17 +118,25 @@ export function AddToCartButton({
         event.preventDefault();
         event.stopPropagation();
         if (atLimit) return;
-        if (addItem(item)) setAdded(true);
+        if (addItem(item)) {
+          playButtonFeedback(
+            event.currentTarget.querySelector(".sf-cart-icon"),
+            "cart",
+          );
+          setAdded(true);
+        }
       }}
     >
       <span className="sf-cart-icon" aria-hidden="true">
         <ShoppingCart size={iconOnly ? 18 : compact ? 19 : 20} />
         {!iconOnly && (added ? <Check size={11} /> : <Plus size={11} />)}
       </span>
-      {iconOnly && quantity > 0 && (
-        <span key={quantity} className="sf-card-cart-count" aria-hidden="true">
-          {quantity}
-        </span>
+      {iconOnly && (
+        <ShoppingCount
+          value={hydrated ? quantity : null}
+          className="sf-card-cart-count"
+          badge
+        />
       )}
       {compact || iconOnly ? null : <span>{added ? addedLabel : label}</span>}
     </button>

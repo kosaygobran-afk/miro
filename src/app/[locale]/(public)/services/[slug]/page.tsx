@@ -168,9 +168,9 @@ export default async function ServiceDetailPage({
               </Link>
             )}
           </div>
-          <aside className="experience-detail-aside">
+          <aside className="experience-detail-aside" data-headline-group>
             {Icon && (
-              <span className="experience-icon">
+              <span className="experience-icon" data-headline-icon>
                 <Icon aria-hidden="true" />
               </span>
             )}

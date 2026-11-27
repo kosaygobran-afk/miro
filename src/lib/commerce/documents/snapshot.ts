@@ -297,7 +297,7 @@ export function validateDocumentSnapshot(
     onlyKeys(
       row,
       ["description", "quantity", "net_agorot", "vat_agorot", "gross_agorot"],
-      ["unit_agorot", "discount_agorot"],
+      ["sku", "unit_agorot", "discount_agorot"],
       `items[${index}]`,
     );
     const quantity = row.quantity;
@@ -326,6 +326,9 @@ export function validateDocumentSnapshot(
         `items[${index}].description`,
         2000,
       ),
+      ...(row.sku === undefined
+        ? {}
+        : { sku: nonBlank(row.sku, `items[${index}].sku`, 100) }),
       quantity: quantity as number,
       ...(unit === undefined ? {} : { unit_agorot: unit }),
       ...(discount === undefined ? {} : { discount_agorot: discount }),

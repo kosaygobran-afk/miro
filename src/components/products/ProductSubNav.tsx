@@ -9,30 +9,13 @@ import {
   ArrowRight,
   CornerDownLeft,
   CornerDownRight,
-  Camera,
-  Cable,
-  KeyRound,
-  Router,
-  Server,
-  ShieldCheck,
-  Wrench,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
 import { RevealImage as Image } from "@/components/ui/reveal-image";
+import { getCategoryIcon } from "@/features/catalog/category-icons";
 import { isLocale, type Locale } from "@/lib/i18n";
 import { getCategoryKeyFromSlug } from "@/lib/catalog/routes";
-
-const categoryIcons: Record<string, typeof Camera> = {
-  cameras: Camera,
-  servers: Server,
-  routers: Router,
-  cables: Cable,
-  accessories: Wrench,
-  networkGear: Router,
-  alarms: ShieldCheck,
-  intercom: KeyRound,
-};
 
 function getCategoryKeyFromPath(pathname: string): string | null {
   // Extract category from paths like /en/store/cameras or /he/store/alarms
@@ -143,7 +126,7 @@ export function ProductSubNav({
         id={panelId}
       >
         {visibleCategories.map((category) => {
-          const Icon = categoryIcons[category.key] ?? ShieldCheck;
+          const Icon = getCategoryIcon(category.key);
           const isActive = category.key === currentCategory;
 
           return (

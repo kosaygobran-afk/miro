@@ -1,7 +1,7 @@
 ---
 description: Read-only final code reviewer for correctness, security, architecture, maintainability and incomplete acceptance criteria.
 mode: subagent
-model: nvidia/openai/gpt-oss-20b
+model: nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b
 permissions:
   - action: edit
     resource: "*"

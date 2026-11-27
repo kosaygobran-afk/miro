@@ -366,7 +366,7 @@ export function RequestsQueue({
   useEffect(() => {
     const controller = new AbortController();
     Promise.all(
-      (["worker", "admin", "ceo"] as const).map(async (role) => {
+      (["admin", "ceo"] as const).map(async (role) => {
         const members: StaffMember[] = [];
         let offset = 0;
         while (!controller.signal.aborted) {

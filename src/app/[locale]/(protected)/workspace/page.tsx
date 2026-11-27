@@ -17,7 +17,8 @@ export default async function WorkspaceEntry({
   redirect(
     withLocale(
       locale,
-      actor.role === "customer" && next === "checkout"
+      (actor.role === "customer" || actor.role === "worker") &&
+        next === "checkout"
         ? "checkout"
         : roleHome(actor.role),
     ),

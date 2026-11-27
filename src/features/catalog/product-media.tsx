@@ -62,7 +62,7 @@ export function ProductMedia({
         fetchPriority={fetchPriority}
         className={className}
         unoptimized={src.split(/[?#]/, 1)[0].toLowerCase().endsWith(".svg")}
-        onLoad={() => setLoadedSrc(src)}
+        onDecoded={() => setLoadedSrc(src)}
         onError={() => setFailedSrc(src)}
       />
     </span>

@@ -8,9 +8,10 @@ export function RevealImage({
   alt,
   className,
   onLoad,
+  onDecoded,
   onError,
   ...props
-}: ImageProps) {
+}: ImageProps & { onDecoded?: () => void }) {
   const source =
     typeof props.src === "string"
       ? props.src
@@ -49,8 +50,10 @@ export function RevealImage({
         } catch {
           /* The load event already guarantees usable pixels. */
         }
-        if (element.isConnected && currentSource.current === source)
+        if (element.isConnected && currentSource.current === source) {
           setReadySource(source);
+          onDecoded?.();
+        }
       }}
       onError={(event) => {
         // Failed images also settle: parents may supply an illustration fallback.

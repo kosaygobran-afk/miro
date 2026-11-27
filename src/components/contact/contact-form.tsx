@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { CheckCircle, CircleAlert, MessageSquare, Tag } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 export type ContactFormCopy = {
   name: string;
   email: string;
   phone: string;
   message: string;
+  messageHint: string;
   company: string;
   submit: string;
   sending: string;
@@ -31,7 +33,7 @@ interface ContactFormProps {
   source: "contact_page" | "product_page" | "store_page";
   productId?: string | null;
   variantId?: string | null;
-  contextLine?: string | null;
+  contextLine?: ReactNode;
   initialMessage?: string;
   title?: string;
   intro?: string;
@@ -74,7 +76,7 @@ export function ContactForm({
     if (formError) {
       summaryRef.current?.focus();
     }
-  }, [formError]);
+  }, [formError, fieldErrors]);
 
   useEffect(() => {
     if (success) {
@@ -111,6 +113,7 @@ export function ContactForm({
 
     setSubmitting(true);
     setFormError(null);
+    setSuccess(false);
     try {
       const response = await fetch("/api/enquiries", {
         method: "POST",
@@ -176,28 +179,44 @@ export function ContactForm({
   function fieldProps(field: FieldName) {
     const errorId = `contact-error-${field}`;
     const hasError = Boolean(fieldErrors[field]);
+    const description = [
+      hasError && errorId,
+      field === "message" && "contact-message-hint",
+    ]
+      .filter(Boolean)
+      .join(" ");
     return {
       "aria-invalid": hasError || undefined,
-      "aria-describedby": hasError ? errorId : undefined,
+      "aria-describedby": description || undefined,
     };
   }
 
   return (
     <form
-      className="miro-card miro-contact-form space-y-4 p-5"
+      className="miro-card miro-contact-form"
+      aria-labelledby={title ? "contact-form-title" : undefined}
+      method="post"
       onSubmit={handleSubmit}
       noValidate
     >
       {title ? (
-        <div>
-          <h2 className="experience-form-title">{title}</h2>
-          {intro ? <p className="experience-form-intro">{intro}</p> : null}
+        <div className="experience-contact-form-heading">
+          <span className="experience-contact-icon">
+            <MessageSquare aria-hidden="true" />
+          </span>
+          <div>
+            <h2 id="contact-form-title" className="experience-form-title">
+              {title}
+            </h2>
+            {intro ? <p className="experience-form-intro">{intro}</p> : null}
+          </div>
         </div>
       ) : null}
 
       {contextLine ? (
-        <p className="experience-note" dir="auto">
-          {contextLine}
+        <p className="experience-note experience-contact-context">
+          <Tag size={17} aria-hidden="true" />
+          <span>{contextLine}</span>
         </p>
       ) : null}
 
@@ -206,118 +225,129 @@ export function ContactForm({
           ref={summaryRef}
           tabIndex={-1}
           role="alert"
-          className="experience-form-status"
+          className="experience-form-status experience-contact-feedback"
           id="contact-error-summary"
         >
+          <CircleAlert size={18} aria-hidden="true" />
           {formError}
         </div>
       ) : null}
 
-      <div className="block">
-        <label className="block">
-          <span className="mb-2 block font-bold">{copy.name}</span>
-          <input
-            className="miro-input"
-            name="name"
-            autoComplete="name"
-            maxLength={120}
-            required
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            {...fieldProps("name")}
-          />
-        </label>
-        {fieldErrors.name ? (
-          <p id="contact-error-name" className="experience-form-status">
-            {fieldErrors.name}
-          </p>
-        ) : null}
-      </div>
+      <div className="experience-contact-fields">
+        <div className="block experience-contact-field-wide">
+          <label className="block">
+            <span className="mb-2 block font-bold">{copy.name}</span>
+            <input
+              className="miro-input"
+              name="name"
+              autoComplete="name"
+              dir="auto"
+              maxLength={120}
+              required
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              {...fieldProps("name")}
+            />
+          </label>
+          {fieldErrors.name ? (
+            <p id="contact-error-name" className="experience-form-status">
+              {fieldErrors.name}
+            </p>
+          ) : null}
+        </div>
 
-      <div className="block">
-        <label className="block">
-          <span className="mb-2 block font-bold">{copy.email}</span>
-          <input
-            className="miro-input"
-            name="email"
-            type="email"
-            autoComplete="email"
-            maxLength={254}
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            {...fieldProps("email")}
-          />
-        </label>
-        {fieldErrors.email ? (
-          <p id="contact-error-email" className="experience-form-status">
-            {fieldErrors.email}
-          </p>
-        ) : null}
-      </div>
+        <div className="block">
+          <label className="block">
+            <span className="mb-2 block font-bold">{copy.email}</span>
+            <input
+              className="miro-input"
+              name="email"
+              type="email"
+              autoComplete="email"
+              dir="ltr"
+              maxLength={254}
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              {...fieldProps("email")}
+            />
+          </label>
+          {fieldErrors.email ? (
+            <p id="contact-error-email" className="experience-form-status">
+              {fieldErrors.email}
+            </p>
+          ) : null}
+        </div>
 
-      <div className="block">
-        <label className="block">
-          <span className="mb-2 block font-bold">{copy.phone}</span>
-          <input
-            className="miro-input"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            maxLength={40}
-            value={phone}
-            onChange={(event) => setPhone(event.target.value)}
-            {...fieldProps("phone")}
-          />
-        </label>
-        {fieldErrors.phone ? (
-          <p id="contact-error-phone" className="experience-form-status">
-            {fieldErrors.phone}
-          </p>
-        ) : null}
-      </div>
+        <div className="block">
+          <label className="block">
+            <span className="mb-2 block font-bold">{copy.phone}</span>
+            <input
+              className="miro-input"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              dir="ltr"
+              maxLength={40}
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              {...fieldProps("phone")}
+            />
+          </label>
+          {fieldErrors.phone ? (
+            <p id="contact-error-phone" className="experience-form-status">
+              {fieldErrors.phone}
+            </p>
+          ) : null}
+        </div>
 
-      <div
-        aria-hidden="true"
-        style={{
-          position: "absolute",
-          insetInlineStart: "-10000px",
-          width: "1px",
-          height: "1px",
-          overflow: "hidden",
-        }}
-      >
-        <label>
-          <span>{copy.company}</span>
-          <input
-            name="company"
-            type="text"
-            autoComplete="off"
-            tabIndex={-1}
-            value={company}
-            onChange={(event) => setCompany(event.target.value)}
-          />
-        </label>
-      </div>
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            insetInlineStart: "-10000px",
+            width: "1px",
+            height: "1px",
+            overflow: "hidden",
+          }}
+        >
+          <label>
+            <span>{copy.company}</span>
+            <input
+              name="company"
+              type="text"
+              autoComplete="off"
+              tabIndex={-1}
+              value={company}
+              onChange={(event) => setCompany(event.target.value)}
+            />
+          </label>
+        </div>
 
-      <div className="block">
-        <label className="block">
-          <span className="mb-2 block font-bold">{copy.message}</span>
-          <textarea
-            className="miro-input min-h-32 resize-y"
-            name="message"
-            maxLength={2000}
-            required
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            {...fieldProps("message")}
-          />
-        </label>
-        {fieldErrors.message ? (
-          <p id="contact-error-message" className="experience-form-status">
-            {fieldErrors.message}
+        <div className="block experience-contact-field-wide">
+          <label className="block">
+            <span className="mb-2 block font-bold">{copy.message}</span>
+            <textarea
+              className="miro-input resize-y"
+              name="message"
+              dir="auto"
+              maxLength={2000}
+              rows={4}
+              required
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              {...fieldProps("message")}
+            />
+          </label>
+          {fieldErrors.message ? (
+            <p id="contact-error-message" className="experience-form-status">
+              {fieldErrors.message}
+            </p>
+          ) : null}
+          <p id="contact-message-hint" className="experience-contact-hint">
+            {copy.messageHint}
           </p>
-        ) : null}
+        </div>
       </div>
 
       <button
@@ -335,8 +365,9 @@ export function ContactForm({
           tabIndex={-1}
           id="contact-success"
           role="status"
-          className="experience-form-status"
+          className="experience-form-status experience-contact-feedback"
         >
+          <CheckCircle size={18} aria-hidden="true" />
           {copy.success}
         </p>
       ) : null}

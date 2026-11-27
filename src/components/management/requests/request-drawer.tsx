@@ -111,7 +111,9 @@ export function RequestDrawer({
   const staffName = (id: string): string => {
     if (id === selfId) return selfName || t(copyMap.meSuffix);
     return (
-      staff.find((member) => member.id === id)?.name || t(copyMap.unknownStaff)
+      staff.find((member) => member.id === id)?.name ||
+      (request.assignedTo?.id === id && request.assignedTo.displayName) ||
+      t(copyMap.unknownStaff)
     );
   };
 
@@ -323,6 +325,13 @@ export function RequestDrawer({
                 }}
               >
                 <option value="">{t(copyMap.unassignedOption)}</option>
+                {assignedToId &&
+                assignedToId !== selfId &&
+                !staff.some((member) => member.id === assignedToId) ? (
+                  <option value={assignedToId} disabled>
+                    {staffName(assignedToId)}
+                  </option>
+                ) : null}
                 <option
                   value={selfId}
                 >{`${selfName || t(copyMap.unassignedOption)} (${t(copyMap.meSuffix)})`}</option>
@@ -628,6 +637,13 @@ export function RequestDrawer({
                     }}
                   >
                     <option value="">{t(copyMap.unassignedOption)}</option>
+                    {assignedToId &&
+                    assignedToId !== selfId &&
+                    !staff.some((member) => member.id === assignedToId) ? (
+                      <option value={assignedToId} disabled>
+                        {staffName(assignedToId)}
+                      </option>
+                    ) : null}
                     <option
                       value={selfId}
                     >{`${selfName || t(copyMap.unassignedOption)} (${t(copyMap.meSuffix)})`}</option>

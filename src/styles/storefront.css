@@ -1,11 +1,12 @@
 /* MIRO storefront. Hardware visuals are original illustrations; catalog content is preview data. */
 .sf-storefront {
   --sf-line: var(--border-subtle);
+  --sf-compact-section-inset: clamp(0.7rem, 1.6vw, 1.4rem);
 }
 .sf-storefront :is(h1, h2, h3, p) {
   margin: 0;
 }
-.sf-storefront h2 {
+.sf-storefront :is(h1:where(#store-title), h2:not(:where(.sf-eyebrow))) {
   font-size: clamp(1.65rem, 2.3vw, 2.65rem);
   line-height: 1.17;
   font-weight: 800;
@@ -1260,6 +1261,8 @@ body:has(.sf-product-dialog[open]) {
   }
   .sf-hero .sf-eyebrow {
     margin-bottom: 1rem;
+  }
+  :is(.sf-hero .sf-eyebrow, .sf-store-eyebrow) {
     font-size: 0.64rem;
   }
   .sf-hero .sf-hero-intro {
@@ -3323,8 +3326,9 @@ body:has(.sf-product-dialog[open]) {
    Moving Product Rail
    ------------------------------------------------------------ */
 .sf-moving-rail-section {
+  --sf-moving-rail-edge-inset: var(--sf-compact-section-inset);
   position: relative;
-  padding-block: clamp(2.25rem, 5vw, 4.5rem);
+  padding-block-start: var(--sf-moving-rail-edge-inset);
   overflow: clip;
   border-block: 1px solid
     color-mix(in srgb, var(--border-subtle) 72%, transparent);
@@ -3345,7 +3349,7 @@ body:has(.sf-product-dialog[open]) {
   align-items: end;
   justify-content: space-between;
   gap: 1.5rem;
-  margin-bottom: clamp(1.25rem, 3vw, 2rem);
+  margin-bottom: 0;
 }
 .sf-moving-rail-header .sf-eyebrow {
   margin-bottom: 0.45rem;
@@ -3403,7 +3407,8 @@ body:has(.sf-product-dialog[open]) {
   position: relative;
   overflow: hidden;
   margin-inline: calc(clamp(0.5rem, 1.5vw, 1.25rem) * -1);
-  padding: 0.75rem clamp(0.5rem, 1.5vw, 1.25rem) 1.4rem;
+  padding-block: var(--sf-moving-rail-edge-inset);
+  padding-inline: clamp(0.5rem, 1.5vw, 1.25rem);
   mask-image: linear-gradient(
     to right,
     transparent 0,

@@ -11,7 +11,10 @@ for (const locale of ["he", "en"] as const) {
       await page.route("**/api/track", (route) =>
         route.fulfill({ status: 204 }),
       );
-      await page.goto(`/${locale}`);
+      await page.goto(`/${locale}/home`);
+      await expect(
+        page.locator(".sf-hero #home-collection-title"),
+      ).toBeVisible();
       await expect(page.locator("html")).toHaveAttribute(
         "data-motion-ready",
         "true",

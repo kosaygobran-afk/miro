@@ -30,10 +30,12 @@ export default async function WebsiteImagesPage({
   const slots = [
     {
       key: "home-hero",
-      label: he ? "רקע ראשי בדף הבית" : "Home hero background",
+      label: he
+        ? "תמונת אזור מיגון ותקשורת בדף הבית"
+        : "Home security & communications photo",
       description: he
-        ? "מומלץ צילום רוחבי ביחס 16:9, עם שטח פנוי לכותרת סביב מרכז התמונה."
-        : "Use a wide 16:9 photo and leave clear space for the headline near the center.",
+        ? "התמונה מופיעה באזור שמעל תחתית דף הבית. מומלץ צילום רוחבי ביחס 16:9 עם נושא ברור במרכז."
+        : "Shown in the section above the Home footer. Use a wide 16:9 photo with a clear, centered subject.",
       defaultUrl: HOME_HERO_IMAGE,
     },
     ...(services ?? []).map((service) => ({

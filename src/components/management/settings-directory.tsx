@@ -116,6 +116,18 @@ const groups: {
         },
       },
       {
+        path: "admin/categories#store-category-grid",
+        label: {
+          he: "עיצוב רשת הקטגוריות בחנות",
+          en: "Store category grid artwork",
+        },
+        keywords: {
+          he: "קטגוריות ראשיות שמות תמונות ציור אייקון סמל SVG",
+          en: "main category names images photography illustration icon SVG artwork",
+        },
+        ceoOnly: true,
+      },
+      {
         key: "storefrontMerchandising",
         keywords: {
           he: "פס מוצרים בר מבצעים מדבקות קולקציה",

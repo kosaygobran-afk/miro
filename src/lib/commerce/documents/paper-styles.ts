@@ -41,6 +41,7 @@ bdi[dir="ltr"]{direction:ltr}
 .items tbody tr:nth-child(even){background:#fafbfc}
 .items .gross{font-weight:700}
 .items .numeric{text-align:right;font-variant-numeric:tabular-nums;font-size:11px}
+.items .sku{text-align:right;overflow-wrap:anywhere;font-size:11px}
 .item-description{white-space:pre-wrap;font-size:12px;line-height:1.5}
 .item-meta{margin-top:9px}
 .item-meta .detail-grid{column-gap:12px}
@@ -116,6 +117,7 @@ bdi[dir="ltr"]{direction:ltr}
  [data-layout="a4"] .recipient{margin-block-end:10px;padding:10px 12px}
  [data-layout="a4"] .items{margin-block:10px}
  [data-layout="a4"] .items th,[data-layout="a4"] .items td{padding-block:5px}
+ [data-layout="a4"] .items th:last-child br{display:none}
  [data-layout="a4"] .item-meta{margin-block-start:4px}
  [data-layout="a4"] .item-meta .field{padding-block-end:0}
  [data-layout="a4"] .closing{margin-block-start:12px}

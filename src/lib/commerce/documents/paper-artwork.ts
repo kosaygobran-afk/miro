@@ -2,7 +2,7 @@ import artwork from "@/components/brand/artwork.json";
 import type * as PDFKit from "pdfkit";
 
 /** One fixed vector master for HTML and PDF; no remote images or font logos. */
-export const PAPER_TEMPLATE_VERSION = "miro-draft-4";
+export const PAPER_TEMPLATE_VERSION = "miro-draft-5";
 export const PAPER_ICONS = {
   business:
     "M3 21V3H15V21M15 9H21V21M1 21H23M6 7H8M10 7H12M6 11H8M10 11H12M6 15H8M10 15H12M18 13H19M18 17H19",

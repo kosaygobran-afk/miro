@@ -63,7 +63,7 @@ export const storeCopy = {
     bundleTitle: "Better together.",
     bundleText:
       "Video, access and connectivity. Bring the essentials of your business into one thoughtfully planned solution.",
-    bundleAction: "Explore business solutions",
+    bundleAction: "Explore services",
     bundleTags: ["Video security", "Access control", "Business networks"],
     assurance: [
       {
@@ -189,7 +189,7 @@ export const storeCopy = {
     bundleTitle: "ביחד, זה חכם יותר.",
     bundleText:
       "צילום, כניסה ותקשורת. החלקים החשובים של העסק שלכם, בפתרון אחד שמתוכנן נכון.",
-    bundleAction: "לפתרונות לעסקים",
+    bundleAction: "לשירותים שלנו",
     bundleTags: ["מערכות צילום", "בקרת כניסה", "רשתות לעסקים"],
     assurance: [
       { title: "מותאם למרחב שלכם", text: "מתחילים מהצרכים ומתכנון המקום" },

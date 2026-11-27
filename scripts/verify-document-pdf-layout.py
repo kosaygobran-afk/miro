@@ -100,9 +100,22 @@ def wrapped_marker_fragments(words, expected, rtl):
 for file in files:
     root = ET.fromstring(subprocess.check_output(["pdftotext", "-bbox-layout", str(file), "-"]))
     metadata = subprocess.check_output(["pdfinfo", str(file)], text=True)
-    if re.fullmatch(r"(?:print-)?(quote|proforma|transaction_invoice|tax_invoice|receipt|invoice_receipt|credit_note|correction)-(he|en)-a4\.pdf", file.name):
-        if not re.search(r"^Pages:\s+1\s*$", metadata, re.MULTILINE):
+    sample_name = re.fullmatch(
+        r"(?:print-)?(quote|proforma|transaction_invoice|tax_invoice|receipt|invoice_receipt|credit_note|correction)-(he|en)-(a4|receipt80)\.pdf",
+        file.name,
+    )
+    if sample_name:
+        kind, _, layout = sample_name.groups()
+        if layout == "a4" and not re.search(r"^Pages:\s+1\s*$", metadata, re.MULTILINE):
             failures.append({"file": file.name, "problem": "standard A4 sample should fit on one page"})
+        plain = compact_text(subprocess.check_output(["pdftotext", str(file), "-"], text=True))
+        amount = "-ILS283.20" if kind == "credit_note" else "ILS283.20"
+        for required in ("EX-IPC-42", "+18%", amount):
+            content_checks += 1
+            if required not in plain:
+                failures.append({"file": file.name, "problem": "missing line item content", "text": required})
+        if "ILS240.00" in plain:
+            failures.append({"file": file.name, "problem": "pre-VAT line price still printed"})
     footer_marker = re.search(r"footer-reserve=([0-9]+(?:\.[0-9]+)?)", metadata)
     footer_reserve = float(footer_marker.group(1)) if footer_marker else 52
     document_words = []
@@ -136,8 +149,7 @@ for file in files:
     # The English sample has stable, fictional contact values. Verify the real
     # PDF text sits below its label at the same left anchor, rather than merely
     # asserting the intended renderer coordinates or HTML styles.
-    sample_name = re.fullmatch(r"(?:print-)?(?:quote|proforma|transaction_invoice|tax_invoice|receipt|invoice_receipt|credit_note|correction)-en-(a4|receipt80)\.pdf", file.name)
-    if sample_name:
+    if sample_name and sample_name.group(2) == "en":
         for label, value in (("Phone", "+972-00-000-0000"), ("Email", "business@example.invalid")):
             labels = [word for word in document_words if word[2] == label]
             if not labels:
@@ -152,10 +164,11 @@ for file in files:
             anchor_checks += 1
             if any(abs(a[0] - fragment[1][0]) > 1.5 for fragment in fragments) or b[1] < a[3] - 1:
                 failures.append({"file":file.name,"page":p,"problem":"contact value not stacked on label reading edge","text":[label,value],"boxes":[a,*[fragment[1] for fragment in fragments]]})
-        if sample_name.group(1) == "a4":
+        if sample_name.group(3) == "a4":
             descriptions = [word for word in document_words if word[2] == "Description"]
-            for label, value in (("Qty", "2"), ("Net", "240.00"), ("VAT", "43.20"), ("Gross", "283.20")):
-                headers = [word for word in document_words if word[2] == label and any(word[0] == d[0] and abs(word[1][1] - d[1][1]) < 3 for d in descriptions)]
+            for label, value in (("Qty", "2"), ("SKU", "EX-IPC-42"), ("VAT", "43.20"), ("+18%", "283.20")):
+                headers = [word for word in document_words if word[2] == label
+                           and any(word[0] == d[0] and -3 < word[1][1] - d[1][1] < (22 if label == "+18%" else 3) for d in descriptions)]
                 paired = False
                 for p, a, _ in headers:
                     candidates = [word for word in document_words if word[0] == p and word[2] == value and a[3] <= word[1][1] <= a[3] + 160]
@@ -164,11 +177,11 @@ for file in files:
                     _, b, _ = min(candidates, key=lambda word:abs(word[1][2] - a[2]))
                     anchor_checks += 1
                     paired = True
-                    if abs(a[2] - b[2]) > 1.5:
-                        failures.append({"file":file.name,"page":p,"problem":"numeric table heading/body anchors differ","text":[label,value],"boxes":[a,b]})
-                    break
+                    if abs(a[2] - b[2]) <= 1.5:
+                        break
+                    paired = False
                 if not paired:
-                    failures.append({"file":file.name,"problem":"missing numeric table anchor pair","text":[label,value]})
+                    failures.append({"file":file.name,"problem":"missing aligned item table anchor pair","text":[label,value]})
     if file.name in expectations:
         text = subprocess.check_output(["pdftotext", str(file), "-"], text=True)
         compact = compact_text(text)

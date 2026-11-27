@@ -1,6 +1,6 @@
 # Document previews and printable templates
 
-Updated 2026-11-22 after the bilingual layout and pagination follow-up. These are draft
+Updated 2026-11-26 after the line-item SKU and VAT price update. These are draft
 templates, not approval for official issuance.
 
 ## Try a document
@@ -63,7 +63,7 @@ from the canonical PDF because browsers and printer drivers control printing.
   measured row bands so long names grow vertically and neighboring fields
   receive matching space. Numeric table headings/amounts use the same right
   anchor. Repeated business contacts occupy a measured footer reserve; the
-  template version is now `miro-draft-4`. A4 browser previews at 600 px or
+  template version is now `miro-draft-5`. A4 browser previews at 600 px or
   narrower use stacked line items, while A4 printing and desktop previews use
   the numeric table. The full vector logo centers on every 80 mm page.
 - `paper-styles.ts` owns paper typography/spacing separately from application
@@ -84,8 +84,9 @@ from the canonical PDF because browsers and printer drivers control printing.
   continue across pages without dropping text, crossing the footer reserve or
   duplicating row amounts. Each PDF page has a draft warning, full logo, draft
   ID and local date/time; continuation pages also identify themselves. Footers
-  isolate page numbers. 80 mm items use stacked labeled values for readable
-  units, discounts, net, VAT and gross. Standard A4 samples fit on one page in
+  isolate page numbers. 80 mm and narrow HTML items stack the same saved SKU,
+  quantity, VAT and VAT-inclusive price as the A4 table, with explicit unit
+  price and discount details when available. Standard A4 samples fit on one page in
   each language in generated PDFs and Chromium native print. The note heading stays with the opening lines. Separate tender
   records keep their method, amount, local timestamp and reference together.
   Receipts distinguish the document total, amount paid and any balance.
@@ -94,6 +95,13 @@ from the canonical PDF because browsers and printer drivers control printing.
   Number-series permissions, readiness checks and immutable issued artifacts
   remain unchanged. Preview artifact keys include `PAPER_TEMPLATE_VERSION`, so
   a prior draft rendering cannot silently substitute for this template revision.
+- The customer-facing price column uses the saved gross line amount, including
+  the saved discount and VAT. The +18% heading appears when the recorded lines
+  support that rate at agorot precision. Older or mixed VAT amounts can use the
+  generic inclusive heading, and zero-VAT documents use the plain price heading.
+  The summary still shows net, VAT and total. A saved unit price is shown when
+  it agrees with the gross line amount after its saved discount. The item SKU
+  comes from the stored order or intent line; drafts without one display a dash.
 
 ## Free tools and operating costs
 

@@ -83,8 +83,12 @@ export async function AccountDashboard({
     <section className="miro-section account-dashboard">
       <div className="miro-container space-y-6">
         <div className="miro-card account-profile-header flex flex-wrap items-center justify-between gap-4 p-6">
-          <div className="account-profile-identity">
-            <span className="account-icon" aria-hidden="true">
+          <div className="account-profile-identity" data-headline-group>
+            <span
+              className="account-icon"
+              aria-hidden="true"
+              data-headline-icon
+            >
               <UserRound size={22} />
             </span>
             <div>
@@ -138,7 +142,7 @@ export async function AccountDashboard({
           name={context.profile?.full_name ?? ""}
           phone={context.profile?.phone ?? ""}
         />
-        {context.role !== "customer" && (
+        {(context.role === "admin" || context.role === "ceo") && (
           <Link
             className="miro-button miro-button-secondary"
             href={withLocale(locale, roleHome(context.role))}
@@ -363,8 +367,8 @@ function SummaryCard({
   locale: Locale;
 }) {
   return (
-    <div className="miro-card account-summary-card p-5">
-      <span className="account-icon" aria-hidden="true">
+    <div className="miro-card account-summary-card p-5" data-headline-group>
+      <span className="account-icon" aria-hidden="true" data-headline-icon>
         <Icon size={22} />
       </span>
       <p className="text-sm text-muted-foreground">{title}</p>

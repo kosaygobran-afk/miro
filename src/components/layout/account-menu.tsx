@@ -141,16 +141,10 @@ export function AccountMenu({
   const roleDestination =
     role === "admin" || role === "ceo"
       ? withLocale(locale, "admin")
-      : role === "worker"
-        ? withLocale(locale, "worker")
-        : withLocale(locale, "account");
+      : withLocale(locale, "account");
 
   const roleButtonLabel =
-    role === "admin" || role === "ceo"
-      ? labels.adminConsole
-      : role === "worker"
-        ? labels.workerArea
-        : labels.myAccount;
+    role === "admin" || role === "ceo" ? labels.adminConsole : labels.myAccount;
 
   const area =
     pathname?.match(/^\/(?:he|en)\/(admin|worker|account)(?:\/|$)/)?.[1] ??
@@ -166,11 +160,7 @@ export function AccountMenu({
             ? "החנות"
             : "Storefront";
   const destinationArea =
-    role === "admin" || role === "ceo"
-      ? "admin"
-      : role === "worker"
-        ? "worker"
-        : "account";
+    role === "admin" || role === "ceo" ? "admin" : "account";
 
   const RoleButtonIcon =
     role === "admin" || role === "ceo" ? LayoutDashboard : UserRound;

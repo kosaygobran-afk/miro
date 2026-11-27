@@ -33,7 +33,7 @@ runInNewContext(
   { exports: presentation },
 );
 
-function loadDashboard({ fail = [], saved = [] } = {}) {
+function loadDashboard({ fail = [], saved = [], role = "customer" } = {}) {
   const started = [];
   let release;
   const gate = new Promise((resolve) => {
@@ -147,7 +147,7 @@ function loadDashboard({ fail = [], saved = [] } = {}) {
       await exports.AccountDashboard({
         locale,
         context: {
-          role: "customer",
+          role,
           user: { id: "customer", email: "account@example.test" },
           profile: { full_name: "QA Customer" },
         },
@@ -204,3 +204,16 @@ test("one account region failing preserves other real history and Hebrew status 
   assert.match(html, /אין חשבוניות עדיין/);
   assert.ok(!html.includes("waiting_customer"));
 });
+
+for (const locale of ["en", "he"]) {
+  test(`${locale} worker receives the customer account without an extra workspace`, async () => {
+    const dashboard = loadDashboard({ role: "worker" });
+    dashboard.release();
+    const html = await dashboard.render(locale);
+    assert.match(html, /account-dashboard/);
+    assert.doesNotMatch(
+      html,
+      /Open workspace|פתיחת סביבת העבודה|My tasks|המשימות שלי/,
+    );
+  });
+}

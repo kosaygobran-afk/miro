@@ -1,5 +1,6 @@
 "use client";
 
+import { playGalleryArrowFeedback } from "@/components/motion/button-feedback";
 import { getVariantImages } from "@/lib/catalog/variant-media";
 import { VariantChoices } from "@/features/catalog/variant-choices";
 import { useState } from "react";
@@ -27,6 +28,7 @@ import { WishlistButton } from "@/features/wishlist/wishlist-button";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
 import { StockIndicator } from "@/features/catalog/stock-indicator";
 import { ProductIdentifiers } from "@/features/catalog/product-identifiers";
+import { ProductGalleryMedia } from "@/features/catalog/product-gallery-media";
 import { ProductImageMagnifier } from "@/features/catalog/product-image-magnifier";
 import { useAnimationSettings } from "@/components/motion/animation-provider";
 import {
@@ -97,9 +99,6 @@ export function ProductDetailInteractive({
   const PreviousArrow = locale === "he" ? ChevronRight : ChevronLeft;
   const NextArrow = locale === "he" ? ChevronLeft : ChevronRight;
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [failedImageIds, setFailedImageIds] = useState<Set<string>>(
-    () => new Set(),
-  );
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
     () => {
       const preferred = getDefaultVariant(variants, defaultVariantId);
@@ -234,9 +233,6 @@ export function ProductDetailInteractive({
     Math.max(visibleImages.length - 1, 0),
   );
   const activeImage = visibleImages[resolvedActiveImageIndex];
-  const activeImageFailed = activeImage
-    ? failedImageIds.has(activeImage.id)
-    : false;
 
   const showPreviousImage = () => {
     setActiveImageIndex((current) =>
@@ -274,6 +270,18 @@ export function ProductDetailInteractive({
       {copy.illustration}
     </p>
   ) : null;
+  const mainImage = {
+    imageKey: activeImage?.id,
+    src: activeImage?.url,
+    alt:
+      (locale === "he" ? activeImage?.altHe : activeImage?.altEn) ??
+      productName,
+    product: { id: productId, name: productName, category: productCategory },
+    sizes: "(max-width: 1200px) 100vw, 800px",
+    fetchPriority: "high" as const,
+    fallback: imageFallback,
+    annotation: imageAnnotation,
+  };
 
   return (
     <>
@@ -314,26 +322,11 @@ export function ProductDetailInteractive({
             <div className="sf-detail-magnifier">
               <ProductImageMagnifier
                 key={productId}
-                imageKey={activeImage?.id}
-                product={{
-                  id: productId,
-                  name: productName,
-                  category: productCategory,
-                }}
-                src={activeImage?.url}
-                alt={
-                  locale === "he"
-                    ? (activeImage?.altHe ?? productName)
-                    : (activeImage?.altEn ?? productName)
-                }
+                {...mainImage}
                 locale={locale}
                 active
-                sizes="(max-width: 1200px) 100vw, 800px"
                 imageClassName="sf-product-main-image"
-                fetchPriority="high"
                 escapeScope="local"
-                fallback={imageFallback}
-                annotation={imageAnnotation}
                 counter={
                   activeImage ? (
                     <span
@@ -353,37 +346,19 @@ export function ProductDetailInteractive({
                 }
               />
             </div>
-          ) : activeImage && !activeImageFailed ? (
-            <Image
-              key={activeImage.id}
-              src={activeImage.url}
-              alt={
-                locale === "he"
-                  ? (activeImage.altHe ?? productName)
-                  : (activeImage.altEn ?? productName)
-              }
-              fill
-              sizes="(max-width: 1200px) 100vw, 800px"
-              priority
-              className="sf-product-main-image"
-              unoptimized={activeImage.url.toLowerCase().includes(".svg")}
-              onError={() =>
-                setFailedImageIds((current) => {
-                  const next = new Set(current);
-                  next.add(activeImage.id);
-                  return next;
-                })
-              }
-            />
           ) : (
-            imageFallback
+            <ProductGalleryMedia
+              key={productId}
+              {...mainImage}
+              className="sf-product-main-image"
+            />
           )}
-          {!enhanced ? imageAnnotation : null}
           {visibleImages.length > 1 ? (
             <>
               <button
                 type="button"
                 className="sf-gallery-arrow sf-gallery-arrow-previous"
+                onClickCapture={playGalleryArrowFeedback}
                 onClick={showPreviousImage}
                 aria-label={
                   locale === "he" ? "התמונה הקודמת" : "Previous image"
@@ -394,6 +369,7 @@ export function ProductDetailInteractive({
               <button
                 type="button"
                 className="sf-gallery-arrow sf-gallery-arrow-next"
+                onClickCapture={playGalleryArrowFeedback}
                 onClick={showNextImage}
                 aria-label={locale === "he" ? "התמונה הבאה" : "Next image"}
               >

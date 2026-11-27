@@ -14,18 +14,6 @@ const input = z.discriminatedUnion("action", [
     action: z.literal("request"),
     message: z.string().trim().min(10).max(4000),
   }),
-  z.object({
-    action: z.literal("updateRequest"),
-    id: z.string().uuid(),
-    status: z.enum([
-      "new",
-      "in_progress",
-      "waiting_customer",
-      "closed",
-      "spam",
-    ]),
-    worker: z.string().uuid().nullable(),
-  }),
 ]);
 
 export async function POST(request: Request) {
@@ -47,19 +35,13 @@ export async function POST(request: Request) {
           .eq("id", actor.user.id)
           .select("id")
           .single()
-      : data.action === "request"
-        ? await client.from("service_requests").insert({
-            customer_id: actor.user.id,
-            name: actor.profile?.full_name || actor.user.email || "Customer",
-            email: actor.user.email || "",
-            phone: actor.profile?.phone,
-            message: data.message,
-          })
-        : await client.rpc("update_service_request", {
-            target: data.id,
-            new_status: data.status,
-            worker: data.worker,
-          });
+      : await client.from("service_requests").insert({
+          customer_id: actor.user.id,
+          name: actor.profile?.full_name || actor.user.email || "Customer",
+          email: actor.user.email || "",
+          phone: actor.profile?.phone,
+          message: data.message,
+        });
   if (result.error)
     return NextResponse.json(
       { error: "Unable to save this change." },

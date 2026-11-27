@@ -40,9 +40,13 @@ export function ShoppingPageHeading({
         : `${itemCount} items`;
 
   return (
-    <header className="sf-cart-heading sf-shopping-heading">
+    <header className="sf-cart-heading sf-shopping-heading" data-headline-group>
       <div className="sf-shopping-heading-main">
-        <span className="sf-cart-heading-icon" aria-hidden="true">
+        <span
+          className="sf-cart-heading-icon"
+          aria-hidden="true"
+          data-headline-icon
+        >
           <Icon size={26} />
         </span>
         <div className="sf-shopping-heading-copy">
@@ -92,8 +96,13 @@ export function ShoppingEmptyState({
     <section
       className="sf-cart-empty sf-shopping-empty"
       aria-labelledby="shopping-empty-title"
+      data-headline-group
     >
-      <span className="sf-shopping-empty-icon" aria-hidden="true">
+      <span
+        className="sf-shopping-empty-icon"
+        aria-hidden="true"
+        data-headline-icon
+      >
         {icon}
       </span>
       <h2 id="shopping-empty-title">{title}</h2>

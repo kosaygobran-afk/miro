@@ -426,7 +426,7 @@ body {
 }
 .premium-footer-main {
   display: grid;
-  grid-template-columns: 1.4fr 0.8fr 0.8fr 1.15fr;
+  grid-template-columns: 1.4fr 0.8fr 1.15fr;
   gap: 3rem;
   padding-block: 3.5rem;
 }
@@ -594,7 +594,7 @@ body {
   }
   .premium-footer-main {
     gap: 2rem;
-    grid-template-columns: 1.2fr 0.8fr 0.8fr;
+    grid-template-columns: 1.2fr 0.8fr;
   }
   .premium-footer-consult {
     grid-column: 1 / -1;
@@ -660,7 +660,7 @@ body {
     min-width: 36px;
   }
   .premium-footer-main {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     gap: 2rem 1.5rem;
     padding-block: 2.5rem;
   }

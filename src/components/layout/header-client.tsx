@@ -37,8 +37,6 @@ export type HeaderLabels = {
   nav: {
     home: string;
     services: string;
-    homeServices: string;
-    business: string;
     products: string;
     about: string;
     contact: string;
@@ -383,14 +381,6 @@ export function HeaderClient({
           <span className="premium-topbar-motto" dir="ltr">
             SECURE. SMART. CONNECTED.
           </span>
-          <Link href={withLocale(locale, "services/business")}>
-            <span>
-              {he
-                ? "פתרון שמתאים לעסק שלכם"
-                : "Security that fits your business"}
-            </span>
-            <Arrow size={13} aria-hidden="true" />
-          </Link>
         </div>
       </div>
       <header
@@ -548,34 +538,6 @@ export function HeaderClient({
                 />
                 <nav aria-label={labels.navLabel}>{navLinksView(true)}</nav>
                 <div className="premium-mobile-shortcuts">
-                  <Link
-                    href={withLocale(locale, "services/home")}
-                    onClick={closeNavigation}
-                    className="miro-centered-control"
-                  >
-                    <span className="miro-control-label">
-                      {labels.nav.homeServices}
-                    </span>
-                    <Arrow
-                      className="miro-control-end"
-                      size={16}
-                      aria-hidden="true"
-                    />
-                  </Link>
-                  <Link
-                    href={withLocale(locale, "services/business")}
-                    onClick={closeNavigation}
-                    className="miro-centered-control"
-                  >
-                    <span className="miro-control-label">
-                      {labels.nav.business}
-                    </span>
-                    <Arrow
-                      className="miro-control-end"
-                      size={16}
-                      aria-hidden="true"
-                    />
-                  </Link>
                   <HeaderShoppingLink
                     destination="wishlist"
                     locale={locale}

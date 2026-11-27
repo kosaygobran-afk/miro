@@ -1,0 +1,125 @@
+.dialog:global(.mgmt-dialog) {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.dialog > :global(.mgmt-dialog__body) {
+  min-block-size: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.picker,
+.editor {
+  display: grid;
+  gap: 1rem;
+}
+
+.picker {
+  grid-template-columns: minmax(0, 24rem) minmax(0, 1fr);
+  align-items: end;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.form,
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  min-inline-size: 0;
+}
+
+.fields > button {
+  align-self: start;
+}
+
+.editor {
+  grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+.svgCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8rem;
+  resize: vertical;
+}
+
+.fileName {
+  color: var(--muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.preview {
+  display: grid;
+  gap: 0.55rem;
+  inline-size: 100%;
+  max-inline-size: 19rem;
+  margin: 0;
+  padding: 0.55rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  background: var(--surface);
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.65rem;
+  background: radial-gradient(
+    ellipse at 50% 75%,
+    color-mix(in srgb, var(--primary) 15%, var(--surface-muted)),
+    var(--surface)
+  );
+}
+
+.illustration {
+  inline-size: 92%;
+  block-size: 91%;
+  object-fit: contain;
+}
+
+.photo {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.badge {
+  position: absolute;
+  inset-inline-end: 0.35rem;
+  inset-block-end: 0.35rem;
+  inline-size: clamp(2.25rem, 38%, 4.5rem);
+  padding: 0.15rem;
+  border: 1px solid var(--border-control);
+  border-radius: 0.5rem;
+  background: var(--surface);
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+}
+
+@media (max-width: 44rem) {
+  .picker,
+  .editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .preview {
+    grid-row: 1;
+    max-inline-size: 15rem;
+  }
+}

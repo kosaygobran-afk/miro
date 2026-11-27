@@ -253,7 +253,10 @@ export async function POST(request: NextRequest) {
         return failureResponse("unavailable", 503, locale);
       if (actor && actor.status !== "active")
         return failureResponse("unavailable", 403, locale);
-      const customerId = actor?.role === "customer" ? actor.user.id : null;
+      const customerId =
+        actor && (actor.role === "customer" || actor.role === "worker")
+          ? actor.user.id
+          : null;
       const admin = createAdminClient();
       const contact = {
         name: data.name,

@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import { RevealImage as Image } from "@/components/ui/reveal-image";
 import { CartSkeleton } from "./cart-skeleton";
+import { ShoppingCount } from "./shopping-count";
 import Link from "@/components/motion/motion-link";
 import {
   ArrowRight,
@@ -156,7 +157,9 @@ export function CartPageClient({ locale }: { locale: "he" | "en" }) {
                           >
                             <Minus size={16} aria-hidden="true" />
                           </button>
-                          <output aria-live="polite">{item.quantity}</output>
+                          <output aria-live="polite">
+                            <ShoppingCount value={item.quantity} />
+                          </output>
                           <button
                             type="button"
                             onClick={() =>

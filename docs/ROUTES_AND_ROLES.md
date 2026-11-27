@@ -30,10 +30,10 @@ Route groups in parentheses are organization only. They do not appear in URLs.
 
 ## Protected Routes
 
-These routes require a verified server session and an active profile. Worker and admin areas enforce role checks.
+These routes require a verified server session and an active profile. The admin area enforces role checks.
 
-- `/he/account` and `/en/account` - customer account
-- `/he/worker` and `/en/worker` - worker area
+- `/he/account` and `/en/account` - shared customer and worker account
+- `/he/worker` and `/en/worker` - legacy links redirect to the shared account
 - `/he/admin` and `/en/admin` - CEO/admin console (shared shell): Overview
 - `/[locale]/admin/products` - catalog + variant editor (publish/unpublish/archive)
 - `/[locale]/admin/inventory` - stock ledger, adjustments, receiving, replenishment
@@ -53,13 +53,13 @@ These routes require a verified server session and an active profile. Worker and
 | -------- | -------------------------------------------- | --------------------------------------------------------------------------------- |
 | Visitor  | No account needed                            | Browse, keep a local cart, and submit enquiries or checkout requests              |
 | Customer | Public signup and shared login               | Own profile and own service requests                                              |
-| Worker   | Shared login; CEO assigns role               | Assigned jobs and minimum required customer information                           |
+| Worker   | Shared login; CEO assigns role               | Customer account and shopping, with role-specific catalog prices                  |
 | Admin    | Shared login; CEO assigns role               | Catalog, inventory, sales recording, analytics, finance and user-list **viewing** |
 | CEO      | Shared login; bootstrap or existing CEO adds | Everything, plus user control/deletion, tax and business settings, adding CEOs    |
 
 The initial CEO is `kosay.gobran@gmail.com`, bootstrapped by migration `20260924130000_bootstrap_ceo.sql` after the owner signs up and verifies the email (re-run `npx supabase db push --linked`). Additional CEOs are added only by an active CEO through the audited `add_ceo` flow.
 
-CEO and admin sign in through the shared login and land in the customer interface; the header account menu shows a prominent Management console button (and the admin console has a "Switch to storefront" link and Log out). Workers get a worker-area entry; every signed-in menu has a visible Log out.
+CEO and admin sign in through the shared login and land in the customer interface; the header account menu shows a prominent Management console button (and the admin console has a "Switch to storefront" link and Log out). Workers use the same account entry as customers; every signed-in menu has a visible Log out.
 
 There is no role selector, no worker signup form and no CEO signup form.
 
@@ -71,7 +71,7 @@ There is no role selector, no worker signup form and no CEO signup form.
 ## Sensitive operations
 
 - `/auth/callback` exchanges confirmation/recovery codes and only redirects to localized account/reset routes.
-- `/api/account` handles own profile, own requests and authorized staff request updates.
+- `/api/account` handles own profile and own requests; request management uses `/api/management/requests`.
 - `/api/management/users` lists accounts for CEO and admin; PATCH (role/status) and DELETE (account removal) are CEO-only and delegate to the audited SQL functions `manage_account` and `delete_user_account`. CEO accounts are protected from these paths; CEO removal happens only through the audited self-delete flow that preserves at least one active CEO.
 - `/api/auth/session` returns `{ authenticated, role, name }` for the header account menu; `/api/auth/logout` signs out (JSON 200 for fetch, 303 redirect for form posts).
 - `/api/ceo` requires current-password verification for email changes, adding CEOs and deleting only the current CEO account. The last active CEO cannot delete itself.

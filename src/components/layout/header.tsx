@@ -21,8 +21,6 @@ export async function Header({ locale }: { locale: Locale }) {
     nav: {
       home: t("nav.home"),
       services: t("nav.services"),
-      homeServices: t("nav.homeServices"),
-      business: t("nav.business"),
       products: t("nav.products"),
       about: t("nav.about"),
       contact: t("nav.contact"),

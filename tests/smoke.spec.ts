@@ -71,6 +71,50 @@ test.describe("deployment smoke", () => {
     }
   });
 
+  for (const locale of ["he", "en"] as const) {
+    test(`${locale}: Home opens with the collection and closes with Security & Communications`, async ({
+      page,
+    }) => {
+      await page.route("**/api/track", (route) =>
+        route.fulfill({ status: 204 }),
+      );
+      await page.goto(`/${locale}/home`);
+
+      const main = page.locator("#main-content");
+      const collection = main.locator("section.sf-hero");
+      const security = main.locator('section[aria-labelledby="buyer-title"]');
+      await expect(main.locator("section").first()).toHaveAttribute(
+        "aria-labelledby",
+        "home-collection-title",
+      );
+      await expect(main.locator("section").last()).toHaveAttribute(
+        "aria-labelledby",
+        "buyer-title",
+      );
+      await expect(main.getByRole("heading", { level: 1 })).toHaveAttribute(
+        "id",
+        "home-collection-title",
+      );
+      await expect(security.getByRole("heading", { level: 2 })).toHaveAttribute(
+        "id",
+        "buyer-title",
+      );
+
+      const catalog = `/${locale}#store-items`;
+      await expect(security.locator(`a[href="${catalog}"]`)).toBeVisible();
+      await expect(
+        security.locator(`a[href="/${locale}/services"]`),
+      ).toBeVisible();
+      await expect(
+        collection.locator(`a[href="/${locale}/contact"]`),
+      ).toBeVisible();
+      await collection.locator(`a[href="${catalog}"]`).click();
+      await expect(page).toHaveURL(catalog);
+      await expect(page.locator("#store-items #store-title")).toBeVisible();
+      await expect(page.locator("section.sf-hero")).toHaveCount(0);
+    });
+  }
+
   test("old product URLs redirect to the Store section", async ({ page }) => {
     const response = await page.goto("/he/products/cameras");
 

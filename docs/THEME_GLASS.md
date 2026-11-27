@@ -78,7 +78,7 @@ excludes the enhancement, even when a worker marker is also present.
 Product-card, moving-rail, preview and detail media backplates use neutral-token
 radial gradients instead of hard-coded blue-gray studio highlights. Product
 images, their fitting/clipping and semantic badges remain intact. The public
-account dashboard, its forms, login/cart surfaces and worker navigation inherit
+account dashboard (including worker accounts), its forms and login/cart surfaces inherit
 the same neutral tokens. Verify protected pages with
 `node scripts/verify-dark-surfaces.mjs` (optional `BASE_URL`, `DARK_OUTPUT_DIR`):
 disposable customer/worker identities, both locales, 320/1440px, all themes,

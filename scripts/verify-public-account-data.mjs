@@ -370,7 +370,7 @@ try {
     );
     await visit(publicPage, `/${locale}/services`);
     assert.equal(
-      await publicPage.locator("#expertise .experience-category-card").count(),
+      await publicPage.locator("#expertise [data-service-entry]").count(),
       services.length,
       "Published service count matches current database",
     );
@@ -474,12 +474,12 @@ try {
     );
     const expected =
       account.role === "worker"
-        ? [fixtureRows[0].id]
+        ? []
         : [fixtureRows[account === customerA ? 0 : 1].id];
     assert.deepEqual(
       own.map((row) => row.id).sort(),
       expected.sort(),
-      `${account.label} reads only own/assigned fixture`,
+      `${account.label} reads only own fixture`,
     );
     const otherSaved = ensure(
       await account.client
@@ -506,11 +506,7 @@ try {
     );
     for (const locale of ["en", "he"]) {
       if (account !== customerB)
-        await layouts(
-          page,
-          `/${locale}/${account.role === "worker" ? "worker" : "account"}`,
-          account.role,
-        );
+        await layouts(page, `/${locale}/account`, account.role);
       await visit(page, `/${locale}/account`);
       assert.equal(
         await page.locator(".account-profile-identity h1").innerText(),
@@ -524,31 +520,16 @@ try {
         await page.locator(".account-history-row").count(),
         account.role === "customer" ? 1 : 0,
       );
-      if (account.role === "worker") {
-        await visit(page, `/${locale}/worker`);
-        const text = await page.locator("main").innerText();
-        assert.ok(text.includes(fixtureRows[0].message));
-        assert.ok(
-          !text.includes(fixtureRows[1].message) &&
-            !text.includes(customerB.name),
-        );
-        const status = await page.locator('select[name="status"]').inputValue();
-        if (status !== fixtureRows[0].status)
-          issue({
-            kind: "incorrect_worker_status",
-            path: `/${locale}/worker`,
-            expected: fixtureRows[0].status,
-            actual: status,
-            explanation:
-              "Waiting-customer request renders another status; worker update could change current state without an intentional selection.",
-          });
-      } else {
-        await page.goto(`${base}/${locale}/worker`, {
-          waitUntil: "domcontentloaded",
-        });
-        await page.waitForURL(`${base}/${locale}/account`, { timeout: 30_000 });
-        assert.equal(new URL(page.url()).pathname, `/${locale}/account`);
-      }
+      await page.goto(`${base}/${locale}/worker`, {
+        waitUntil: "domcontentloaded",
+      });
+      await page.waitForURL(`${base}/${locale}/account`, { timeout: 30_000 });
+      assert.equal(new URL(page.url()).pathname, `/${locale}/account`);
+      assert.ok(
+        !(await page.locator("main").innerText()).includes(
+          fixtureRows[0].message,
+        ),
+      );
       await page.goto(`${base}/${locale}/admin`, {
         waitUntil: "domcontentloaded",
       });

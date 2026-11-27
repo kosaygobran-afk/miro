@@ -92,7 +92,7 @@ with tempfile.TemporaryDirectory(prefix="miro-commerce-integration-", dir=qa_par
         if os.getenv("DOCUMENT_PREVIEW_REVIEW"):
             # Synthetic stored draft for preview readback; never linked business records.
             identity = {"legal_name":"Fixture document business", "trade_name":"Fixture documents", "entity_kind":"company", "registration_number":"EXAMPLE-REG", "vat_number":"EXAMPLE-VAT", "address":{"street":"12 Example Street","city":"Example City","postal_code":"0000000","country":"IL"}, "phone":"+972-00-000-0000","email":"fixture@example.invalid","document_language":"he"}
-            snapshot = {"items":[{"description":"Stored draft fixture / מסמך בדיקה", "quantity":1,"unit_price_agorot":10000,"discount_agorot":0,"net_agorot":10000,"vat_agorot":1800,"gross_agorot":11800}], "payment_references":[]}
+            snapshot = {"items":[{"description":"Stored draft fixture / מסמך בדיקה", "sku":"STORED-IPC-42","quantity":1,"unit_price_agorot":11800,"discount_agorot":0,"net_agorot":10000,"vat_agorot":1800,"gross_agorot":11800}], "payment_references":[]}
             encode = lambda value: "'" + json.dumps(value, ensure_ascii=False).replace("'", "''") + "'::jsonb"
             run(psql, input="insert into public.fiscal_documents(id,document_type,state,business_snapshot,customer_snapshot,subtotal_agorot,vat_agorot,total_agorot,document_snapshot,idempotency_effect_key,created_by) values ('00000000-0000-4000-8000-000000009941','quote','draft'," + encode(identity) + "," + encode({"name":"Sample customer / לקוח לדוגמה"}) + ",10000,1800,11800," + encode(snapshot) + ",'document-preview-fixture','00000000-0000-0000-0000-000000009902');")
         if os.getenv("POS_REVIEW"):

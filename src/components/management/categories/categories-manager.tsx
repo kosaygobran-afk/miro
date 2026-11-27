@@ -32,6 +32,7 @@ import { categoriesCopy as copy } from "./copy";
 import { buildOrderUpdates } from "@/lib/management-ordering";
 import { CollectionSummary } from "../ui/collection-summary";
 import { ReportChoices } from "../ui/reporting-workspace";
+import { StorefrontCategoryArtwork } from "./storefront-artwork-editor";
 import styles from "./categories-manager.module.css";
 
 type CategoryRow = {
@@ -120,7 +121,13 @@ function collectDescendants(
   return blocked;
 }
 
-export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
+export function CategoriesManager({
+  locale,
+  isCeo,
+}: {
+  locale: "he" | "en";
+  isCeo: boolean;
+}) {
   const he = locale === "he";
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [loadState, setLoadState] = useState<"loading" | "ready" | "error">(
@@ -590,6 +597,18 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
     return collectDescendants(categories, editing.id);
   }, [categories, editing]);
 
+  const storefrontArtwork = isCeo ? (
+    <StorefrontCategoryArtwork
+      locale={locale}
+      categories={categories}
+      loadState={loadState}
+      onEditNames={(id) => {
+        const category = categories.find((row) => row.id === id);
+        if (category) openEdit(category);
+      }}
+    />
+  ) : null;
+
   if (loadState === "loading") {
     return (
       <div className={styles.stack}>
@@ -597,6 +616,7 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
           title={copy.pageTitle[locale]}
           subtitle={copy.pageSubtitle[locale]}
         />
+        {storefrontArtwork}
         <TableSkeleton
           columnWidths={[
             "6%",
@@ -635,6 +655,7 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
           title={copy.pageTitle[locale]}
           subtitle={copy.pageSubtitle[locale]}
         />
+        {storefrontArtwork}
         <ErrorState
           title={copy.loadErrorTitle[locale]}
           onRetry={() => {
@@ -663,6 +684,7 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
           </button>
         }
       />
+      {storefrontArtwork}
 
       {notice ? (
         <Notice
@@ -969,6 +991,11 @@ export function CategoriesManager({ locale }: { locale: "he" | "en" }) {
               label={copy.fieldNameHe[locale]}
               required
               error={fieldErrors.name_he}
+              description={
+                isCeo && !form.parent_id
+                  ? copy.sharedNamesHint[locale]
+                  : undefined
+              }
             >
               {(control) => (
                 <input

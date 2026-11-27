@@ -29,8 +29,8 @@ export function PublishedWebsiteImages({
       : "Services · Network installations",
   };
   const transitions = {
-    "flip-up": he ? "היפוך מלמטה למעלה" : "Bottom-to-top flip",
-    "swipe-left": he ? "החלקה מימין לשמאל" : "Right-to-left swipe",
+    "flip-up": he ? "חשיפה משמאל לימין" : "Left-to-right reveal",
+    "swipe-left": he ? "החלקה רכה" : "Soft slide",
     fade: he ? "התמזגות" : "Fade",
     none: he ? "החלפה מיידית" : "Instant change",
   };

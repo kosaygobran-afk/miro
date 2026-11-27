@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "@/components/motion/motion-link";
 import { formatAgorot, MAX_AGOROT } from "@/lib/commerce/money";
+import type { PaymentCapabilities, PaymentMethod } from "@/lib/commerce/payments";
 import styles from "./payment.module.css";
 
 type CheckoutStatus = {
@@ -36,17 +37,25 @@ type CheckoutStatus = {
   readiness: {
     configured: boolean;
     environment: string | null;
-    capabilities: { hostedCard: string; bit: string; installments: string };
+    capabilities: Pick<
+      PaymentCapabilities,
+      "hostedCard" | "bit" | "installments"
+    > &
+      Partial<Pick<PaymentCapabilities, "wallets">>;
   };
 };
 type AmbiguousLeg = {
   intentId: string;
-  method: "credit_card" | "bit";
+  method: PaymentMethod;
   count: number;
   amount: number;
   key: string;
   selector: string;
 };
+const WALLETS = [
+  { method: "apple_pay", capability: "applePay", name: "Apple Pay" },
+  { method: "google_pay", capability: "googlePay", name: "Google Pay" },
+] as const;
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const UNRESOLVED_STATES = new Set([
@@ -112,17 +121,32 @@ export function isAmbiguousPaymentLeg(
   const leg = value as AmbiguousLeg;
   return (
     leg.intentId === intentId &&
-    ["credit_card", "bit"].includes(leg.method) &&
+    ["credit_card", "bit", "apple_pay", "google_pay"].includes(leg.method) &&
     Number.isInteger(leg.count) &&
     leg.count >= 1 &&
     leg.count <= 24 &&
-    (leg.method !== "bit" || leg.count === 1) &&
+    (leg.method === "credit_card" || leg.count === 1) &&
     Number.isSafeInteger(leg.amount) &&
     leg.amount > 0 &&
     leg.amount <= MAX_AGOROT &&
     typeof leg.key === "string" &&
     UUID_PATTERN.test(leg.key) &&
     leg.selector === `${leg.method}:${leg.count}:${leg.amount}`
+  );
+}
+
+function isPaymentMethodAvailable(
+  status: CheckoutStatus,
+  method: PaymentMethod,
+): boolean {
+  const { capabilities } = status.readiness;
+  if (method === "credit_card") return capabilities.hostedCard === "enabled";
+  if (method === "bit") return capabilities.bit === "enabled";
+  const wallet = WALLETS.find((entry) => entry.method === method);
+  return Boolean(
+    wallet &&
+      status.intent.channel === "website" &&
+      capabilities.wallets?.[wallet.capability] === "enabled",
   );
 }
 function hasUnresolvedAttempt(status: CheckoutStatus): boolean {
@@ -357,7 +381,7 @@ export function PaymentPageClient({
     (ambiguousLeg !== null &&
       ambiguousLeg.amount !== currentStatus.intent.remaining_agorot);
 
-  async function start(method: "credit_card" | "bit") {
+  async function start(method: PaymentMethod) {
     if (
       submittingRef.current ||
       !verifiedRef.current ||
@@ -379,20 +403,14 @@ export function PaymentPageClient({
         !isPaymentPageCollectable(fresh)
       )
         return;
-      if (
-        fresh.readiness.capabilities[
-          method === "credit_card" ? "hostedCard" : "bit"
-        ] !== "enabled"
-      )
-        return;
+      if (!isPaymentMethodAvailable(fresh, method)) return;
       const uncertain = ambiguousRef.current;
       const count = uncertain
         ? uncertain.count
-        : method === "bit"
-          ? 1
-          : fresh.readiness.capabilities.installments === "enabled"
-            ? installments
-            : 1;
+        : method === "credit_card" &&
+            fresh.readiness.capabilities.installments === "enabled"
+          ? installments
+          : 1;
       const amount = fresh.intent.remaining_agorot;
       const selector = `${method}:${count}:${amount}`;
       if (
@@ -489,6 +507,20 @@ export function PaymentPageClient({
         setSubmitting(false);
       }
     }
+  }
+
+  const availableWallets =
+    currentStatus && !final
+      ? WALLETS.filter(({ method }) =>
+          isPaymentMethodAvailable(currentStatus, method),
+        )
+      : [];
+  function isMethodBlocked(method: PaymentMethod) {
+    return (
+      submitting ||
+      newPaymentBlocked ||
+      (ambiguousLeg !== null && ambiguousLeg.method !== method)
+    );
   }
 
   const labels: Record<string, string> = he
@@ -615,7 +647,38 @@ export function PaymentPageClient({
                   : "The previous request has not been confirmed. Check again or resume that same payment if available. Its method and installments stay locked."}
               </p>
             ) : null}
-            {currentStatus.readiness.capabilities.installments === "enabled" ? (
+            {availableWallets.length ? (
+              <div className={styles.wallets}>
+                <div className={styles.actions}>
+                  {availableWallets.map(({ method, name }) => (
+                    <button
+                      key={method}
+                      type="button"
+                      className="miro-button miro-button-primary"
+                      disabled={isMethodBlocked(method)}
+                      onClick={() => void start(method)}
+                    >
+                      {he
+                        ? ambiguousLeg?.method === method
+                          ? "המשך בקשת "
+                          : "המשך עם "
+                        : ambiguousLeg?.method === method
+                          ? "Resume "
+                          : "Continue with "}
+                      <bdi>{name}</bdi>
+                    </button>
+                  ))}
+                </div>
+                <p>
+                  {he
+                    ? "הארנק ייפתח בעמוד התשלום של PayPlus במכשיר נתמך."
+                    : "PayPlus opens the wallet on a supported device."}
+                </p>
+              </div>
+            ) : null}
+            {!final &&
+            currentStatus.readiness.capabilities.installments === "enabled" &&
+            isPaymentMethodAvailable(currentStatus, "credit_card") ? (
               <label>
                 {he ? "תשלומים" : "Installments"}
                 <select
@@ -643,19 +706,10 @@ export function PaymentPageClient({
             ) : null}
             {!final ? (
               <div className={styles.actions}>
-                {currentStatus.readiness.capabilities.hostedCard ===
-                "enabled" ? (
+                {isPaymentMethodAvailable(currentStatus, "credit_card") ? (
                   <button
                     className="miro-button miro-button-primary"
-                    disabled={
-                      submitting ||
-                      !verified ||
-                      !!unresolved ||
-                      currentStatus.intent.remaining_agorot <= 0 ||
-                      newPaymentBlocked ||
-                      (ambiguousLeg !== null &&
-                        ambiguousLeg.method !== "credit_card")
-                    }
+                    disabled={isMethodBlocked("credit_card")}
                     onClick={() => void start("credit_card")}
                   >
                     {ambiguousLeg
@@ -667,17 +721,10 @@ export function PaymentPageClient({
                         : "Pay by card"}
                   </button>
                 ) : null}
-                {currentStatus.readiness.capabilities.bit === "enabled" ? (
+                {isPaymentMethodAvailable(currentStatus, "bit") ? (
                   <button
                     className="miro-button miro-button-secondary"
-                    disabled={
-                      submitting ||
-                      !verified ||
-                      !!unresolved ||
-                      currentStatus.intent.remaining_agorot <= 0 ||
-                      newPaymentBlocked ||
-                      (ambiguousLeg !== null && ambiguousLeg.method !== "bit")
-                    }
+                    disabled={isMethodBlocked("bit")}
                     onClick={() => void start("bit")}
                   >
                     {ambiguousLeg

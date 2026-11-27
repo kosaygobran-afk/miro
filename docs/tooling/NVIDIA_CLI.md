@@ -4,7 +4,17 @@ Updated 2026-10-16. This is local developer tooling, independent of the website'
 
 ## Model and maximum settings
 
-Both native CLIs default to `nvidia/nemotron-ultra`, mapped to the real NVIDIA API model `nvidia/nemotron-3-ultra-550b-a55b`. Kimi Code 2.1.1 and OpenCode 2.0.24 were inspected and exercised with synthetic file-reading tools. OpenCode's primary agent remains `build`; both tools retain GPT-OSS 20B for configured workers.
+Both native CLIs default to `nvidia/nemotron-ultra`, mapped to the real NVIDIA API model `nvidia/nemotron-3-ultra-550b-a55b`. Kimi Code 2.1.1 and OpenCode were inspected and exercised with synthetic file-reading tools. OpenCode's primary agent remains `build`. The repository's configured workers now use NVIDIA `nvidia/nemotron-3.5-super-vl-120b-a12b`; see the 2026-11-27 API check below.
+
+## NVIDIA API and model check — 2026-11-27
+
+The authenticated `GET https://integrate.api.nvidia.com/v1/models` endpoint returned 29 model IDs for the configured account. The listing included Nemotron 3 Ultra, Nemotron 3.5 Lightning, Nemotron 3.5 Super VL, GLM 5.3 Flash, and other chat, vision, embedding, translation, and specialty models. It did not include `openai/gpt-oss-20b`, which was previously configured for repository workers. The catalog is account-specific and can change; a listed ID alone does not prove a successful completion.
+
+The current worker model `nvidia/nemotron-3.5-super-vl-120b-a12b` returned a successful synthetic function call through the hosted API (`finish_reason: tool_calls`). NVIDIA's reference describes support for reasoning and tools; a short probe used `reasoning_effort: none`. The smaller `nvidia/nemotron-3.5-lightning-30b-a3b` also returned a completion and function call when `chat_template_kwargs.enable_thinking` was false. With thinking left on and an intentionally tiny output limit, Lightning spent the budget on reasoning and returned no visible answer; do not infer a model outage from that case.
+
+Nemotron 3 Ultra remains the Kimi/OpenCode primary because that is the owner's explicit selection and its live verification is separately recorded below. GPT-OSS is disabled in this repository's OpenCode provider config, and the six repository workers point to Super VL. NVIDIA's Kimi K3.1 Pro reference currently says its endpoint is preview/playground-only and not available for programmatic API access, despite the ID appearing in the model listing. Recheck both the authenticated list and a real synthetic completion before changing defaults again.
+
+Official references: [NVIDIA models](https://docs.api.nvidia.com/nim/reference/models-1), [Nemotron 3.5 Super VL API](https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3_5-super-vl-120b-a12b-infer), [Nemotron 3.5 Lightning API](https://docs.api.nvidia.com/nim/reference/nvidia-nemotron-3-5-lightning-30b-a3b-infer), [Kimi K3.1 Pro API](https://docs.api.nvidia.com/nim/reference/moonshotai-kimi-k3_1-pro-infer).
 
 Full supported reasoning is `high`, with `reasoning_budget = -1`, enabled thinking, `medium_effort = false`, and `force_nonempty_content = true`. Sampling uses NVIDIA's temperature 1 / top-p 0.95. Output is capped at the documented 32,768 tokens, respecting a smaller caller cap near context exhaustion. The catalog's 1,000,000-token context declaration is configured; full-window and maximum-length generation have not been load-tested.
 

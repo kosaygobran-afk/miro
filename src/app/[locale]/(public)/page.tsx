@@ -1,6 +1,5 @@
 import { BrandArtwork } from "@/components/brand/brand-artwork";
 import Link from "@/components/motion/motion-link";
-import { StoreHeroBackdrop } from "@/features/store-design/store-hero-backdrop";
 import { CompanyRail } from "@/features/store-design/company-rail";
 import {
   ArrowLeft,
@@ -15,6 +14,7 @@ import { getTranslations } from "next-intl/server";
 import { ProductsClient } from "@/components/products/ProductsClient";
 import { CatalogUnavailable } from "@/components/products/catalog-unavailable";
 import { ProductSubNav } from "@/components/products/ProductSubNav";
+import { StoreTopCategoryNav } from "@/components/products/store-top-category-nav";
 import { ProductMovingRail } from "@/features/catalog/product-moving-rail";
 import { SecurityComposition } from "@/components/products/ProductVisual";
 import { isLocale, withLocale } from "@/lib/i18n";
@@ -23,7 +23,7 @@ import type { Metadata } from "next";
 import { getSiteUrl, pageMetadata } from "@/lib/seo";
 import type { Locale } from "@/lib/i18n";
 import { getStorePageData } from "@/lib/store-data";
-import { getWebsitePageCopy } from "@/lib/website-page-copy-server";
+import { getStorefrontCategoryArtwork } from "@/lib/catalog/storefront-category-artwork-server";
 import { StoreLiveRefresh } from "@/features/catalog/store-live-refresh";
 import { headers } from "next/headers";
 
@@ -56,9 +56,9 @@ export default async function ProductsPage({
   const copy = storeCopy[locale];
   const Arrow = locale === "he" ? ArrowLeft : ArrowRight;
 
-  const [{ viewer, catalog }, pageCopy] = await Promise.all([
+  const [{ viewer, catalog }, categoryArtwork] = await Promise.all([
     getStorePageData(locale),
-    getWebsitePageCopy("store", locale),
+    getStorefrontCategoryArtwork(),
   ]);
   if (catalog.error) return <CatalogUnavailable locale={locale} />;
   const savedProductIds = new Set(viewer.savedProductIds);
@@ -88,65 +88,25 @@ export default async function ProductsPage({
         }}
       />
       <StoreLiveRefresh />
-      <section className="sf-hero" aria-labelledby="store-title">
-        <StoreHeroBackdrop locale={locale} />
-        <div className="sf-hero-grid" aria-hidden="true" />
-        <div className="miro-container sf-hero-inner">
-          <div className="sf-hero-copy" data-page-heading-copy>
-            <p className="sf-eyebrow">
-              <span />
-              {pageCopy.eyebrow}
-            </p>
-            <h1 id="store-title">
-              {pageCopy.title}
-              <span>{pageCopy.accent}</span>
-            </h1>
-            <p className="sf-hero-intro">{pageCopy.description}</p>
-            <div className="sf-hero-actions">
-              <a
-                href="#store-items"
-                className="miro-button miro-button-primary"
-              >
-                {copy.browse}
-                <Arrow size={18} aria-hidden="true" />
-              </a>
-              <Link
-                href={withLocale(locale, "contact")}
-                className="sf-hero-secondary"
-              >
-                {copy.consult}
-                <Arrow size={17} aria-hidden="true" />
-              </Link>
-            </div>
-            <div className="sf-hero-signature" aria-hidden="true">
-              <span>SECURE.</span>
-              <span>SMART.</span>
-              <span>CONNECTED.</span>
-            </div>
-          </div>
-          <span className="sf-hero-caption">MIRO GROUP / COLLECTION 01</span>
-        </div>
-      </section>
-
-      <ProductSubNav
+      <StoreTopCategoryNav
         categories={categories}
+        artworkById={categoryArtwork}
         locale={locale}
-        ariaLabel={copy.category}
       />
+      <CompanyRail locale={locale} />
 
       <ProductMovingRail products={catalog.products} locale={locale} />
-      <CompanyRail locale={locale} />
 
       <section
         className="sf-collection-section"
         id="store-items"
-        aria-labelledby="collection-title"
+        aria-labelledby="store-title"
       >
         <div className="miro-container">
           <div className="sf-section-heading">
-            <div>
+            <div id="collection-title">
               <p className="sf-eyebrow">{copy.catalogLabel}</p>
-              <h2 id="collection-title">{copy.collection}</h2>
+              <h1 id="store-title">{copy.collection}</h1>
             </div>
             <p>{copy.collectionText}</p>
           </div>
@@ -178,7 +138,7 @@ export default async function ProductsPage({
                 ))}
               </div>
               <Link
-                href={withLocale(locale, "services/business")}
+                href={withLocale(locale, "services")}
                 className="miro-button miro-button-primary"
               >
                 {copy.bundleAction}
@@ -256,6 +216,12 @@ export default async function ProductsPage({
           </div>
         </div>
       </section>
+
+      <ProductSubNav
+        categories={categories}
+        locale={locale}
+        ariaLabel={copy.category}
+      />
     </div>
   );
 }

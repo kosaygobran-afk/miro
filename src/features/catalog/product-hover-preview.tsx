@@ -1,5 +1,6 @@
 "use client";
 
+import { playGalleryArrowFeedback } from "@/components/motion/button-feedback";
 import {
   Fragment,
   useCallback,
@@ -12,6 +13,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { productPreviewHoverDelay, productPreviewTiming } from "@/lib/motion";
+import { ProductGalleryMedia } from "./product-gallery-media";
 import { ProductMedia } from "./product-media";
 import { ProductImageMagnifier } from "./product-image-magnifier";
 import { AddToCartButton } from "@/features/cart/add-to-cart-button";
@@ -667,12 +669,13 @@ export function ProductHoverPreview({
             togglePortalTarget={magnifierSlot}
           />
         ) : (
-          <ProductMedia
+          <ProductGalleryMedia
+            key={product.id}
+            imageKey={allImages[activeImageIndex]?.id}
             product={product}
             src={allImages[activeImageIndex]?.url}
             alt={imageAlt}
             sizes="(max-width: 380px) calc(100vw - 5rem), (max-width: 512px) calc(100vw - 9rem), 360px"
-            loading="eager"
             className="sf-hover-preview-image"
           />
         )}
@@ -681,6 +684,7 @@ export function ProductHoverPreview({
             <button
               type="button"
               className="sf-hover-preview-arrow sf-hover-preview-arrow-previous"
+              onClickCapture={playGalleryArrowFeedback}
               onClick={showPreviousImage}
               aria-label={locale === "he" ? "התמונה הקודמת" : "Previous image"}
             >
@@ -689,6 +693,7 @@ export function ProductHoverPreview({
             <button
               type="button"
               className="sf-hover-preview-arrow sf-hover-preview-arrow-next"
+              onClickCapture={playGalleryArrowFeedback}
               onClick={showNextImage}
               aria-label={locale === "he" ? "התמונה הבאה" : "Next image"}
             >

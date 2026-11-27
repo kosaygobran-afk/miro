@@ -1,6 +1,11 @@
 .gallery {
   min-width: 0;
   inline-size: 100%;
+  --gallery-reading-direction: 1;
+}
+
+.gallery[dir="rtl"] {
+  --gallery-reading-direction: -1;
 }
 
 .frame {
@@ -8,10 +13,8 @@
   overflow: hidden;
   isolation: isolate;
   aspect-ratio: 4 / 5;
-  border: var(--gallery-border) solid var(--border-subtle);
   border-radius: var(--gallery-radius);
-  background: var(--surface-raised, var(--surface));
-  perspective: 75rem;
+  background: transparent;
   touch-action: pan-y pinch-zoom;
 }
 
@@ -22,10 +25,14 @@
 }
 
 .slide img {
+  display: block;
+  width: 100%;
+  height: 100%;
   object-fit: var(--gallery-fit);
   object-position: var(--gallery-focus);
   transform-origin: var(--gallery-focus);
   transform: scale(var(--gallery-zoom));
+  border-radius: var(--gallery-radius);
 }
 
 .frame[data-effect="warm"] img {
@@ -36,56 +43,63 @@
   filter: grayscale(1) contrast(1.06);
 }
 
-.slide[data-transition] {
-  animation-duration: 620ms;
-  animation-timing-function: cubic-bezier(0.2, 0.75, 0.22, 1);
+.slide[data-phase="pending"] {
+  visibility: hidden;
 }
 
-.slide[data-transition="flip-up"] {
-  transform-origin: center bottom;
-  animation-name: flip-up;
+@media (prefers-reduced-motion: no-preference) {
+  .frame[data-transition] {
+    --gallery-transition-duration: 1050ms;
+    --gallery-transition-ease: cubic-bezier(0.45, 0, 0.25, 1);
+  }
+
+  .frame[data-transition] .slide[data-phase="outgoing"] {
+    animation: gallery-dissolve-out var(--gallery-transition-duration)
+      var(--gallery-transition-ease) both;
+  }
+
+  .frame[data-transition] .slide[data-phase="incoming"] {
+    /* Complementary opacity inside the isolated frame avoids a brightness dip. */
+    mix-blend-mode: plus-lighter;
+    animation: gallery-dissolve-in var(--gallery-transition-duration)
+      var(--gallery-transition-ease) both;
+  }
+
+  /* The saved animation IDs also cover settings published before this change. */
+  .frame[data-transition="flip-up"] .slide[data-phase="incoming"] {
+    --gallery-enter-scale: 0.982;
+  }
+
+  .frame[data-transition="swipe-left"] .slide[data-phase="incoming"] {
+    --gallery-enter-offset: calc(
+      1.5% * var(--gallery-reading-direction) * var(--gallery-direction)
+    );
+  }
+
+  .frame[data-replay] .slide[data-phase="outgoing"] {
+    visibility: hidden;
+  }
+
+  .frame[data-replay] .slide[data-phase="incoming"] {
+    --gallery-enter-opacity: 0.5;
+  }
 }
 
-.slide[data-transition="swipe-left"] {
-  animation-name: swipe-left;
-}
-
-.slide[data-transition="fade"] {
-  animation-name: fade;
-}
-
-@keyframes flip-up {
+@keyframes gallery-dissolve-in {
   from {
-    transform: translateY(16%) rotateX(-32deg);
-    opacity: 0;
+    opacity: var(--gallery-enter-opacity, 0);
+    transform: translateX(var(--gallery-enter-offset, 0))
+      scale(var(--gallery-enter-scale, 1));
   }
   to {
-    transform: none;
     opacity: 1;
-  }
-}
-
-@keyframes swipe-left {
-  from {
-    transform: translateX(100%);
-  }
-  to {
     transform: none;
   }
 }
 
-@keyframes fade {
-  from {
-    opacity: 0;
-  }
+@keyframes gallery-dissolve-out {
   to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .slide[data-transition] {
-    animation: none;
+    opacity: 0;
   }
 }
 
@@ -142,15 +156,11 @@
 
 .section {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, min(47%, 32rem));
+  grid-template-columns: minmax(0, 39rem) minmax(0, min(47%, 32rem));
   grid-template-areas: "intro media";
-  gap: clamp(1.5rem, 4vw, 5rem);
+  justify-content: center;
+  gap: clamp(0.5rem, 2vw, 1.5rem);
   align-items: center;
-}
-
-.section[data-media-start="true"] {
-  grid-template-columns: minmax(0, min(47%, 32rem)) minmax(0, 1fr);
-  grid-template-areas: "media intro";
 }
 
 .intro {
@@ -163,9 +173,38 @@
 }
 
 @media (max-width: 800px) {
-  .section,
-  .section[data-media-start="true"] {
+  .section {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas: "intro" "media";
+  }
+}
+
+.projectPanel {
+  container-type: inline-size;
+  align-self: start;
+  padding: clamp(1rem, 1.8vw, 2rem);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1.15rem;
+  background: var(--surface);
+}
+
+.projectGallery {
+  display: grid;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 46%);
+  gap: clamp(0.75rem, 1.5vw, 1.5rem);
+}
+
+.projectGallery .intro {
+  grid-area: auto;
+}
+
+.projectGallery h2 {
+  font-size: clamp(1.4rem, 4.5cqi, 2.3rem);
+}
+
+@container (max-width: 24rem) {
+  .projectGallery {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

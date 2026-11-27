@@ -96,7 +96,7 @@
   max-width: 52ch;
   text-wrap: pretty;
 }
-.sf-section-heading h2,
+.sf-section-heading :is(h1, h2),
 .sf-moving-rail-header h2 {
   letter-spacing: -0.035em;
   text-wrap: balance;
@@ -141,12 +141,6 @@
 .sf-company-heading .sf-eyebrow {
   font-size: 0.57rem;
   letter-spacing: 0.17em;
-}
-.sf-company-heading h2 {
-  font-size: 1rem;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin-top: 0.3rem;
 }
 .sf-company-heading p {
   font-size: 0.74rem;
