@@ -20,7 +20,6 @@ const readPageCopy = cachePublicPresentation(
     if (error) throw error;
     return websitePageCopySchema.parse(data);
   },
-  { refresh: "blocking" },
 );
 
 export async function getWebsitePageCopy(

@@ -30,7 +30,6 @@ const readCategoryArtwork = cachePublicPresentation(
     if (error) throw error;
     return data ?? [];
   },
-  { refresh: "blocking" },
 );
 
 export async function getStorefrontCategoryArtwork(): Promise<

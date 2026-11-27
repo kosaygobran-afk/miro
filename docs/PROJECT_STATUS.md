@@ -1,3 +1,10 @@
+## Next.js 16.4.6 issue overlay fixes — 2026-11-27
+
+- Stabilized `StoreLiveRefresh` around a fixed router refresh function so React no longer reports a changing `useEffect` dependency-array shape during route updates.
+- Changed public presentation cache reads to minute-window blocking revalidation, preventing Next's dev overlay from reporting stale cache background-revalidation console errors for navigation, storefront design, animation and glass settings.
+- `npm run lint`, `npm run typecheck`, the live `/he` reload and the screenshot issue check passed; the live Next.js issue badge is gone. The production build will verify the full route set after the source update.
+- QA owns manual bilingual and screen-reader sign-off, engineering owns any later cache or Realtime catalog regressions, and release operations owns deployment.
+
 ## Categories hover clearance — 2026-11-27
 
 - Added equal space between the primary Categories heading and the cards and beneath the cards. Fine-pointer magnification gets extra clearance, and the transform origin limits upward growth for tall labels. Touch and reduced-motion layouts use the compact spacing.

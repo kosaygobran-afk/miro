@@ -13,6 +13,7 @@ export function StoreLiveRefresh({
   reconcilePromotions?: boolean;
 } = {}) {
   const router = useRouter();
+  const refreshRouter = router.refresh;
 
   useEffect(() => {
     const hasPublicKey = Boolean(
@@ -53,7 +54,7 @@ export function StoreLiveRefresh({
           return;
         renderedVersion = version;
         refreshedAt = Date.now();
-        router.refresh();
+        refreshRouter();
       }, 250);
     };
     const observeVersion = (next: unknown, fromUpdate = false) => {
@@ -115,7 +116,7 @@ export function StoreLiveRefresh({
       window.removeEventListener("focus", checkVersion);
       void client.removeChannel(channel);
     };
-  }, [reconcilePromotions, router]);
+  }, [reconcilePromotions, refreshRouter]);
 
   return null;
 }
