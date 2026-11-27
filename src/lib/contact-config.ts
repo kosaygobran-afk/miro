@@ -48,7 +48,6 @@ const readPublicContactConfig = cachePublicPresentation(
     if (error) throw error;
     return rpcConfigSchema.parse(data);
   },
-  { refresh: "blocking" },
 );
 
 export type PublicContactConfig = {
