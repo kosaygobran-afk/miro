@@ -25,7 +25,7 @@ export default async function CategoriesPage({
 }) {
   const { locale } = await params;
   const safeLocale = (isLocale(locale) ? locale : "he") as Locale;
-  await requireRole(safeLocale, ["admin", "ceo"]);
+  const { role } = await requireRole(safeLocale, ["admin", "ceo"]);
 
-  return <CategoriesManager locale={safeLocale} />;
+  return <CategoriesManager locale={safeLocale} isCeo={role === "ceo"} />;
 }

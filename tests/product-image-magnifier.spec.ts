@@ -353,10 +353,9 @@ for (const locale of ["en", "he"] as const) {
         await expect(toggle).toHaveAttribute("aria-pressed", "true");
         await expect(stage).toBeFocused();
         await expect(stage).toBeInViewport({ ratio: 0.8 });
-        await expect(stage.locator(":scope > .sf-product-image-fit")).toHaveCSS(
-          "transform",
-          "none",
-        );
+        await expect(
+          stage.locator('[data-gallery-frame="current"] .sf-product-image-fit'),
+        ).toHaveCSS("transform", "none");
         await expect(stage.locator(".sf-image-magnifier-view")).toHaveCSS(
           "transform",
           "matrix(2, 0, 0, 2, 0, 0)",
@@ -512,10 +511,9 @@ test("slider and wheel adjust only the circular lens, with bounded zoom and no g
     "transform",
     "matrix(4.75, 0, 0, 4.75, 0, 0)",
   );
-  await expect(stage.locator(":scope > .sf-product-image-fit")).toHaveCSS(
-    "transform",
-    "none",
-  );
+  await expect(
+    stage.locator('[data-gallery-frame="current"] .sf-product-image-fit'),
+  ).toHaveCSS("transform", "none");
   await slider.focus();
   await page.keyboard.press("Home");
   await page.keyboard.press("ArrowLeft");
@@ -559,7 +557,7 @@ test("failed image selection uses the illustration without offering magnificatio
   await page.route("**/_next/image?**", (route) => route.abort());
   await popup.locator(".sf-hover-preview-arrow-next").click();
   await expect(
-    popup.locator(".sf-hover-preview-image-stage > .sf-product-visual"),
+    popup.locator('[data-gallery-frame="current"] > .sf-product-visual'),
   ).toBeVisible();
   await expect(popup.locator(".sf-image-magnifier-toggle")).toHaveCount(0);
   await expect(
@@ -672,6 +670,10 @@ for (const locale of ["en", "he"] as const) {
         });
         const stage = scope.locator(".sf-hover-preview-image-stage");
         const stageId = await stage.getAttribute("id");
+        const currentImage = stage.locator(
+          '[data-gallery-frame="current"] img',
+        );
+        const initialSource = (await currentImage.getAttribute("src"))!;
         const relativeControlPosition = () =>
           scope.evaluate((element) => {
             const frame = element.getBoundingClientRect();
@@ -704,6 +706,11 @@ for (const locale of ["en", "he"] as const) {
         try {
           await next.click();
           await expect.poll(() => waiting).toBeGreaterThan(0);
+          const pendingImage = stage.locator('[data-gallery-frame="pending"]');
+          await expect(pendingImage).toHaveCSS("visibility", "hidden");
+          await expect(pendingImage).toHaveAttribute("aria-hidden", "true");
+          await expect(currentImage).toHaveAttribute("src", initialSource);
+          await expect(currentImage).toHaveCSS("opacity", "1");
           await expect(toggle).toBeVisible();
           await expect(toggle).toBeDisabled();
           await expect(toggle).toHaveCSS("opacity", "1");
@@ -720,6 +727,8 @@ for (const locale of ["en", "he"] as const) {
           expect(pendingPosition.y).toBeCloseTo(position.y, 0);
           release();
           await expect(toggle).toBeEnabled();
+          await expect(currentImage).not.toHaveAttribute("src", initialSource);
+          await expect(stage.locator("[data-gallery-frame]")).toHaveCount(1);
           await expect(toggle).toHaveAttribute("aria-pressed", "false");
           await toggle.click();
           await expect(scope.getByRole("slider")).toHaveValue("2");

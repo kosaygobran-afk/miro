@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" fill="none">
+  <defs>
+    <linearGradient id="steel" x2=".18" y2="1">
+      <stop stop-color="#f1f0eb"/>
+      <stop offset=".43" stop-color="#b9bdbe"/>
+      <stop offset="1" stop-color="#717779"/>
+    </linearGradient>
+    <linearGradient id="graphite" x2=".2" y2="1">
+      <stop stop-color="#505457"/>
+      <stop offset="1" stop-color="#17191b"/>
+    </linearGradient>
+    <radialGradient id="lens" cx=".36" cy=".31" r=".68">
+      <stop stop-color="#87c6cd"/>
+      <stop offset=".36" stop-color="#315c71"/>
+      <stop offset=".63" stop-color="#243b4a"/>
+      <stop offset="1" stop-color="#0c151d"/>
+    </radialGradient>
+  </defs>
+
+<ellipse cx="119" cy="131" rx="104" ry="10" fill="#141615" opacity=".25"/>
+
+  <g stroke-linejoin="round">
+    <path d="M103 48v-9l11-7h23l8 7v12" stroke="#8699a6" stroke-width="8"/>
+    <path d="M106 48v-9l9-6h20l7 7v10" stroke="#344451" stroke-width="5"/>
+    <path d="M106 28c0-6 13-10 26-8 8 1 15 4 15 8v5h-41Z" fill="url(#graphite)" stroke="#8396a4" stroke-width="1.5"/>
+    <path d="M77 49 91 42h60l13 9v35l-11 7H77Z" fill="url(#steel)" stroke="#8597a3" stroke-width="1.5"/>
+    <rect x="75" y="49" width="80" height="45" rx="8" fill="url(#graphite)" stroke="#8a9eaa" stroke-width="1.5"/>
+    <path d="M81 55h18m-18 4h12" stroke="#93a7b4" stroke-linecap="round"/>
+    <circle cx="132" cy="72" r="15" fill="#243343" stroke="#97acb7" stroke-width="2"/>
+    <circle cx="132" cy="72" r="10" fill="url(#lens)" stroke="#18242e" stroke-width="2"/>
+    <circle cx="128" cy="68" r="2.2" fill="#a1d6d5" opacity=".8"/>
+    <circle cx="85" cy="83" r="2" fill="#e6b15e"/>
+
+    <g transform="rotate(-12 57 110)">
+      <path d="M34 111c0-17 9-29 23-29s23 12 23 29v9a13 13 0 0 1-13 13H47a13 13 0 0 1-13-13Z" fill="url(#steel)" stroke="#8799a7" stroke-width="1.5"/>
+      <path d="M35 108c12 5 32 5 44 0v12a12 12 0 0 1-12 12H47a12 12 0 0 1-12-12Z" fill="url(#graphite)"/>
+      <path d="M57 84v23" stroke="#53616e"/>
+      <rect x="54" y="92" width="6" height="11" rx="3" fill="#293b48" stroke="#c6d0d3"/>
+    </g>
+
+    <g transform="rotate(17 183 101)">
+      <path d="M175 77h19v24h-19Z" fill="url(#steel)" stroke="#82919e" stroke-width="1.4"/>
+      <path d="M182 77v-8h5v8" stroke="#9eabb5" stroke-width="3"/>
+      <path d="M173 84h5m14 0h5" stroke="#c9ac6f" stroke-width="2.7" stroke-linecap="round"/>
+      <path d="M169 100a5 5 0 0 1 5-5h21a5 5 0 0 1 5 5v23a5 5 0 0 1-5 5h-21a5 5 0 0 1-5-5Z" fill="url(#graphite)" stroke="#8095a2" stroke-width="1.5"/>
+      <ellipse cx="184.5" cy="124" rx="14" ry="5" fill="#101d26" stroke="#8fa2aa"/>
+      <path d="M174 122h8v3h-8zm12 0h8v3h-8z" fill="#d8b56d"/>
+    </g>
+  </g>
+</svg>

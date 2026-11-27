@@ -22,6 +22,10 @@ test("guest wishlist survives locale changes on a small phone", async ({
     .locator(".premium-mobile-navigation")
     .getByRole("link", { name: "Wishlist: 1", exact: true });
   await expect(shortcut.locator(".premium-shopping-count")).toBeVisible();
+  await expect(shortcut.locator("[data-wishlist-heart]")).toHaveCSS(
+    "fill",
+    /^url\(/,
+  );
 
   await page.goto("/he/cart", { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "לרשימת המשאלות", exact: true }).click();
@@ -80,20 +84,112 @@ test("cart quantities and unique wishlist selections update their own badges", a
     DEFAULT_ANIMATION_SETTINGS,
   );
   await expect(add).toBeEnabled();
+  const started = page.evaluate(
+    () =>
+      new Promise<string>((resolve) => {
+        const onStart = (event: AnimationEvent) => {
+          if (event.animationName !== "motion-icon-beat") return;
+          document.removeEventListener("animationstart", onStart);
+          resolve(event.animationName);
+        };
+        document.addEventListener("animationstart", onStart);
+      }),
+  );
   await add.press("Enter");
   await add.press("Enter");
-  await save.press("Space");
+  const cardHeart = save.locator("[data-wishlist-heart]");
+  await save.hover();
+  await expect(cardHeart).toHaveCSS("animation-name", "motion-heart-pulse");
+  await expect
+    .poll(() =>
+      cardHeart.evaluate((heart) =>
+        heart
+          .getAnimations()
+          .some((animation) => animation.playState === "running"),
+      ),
+    )
+    .toBe(false);
+  const savePulsePaint = page.evaluate(
+    () =>
+      new Promise<
+        Record<string, { fill: string; stops: number[][]; start: number }>
+      >((resolve) => {
+        const paint: Record<
+          string,
+          { fill: string; stops: number[][]; start: number }
+        > = {};
+        const context = document.createElement("canvas").getContext("2d")!;
+        const onStart = (event: AnimationEvent) => {
+          const icon = event.target;
+          if (
+            event.animationName !== "motion-heart-pulse" ||
+            !(icon instanceof SVGElement) ||
+            icon.dataset.buttonEffect !== "save"
+          )
+            return;
+          const pulse = icon
+            .getAnimations()
+            .find(
+              (animation) =>
+                animation instanceof CSSAnimation &&
+                animation.animationName === event.animationName,
+            );
+          const surface = icon.closest(".premium-wishlist-link")
+            ? "navbar"
+            : "product";
+          paint[surface] = {
+            fill: getComputedStyle(icon).fill,
+            stops: Array.from(icon.querySelectorAll("stop"), (stop) => {
+              context.fillStyle = getComputedStyle(stop).stopColor;
+              context.fillRect(0, 0, 1, 1);
+              return Array.from(
+                context.getImageData(0, 0, 1, 1).data.slice(0, 3),
+              );
+            }),
+            start: Number(pulse?.startTime),
+          };
+          if (paint.navbar && paint.product) {
+            document.removeEventListener("animationstart", onStart);
+            resolve(paint);
+          }
+        };
+        document.addEventListener("animationstart", onStart);
+      }),
+  );
+  await save.click();
   await expect(cart).toHaveAccessibleName("Shopping cart: 2");
   await expect(cart.locator(".premium-shopping-count")).toHaveText("2");
   await expect(wishlist.locator(".premium-shopping-count")).toHaveText("1");
-  await expect(save.locator("svg")).toHaveCSS(
-    "animation-name",
-    "sf-shopping-confirm",
+  expect(await started).toBe("motion-icon-beat");
+  const { navbar, product } = await savePulsePaint;
+  for (const heart of [navbar, product]) {
+    expect(heart.fill).toMatch(/^url\(/);
+    expect(heart.stops).toEqual([
+      [229, 36, 73],
+      [255, 118, 190],
+    ]);
+  }
+  expect(navbar.fill).not.toBe(product.fill);
+  expect(Math.abs(navbar.start - product.start)).toBeLessThanOrEqual(16);
+  await expect(save.locator("svg")).not.toHaveAttribute("data-button-effect");
+  await expect(wishlist.locator("svg")).not.toHaveAttribute(
+    "data-button-effect",
   );
+  await expect(wishlist.locator("svg")).toHaveAttribute("data-wishlist-filled");
+  for (const heart of [save.locator("svg"), wishlist.locator("svg")]) {
+    const stops = await heart
+      .locator("stop")
+      .evaluateAll((elements) =>
+        elements.map((stop) => getComputedStyle(stop).stopColor),
+      );
+    expect(stops).toHaveLength(2);
+    expect(stops[0]).toBe(stops[1]);
+  }
   await page.emulateMedia({ reducedMotion: "reduce" });
   await save.press("Space");
   await expect(save.locator("svg")).toHaveCSS("animation-name", "none");
   await expect(wishlist).toHaveAccessibleName("Wishlist: 0");
+  await expect(wishlist.locator("svg")).toHaveCSS("fill", "none");
   await expect(wishlist.locator(".premium-shopping-count")).toHaveCount(0);
   await expect(cart.locator(".premium-shopping-count")).toHaveText("2");
 });

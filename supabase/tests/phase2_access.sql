@@ -56,12 +56,22 @@ do $$ begin
   raise exception 'Admin promoted admin';
  exception when insufficient_privilege then null; end;
 end $$;
-select public.update_service_request('10000000-0000-0000-0000-000000000001','in_progress','00000000-0000-0000-0000-000000000002');
+-- An admin can handle requests, but cannot newly assign them to a shopper.
+do $$ begin
+ begin
+  perform public.update_service_request('10000000-0000-0000-0000-000000000001','in_progress','00000000-0000-0000-0000-000000000002');
+  raise exception 'Worker assignment accepted';
+ exception when sqlstate '22023' then null; end;
+end $$;
+select public.update_service_request('10000000-0000-0000-0000-000000000001','in_progress','00000000-0000-0000-0000-000000000003');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',true);
 do $$ begin
- if (select count(*) from public.service_requests) <> 1 then raise exception 'Worker assignment read failed'; end if;
+ if (select count(*) from public.service_requests) <> 0 then raise exception 'Worker read another customer request'; end if;
+ begin
+  perform public.update_service_request('10000000-0000-0000-0000-000000000001','closed',null);
+  raise exception 'Worker updated a request';
+ exception when insufficient_privilege then null; end;
 end $$;
-select public.update_service_request('10000000-0000-0000-0000-000000000001','closed',null);
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000004',true);
 select public.manage_account('00000000-0000-0000-0000-000000000001',null,'suspended');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',true);
@@ -79,7 +89,7 @@ do $$ begin
    '00000000-0000-0000-0000-000000000002',
    '00000000-0000-0000-0000-000000000003',
    '00000000-0000-0000-0000-000000000004',
-   '00000000-0000-0000-0000-000000000005')) <> 3 then raise exception 'Audit count mismatch'; end if;
+   '00000000-0000-0000-0000-000000000005')) <> 2 then raise exception 'Audit count mismatch'; end if;
 end $$;
 set local role anon;
 do $$ begin

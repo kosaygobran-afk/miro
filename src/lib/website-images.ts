@@ -97,7 +97,7 @@ export const defaultWebsiteImages: WebsiteImages = {
       animation: "flip-up",
       effect: "natural",
       autoplay: true,
-      interval: 8,
+      interval: 12,
       border: 1,
       radius: 16,
       images: [
@@ -137,7 +137,7 @@ export const defaultWebsiteImages: WebsiteImages = {
       animation: "swipe-left",
       effect: "natural",
       autoplay: true,
-      interval: 8,
+      interval: 12,
       border: 1,
       radius: 16,
       images: [
@@ -177,7 +177,7 @@ export const defaultWebsiteImages: WebsiteImages = {
       animation: "flip-up",
       effect: "natural",
       autoplay: true,
-      interval: 8,
+      interval: 12,
       border: 1,
       radius: 16,
       images: [

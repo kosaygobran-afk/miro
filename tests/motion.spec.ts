@@ -580,3 +580,71 @@ test("GET search receives immediate navigation feedback for its query", async ({
   );
   await expect(page.locator("h1")).toBeVisible();
 });
+
+test("Version 2 controls and headline icons share the tactile feedback", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await gotoReady(page, "/en/about");
+
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-appearance-version",
+    "2",
+  );
+
+  const menuButton = page.locator(".premium-mobile-toggle");
+  await expect(menuButton).toBeVisible();
+  await menuButton.hover();
+  await expect(menuButton).toHaveCSS("animation-name", "motion-control-beat");
+  await expect(menuButton.locator("svg")).toHaveCSS(
+    "animation-name",
+    "motion-control-icon-pulse",
+  );
+
+  const menuBox = await menuButton.boundingBox();
+  expect(menuBox).not.toBeNull();
+  await page.mouse.move(
+    menuBox!.x + menuBox!.width / 2,
+    menuBox!.y + menuBox!.height / 2,
+  );
+  await page.mouse.down();
+  await expect
+    .poll(() =>
+      menuButton
+        .locator("svg")
+        .evaluate((icon) => getComputedStyle(icon).scale),
+    )
+    .toContain("0.86");
+  await page.mouse.up();
+
+  const headlineIcon = page.locator("[data-headline-icon]").first();
+  await headlineIcon.scrollIntoViewIfNeeded();
+  await headlineIcon.hover();
+  await expect(headlineIcon.locator("svg")).toHaveCSS(
+    "animation-name",
+    "motion-icon-beat",
+  );
+
+  const settings = structuredClone(DEFAULT_ANIMATION_SETTINGS);
+  settings.features.microInteractions = false;
+  settings.features.buttonFeedback = false;
+  await applySettings(page, settings);
+  await page.mouse.move(0, 0);
+  await menuButton.hover();
+  await expect(menuButton).toHaveCSS("animation-name", "none");
+  await expect(menuButton.locator("svg")).toHaveCSS("animation-name", "none");
+
+  const menuBoxAfterSave = await menuButton.boundingBox();
+  expect(menuBoxAfterSave).not.toBeNull();
+  await page.mouse.move(
+    menuBoxAfterSave!.x + menuBoxAfterSave!.width / 2,
+    menuBoxAfterSave!.y + menuBoxAfterSave!.height / 2,
+  );
+  await page.mouse.down();
+  expect(
+    await menuButton
+      .locator("svg")
+      .evaluate((icon) => getComputedStyle(icon).scale),
+  ).toBe("none");
+  await page.mouse.up();
+});

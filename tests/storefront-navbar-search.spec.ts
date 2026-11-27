@@ -222,7 +222,10 @@ for (const locale of ["en", "he"] as const) {
             return range.getClientRects().length;
           }),
         ),
-    ).toEqual([1, 1, 1]);
+    ).toEqual([1]);
+    await expect(
+      page.locator('#mobile-navigation a[href*="/services/"]'),
+    ).toHaveCount(0);
   });
 
   test(`${locale}: navbar suggestions page forward and back in physical order`, async ({

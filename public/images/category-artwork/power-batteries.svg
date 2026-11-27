@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" fill="none">
+  <defs>
+    <linearGradient id="steel" x2=".18" y2="1">
+      <stop stop-color="#f1f0eb"/>
+      <stop offset=".43" stop-color="#b9bdbe"/>
+      <stop offset="1" stop-color="#717779"/>
+    </linearGradient>
+    <linearGradient id="graphite" x2=".2" y2="1">
+      <stop stop-color="#505457"/>
+      <stop offset="1" stop-color="#17191b"/>
+    </linearGradient>
+    <linearGradient id="side" x2="1" y2="1">
+      <stop stop-color="#3b4043"/>
+      <stop offset="1" stop-color="#25292c"/>
+    </linearGradient>
+    <linearGradient id="gold" x2=".4" y2="1">
+      <stop stop-color="#ffe6a0"/>
+      <stop offset=".48" stop-color="#d7aa52"/>
+      <stop offset="1" stop-color="#a66520"/>
+    </linearGradient>
+  </defs>
+
+<ellipse cx="119" cy="133" rx="95" ry="10" fill="#141615" opacity=".25"/>
+
+  <g stroke-linejoin="round">
+    <path d="m39 36 34-12h38l31 12v87l-30 10H39Z" fill="url(#side)" stroke="#788b98" stroke-width="1.6"/>
+    <path d="m39 36 34-12h38l31 12-30 10Z" fill="url(#steel)" stroke="#9fadb8" stroke-width="1.6"/>
+    <rect x="36" y="36" width="75" height="97" rx="7" fill="url(#graphite)" stroke="#7e8c98" stroke-width="1.6"/>
+    <path d="M40 93h66v28a8 8 0 0 1-8 8H48a8 8 0 0 1-8-8Z" fill="#25333e"/>
+    <path d="M46 99h55m-55 5h55m-55 5h55m-55 5h55m-55 5h55m-55 5h55" stroke="#738391" opacity=".64" stroke-linecap="round"/>
+    <rect x="48" y="47" width="51" height="27" rx="4" fill="#101c25" stroke="#9eacb3"/>
+    <path d="M55 63h8l6-8 5 12 5-8h12" stroke="#d9bc77" stroke-width="1.9" stroke-linecap="round"/>
+    <circle cx="74" cy="83" r="4.3" fill="#19232b" stroke="#d7ac57" stroke-width="1.5"/>
+    <path d="m116 52 19-7m-19 12 19-7m-19 12 19-7" stroke="#7c8f9d" stroke-linecap="round"/>
+
+    <path d="m140 87 21-10h36l17 10v38l-16 10h-58Z" fill="url(#side)" stroke="#80909f" stroke-width="1.5"/>
+    <path d="m140 87 21-10h36l17 10-16 10Z" fill="url(#steel)" stroke="#98a7b2" stroke-width="1.5"/>
+    <rect x="138" y="88" width="60" height="47" rx="4" fill="url(#graphite)" stroke="#929da5" stroke-width="1.5"/>
+    <path d="M148 85v-6h10v6m27-8v-7h10v7" stroke="#d3aa56" stroke-width="3.6" stroke-linecap="round"/>
+    <rect x="146" y="98" width="44" height="26" rx="3" fill="#263540" stroke="#7f929e"/>
+    <path d="m170 101-11 12h8l-2 9 12-13h-8Z" fill="url(#gold)"/>
+  </g>
+</svg>

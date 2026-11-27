@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { ZoomIn, ZoomOut } from "lucide-react";
+import { ProductGalleryMedia } from "./product-gallery-media";
 import {
   ProductMedia,
   type ProductImageSubject,
@@ -290,16 +291,17 @@ export function ProductImageMagnifier({
           );
         }}
       >
-        <ProductMedia
-          key={mediaKey}
+        <ProductGalleryMedia
+          key={product.id}
+          imageKey={imageKey}
           product={product}
           src={src}
           alt={alt}
           sizes={sizes}
-          loading="eager"
           className={imageClassName}
           onImageStatusChange={handleImageStatusChange}
           fallback={fallback}
+          annotation={annotation}
           fetchPriority={fetchPriority}
         />
         {zoomed ? (
@@ -316,7 +318,6 @@ export function ProductImageMagnifier({
             </div>
           </div>
         ) : null}
-        {annotation}
       </div>
       {status !== "unavailable" || counter ? (
         <div ref={toolsRef} className="sf-hover-preview-image-tools">

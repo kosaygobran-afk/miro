@@ -68,13 +68,15 @@ export async function POST(request: Request) {
       )
       .in("id", [...new Set(parsed.data.items.map((item) => item.product_id))]);
     checkRpcError(result.error);
+    // Online payment currently supports customers and guests only. Keep the
+    // quote-request path available for workers until role-aware charging is verified.
+    const viewer = await getStoreViewer();
+    if (viewer.role && viewer.role !== "customer")
+      return commerceJson({ eligible: false });
     const hasOffers = parsed.data.items.some(
       (item) => item.offer_id !== undefined,
     );
     if (hasOffers) {
-      const viewer = await getStoreViewer();
-      if (viewer.role && viewer.role !== "customer")
-        return commerceJson({ eligible: false });
       const catalog = await getStoreCatalog(parsed.data.locale, viewer.role);
       if (catalog.error) throw new CommerceError("commerce_unavailable", 503);
       try {

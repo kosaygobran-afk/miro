@@ -65,7 +65,51 @@ test.describe("enquiry flow", () => {
       "aria-invalid",
       "true",
     );
+    await expect(form.locator("#contact-error-summary")).toBeFocused();
     await expect(form.locator("#contact-success")).toHaveCount(0);
+  });
+
+  test("Hebrew product enquiries keep the mixed-direction item and selected variant", async ({
+    page,
+  }) => {
+    const product = "1d1239c3-2366-4a3a-926d-b0a88ad3b508";
+    const variant = "61d142a5-c20c-4879-83eb-87dad650ca01";
+    const item = "מצלמת MIRO (CA-22) <b>demo</b>";
+    const query = new URLSearchParams({ product, variant, item });
+    await page.route("**/api/enquiries", (route) =>
+      route.fulfill({ json: { ok: true } }),
+    );
+    await page.goto(`/he/contact?${query}`);
+
+    const form = page.getByRole("form", { name: "שלחו לנו הודעה" });
+    const context = form.locator(".experience-contact-context bdi");
+    await expect(context).toHaveText(item);
+    await expect(context.locator("b")).toHaveCount(0);
+
+    await form.getByLabel("שם מלא").fill("בודק התצוגה");
+    await form.getByLabel("דוא״ל").fill("contact-test@example.com");
+    const message = form.getByLabel("הודעה");
+    await message.fill("אשמח לפרטים נוספים על המוצר.");
+    await expect(message).toHaveAttribute(
+      "aria-describedby",
+      "contact-message-hint",
+    );
+    const [submission] = await Promise.all([
+      page.waitForRequest(
+        (request) =>
+          request.method() === "POST" &&
+          request.url().endsWith("/api/enquiries"),
+      ),
+      form.getByRole("button", { name: "שליחת הפנייה" }).click(),
+    ]);
+    expect(submission.postDataJSON()).toMatchObject({
+      locale: "he",
+      source: "product_page",
+      productId: product,
+      variantId: variant,
+    });
+    await expect(form.getByRole("status")).toBeFocused();
+    await expect(message).toHaveValue("");
   });
 
   test("invalid submission returns the 400 error envelope", async ({

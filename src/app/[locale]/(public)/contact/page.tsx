@@ -2,13 +2,23 @@ import Link from "@/components/motion/motion-link";
 import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { ContactForm } from "@/components/contact/contact-form";
-import { FeatureCheck } from "@/components/public/experience-sections";
+import {
+  DirectionArrow,
+  FeatureCheck,
+} from "@/components/public/experience-sections";
 import { getPublicContactConfig } from "@/lib/contact-config";
 import { createPublicServerClient } from "@/lib/supabase/public-server";
 import { isLocale, withLocale, type Locale } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/seo";
 import { getWebsitePageCopy } from "@/lib/website-page-copy-server";
-import { Mail, MessageCircle, Phone } from "lucide-react";
+import {
+  Clock,
+  ExternalLink,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Phone,
+} from "lucide-react";
 
 const uuidSchema = z.string().uuid();
 
@@ -87,17 +97,12 @@ export default async function ContactPage({
 
   const contextItem =
     productName ?? (itemRaw || (productRaw && !productId ? productRaw : ""));
-  const hasProductContext = Boolean(contextItem);
-  const source = hasProductContext ? "product_page" : "contact_page";
-  const contextLine = contextItem
-    ? t("form.productContext", { item: contextItem })
-    : null;
-
   const formCopy = {
     name: t("form.name"),
     email: t("form.email"),
     phone: t("form.phone"),
     message: t("form.message"),
+    messageHint: t("form.messageHint"),
     company: t("form.company"),
     submit: t("form.submit"),
     sending: t("form.sending"),
@@ -115,131 +120,170 @@ export default async function ContactPage({
 
   const address = he ? contactConfig.addressHe : contactConfig.addressEn;
   const hours = he ? contactConfig.hoursHe : contactConfig.hoursEn;
-  const hasDirectContact = Boolean(
-    contactConfig.phoneHref ||
-    contactConfig.whatsapp ||
-    contactConfig.email ||
-    address ||
-    hours,
-  );
+  const { phone, phoneHref, whatsapp, email } = contactConfig;
+  const methods = [
+    ...(phone && phoneHref
+      ? [
+          {
+            label: t("phoneAction"),
+            value: phone,
+            valueDirection: "ltr" as const,
+            href: `tel:${phoneHref}`,
+            Icon: Phone,
+          },
+        ]
+      : []),
+    ...(whatsapp
+      ? [
+          {
+            label: t("whatsappAction"),
+            value: t("whatsappHint"),
+            href: `https://wa.me/${whatsapp}`,
+            Icon: MessageCircle,
+            external: true,
+          },
+        ]
+      : []),
+    ...(email
+      ? [
+          {
+            label: t("emailAction"),
+            value: email,
+            valueDirection: "ltr" as const,
+            href: `mailto:${email}`,
+            Icon: Mail,
+          },
+        ]
+      : []),
+  ];
+  const hasDirectContact = methods.length > 0 || Boolean(address || hours);
 
   return (
-    <section className="miro-container experience-reading">
+    <section className="miro-container experience-reading experience-contact-page">
       <nav
         className="experience-breadcrumb"
         aria-label={he ? "פירורי לחם" : "Breadcrumb"}
       >
-        <Link href={withLocale(locale)}>{he ? "בית" : "Home"}</Link>
-        <span>/</span>
-        <span>{he ? "יצירת קשר" : "Contact"}</span>
+        <Link href={withLocale(locale, "home")}>{he ? "בית" : "Home"}</Link>
+        <span aria-hidden="true">/</span>
+        <span aria-current="page">{he ? "יצירת קשר" : "Contact"}</span>
       </nav>
       <div className="experience-contact-layout">
-        <div className="experience-contact-copy" data-page-heading-copy>
-          <p className="experience-overline">
-            {pageCopy.eyebrow}
-          </p>
+        <header className="experience-contact-copy" data-page-heading-copy>
+          <p className="experience-overline">{pageCopy.eyebrow}</p>
           <h1>
-            {pageCopy.title}
-            <em>{pageCopy.accent}</em>
+            {pageCopy.title} <em>{pageCopy.accent}</em>
           </h1>
-          <p className="experience-description">
-            {pageCopy.description}
-          </p>
-          <div className="experience-contact-prep">
-            <h2>
-              {he ? "מה כדאי להכין לשיחה?" : "A few useful things to prepare"}
-            </h2>
-            <ul className="experience-checks">
-              <FeatureCheck>
-                {he
-                  ? "סוג הנכס והאזור שבו הוא נמצא"
-                  : "The property type and general location"}
-              </FeatureCheck>
-              <FeatureCheck>
-                {he
-                  ? "מה תרצו לשפר או לחבר"
-                  : "What you would like to improve or connect"}
-              </FeatureCheck>
-              <FeatureCheck>
-                {he
-                  ? "פרטים על תשתית או ציוד קיימים"
-                  : "Details of existing equipment or infrastructure"}
-              </FeatureCheck>
-            </ul>
-          </div>
+          <p className="experience-description">{pageCopy.description}</p>
           {hasDirectContact ? (
-            <section
-              className="experience-contact-prep"
-              aria-labelledby="contact-direct-title"
+            <a
+              className="experience-text-link experience-contact-jump"
+              href="#contact-direct"
             >
-              <h2 id="contact-direct-title">{t("directTitle")}</h2>
-              <ul className="experience-contact-methods">
-                {contactConfig.phone && contactConfig.phoneHref ? (
-                  <li>
-                    <a
-                      className="experience-text-link"
-                      href={`tel:${contactConfig.phoneHref}`}
-                      dir="ltr"
-                    >
-                      <Phone size={17} aria-hidden="true" />
-                      <span>{contactConfig.phone}</span>
-                    </a>
-                  </li>
-                ) : null}
-                {contactConfig.whatsapp ? (
-                  <li>
-                    <a
-                      className="experience-text-link"
-                      href={`https://wa.me/${contactConfig.whatsapp}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <MessageCircle size={17} aria-hidden="true" />
-                      <span>{t("whatsappAction")}</span>
-                    </a>
-                  </li>
-                ) : null}
-                {contactConfig.email ? (
-                  <li>
-                    <a
-                      className="experience-text-link"
-                      href={`mailto:${contactConfig.email}`}
-                      dir="ltr"
-                    >
-                      <Mail size={17} aria-hidden="true" />
-                      <span>{contactConfig.email}</span>
-                    </a>
-                  </li>
-                ) : null}
-              </ul>
-              {address ? <p className="experience-note">{address}</p> : null}
-              {hours ? <p className="experience-note">{hours}</p> : null}
-            </section>
+              {t("directTitle")} <DirectionArrow locale={locale} />
+            </a>
           ) : null}
-          <Link
-            href={withLocale(locale, "services")}
-            className="experience-text-link mt-6"
-          >
-            {he
-              ? "בינתיים, הכירו את הפתרונות"
-              : "Explore the solutions in the meantime"}
-          </Link>
-        </div>
+        </header>
         <ContactForm
-          key={contextItem || "general"}
+          key={JSON.stringify([productId, variantId, contextItem])}
           locale={locale}
           copy={formCopy}
-          source={source}
+          source={contextItem ? "product_page" : "contact_page"}
           productId={productId}
           variantId={variantId}
-          contextLine={contextLine}
-          title={he ? "הפרויקט הבא שלכם" : "Your next project"}
-          intro={
-            he
-              ? "מקום לכל הפרטים שיחברו את התמונה."
-              : "Bring the details of your project together."
+          contextLine={
+            contextItem
+              ? t.rich("form.productContext", {
+                  item: () => <bdi>{contextItem}</bdi>,
+                })
+              : null
           }
+          title={t("form.title")}
+          intro={t("form.intro")}
         />
+        {hasDirectContact ? (
+          <section
+            className="experience-contact-direct"
+            id="contact-direct"
+            tabIndex={-1}
+            aria-labelledby="contact-direct-title"
+          >
+            <h2 id="contact-direct-title">{t("directTitle")}</h2>
+            {methods.length > 0 ? (
+              <ul className="experience-contact-methods" role="list">
+                {methods.map(
+                  ({ label, value, valueDirection, href, Icon, external }) => (
+                    <li key={href}>
+                      <a
+                        href={href}
+                        target={external ? "_blank" : undefined}
+                        rel={external ? "noopener noreferrer" : undefined}
+                      >
+                        <span className="experience-contact-icon">
+                          <Icon aria-hidden="true" />
+                        </span>
+                        <span className="experience-contact-method-copy">
+                          <strong>{label}</strong>
+                          <bdi dir={valueDirection}>{value}</bdi>
+                        </span>
+                        {external ? (
+                          <ExternalLink className="size-4" aria-hidden="true" />
+                        ) : (
+                          <DirectionArrow locale={locale} />
+                        )}
+                      </a>
+                    </li>
+                  ),
+                )}
+              </ul>
+            ) : null}
+            {address || hours ? (
+              <dl className="experience-contact-details">
+                {address ? (
+                  <div>
+                    <dt>
+                      <MapPin aria-hidden="true" />
+                      {t("addressLabel")}
+                    </dt>
+                    <dd>
+                      <bdi>{address}</bdi>
+                    </dd>
+                  </div>
+                ) : null}
+                {hours ? (
+                  <div>
+                    <dt>
+                      <Clock aria-hidden="true" />
+                      {t("hoursLabel")}
+                    </dt>
+                    <dd>
+                      <bdi>{hours}</bdi>
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+            ) : null}
+          </section>
+        ) : null}
+        <section
+          className="experience-contact-prep"
+          aria-labelledby="contact-prep-title"
+        >
+          <div className="experience-contact-prep-heading">
+            <h2 id="contact-prep-title">{t("prep.title")}</h2>
+            <Link
+              href={withLocale(locale, "services")}
+              className="experience-text-link"
+            >
+              {t("prep.servicesLink")} <DirectionArrow locale={locale} />
+            </Link>
+          </div>
+          <ul className="experience-checks" role="list">
+            <FeatureCheck>{t("prep.location")}</FeatureCheck>
+            <FeatureCheck>{t("prep.goal")}</FeatureCheck>
+            <FeatureCheck>{t("prep.equipment")}</FeatureCheck>
+          </ul>
+        </section>
       </div>
     </section>
   );

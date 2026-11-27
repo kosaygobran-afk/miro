@@ -28,9 +28,11 @@ function loadTs(name) {
       ? {}
       : specifier === "@/components/brand/artwork.json"
         ? nodeRequire(resolve(root, "src/components/brand/artwork.json"))
-        : specifier.startsWith("./")
-          ? loadTs(specifier.slice(2))
-          : nodeRequire(specifier);
+        : specifier === "../money"
+          ? loadTs("../money")
+          : specifier.startsWith("./")
+            ? loadTs(specifier.slice(2))
+            : nodeRequire(specifier);
   runInNewContext(output, {
     exports,
     require: localRequire,
@@ -259,7 +261,25 @@ test("every document choice renders both directions and paper sizes with isolate
         assert.doesNotMatch(html, /<image|<script|https?:\/\/(?!www.w3.org)/);
         assert.match(html, /<bdi dir="ltr">\+972-00-000-0000<\/bdi>/);
         assert.match(html, /16:51:20 \(UTC\+02:00\)/);
-        assert.match(html, /<bdi dir="ltr">ILS 10.00<\/bdi>/);
+        assert.match(html, /<bdi dir="ltr">ILS 11\.80<\/bdi>/);
+        assert.match(html, /<bdi dir="ltr">ILS 147\.50<\/bdi>/);
+        assert.match(html, /<bdi dir="ltr">EX-IPC-42<\/bdi>/);
+        assert.match(
+          html,
+          language === "he"
+            ? /מחיר כולל מע״מ <br><bdi dir="ltr">\+18%<\/bdi>/
+            : /Price incl\. VAT <br><bdi dir="ltr">\+18%<\/bdi>/,
+        );
+        const cardStart = html.indexOf('<section class="item-cards"');
+        const lineItems = html.slice(
+          layout === "a4" ? html.indexOf('<table class="items"') : cardStart,
+          html.indexOf("</section>", cardStart),
+        );
+        assert.doesNotMatch(lineItems, />ILS (240\.00|125\.00)</);
+        assert.match(
+          lineItems,
+          type === "credit_note" ? /-ILS 283\.20/ : /ILS 283\.20/,
+        );
         assert.match(html, /ILS 401.20/);
         assert.ok(result.pdfBytes.length > 4000);
         assert.equal(renderer.renderDraftHtml(input, layout), html);
@@ -274,6 +294,25 @@ test("every document choice renders both directions and paper sizes with isolate
           );
         }
       }
+});
+
+test("line items keep legacy SKU and VAT fallbacks truthful", () => {
+  const legacy = renderer.renderDraftHtml(sample, "a4");
+  assert.match(legacy, /מחיר כולל מע״מ<\/th>/);
+  assert.doesNotMatch(legacy, /\+18%/);
+  assert.match(legacy, /<td class="sku"><bdi dir="ltr">-<\/bdi><\/td>/);
+  const exempt = samples.createDocumentSample(
+    "quote",
+    "en",
+    sample.created_at,
+    {
+      ...sample.identity_snapshot,
+      entity_kind: "exempt",
+    },
+  );
+  const exemptHtml = renderer.renderDraftHtml(exempt, "receipt80");
+  assert.match(exemptHtml, /<dt>Price<\/dt><dd><bdi dir="ltr">ILS 240\.00/);
+  assert.doesNotMatch(exemptHtml, /Price incl\. VAT|\+18%/);
 });
 
 test("escaped dynamic text stays text and long descriptions and notes paginate without changing financial totals", async () => {
@@ -394,8 +433,9 @@ test("maximum-length identities and large immutable amounts remain complete on b
       {
         description:
           "Maximum supported monetary magnitude / סכום גבוה ITEMEND42",
+        sku: long("SKU0123456789", 100, "SKUEND42"),
         quantity: 100000,
-        unit_agorot: 8000000,
+        unit_agorot: 9440000,
         discount_agorot: 0,
         net_agorot: 800000000000,
         vat_agorot: 144000000000,
@@ -436,10 +476,11 @@ test("maximum-length identities and large immutable amounts remain complete on b
       "CUSTPHONEEND42",
       "CUSTEMAILEND42",
       "ITEMEND42",
+      "SKUEND42",
       "PAYMENTEND42",
       "NOTEEND42",
       "ILS 9,440,000,000.00",
-      "ILS 80,000.00",
+      "ILS 94,400.00",
     ];
     for (const layout of ["a4", "receipt80"]) {
       const result = await renderer.renderDraftDocument(input, layout);

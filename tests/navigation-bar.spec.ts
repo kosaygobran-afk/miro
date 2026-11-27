@@ -381,11 +381,7 @@ for (const locale of ["en", "he"] as const) {
         menu.locator(".premium-account-secondary-action"),
       ).toHaveCount(0);
       const destination =
-        role === "worker"
-          ? "worker"
-          : role === "customer"
-            ? "account"
-            : "admin";
+        role === "worker" || role === "customer" ? "account" : "admin";
       await expect(
         menu.locator(`a[href="/${locale}/${destination}"]`),
       ).toBeVisible();

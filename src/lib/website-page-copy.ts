@@ -68,36 +68,36 @@ export const defaultWebsitePageCopy: Record<
   store: { he: storefrontText(storeCopy.he), en: storefrontText(storeCopy.en) },
   home: {
     he: {
-      eyebrow: "מיגון. תקשורת. שקט בראש.",
-      title: "העולם שלכם.",
-      accent: "בטוח יותר.",
-      closing: "מחובר יותר.",
+      eyebrow: "מירו גרופ · ציוד מיגון ותקשורת",
+      title: "מצלמות, כניסה חכמה",
+      accent: "ורשתות",
+      closing: "לבית ולעסק.",
       description:
-        "מצלמות, אזעקות, בקרת כניסה ורשתות. פתרונות חכמים שמתחברים לבית שלכם, לעסק שלכם ולדרך שבה אתם חיים.",
+        "בחרו ציוד לפי מה שתרצו לראות, לחבר או לאבטח. כאן תוכלו להשוות בין סוגי הציוד ולהבין מה כדאי לבדוק לפני שמזמינים.",
     },
     en: {
-      eyebrow: "SECURITY. CONNECTION. PEACE OF MIND.",
-      title: "Your world.",
-      accent: "More secure.",
-      closing: "More connected.",
+      eyebrow: "MIRO Group · Security & communications",
+      title: "Cameras, access",
+      accent: "and networks",
+      closing: "for your space.",
       description:
-        "Cameras, alarms, smart access and networks. Thoughtful solutions for your home, your business and the way you live.",
+        "Choose equipment around the door you want to secure, the area you need to see or the room your Wi-Fi barely reaches.",
     },
   },
   services: {
     he: {
-      eyebrow: "פתרונות מיגון ותקשורת",
-      title: "כל החיבורים.",
-      accent: "במקום אחד.",
+      eyebrow: "שירותי מירו גרופ",
+      title: "מהציוד הראשון",
+      accent: "ועד להתקנה.",
       description:
-        "מתכנון הכניסה ועד לכיסוי הרשת. בונים תמונה שלמה של הצרכים שלכם, ומחברים בין הטכנולוגיה הנכונה למרחב הנכון.",
+        "מעוניינים בהתקנה חדשה, בשדרוג או בתיקון? במדריך השירותים תמצאו הסבר על כל שירות ואת הפרטים שכדאי להכין לקראת הפנייה.",
     },
     en: {
-      eyebrow: "SECURITY & COMMUNICATION SOLUTIONS",
-      title: "Every connection.",
-      accent: "One considered plan.",
+      eyebrow: "MIRO Group services",
+      title: "From equipment",
+      accent: "to installation.",
       description:
-        "From your front entrance to your network coverage. Build a complete picture of what you need and connect the right technology to the right space.",
+        "Planning an installation, an upgrade or a repair? Find the service that fits, see what it covers and check which details to bring to your enquiry.",
     },
   },
   about: {

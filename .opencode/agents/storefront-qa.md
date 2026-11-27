@@ -1,7 +1,7 @@
 ---
 description: Read-only QA specialist for MIRO storefront accessibility, responsive design, motion, RTL/LTR, security regressions and end-to-end behavior.
 mode: subagent
-model: nvidia/openai/gpt-oss-20b
+model: nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b
 permissions:
   - action: edit
     resource: "*"

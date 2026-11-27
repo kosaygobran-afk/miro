@@ -66,7 +66,7 @@ const admin = createClient(
     },
   },
 );
-const workerId = randomUUID();
+const otherAdminId = randomUUID();
 const productId = randomUUID();
 const checks = [];
 const geometries = [];
@@ -450,7 +450,7 @@ try {
         assert.ok(row, "Only synthetic requests can be patched");
         row.status = patch.status;
         row.assignedTo = patch.assignedTo
-          ? { id: patch.assignedTo, displayName: "Synthetic QA worker" }
+          ? { id: patch.assignedTo, displayName: "Synthetic QA second admin" }
           : null;
         return route.fulfill({ json: { ok: true } });
       }
@@ -462,10 +462,10 @@ try {
       const users = [
         { id: userId, full_name: "Synthetic QA admin", email, role: "admin" },
         {
-          id: workerId,
-          full_name: "Synthetic QA worker",
-          email: "synthetic-worker@example.test",
-          role: "worker",
+          id: otherAdminId,
+          full_name: "Synthetic QA second admin",
+          email: "synthetic-admin@example.test",
+          role: "admin",
         },
       ].filter((user) => user.role === parsed.searchParams.get("role"));
       return route.fulfill({ json: { users, totalCount: users.length } });
@@ -610,7 +610,7 @@ try {
   let opened = await openDetails("en", 0);
   const assignee = opened.dialog.locator("#request-assignee");
   patchFailure = true;
-  await assignee.selectOption(workerId);
+  await assignee.selectOption(otherAdminId);
   await expect(
     opened.dialog.getByText("Synthetic assignment failure", { exact: true }),
   ).toBeVisible();
@@ -629,16 +629,16 @@ try {
     "Failed assignment cannot leak into a status update",
   );
   assert.equal(shortRow.status, "in_progress");
-  await assignee.selectOption(workerId);
-  await expect(assignee).toHaveValue(workerId);
+  await assignee.selectOption(otherAdminId);
+  await expect(assignee).toHaveValue(otherAdminId);
   await expect(
     opened.dialog.getByText("Update saved", { exact: true }),
   ).toBeVisible();
-  assert.equal(shortRow.assignedTo.id, workerId);
+  assert.equal(shortRow.assignedTo.id, otherAdminId);
   await closeAndRestore("en", opened.opener);
   opened = await openDetails("en", 0);
   await expect(opened.dialog.locator("#request-assignee")).toHaveValue(
-    workerId,
+    otherAdminId,
   );
   await closeAndRestore("en", opened.opener);
   pass(

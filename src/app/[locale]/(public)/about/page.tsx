@@ -80,21 +80,21 @@ export default async function AboutPage({
           <span>{he ? "אודות" : "About"}</span>
         </nav>
         <div className="experience-reading-heading" data-page-heading-copy>
-          <p className="experience-overline">
-            {pageCopy.eyebrow}
-          </p>
+          <p className="experience-overline">{pageCopy.eyebrow}</p>
           <h1>
             {pageCopy.title}
             <em>{pageCopy.accent}</em>
           </h1>
-          <p className="experience-description">
-            {pageCopy.description}
-          </p>
+          <p className="experience-description">{pageCopy.description}</p>
         </div>
         <div className="experience-values">
           {values.map(({ Icon, title, copy }) => (
-            <article className="experience-value" key={title}>
-              <span className="experience-icon">
+            <article
+              className="experience-value"
+              key={title}
+              data-headline-group
+            >
+              <span className="experience-icon" data-headline-icon>
                 <Icon aria-hidden="true" />
               </span>
               <h2>{title}</h2>

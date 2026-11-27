@@ -342,7 +342,10 @@ export function StoreDesign({
           className={styles.editor}
         >
           <FormSection
-            title={text("Store backgrounds", "רקעי החנות")}
+            title={text(
+              "Home collection backgrounds",
+              "רקעי הקולקציה בדף הבית",
+            )}
             icon={<ImagePlus size={20} />}
             description={text(
               "Use a wide 16:9 image with room for the headline. Upload or paste an HTTPS URL, then arrange the slides in playback order.",

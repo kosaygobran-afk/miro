@@ -339,9 +339,8 @@ for (const locale of ["en", "he"] as const) {
       ).toBe(true);
       const axe = await new AxeBuilder({ page })
         .include(".premium-header")
-        .include(".experience-services-hero")
-        .include(".experience-category-grid")
-        .include(".experience-consultation")
+        .include("section[aria-labelledby=buyer-title]")
+        .include("#expertise")
         .include(".premium-footer")
         .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
         .analyze();

@@ -37,7 +37,7 @@ async function paint(page) {
     ];
     return Array.from(
       document.querySelectorAll(
-        "html, body, header, main *, .account-dashboard *, [data-worker-surface] *",
+        "html, body, header, main *, .account-dashboard *",
       ),
     )
       .filter((el) => el.checkVisibility())
@@ -86,16 +86,8 @@ try {
     for (const locale of ["en", "he"])
       for (const width of [320, 1440]) {
         await page.setViewportSize({ width, height: 1000 });
-        await page.goto(
-          `${base}/${locale}/${role === "worker" ? "worker" : "account"}`,
-        );
-        await expect(
-          page.locator(
-            role === "worker"
-              ? '[data-worker-surface="true"]'
-              : ".account-dashboard",
-          ),
-        ).toBeVisible();
+        await page.goto(`${base}/${locale}/account`);
+        await expect(page.locator(".account-dashboard")).toBeVisible();
         await expect(page.locator("html")).toHaveAttribute(
           "data-motion-ready",
           "true",

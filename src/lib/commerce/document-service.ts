@@ -99,6 +99,7 @@ export function documentSnapshotFromRow(row: Row): FiscalDocumentSnapshot {
     items: (Array.isArray(snapshot.items) ? snapshot.items : []).map(
       (value) => {
         const item = object(value);
+        const sku = text(item.sku).trim() || text(item.sku_snapshot).trim();
         return {
           description:
             text(item.description) ||
@@ -107,6 +108,7 @@ export function documentSnapshotFromRow(row: Row): FiscalDocumentSnapshot {
                 ? (item.product_name_he ?? item.name_he)
                 : (item.product_name_en ?? item.name_en),
             ),
+          ...(sku ? { sku } : {}),
           quantity: Number(item.quantity),
           ...(Number(item.unit_price_agorot) > 0
             ? { unit_agorot: Number(item.unit_price_agorot) }

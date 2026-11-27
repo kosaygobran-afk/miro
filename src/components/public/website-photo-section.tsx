@@ -8,12 +8,13 @@ const copy = {
   home: {
     he: {
       title: "מירו בשטח",
-      description: "מהכנת הציוד ועד החיבור האחרון. כך נראית העבודה שלנו בשטח.",
+      description:
+        "לפני שקודחים או מעבירים כבל, בודקים היכן יותקן כל רכיב ואיך הוא יתחבר לציוד הקיים. בתמונות תוכלו לראות את הכלים, הציוד ועבודת ההתקנה של מירו.",
     },
     en: {
       title: "MIRO on site",
       description:
-        "From preparing the equipment to making the final connection, see how we work on site.",
+        "Before a cable goes in, each device needs a location, a power source and a route back to the network. See the tools, equipment and installation work behind a MIRO project.",
     },
   },
   services: {
@@ -55,12 +56,19 @@ export async function WebsitePhotoSection({
   const titleId = `website-photos-${placement}`;
   return (
     <section
-      className="experience-section experience-muted-section"
+      className={
+        placement === "home"
+          ? "experience-section experience-muted-section"
+          : styles.projectPanel
+      }
       aria-labelledby={titleId}
     >
       <div
-        className={`miro-container ${styles.section}`}
-        data-media-start={placement === "serviceDetails" || undefined}
+        className={
+          placement === "home"
+            ? `miro-container ${styles.section}`
+            : styles.projectGallery
+        }
       >
         <div className={styles.intro}>
           <h2 id={titleId} className="experience-heading">

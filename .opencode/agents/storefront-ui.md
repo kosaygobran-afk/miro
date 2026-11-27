@@ -1,7 +1,7 @@
 ---
 description: Implements public MIRO Store product navigation, hover preview, moving product rail, promotional sticker visuals, category icon rendering and product-page presentation.
 mode: subagent
-model: nvidia/openai/gpt-oss-20b
+model: nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b
 ---
 
 You own PUBLIC storefront UI only.

@@ -158,10 +158,10 @@ async function verifyPaperGeometry(tab, name) {
       failures.push("wide paper does not display the item table");
     }
     const headers = Array.from(
-      document.querySelectorAll(".items th.numeric"),
+      document.querySelectorAll(".items th.numeric, .items th.sku"),
     ).filter((header) => header.getClientRects().length > 0);
     for (const row of document.querySelectorAll(".items tbody tr")) {
-      const values = Array.from(row.querySelectorAll("td.numeric"));
+      const values = Array.from(row.querySelectorAll("td.numeric, td.sku"));
       headers.forEach((header, index) => {
         if (!values[index]) {
           failures.push("missing numeric table column");
@@ -459,6 +459,19 @@ try {
           );
           for (const width of [320, 1440]) {
             await preview.setViewportSize({ width, height: 1000 });
+            const items = preview.locator(
+              layout === "a4" && width > 600 ? ".items" : ".item-cards",
+            );
+            await expect(items).toBeVisible();
+            await expect(items).toContainText(
+              language === "he" ? "מק״ט" : "SKU",
+            );
+            await expect(items).toContainText("EX-IPC-42");
+            await expect(items).toContainText("+18%");
+            await expect(items).toContainText(
+              type === "credit_note" ? "-ILS 283.20" : "ILS 283.20",
+            );
+            await expect(items).not.toContainText("ILS 240.00");
             assert.ok(
               await preview.evaluate(
                 () => document.documentElement.scrollWidth <= innerWidth,
@@ -534,6 +547,9 @@ try {
       "receipt80",
     );
     await expect(preview.locator("body")).toContainText("Stored draft fixture");
+    await expect(preview.locator(".item-cards")).toContainText("STORED-IPC-42");
+    await expect(preview.locator(".item-cards")).toContainText("+18%");
+    await expect(preview.locator(".item-cards")).toContainText("ILS 118.00");
     for (const width of [320, 390, 1440])
       for (const theme of ["dark", "medium", "light"]) {
         await page.setViewportSize({ width, height: 1000 });

@@ -12,7 +12,7 @@ export function CatalogUnavailable({ locale }: { locale: "he" | "en" }) {
 
   return (
     <div className="sf-storefront">
-      <section className="sf-collection-section">
+      <section id="store-items" className="sf-collection-section">
         <div className="miro-container">
           <div className="sf-empty" role="status" aria-live="polite">
             <h1>{copy.catalogUnavailable}</h1>

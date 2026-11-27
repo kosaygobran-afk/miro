@@ -34,9 +34,13 @@ export function FormSection({
       className={["mgmt-form-section", className].filter(Boolean).join(" ")}
     >
       <div className="mgmt-form-section__header">
-        <div className="mgmt-form-section__heading">
+        <div className="mgmt-form-section__heading" data-headline-group>
           {icon ? (
-            <span className="mgmt-section-icon" aria-hidden="true">
+            <span
+              className="mgmt-section-icon"
+              aria-hidden="true"
+              data-headline-icon
+            >
               {icon}
             </span>
           ) : null}

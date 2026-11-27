@@ -470,7 +470,7 @@ test("stored HTML and PDF previews honor the selected paper size and stay privat
     }
 });
 
-test("stored snapshot translation keeps zero discounts, original amounts and the actual collection timestamp", async () => {
+test("stored snapshot translation keeps saved SKUs, original amounts and the actual collection timestamp", async () => {
   const { documentSnapshotFromRow } = await moduleAt(
     "src/lib/commerce/document-service.ts",
     {
@@ -502,8 +502,10 @@ test("stored snapshot translation keeps zero discounts, original amounts and the
     vat_agorot: sample.vat_agorot,
     total_agorot: sample.total_agorot,
     document_snapshot: {
-      items: sample.items.map((item) => ({
+      items: sample.items.map((item, index) => ({
         ...item,
+        sku: index === 0 ? " ORDER-SKU " : null,
+        sku_snapshot: index === 1 ? "INTENT-SKU" : "OTHER-SKU",
         unit_price_agorot: item.unit_agorot,
         discount_agorot: 0,
       })),
@@ -520,7 +522,9 @@ test("stored snapshot translation keeps zero discounts, original amounts and the
   const translated = documentSnapshotFromRow(row);
   assert.equal(translated.created_at, "2026-11-02T14:51:20.123Z");
   assert.equal(translated.items[0].discount_agorot, 0);
-  assert.equal(translated.items[0].unit_agorot, 12500);
+  assert.equal(translated.items[0].unit_agorot, 14750);
+  assert.equal(translated.items[0].sku, "ORDER-SKU");
+  assert.equal(translated.items[1].sku, "INTENT-SKU");
   assert.equal(translated.total_agorot, 40120);
   assert.equal(
     translated.payment_references[0].collected_at,

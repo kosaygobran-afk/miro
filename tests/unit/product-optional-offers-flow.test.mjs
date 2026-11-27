@@ -695,3 +695,35 @@ test("checkout fails closed when an authenticated session cannot be verified or 
   );
   assert.equal(missingReference.status, 503);
 });
+
+test("a signed-in worker checkout is attached to the worker's own account", async () => {
+  const workerId = "40000000-0000-4000-8000-000000000020";
+  const h = enquiryHarness({
+    actor: { user: { id: workerId }, role: "worker", status: "active" },
+  });
+  const base = request("enquiries", {
+    ...enquiryBody(),
+    submissionId: "40000000-0000-4000-8000-000000000021",
+  });
+  const headers = new Headers(base.headers);
+  headers.set("cookie", "sb-fixture-auth-token=fixture");
+  const response = await h.POST(new Request(base, { headers }));
+  assert.equal(response.status, 200);
+  const writes = h.calls.filter(
+    (entry) => entry.name === "record_checkout_request",
+  );
+  assert.equal(writes.length, 2);
+  for (const call of writes) assert.equal(call.payload.p_customer_id, workerId);
+  assert.equal(
+    writes[0].payload.p_payload_hash,
+    writes[1].payload.p_payload_hash,
+  );
+});
+
+test("worker online payment is unavailable even without optional offers", async () => {
+  const response = await eligibilityHarness({ role: "worker" }).POST(
+    request("commerce/eligibility", { items: [eligibilityLines[0]] }),
+  );
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).eligible, false);
+});

@@ -58,13 +58,19 @@ async function checkRole(role, account) {
       timeout: 20_000,
     });
 
-    const allowedPath = role === "worker" ? "/en/worker" : "/en/account";
+    const allowedPath = "/en/account";
     stage = `${role} allowed page`;
     const allowed = await page.goto(`${baseUrl}${allowedPath}`, {
       waitUntil: "networkidle",
     });
     if (!allowed?.ok() || page.url().endsWith("/en/login")) {
       throw new Error(`${allowedPath} did not load for ${role}`);
+    }
+
+    stage = `${role} legacy worker link`;
+    await page.goto(`${baseUrl}/en/worker`, { waitUntil: "networkidle" });
+    if (new URL(page.url()).pathname !== "/en/account") {
+      throw new Error("Legacy worker link did not redirect to the account");
     }
 
     stage = `${role} management isolation`;

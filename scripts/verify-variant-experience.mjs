@@ -380,6 +380,20 @@ try {
     );
     await page.getByRole("button", { name: "Open preview" }).click();
     const preview = page.locator(".sf-hover-preview");
+    const choices = preview.locator(".sf-variant-chip");
+    await expect(choices).toHaveCount(3);
+    const tiles = await choices.evaluateAll((chips) =>
+      chips.map((chip) => {
+        const { top, width, height } = chip.getBoundingClientRect();
+        return { top, width, height };
+      }),
+    );
+    assert.ok(tiles.every(({ width, height }) => width <= 128 && height >= 48));
+    assert.equal(tiles[0].top, tiles[1].top, "Two compact tiles fit at 320px");
+    assert.ok(
+      tiles[2].top > tiles[1].top,
+      "The next tile wraps to another row",
+    );
     await expect(preview.locator(".sf-hover-preview-discount")).toContainText(
       "10%",
     );

@@ -38,6 +38,10 @@
 .actions button {
   min-height: 44px;
 }
+.wallets {
+  display: grid;
+  gap: 0.5rem;
+}
 .error {
   border-inline-start: 3px solid #d96a6a;
   padding-inline-start: 0.75rem;

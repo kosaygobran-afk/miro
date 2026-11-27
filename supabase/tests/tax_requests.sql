@@ -263,9 +263,9 @@ select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000301'
 do $$ begin
   perform public.update_service_request(
     'dddddddd-0000-0000-0000-000000000001', 'in_progress',
-    '00000000-0000-0000-0000-000000000303');
+    '00000000-0000-0000-0000-000000000302');
   if (select assigned_to from public.service_requests where id = 'dddddddd-0000-0000-0000-000000000001')
-     <> '00000000-0000-0000-0000-000000000303'::uuid then
+     <> '00000000-0000-0000-0000-000000000302'::uuid then
     raise exception 'Assignment not stored in assigned_to';
   end if;
   if (select status from public.service_requests where id = 'dddddddd-0000-0000-0000-000000000001')
@@ -290,43 +290,33 @@ do $$ begin
     select 1 from public.audit_events
     where action = 'request_update'
       and details->>'request_id' = 'dddddddd-0000-0000-0000-000000000001'
-      and details->>'assigned_to' = '00000000-0000-0000-0000-000000000303'
+      and details->>'assigned_to' = '00000000-0000-0000-0000-000000000302'
   ) then raise exception 'Assignment audit missing'; end if;
 end $$;
 
+-- Model an assignment left over from the former worker workflow. Do not
+-- delete it; ensure it no longer grants access, and management can retain it.
+reset role;
+update public.service_requests set assigned_to='00000000-0000-0000-0000-000000000303'
+  where id='dddddddd-0000-0000-0000-000000000001';
+set local role authenticated;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000303',true); -- worker
 do $$ begin
-  -- RLS: the worker sees exactly their assigned request via assigned_to
-  if (select count(*) from public.service_requests) <> 1 then
-    raise exception 'Worker RLS visibility wrong';
+  if (select count(*) from public.service_requests) <> 0 then
+    raise exception 'Historic assignment exposed another customer request';
   end if;
-
-  -- worker may move their assigned request to waiting_customer
-  perform public.update_service_request('dddddddd-0000-0000-0000-000000000001', 'waiting_customer', null);
-  if (select status from public.service_requests where id = 'dddddddd-0000-0000-0000-000000000001')
-     <> 'waiting_customer' then raise exception 'Worker waiting_customer failed'; end if;
-  if (select assigned_to from public.service_requests where id = 'dddddddd-0000-0000-0000-000000000001')
-     <> '00000000-0000-0000-0000-000000000303'::uuid then
-    raise exception 'Worker status change clobbered the assignment';
-  end if;
-
-  -- worker may not set triage statuses or reassign
   begin
-    perform public.update_service_request('dddddddd-0000-0000-0000-000000000001', 'spam', null);
-    raise exception 'Worker set spam';
+    perform public.update_service_request('dddddddd-0000-0000-0000-000000000001', 'closed', null);
+    raise exception 'Worker changed another customer request';
   exception when insufficient_privilege then null; end;
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000301',true); -- admin
+do $$ begin
+  perform public.update_service_request('dddddddd-0000-0000-0000-000000000001', 'waiting_customer', '00000000-0000-0000-0000-000000000303');
   begin
-    perform public.update_service_request(
-      'dddddddd-0000-0000-0000-000000000001', 'closed',
-      '00000000-0000-0000-0000-000000000301');
-    raise exception 'Worker reassigned';
-  exception when insufficient_privilege then null; end;
-
-  -- worker may not touch a request assigned to nobody
-  begin
-    perform public.update_service_request('dddddddd-0000-0000-0000-000000000002', 'closed', null);
-    raise exception 'Worker updated an unassigned request';
-  exception when insufficient_privilege then null; end;
+    perform public.update_service_request('dddddddd-0000-0000-0000-000000000002', 'in_progress', '00000000-0000-0000-0000-000000000303');
+    raise exception 'New worker assignment accepted';
+  exception when sqlstate '22023' then null; end;
 end $$;
 
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000300',true); -- customer

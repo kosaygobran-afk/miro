@@ -48,6 +48,7 @@ export interface CustomerSnapshot {
 
 export interface DocumentItemSnapshot {
   description: string;
+  sku?: string;
   quantity: number;
   unit_agorot?: number;
   discount_agorot?: number;

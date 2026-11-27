@@ -13,16 +13,6 @@ export function Footer({ locale }: { locale: Locale }) {
     ["about", he ? "אודותינו" : "About us"],
     ["contact", he ? "צרו קשר" : "Contact us"],
   ];
-  const solutions = [
-    ["services/home", he ? "אבטחה לבית" : "Home security"],
-    ["services/business", he ? "אבטחה לעסק" : "Business security"],
-    ["services/security-cameras", he ? "מצלמות אבטחה" : "Security cameras"],
-    [
-      "services/intercom-access",
-      he ? "אינטרקום ובקרת כניסה" : "Intercom & access",
-    ],
-    ["services/network-wifi", he ? "רשת ותקשורת" : "Networks & connectivity"],
-  ];
   const legal = [
     ["privacy", he ? "פרטיות" : "Privacy"],
     ["terms", he ? "תנאי שימוש" : "Terms"],
@@ -51,16 +41,6 @@ export function Footer({ locale }: { locale: Locale }) {
           <h2>{he ? "מכירים את מירו גרופ" : "Discover MIRO Group"}</h2>
           <nav aria-label={he ? "ניווט תחתון" : "Footer navigation"}>
             {links.map(([path, label]) => (
-              <Link key={path} href={withLocale(locale, path)}>
-                {label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-        <div className="premium-footer-column">
-          <h2>{he ? "פתרון לכל מקום" : "For every space"}</h2>
-          <nav aria-label={he ? "פתרונות מיגון ותקשורת" : "Security solutions"}>
-            {solutions.map(([path, label]) => (
               <Link key={path} href={withLocale(locale, path)}>
                 {label}
               </Link>

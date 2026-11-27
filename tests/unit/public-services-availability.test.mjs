@@ -226,3 +226,82 @@ test("bilingual service retry is announced, guarded while pending and refreshes 
       assert.equal(refreshes, 1);
     }
 });
+
+test("the inline guide fills seeded copy and honors CEO text, notes and image removal", async () => {
+  const load = async (path, imports) => {
+    const exports = {};
+    runInNewContext(compile(await read(path)), {
+      exports,
+      require: (name) => imports[name],
+    });
+    return exports;
+  };
+  const icons = await import("lucide-react");
+  const guide = await load("src/components/public/service-guide-copy.ts", {
+    "lucide-react": icons,
+  });
+  const messages = Object.fromEntries(
+    await Promise.all(
+      ["he", "en"].map(async (locale) => [
+        locale,
+        JSON.parse(await read(`src/messages/${locale}.json`)),
+      ]),
+    ),
+  );
+  const { ServiceDirectory } = await load(
+    "src/components/public/service-directory.tsx",
+    {
+      "react/jsx-runtime": jsx,
+      "lucide-react": icons,
+      "./service-guide-copy": guide,
+      "./buyer-pages.module.css": { default: {} },
+      "@/lib/i18n": { getMessages: (locale) => messages[locale] },
+    },
+  );
+  for (const locale of ["he", "en"]) {
+    const seed = messages[locale].pages.services.categories.find(
+      (row) => row.id === "alarm-systems",
+    );
+    const service = {
+      id: "service-1",
+      slug: seed.id,
+      name_en: "Alarm Systems",
+      name_he: "מערכות אזעקה",
+      [`short_description_${locale}`]: seed.description,
+      image_url: "https://example.com/removed.jpg",
+      content: {},
+    };
+    const render = () =>
+      renderToStaticMarkup(
+        ServiceDirectory({
+          locale,
+          services: [service],
+          overrides: { "service-service-1": "" },
+        }),
+      );
+    const baseline = render();
+    assert.ok(baseline.includes(guide.serviceGuide(service).guide[locale][0]));
+    assert.ok(!baseline.includes(seed.description));
+    service[`description_${locale}`] = "A published description";
+    service.content = {
+      process_steps: [
+        {
+          [`title_${locale}`]: "Survey",
+          [`text_${locale}`]: "Review the floor plan",
+        },
+      ],
+      faq: [
+        {
+          [`question_${locale}`]: "What should I bring?",
+          [`answer_${locale}`]: "The panel model",
+        },
+      ],
+    };
+    const edited = render();
+    assert.ok(edited.includes("A published description"));
+    assert.ok(!edited.includes(guide.serviceGuide(service).guide[locale][0]));
+    assert.match(edited, /Review the floor plan/);
+    assert.match(edited, /The panel model/);
+    assert.doesNotMatch(edited, /<a\b|<img\b/);
+  }
+});

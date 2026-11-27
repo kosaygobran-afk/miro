@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 160" fill="none">
+  <defs>
+    <linearGradient id="steel" x2=".18" y2="1">
+      <stop stop-color="#f1f0eb"/>
+      <stop offset=".43" stop-color="#b9bdbe"/>
+      <stop offset="1" stop-color="#717779"/>
+    </linearGradient>
+    <linearGradient id="side" x2="1" y2="1">
+      <stop stop-color="#3b4043"/>
+      <stop offset="1" stop-color="#25292c"/>
+    </linearGradient>
+    <linearGradient id="glass" x2="1" y2="1">
+      <stop stop-color="#193443"/>
+      <stop offset=".6" stop-color="#12232f"/>
+      <stop offset="1" stop-color="#42717a"/>
+    </linearGradient>
+    <linearGradient id="red" x2=".25" y2="1">
+      <stop stop-color="#ff8877"/>
+      <stop offset=".43" stop-color="#db4540"/>
+      <stop offset="1" stop-color="#7f3535"/>
+    </linearGradient>
+  </defs>
+
+<ellipse cx="117" cy="132" rx="101" ry="10" fill="#141615" opacity=".25"/>
+
+  <g stroke-linejoin="round">
+    <path d="M26 56 40 47h45l13 10v63l-13 8H26Z" fill="url(#side)" stroke="#8294a0" stroke-width="1.5"/>
+    <rect x="24" y="55" width="65" height="73" rx="7" fill="url(#steel)" stroke="#9cabb5" stroke-width="1.5"/>
+    <rect x="32" y="63" width="49" height="21" rx="4" fill="url(#glass)" stroke="#768998"/>
+    <path d="M38 77h5l4-6 5 8 5-5h15" stroke="#dbc07e" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M40 94h4m11 0h4m11 0h4m-34 8h4m11 0h4m11 0h4m-34 8h4m11 0h4m11 0h4" stroke="#435865" stroke-width="3.2" stroke-linecap="round"/>
+    <circle cx="56" cy="120" r="2.3" fill="#845c2f"/>
+
+    <path d="m158 47 15-10h31l15 11v61l-12 10h-49Z" fill="#773f3d" stroke="#9e6f66" stroke-width="1.5"/>
+    <rect x="154" y="47" width="53" height="72" rx="8" fill="url(#red)" stroke="#bf786a" stroke-width="1.5"/>
+    <rect x="161" y="55" width="39" height="22" rx="5" fill="#f8d8c3" stroke="#965e54"/>
+    <path d="M167 60v12m7-12v12m7-12v12m7-12v12m7-12v12" stroke="#b56054" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M165 88h31m-31 5h31m-31 5h31m-31 5h31m-31 5h31" stroke="#693d3c" stroke-width="1.5" stroke-linecap="round"/>
+
+    <ellipse cx="121" cy="118" rx="40" ry="16" fill="url(#side)" stroke="#8c9faa" stroke-width="1.5"/>
+    <ellipse cx="121" cy="113" rx="40" ry="16" fill="url(#steel)" stroke="#acb9c0" stroke-width="1.5"/>
+    <ellipse cx="121" cy="112" rx="28" ry="10" stroke="#546b79" stroke-width="2" stroke-dasharray="2.5 3"/>
+    <ellipse cx="121" cy="112" rx="19" ry="6" fill="#c9d3d8" stroke="#8b9eaa"/>
+    <ellipse cx="121" cy="112" rx="2.5" ry="1.4" fill="#ad3b36"/>
+  </g>
+</svg>

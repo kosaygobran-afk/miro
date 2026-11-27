@@ -86,9 +86,13 @@ test("cold image stays pending until decode completes and forwards its load even
     decode: () => gate.promise,
   };
   let observed;
+  let decoded = false;
   const props = render({
     onLoad: (event) => {
       observed = event.currentTarget;
+    },
+    onDecoded: () => {
+      decoded = true;
     },
   });
   props.ref(element);
@@ -98,8 +102,10 @@ test("cold image stays pending until decode completes and forwards its load even
   assert.equal(observed, element);
   event.currentTarget = null;
   assert.equal(render()["data-image-ready"], "false");
+  assert.equal(decoded, false);
   gate.resolve();
   await loading;
+  assert.equal(decoded, true);
   const ready = render();
   assert.equal(ready["data-image-ready"], "true");
   assert.equal(ready["data-image-cached"], undefined);
@@ -123,7 +129,9 @@ test("already cached images bypass the fade and retain fill/alt geometry props",
 test("a late decode cannot reveal a newer image before its own decode", async () => {
   const render = component();
   const gate = deferred();
-  const older = render();
+  const older = render({
+    onDecoded: () => assert.fail("An old image must not report readiness"),
+  });
   older.ref({ complete: false });
   const loading = older.onLoad({
     currentTarget: { isConnected: true, decode: () => gate.promise },

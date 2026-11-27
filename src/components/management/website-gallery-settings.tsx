@@ -679,13 +679,17 @@ export function WebsiteGalleryEditor({
                     items={[
                       [
                         "flip-up",
-                        he ? "היפוך מלמטה למעלה" : "Bottom-to-top flip",
+                        he
+                          ? "התמזגות עם זום עדין"
+                          : "Dissolve with subtle zoom",
                       ],
                       [
                         "swipe-left",
-                        he ? "החלקה מימין לשמאל" : "Right-to-left swipe",
+                        he
+                          ? "התמזגות עם הסטה קלה"
+                          : "Dissolve with subtle drift",
                       ],
-                      ["fade", he ? "התמזגות" : "Fade"],
+                      ["fade", he ? "התמזגות" : "Dissolve"],
                       ["none", he ? "החלפה מיידית" : "Instant change"],
                     ]}
                     onChange={(animation) => updateGallery({ animation })}

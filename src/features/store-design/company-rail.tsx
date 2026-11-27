@@ -15,14 +15,15 @@ export function CompanyRail({ locale }: { locale: "he" | "en" }) {
   if (!brands.enabled || !items.length) return null;
   const animated = !reduceMotion && items.length > 2;
   const he = locale === "he";
-  const label = he ? "מותגים וטכנולוגיות" : "Brands & technologies";
+  const label = he ? "מותגים וטכנולוגיות" : "BRANDS & TECHNOLOGY";
   return (
     <section className="sf-company-rail" aria-labelledby="company-rail-title">
       <div className="miro-container">
         <div className="sf-company-heading">
           <div>
-            <span className="sf-eyebrow">TECHNOLOGY INDEX</span>
-            <h2 id="company-rail-title">{label}</h2>
+            <span className="sf-eyebrow" id="company-rail-title">
+              {label}
+            </span>
           </div>
           <p>
             {he

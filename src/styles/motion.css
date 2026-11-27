@@ -11,6 +11,11 @@
   --motion-menu-duration: 150ms;
   --motion-button-duration: 160ms;
   --motion-micro-duration: 150ms;
+  --motion-icon-pulse-duration: max(
+    440ms,
+    calc(var(--motion-micro-duration) * 3.2)
+  );
+  --motion-heart-duration: max(760ms, calc(var(--motion-micro-duration) * 4.8));
   --motion-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
   --motion-beam-height: 2px;
 }
@@ -148,12 +153,70 @@ html:has(.mgmt-shell) .motion-navigation-progress {
 }
 :root
   :is(.sf-product-media, .sf-main-image):has(
-    .motion-image[data-image-ready="false"]
+    .motion-image[data-image-ready="false"]:not(
+        [data-gallery-frame="pending"] *
+      )
   ) {
   background-color: var(--surface-muted);
 }
 :root[data-motion-image-reveal="false"] .motion-image {
   transition: none;
+}
+
+.sf-product-gallery-media,
+.sf-product-gallery-frame {
+  position: absolute;
+  inset: 0;
+}
+.sf-product-gallery-media {
+  isolation: isolate;
+}
+.sf-product-gallery-frame:is(
+  [data-gallery-frame="pending"],
+  [data-gallery-frame="outgoing"]
+) {
+  pointer-events: none;
+}
+.sf-product-gallery-frame[data-gallery-frame="pending"] {
+  visibility: hidden;
+}
+:root
+  .sf-product-gallery-frame:is(
+    [data-gallery-frame="pending"],
+    [data-gallery-frame="incoming"]
+  )
+  .motion-image {
+  transition: none;
+}
+:root[data-motion-image-reveal="true"] {
+  .sf-product-gallery-frame:is(
+    [data-gallery-frame="incoming"],
+    [data-gallery-frame="outgoing"]
+  ) {
+    /* Add premultiplied layers inside the isolated frame to avoid a dim midpoint. */
+    mix-blend-mode: plus-lighter;
+    animation: product-gallery-crossfade var(--motion-image-duration)
+      var(--motion-easing) both;
+  }
+  .sf-product-gallery-frame[data-gallery-frame="outgoing"] {
+    animation-name: product-gallery-fade-out;
+  }
+}
+@keyframes product-gallery-crossfade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes product-gallery-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 
 /* Extend the existing components instead of adding an animation framework. */
@@ -287,9 +350,10 @@ html:has(.mgmt-shell) .motion-navigation-progress {
   transition: none !important;
 }
 :root[data-motion-button-feedback="false"]
-  :is(button, .miro-button, .mgmt-button),
-:root[data-motion-button-feedback="false"] button .animate-spin {
+  :is(button, .miro-button, .mgmt-button) {
   transition: none !important;
+}
+:root[data-motion-button-feedback="false"] [data-button-effect] {
   animation: none !important;
 }
 :root[data-motion-micro-interactions="false"]
@@ -301,6 +365,186 @@ html:has(.mgmt-shell) .motion-navigation-progress {
     .sf-gallery-arrow
   ) {
   transition: none !important;
+}
+
+/* Version 2 controls share one tactile language across public and management
+   surfaces. The effects stay inside the icon/control so they never change
+   layout, product artwork, native inputs or the existing control geometry. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-appearance-version="2"][data-motion-button-feedback="true"] {
+    :is(button:enabled, a[href], summary, [role="button"]):not(
+        [aria-disabled="true"],
+        [data-theme-option],
+        .animate-spin,
+        .animate-pulse,
+        [aria-busy="true"]
+      ):active {
+      filter: brightness(0.92);
+    }
+
+    :is(button:enabled, a[href], summary, [role="button"]):not(
+        [aria-disabled="true"],
+        [data-theme-option],
+        .animate-spin,
+        .animate-pulse,
+        [aria-busy="true"]
+      ):active
+      :is(svg, .sf-cart-icon):not(.sf-cart-icon svg):not(
+        [data-button-effect]
+      ):not([data-button-effect] svg) {
+      scale: 0.86 !important;
+    }
+  }
+
+  :root[data-appearance-version="2"][data-motion-micro-interactions="true"] {
+    :is(
+        button:enabled,
+        summary,
+        [role="button"],
+        a.miro-button[href],
+        a[class*="button"],
+        a[class*="Button"],
+        a[class*="btn"],
+        a[class*="action"],
+        a[class*="Action"]
+      ):not(
+        [aria-disabled="true"],
+        [data-theme-option],
+        .animate-spin,
+        .animate-pulse,
+        [aria-busy="true"]
+      ):is(:hover, :focus-visible) {
+      animation-name: motion-control-beat;
+      animation-duration: calc(var(--motion-micro-duration) * 2.4);
+      animation-timing-function: var(--motion-easing);
+      animation-iteration-count: 1;
+      animation-fill-mode: none;
+      transform-origin: center;
+    }
+
+    :is(button:enabled, a[href], summary, [role="button"]):not(
+        [aria-disabled="true"],
+        .animate-spin,
+        .animate-pulse,
+        [aria-busy="true"]
+      ):is(:hover, :focus-visible)
+      :is(svg, .sf-cart-icon):not(.sf-cart-icon svg):not(
+        [data-button-effect],
+        [data-button-effect] svg,
+        [data-headline-icon] svg,
+        .animate-spin,
+        .animate-pulse
+      ) {
+      animation-name: motion-control-icon-pulse;
+      animation-duration: var(--motion-icon-pulse-duration);
+      animation-timing-function: var(--motion-easing);
+      animation-iteration-count: 1;
+      animation-fill-mode: none;
+      transform-origin: center;
+
+      &[data-wishlist-heart] {
+        animation-name: motion-heart-pulse;
+        animation-duration: var(--motion-heart-duration);
+      }
+    }
+
+    :is(
+        [data-headline-group]:hover,
+        [data-headline-group]:focus-within,
+        [data-headline-icon]:hover
+      )
+      :is([data-headline-icon] svg, :is(h1, h2, h3, h4, h5, h6) > svg) {
+      animation-name: motion-icon-beat;
+      animation-duration: var(--motion-icon-pulse-duration);
+      animation-timing-function: var(--motion-easing);
+      animation-iteration-count: 1;
+      animation-fill-mode: none;
+      transform-origin: center;
+    }
+
+    :is(h1, h2, h3, h4, h5, h6):hover > svg {
+      animation-name: motion-icon-beat;
+      animation-duration: var(--motion-icon-pulse-duration);
+      animation-timing-function: var(--motion-easing);
+      animation-iteration-count: 1;
+      animation-fill-mode: none;
+      transform-origin: center;
+    }
+  }
+}
+
+@keyframes motion-control-beat {
+  0% {
+    scale: 1;
+  }
+  38% {
+    scale: 1.022;
+  }
+  68% {
+    scale: 0.994;
+  }
+  100% {
+    scale: 1;
+  }
+}
+
+@keyframes motion-control-icon-pulse {
+  0%,
+  100% {
+    scale: 1;
+    filter: brightness(1);
+  }
+  42% {
+    scale: 1.12;
+    filter: brightness(1.12);
+  }
+}
+
+@property --wishlist-heart-flash {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+@keyframes motion-heart-pulse {
+  0%,
+  52%,
+  100% {
+    scale: 1;
+  }
+  28% {
+    scale: 1.26;
+  }
+  72% {
+    scale: 1.13;
+  }
+  0%,
+  28% {
+    --wishlist-heart-flash: 100%;
+  }
+  72%,
+  100% {
+    --wishlist-heart-flash: 0%;
+  }
+}
+
+@keyframes motion-icon-beat {
+  0% {
+    scale: 1;
+    filter: brightness(1);
+  }
+  36% {
+    scale: 1.13;
+    filter: brightness(1.12);
+  }
+  66% {
+    scale: 0.96;
+    filter: brightness(1);
+  }
+  100% {
+    scale: 1;
+    filter: brightness(1);
+  }
 }
 
 /* Existing first-page entrances now share a short reveal and one switch. */
@@ -377,7 +621,8 @@ html:has(.mgmt-shell) .motion-navigation-progress {
       .motion-content-reveal,
       .motion-skeleton,
       .mgmt-skeleton,
-      .motion-image
+      .motion-image,
+      .sf-product-gallery-frame
     ) {
     animation: none !important;
     transition: none !important;

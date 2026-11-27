@@ -1,7 +1,7 @@
 ---
 description: Implements CEO/admin category icon upload and Store merchandising management for moving rail, badges and public promotions.
 mode: subagent
-model: nvidia/openai/gpt-oss-20b
+model: nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b
 ---
 
 You own management/CMS UI for this feature.

@@ -1,5 +1,6 @@
 "use client";
 
+import { playButtonFeedback } from "@/components/motion/button-feedback";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "@/components/motion/motion-link";
 import { OverflowLabel } from "./overflow-label";
@@ -220,7 +221,6 @@ export function ProductCard({
       locale={locale}
       initialSaved={isSaved}
       iconOnly
-      legacyIcon={!enhancedBadges}
       onRemove={onWishlistRemove}
       descriptionId={descriptionId}
       tabIndex={isDuplicate ? -1 : undefined}
@@ -237,7 +237,10 @@ export function ProductCard({
       tabIndex={isDuplicate ? -1 : undefined}
       aria-haspopup="dialog"
       aria-expanded={showHoverPreview}
-      onClick={openExplicitly}
+      onClick={(event) => {
+        playButtonFeedback(event.currentTarget.querySelector("svg"), "peek");
+        openExplicitly();
+      }}
     >
       <Eye size={enhancedBadges ? 18 : 16} aria-hidden="true" />
     </button>

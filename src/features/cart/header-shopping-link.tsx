@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "@/components/motion/motion-link";
-import { Heart, ShoppingCart } from "lucide-react";
+import { playButtonFeedback } from "@/components/motion/button-feedback";
+import { ShoppingCart } from "lucide-react";
+import { useLayoutEffect, useRef } from "react";
+import { ShoppingCount } from "./shopping-count";
 import { useCart } from "@/features/cart/cart-context";
+import { WishlistHeart } from "@/features/wishlist/wishlist-heart";
 import { withLocale, type Locale } from "@/lib/i18n";
 
 export function HeaderShoppingLink({
@@ -20,7 +24,6 @@ export function HeaderShoppingLink({
 }) {
   const { itemCount, wishlist, hydrated } = useCart();
   const cart = destination === "cart";
-  const Icon = cart ? ShoppingCart : Heart;
   const label = cart
     ? locale === "he"
       ? "סל הקניות"
@@ -29,24 +32,38 @@ export function HeaderShoppingLink({
       ? "רשימת משאלות"
       : "Wishlist";
   const count = cart ? itemCount : wishlist.length;
+  const heart = useRef<SVGSVGElement>(null);
+  const previousCount = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (!hydrated || cart) return;
+    const previous = previousCount.current;
+    previousCount.current = count;
+    if (previous !== null && previous !== count) {
+      playButtonFeedback(heart.current, count > previous ? "save" : "unsave");
+    }
+  }, [cart, count, hydrated]);
 
   const icon = (
     <>
-      <Icon size={inMenu ? 16 : 20} aria-hidden="true" />
-      {hydrated && count > 0 && (
-        <span
-          key={count}
-          className={
-            cart
-              ? "premium-shopping-count premium-cart-count"
-              : "premium-shopping-count"
-          }
-          aria-hidden="true"
-          dir="ltr"
-        >
-          {count > 99 ? "99+" : count}
-        </span>
+      {cart ? (
+        <ShoppingCart size={inMenu ? 16 : 20} aria-hidden="true" />
+      ) : (
+        <WishlistHeart
+          ref={heart}
+          filled={hydrated && count > 0}
+          size={inMenu ? 16 : 20}
+        />
       )}
+      <ShoppingCount
+        value={hydrated ? count : null}
+        badge
+        cap={99}
+        className={
+          cart
+            ? "premium-shopping-count premium-cart-count"
+            : "premium-shopping-count"
+        }
+      />
     </>
   );
 

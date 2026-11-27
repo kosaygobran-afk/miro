@@ -6,8 +6,12 @@ import { getClient } from "@/lib/supabase/client";
 
 const RECONCILE_INTERVAL_MS = 120_000;
 
-/** Keep an open storefront in sync with catalog and stock writes elsewhere. */
-export function StoreLiveRefresh() {
+/** Refresh a public page when the catalog and design version changes. */
+export function StoreLiveRefresh({
+  reconcilePromotions = true,
+}: {
+  reconcilePromotions?: boolean;
+} = {}) {
   const router = useRouter();
 
   useEffect(() => {
@@ -28,7 +32,8 @@ export function StoreLiveRefresh() {
       version !== renderedVersion ||
       // Scheduled promotions and private role prices do not all emit the public
       // signal. Reconcile them periodically once popup interaction has ended.
-      (Date.now() - refreshedAt >= RECONCILE_INTERVAL_MS &&
+      (reconcilePromotions &&
+        Date.now() - refreshedAt >= RECONCILE_INTERVAL_MS &&
         !document.querySelector(".sf-hover-preview, [data-preview-intent]"));
     const refresh = () => {
       if (
@@ -110,7 +115,7 @@ export function StoreLiveRefresh() {
       window.removeEventListener("focus", checkVersion);
       void client.removeChannel(channel);
     };
-  }, [router]);
+  }, [reconcilePromotions, router]);
 
   return null;
 }

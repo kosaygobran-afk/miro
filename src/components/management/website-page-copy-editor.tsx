@@ -16,8 +16,11 @@ import { ErrorState, FormField, FormSection, FormSkeleton, Notice } from "./ui";
 
 const endpoint = "/api/management/settings/page-copy";
 const pageLabels = {
-  store: { en: "Store", he: "חנות" },
-  home: { en: "Home", he: "בית" },
+  store: { en: "Collection opening · Home", he: "פתיחת הקולקציה · דף הבית" },
+  home: {
+    en: "Security & communications · Home",
+    he: "מיגון ותקשורת · דף הבית",
+  },
   services: { en: "Services overview", he: "סקירת שירותים" },
   about: { en: "About", he: "אודות" },
   contact: { en: "Contact", he: "יצירת קשר" },
@@ -159,8 +162,8 @@ export function WebsitePageCopyEditor({
       icon={<FileText size={20} />}
       description={
         he
-          ? "בחרו עמוד וערכו את הכותרות ואת הפתיחה בעברית ובאנגלית."
-          : "Choose a page to edit its opening headings and introduction in Hebrew and English."
+          ? "בחרו אזור וערכו את הכותרות ואת התיאור בעברית ובאנגלית."
+          : "Choose a section to edit its headings and description in Hebrew and English."
       }
     >
       {loadFailed ? (
@@ -184,7 +187,7 @@ export function WebsitePageCopyEditor({
                 : "The CEO can publish page text."}
             </Notice>
           ) : null}
-          <FormField label={he ? "עמוד באתר" : "Website page"}>
+          <FormField label={he ? "אזור באתר" : "Website section"}>
             {(control) => (
               <select
                 {...control}

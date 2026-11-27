@@ -2,8 +2,7 @@ export type AppRole = "customer" | "worker" | "admin" | "ceo";
 export type AccountStatus = "active" | "suspended" | "blocked";
 
 export function roleHome(role: AppRole) {
-  if (role === "customer") return "account";
-  if (role === "worker") return "worker";
+  if (role === "customer" || role === "worker") return "account";
   return "admin";
 }
 

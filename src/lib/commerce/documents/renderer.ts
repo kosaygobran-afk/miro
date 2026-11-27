@@ -5,6 +5,7 @@ import bidiFactory from "bidi-js";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { grossVatBreakdown, percentageAmount } from "../money";
 import { formatDocumentTimestamp } from "./format";
 export { formatDocumentTimestamp } from "./format";
 import { paperStyles } from "./paper-styles";
@@ -67,6 +68,7 @@ const LABELS: Record<DocumentLanguage, Record<string, string>> = {
     business: "פרטי העסק",
     description: "תיאור",
     quantity: "כמות",
+    sku: "מק״ט",
     net: "לפני מע״מ",
     vat: "מע״מ",
     total: "סה״כ לתשלום",
@@ -91,10 +93,12 @@ const LABELS: Record<DocumentLanguage, Record<string, string>> = {
     email: "דוא״ל",
     address: "כתובת",
     taxable: "בסיס חייב",
-    gross: "סכום כולל",
+    price: "מחיר",
+    priceIncludingVat: "מחיר כולל מע״מ",
     thanks: "תודה רבה",
     noNumber: "ללא מספר מסמך רשמי",
-    unit: "מחיר ליחידה",
+    unit: "מחיר ליחידה כולל מע״מ",
+    unitWithoutVat: "מחיר ליחידה",
     discount: "הנחה",
   },
   en: {
@@ -116,6 +120,7 @@ const LABELS: Record<DocumentLanguage, Record<string, string>> = {
     business: "Business details",
     description: "Description",
     quantity: "Qty",
+    sku: "SKU",
     net: "Net",
     vat: "VAT",
     total: "Total due",
@@ -140,10 +145,12 @@ const LABELS: Record<DocumentLanguage, Record<string, string>> = {
     email: "Email",
     address: "Address",
     taxable: "Taxable base",
-    gross: "Gross",
+    price: "Price",
+    priceIncludingVat: "Price incl. VAT",
     thanks: "Thank you",
     noNumber: "No official document number",
-    unit: "Unit price",
+    unit: "Unit price incl. VAT",
+    unitWithoutVat: "Unit price",
     discount: "Discount",
   },
 };
@@ -173,6 +180,14 @@ function escapeHtml(text: string): string {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+function labelMarkup(label: string): string {
+  const [title, rate] = label.split("\n");
+  return (
+    escapeHtml(title) +
+    (rate ? ` <br><bdi dir="ltr">${escapeHtml(rate)}</bdi>` : "")
+  );
 }
 
 function fullAddress(
@@ -285,14 +300,43 @@ function summaryFields(document: FiscalDocumentSnapshot): DetailField[] {
       : []),
   ];
 }
+function itemPriceLabel(document: FiscalDocumentSnapshot): string {
+  const l = labels(document.identity_snapshot.document_language);
+  if (document.vat_agorot === 0) return l.price;
+
+  // Legacy order snapshots carry the amounts but may omit the rate.
+  // Check the recorded values at agorot precision for both rounding conventions.
+  const standardRate = 18;
+  const basisPoints = standardRate * 100;
+  const matchesStandardRate =
+    document.items.some((item) => item.net_agorot >= 100) &&
+    document.items.every(
+      (item) =>
+        item.vat_agorot === percentageAmount(item.net_agorot, basisPoints) ||
+        item.net_agorot ===
+          grossVatBreakdown(item.gross_agorot, basisPoints).netAgorot,
+    );
+  return matchesStandardRate
+    ? `${l.priceIncludingVat}\n+${standardRate}%`
+    : l.priceIncludingVat;
+}
+
 function itemDetails(
   item: FiscalDocumentSnapshot["items"][number],
   lang: DocumentLanguage,
 ) {
   const l = labels(lang);
   return [
-    ...(item.unit_agorot !== undefined
-      ? [{ label: l.unit, value: money(item.unit_agorot, lang), ltr: true }]
+    ...(item.unit_agorot !== undefined &&
+    item.unit_agorot * item.quantity - (item.discount_agorot ?? 0) ===
+      item.gross_agorot
+      ? [
+          {
+            label: item.vat_agorot > 0 ? l.unit : l.unitWithoutVat,
+            value: money(item.unit_agorot, lang),
+            ltr: true,
+          },
+        ]
       : []),
     ...(item.discount_agorot !== undefined
       ? [
@@ -309,16 +353,17 @@ function itemDetails(
 function receiptItemFields(
   item: FiscalDocumentSnapshot["items"][number],
   lang: DocumentLanguage,
+  priceLabel: string,
   credit: boolean,
 ): DetailField[] {
   const l = labels(lang);
   return [
     { label: l.quantity, value: String(item.quantity), ltr: true },
+    { label: l.sku, value: item.sku ?? "-", ltr: true },
     ...itemDetails(item, lang),
-    { label: l.net, value: money(item.net_agorot, lang), ltr: true },
     { label: l.vat, value: money(item.vat_agorot, lang), ltr: true },
     {
-      label: l.gross,
+      label: priceLabel,
       value: money(item.gross_agorot, lang, credit),
       ltr: true,
     },
@@ -381,23 +426,24 @@ function accessibleHtml(
   const bdi = (text: string, ltr = false) =>
     `<bdi dir="${ltr ? "ltr" : "auto"}">${escapeHtml(text)}</bdi>`;
   const details = (fields: DetailField[], className = "") =>
-    `<dl class="detail-grid ${className}">${fields.map((field, index) => `<div class="field${className === "summary-grid" && index === 2 ? " total-field" : ""}" data-field="${escapeHtml(field.label)}" data-reading-anchor="start"${field.wide ? ' data-wide="true"' : ""}><dt>${field.icon ? paperIconSvg(field.icon) : ""}${escapeHtml(field.label)}</dt><dd>${bdi(field.value, field.ltr)}</dd></div>`).join("")}</dl>`;
+    `<dl class="detail-grid ${className}">${fields.map((field, index) => `<div class="field${className === "summary-grid" && index === 2 ? " total-field" : ""}" data-field="${escapeHtml(field.label)}" data-reading-anchor="start"${field.wide ? ' data-wide="true"' : ""}><dt>${field.icon ? paperIconSvg(field.icon) : ""}${labelMarkup(field.label)}</dt><dd>${bdi(field.value, field.ltr)}</dd></div>`).join("")}</dl>`;
   const sectionTitle = (icon: PaperIcon, value: string) =>
     `<h2>${paperIconSvg(icon)}<span>${escapeHtml(value)}</span></h2>`;
   const credit = document.type === "credit_note";
+  const priceLabel = itemPriceLabel(document);
   const rows =
     layout === "a4"
       ? document.items
           .map((item) => {
             const amountFields = itemDetails(item, lang);
-            return `<tr><td><span class="item-description">${bdi(item.description)}</span>${amountFields.length ? `<div class="item-meta">${details(amountFields)}</div>` : ""}</td><td class="numeric">${bdi(String(item.quantity), true)}</td><td class="numeric">${bdi(money(item.net_agorot, lang), true)}</td><td class="numeric">${bdi(money(item.vat_agorot, lang), true)}</td><td class="numeric gross">${bdi(money(item.gross_agorot, lang, credit), true)}</td></tr>`;
+            return `<tr><td><span class="item-description">${bdi(item.description)}</span>${amountFields.length ? `<div class="item-meta">${details(amountFields)}</div>` : ""}</td><td class="numeric">${bdi(String(item.quantity), true)}</td><td class="sku">${bdi(item.sku ?? "-", true)}</td><td class="numeric">${bdi(money(item.vat_agorot, lang), true)}</td><td class="numeric gross">${bdi(money(item.gross_agorot, lang, credit), true)}</td></tr>`;
           })
           .join("")
       : "";
   const itemCards = `<section class="item-cards" aria-label="${escapeHtml(l.description)}">${document.items
     .map(
       (item) =>
-        `<article class="receipt-item"><h3>${bdi(item.description)}</h3>${details(receiptItemFields(item, lang, credit))}</article>`,
+        `<article class="receipt-item"><h3>${bdi(item.description)}</h3>${details(receiptItemFields(item, lang, priceLabel, credit))}</article>`,
     )
     .join("")}</section>`;
   const payments = document.payment_references
@@ -432,7 +478,7 @@ function accessibleHtml(
     ],
   )}</div><p class="number-note">${escapeHtml(document.number ? l.document : l.noNumber)}${document.number ? `: ${bdi(document.number, true)}` : ""}</p>${PAPER_RULE_SVG}</header>
 <section class="recipient">${sectionTitle("customer", l.customer)}${details(customerFields(document))}</section>
-${layout === "a4" ? `<table class="items"><caption>ILS</caption><thead><tr>${[l.description, l.quantity, l.net, l.vat, l.gross].map((label, index) => `<th scope="col"${index > 0 ? ' class="numeric"' : ""}>${escapeHtml(label)}</th>`).join("")}</tr></thead><tbody>${rows}</tbody></table>` : ""}${itemCards}
+${layout === "a4" ? `<table class="items"><caption>ILS</caption><thead><tr><th scope="col">${l.description}</th><th scope="col" class="numeric">${l.quantity}</th><th scope="col" class="sku">${l.sku}</th><th scope="col" class="numeric">${l.vat}</th><th scope="col" class="numeric">${labelMarkup(priceLabel)}</th></tr></thead><tbody>${rows}</tbody></table>` : ""}${itemCards}
 ${payments ? `<div class="closing">${paymentsHtml}${summary}</div>` : summary}
 ${document.allocation_number || document.related_document_number ? `<section class="notes">${details([...(document.allocation_number ? [{ label: l.allocation, value: document.allocation_number, ltr: true }] : []), ...(document.related_document_number ? [{ label: l.related, value: document.related_document_number, ltr: true }] : [])])}</section>` : ""}
 ${document.note ? `<section class="notes">${sectionTitle("note", l.note)}<p>${bdi(document.note)}</p></section>` : ""}
@@ -1109,12 +1155,13 @@ async function renderLayout(
     y += 12;
   }
 
+  const priceLabel = itemPriceLabel(document);
   const columns = [
     { label: l.description, ratio: 0.42 },
     { label: l.quantity, ratio: 0.08 },
-    { label: l.net, ratio: 0.17 },
+    { label: l.sku, ratio: 0.17 },
     { label: l.vat, ratio: 0.15 },
-    { label: l.gross, ratio: 0.18 },
+    { label: priceLabel, ratio: 0.18 },
   ].map((column, index, all) => ({
     ...column,
     width: usable * column.ratio,
@@ -1157,6 +1204,7 @@ async function renderLayout(
       const fields = receiptItemFields(
         item,
         lang,
+        priceLabel,
         document.type === "credit_note",
       );
       const itemHeight =
@@ -1194,11 +1242,11 @@ async function renderLayout(
     ];
     const values = [
       String(item.quantity),
-      money(item.net_agorot, lang),
+      item.sku ?? "-",
       money(item.vat_agorot, lang),
       money(item.gross_agorot, lang, document.type === "credit_note"),
     ];
-    const numericHeight = Math.max(
+    const valueHeight = Math.max(
       ...values.map(
         (value, index) =>
           measure(
@@ -1216,7 +1264,7 @@ async function renderLayout(
       const minimumHeight = Math.max(
         38,
         blocks[offset].height + 12,
-        offset === 0 ? numericHeight : 0,
+        offset === 0 ? valueHeight : 0,
       );
       if (y + minimumHeight > bottom) {
         newPage();

@@ -1,7 +1,7 @@
 ---
 description: Read-only architect for MIRO storefront, catalog, data-flow and integration mapping before implementation.
 mode: subagent
-model: nvidia/openai/gpt-oss-20b
+model: nvidia/nvidia/nemotron-3.5-super-vl-120b-a12b
 permissions:
   - action: edit
     resource: "*"

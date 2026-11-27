@@ -194,7 +194,7 @@
   text-wrap: pretty;
 }
 :root[data-appearance-version="2"]
-  :is(.sf-section-heading h2, .experience-heading) {
+  :is(.sf-section-heading :is(h1, h2), .experience-heading) {
   font-weight: 760;
   letter-spacing: -0.025em;
   text-wrap: balance;
@@ -664,6 +664,7 @@
       .sf-hero-actions,
       .experience-hero .experience-actions,
       .sf-hero .sf-eyebrow,
+      .sf-store-eyebrow,
       .experience-hero .experience-overline
     ) {
     justify-content: center;
