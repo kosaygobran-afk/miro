@@ -73,7 +73,7 @@ export function PosCartLine({
     <div
       className={cn(
         "relative flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface p-3 transition-colors",
-        stockExceeded && "border-red-500/50",
+        stockExceeded && "border-[var(--miro-danger)]",
       )}
     >
       {/* Main line content */}
@@ -98,7 +98,7 @@ export function PosCartLine({
               <span
                 className={cn(
                   "px-1.5 py-0.5 text-xs font-medium rounded-full",
-                  "bg-primary/10 text-primary",
+                  "bg-primary/10 text-accent-text",
                 )}
               >
                 {t({ he: "שירות", en: "Service" })}
@@ -108,7 +108,7 @@ export function PosCartLine({
               <span
                 className={cn(
                   "px-1.5 py-0.5 text-xs font-medium rounded-full",
-                  "bg-amber-100/10 text-amber-400 dark:bg-amber-900/20",
+                  "bg-[var(--miro-warning-bg)] text-[var(--miro-warning)]",
                 )}
               >
                 {t({ he: "ידני", en: "Manual" })}
@@ -125,7 +125,9 @@ export function PosCartLine({
               <span
                 className={cn(
                   "flex items-center gap-1",
-                  lowStock ? "text-amber-400" : "text-muted-foreground",
+                  lowStock
+                    ? "text-[var(--miro-warning)]"
+                    : "text-muted-foreground",
                 )}
               >
                 <span>{t({ he: "מלאי:", en: "Stock:" })}</span>
@@ -245,7 +247,7 @@ export function PosCartLine({
             <div
               className={cn(
                 "px-2 py-0.5 text-xs font-medium rounded-full",
-                "bg-amber-100/10 text-amber-400 dark:bg-amber-900/20",
+                "bg-[var(--miro-warning-bg)] text-[var(--miro-warning)]",
               )}
             >
               <Tag className="inline h-3 w-3 mr-1" aria-hidden="true" />
@@ -268,7 +270,7 @@ export function PosCartLine({
             disabled={saving}
             className={cn(
               "p-1.5 rounded-lg transition-colors",
-              "text-muted-foreground hover:text-red-400 hover:bg-red-500/10",
+              "text-muted-foreground hover:text-error-text hover:bg-[var(--miro-danger-bg)]",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]",
               "disabled:opacity-30 disabled:cursor-not-allowed",
             )}

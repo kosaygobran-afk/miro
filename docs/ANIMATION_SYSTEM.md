@@ -270,7 +270,7 @@ Public catalog still loads the active catalog as one collection. Very large cata
 4. Use one `.motion-content-reveal` on the finished region. Avoid staggering large tables or hiding the entire site. Retain proper empty/error/retry states and mutation submission locks.
 5. Use RevealImage inside an already dimensioned/aspect-ratio stage. Keep alt text, fallback images and meaningful dimensions/sizes; cached images should not replay a fade.
 6. Reuse the relevant `--motion-*-duration` and `--motion-easing`. Connect every added effect to its existing feature switch. If a genuinely new motion category is needed, update the schema, SQL validator/public projection, CEO notes, defaults, tests and this catalog together.
-7. New visual overrides belong in the Version 2 layers, so Version 1 can still restore the original palette/geometry. Preserve the console dark tokens and localize meaningful copy.
+7. Keep version-specific geometry and motion in the appearance layers. Both versions and all roles use the colors defined in `src/app/globals.css`. Preserve the immutable historical snapshot when restoring the Version 1 layout and animations.
 8. Check 320/390px phones, tablet/desktop, both locales, all themes, keyboard/Escape/focus, reduced motion, empty/error/slow network and safe mocked operations. Wait finite transitions before automated final-state contrast checks; separately assert menus keep readable opacity throughout their entrance.
 
 ## Verification and remaining owners
@@ -325,9 +325,7 @@ These lab measurements cover the motion/analytics build before the account conti
 
 ## Expanded component design and analytical knowledge
 
-Version 2 applies separate public and console design layers. Public Light uses quiet warm off-white surfaces, charcoal text, dark gold for text/focus and gold for primary controls. Public Dark/Mid retain MIRO's black/charcoal/gold identity with calmer surface contrast. Framed icons, consistent button/card radii, reserved image stages, product pricing typography, responsive hero/category/gallery/cart/auth/service composition and centered phone groups share the same component language. Public palette rules exclude the management shell.
-
-The console keeps its existing Dark palette. `console-evolution.css` changes shared shapes, icon geometry, heading/value scale, component spacing and centered content. Only console Light/Medium receive calmer neutral reading surfaces. Overlays use the same local management tokens as the shell; changing to the public website removes the console palette scope.
+Version 2 applies geometry and motion through its public and console design layers. Both versions inherit the three shared website palettes, including portaled overlays. See [Themes and glass](THEME_GLASS.md) for the colors and the scope of the Dark glass finish.
 
 The analytics additions use existing data, with explicit definitions and genuine missing/error states:
 

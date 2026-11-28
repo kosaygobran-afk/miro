@@ -1,27 +1,10 @@
-/* MIRO business console: one management-only visual system, including portals. */
+/* Management and its body-level dialogs inherit the selected site palette.
+   Report series retain the same channel colors in charts, legends and tables. */
 .mgmt-shell-root,
 #mgmt-overlay-portal-host {
-  --background: #090e17;
-  --foreground: #edf2fa;
-  --surface: #111925;
-  --surface-muted: #182232;
-  --surface-elevated: #1c2839;
-  --muted-foreground: #a9b7cc;
-  --border-subtle: #2b394c;
-  --border-control: #41516a;
-  --report-cyan: #57e5dc;
-  --report-violet: #b6a1ff;
-  --report-lime: #c8f86c;
-  --badge-admin: var(--report-violet);
-  --badge-worker: var(--report-cyan);
-  --badge-suspended: var(--warning-text);
-  --primary: #ffe16b;
-  --primary-foreground: #15160b;
-  --accent-text: #ffe16b;
-  --secondary-accent: #57e5dc;
-  --success-text: #8ef1b2;
-  --error-text: #ff9fb2;
-  --warning-text: #ffcf78;
+  --report-cyan: var(--sales-channel-pos);
+  --report-violet: var(--sales-channel-website);
+  --report-lime: var(--miro-success);
   --radius-lg: 1.15rem;
   --mgmt-radius-card: 1.15rem;
   --mgmt-surface: var(--surface);
@@ -29,49 +12,11 @@
   color: var(--foreground);
   background: var(--background);
 }
-[data-theme="medium"] :is(.mgmt-shell-root, #mgmt-overlay-portal-host),
-#mgmt-overlay-portal-host[data-theme="medium"] {
-  --background: #dbe3ed;
-  --foreground: #1c2a3d;
-  --surface: #f0f4f8;
-  --surface-muted: #e4ebf3;
-  --surface-elevated: #f8fafc;
-  --muted-foreground: #52627a;
-  --border-subtle: #c2cedc;
-  --border-control: #8696aa;
-  --report-cyan: #006d68;
-  --report-violet: #6841bc;
-  --report-lime: #4b6b06;
-  --accent-text: #765500;
-  --secondary-accent: #006d68;
-  --success-text: #176c3d;
-  --error-text: #b1284b;
-  --warning-text: #8a5009;
-}
-[data-theme="light"] :is(.mgmt-shell-root, #mgmt-overlay-portal-host),
-#mgmt-overlay-portal-host[data-theme="light"] {
-  --background: #f0f4fa;
-  --foreground: #18273a;
-  --surface: #ffffff;
-  --surface-muted: #f2f6fb;
-  --surface-elevated: #ffffff;
-  --muted-foreground: #56667c;
-  --border-subtle: #d4dfea;
-  --border-control: #8a9bb1;
-  --report-cyan: #006d68;
-  --report-violet: #6841bc;
-  --report-lime: #4b6b06;
-  --accent-text: #765500;
-  --secondary-accent: #006d68;
-  --success-text: #176c3d;
-  --error-text: #b1284b;
-  --warning-text: #8a5009;
-}
 .mgmt-shell {
   background:
     radial-gradient(
       ellipse at 90% 0%,
-      color-mix(in srgb, var(--report-violet) 5%, transparent),
+      color-mix(in srgb, var(--accent-text) 5%, transparent),
       transparent 40%
     ),
     var(--background);
@@ -88,7 +33,7 @@
   background:
     linear-gradient(
       160deg,
-      color-mix(in srgb, var(--report-cyan) 4%, transparent),
+      color-mix(in srgb, var(--accent-text) 4%, transparent),
       transparent 45%
     ),
     var(--surface);
@@ -98,7 +43,7 @@
   border-color: var(--border-subtle);
 }
 .mgmt-sidebar__brand-mark {
-  box-shadow: 0 5px 20px #ffe16b18;
+  box-shadow: var(--miro-shadow);
   border-radius: 0.9rem;
 }
 .mgmt-sidebar__brand-name {
@@ -110,7 +55,7 @@
   font-size: 0.7rem;
 }
 .mgmt-sidebar__footer {
-  background: color-mix(in srgb, var(--report-violet) 4%, var(--surface));
+  background: var(--surface-muted);
   border-color: var(--border-subtle);
 }
 .mgmt-nav {
@@ -138,20 +83,20 @@
   border-radius: 0.45rem;
 }
 .mgmt-nav__link--active {
-  background: color-mix(in srgb, var(--report-cyan) 9%, var(--surface));
-  color: var(--report-cyan);
+  background: var(--miro-tint);
+  color: var(--accent-text);
   border-color: color-mix(
     in srgb,
-    var(--report-cyan) 30%,
+    var(--accent-text) 30%,
     var(--border-subtle)
   );
-  box-shadow: inset 3px 0 var(--report-cyan);
+  box-shadow: inset 3px 0 var(--accent-text);
 }
 [dir="rtl"] .mgmt-nav__link--active {
-  box-shadow: inset -3px 0 var(--report-cyan);
+  box-shadow: inset -3px 0 var(--accent-text);
 }
 .mgmt-nav__link--active .mgmt-nav__icon {
-  background: color-mix(in srgb, var(--report-cyan) 12%, transparent);
+  background: color-mix(in srgb, var(--accent-text) 12%, transparent);
 }
 .mgmt-nav__link:hover {
   background: var(--surface-muted);
@@ -179,15 +124,15 @@
   align-items: center;
   gap: 0.75rem;
   margin-block-end: 1.35rem;
-  color: var(--report-cyan);
+  color: var(--accent-text);
 }
 .mgmt-workspace-header__icon {
   display: grid;
   place-items: center;
   inline-size: 2.8rem;
   block-size: 2.8rem;
-  background: color-mix(in srgb, var(--report-cyan) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--report-cyan) 20%, transparent);
+  background: color-mix(in srgb, var(--accent-text) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent-text) 20%, transparent);
   border-radius: 0.85rem;
 }
 .mgmt-workspace-header__identity {
@@ -218,7 +163,7 @@
   background: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: 1.15rem;
-  box-shadow: 0 6px 24px #00000006;
+  box-shadow: var(--miro-shadow);
 }
 .mgmt-shell .mgmt-toolbar {
   padding: 1rem;
@@ -246,17 +191,22 @@
 }
 .mgmt-shell :is(.mgmt-button--secondary, .miro-button-secondary),
 #mgmt-overlay-portal-host :is(.mgmt-button--secondary, .miro-button-secondary) {
-  color: var(--report-cyan);
-  background: color-mix(in srgb, var(--report-cyan) 7%, var(--surface));
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 7%, var(--surface));
   border: 1px solid
-    color-mix(in srgb, var(--report-cyan) 30%, var(--border-subtle));
+    color-mix(in srgb, var(--accent-text) 30%, var(--border-subtle));
 }
 .mgmt-shell :is(.mgmt-button--primary, .miro-button-primary),
 #mgmt-overlay-portal-host :is(.mgmt-button--primary, .miro-button-primary) {
   color: var(--primary-foreground);
   background: var(--primary);
   border-color: var(--primary);
-  box-shadow: 0 3px 12px #ffe16b12;
+  box-shadow: var(--miro-shadow);
+}
+:is(.mgmt-shell, #mgmt-overlay-portal-host)
+  :is(.mgmt-button--primary, .miro-button-primary):hover:not(:disabled) {
+  background: var(--miro-gold-hover);
+  border-color: var(--miro-gold-hover);
 }
 .mgmt-shell :is(.mgmt-button--ghost, .miro-button-ghost) {
   color: var(--muted-foreground);
@@ -269,7 +219,7 @@
   background:
     linear-gradient(
       140deg,
-      color-mix(in srgb, var(--report-cyan) 5%, transparent),
+      color-mix(in srgb, var(--accent-text) 5%, transparent),
       transparent 55%
     ),
     var(--surface);
@@ -288,24 +238,25 @@
   min-inline-size: 0;
 }
 .mgmt-shell .mgmt-metric-card__icon {
-  color: var(--report-cyan);
-  background: color-mix(in srgb, var(--report-cyan) 10%, transparent);
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 10%, transparent);
   border-radius: 0.8rem;
 }
 .mgmt-shell .mgmt-metric-card__icon:empty {
   display: none;
 }
-.mgmt-shell .mgmt-metric-card:nth-child(4n + 2) .mgmt-metric-card__icon {
-  color: var(--report-violet);
-  background: color-mix(in srgb, var(--report-violet) 10%, transparent);
+/* Keep the neutral metric gold. Explicit KPI tones carry business meaning. */
+.mgmt-shell .mgmt-metric-card--success .mgmt-metric-card__icon {
+  color: var(--miro-success);
+  background: var(--miro-success-bg);
 }
-.mgmt-shell .mgmt-metric-card:nth-child(4n + 3) .mgmt-metric-card__icon {
-  color: var(--accent-text);
-  background: color-mix(in srgb, var(--primary) 10%, transparent);
+.mgmt-shell .mgmt-metric-card--warning .mgmt-metric-card__icon {
+  color: var(--miro-warning);
+  background: var(--miro-warning-bg);
 }
-.mgmt-shell .mgmt-metric-card:nth-child(4n + 4) .mgmt-metric-card__icon {
-  color: var(--report-lime);
-  background: color-mix(in srgb, var(--report-lime) 10%, transparent);
+.mgmt-shell .mgmt-metric-card--danger .mgmt-metric-card__icon {
+  color: var(--miro-danger);
+  background: var(--miro-danger-bg);
 }
 .mgmt-shell .mgmt-metric-card__footer {
   color: var(--muted-foreground);
@@ -341,7 +292,7 @@
   font-size: 0.81rem;
 }
 .mgmt-shell .mgmt-table__body tr:hover {
-  background: color-mix(in srgb, var(--report-cyan) 4%, transparent);
+  background: color-mix(in srgb, var(--accent-text) 4%, transparent);
 }
 .mgmt-shell .mgmt-table__body tr:last-child td {
   border-block-end: 0;
@@ -354,8 +305,8 @@
   padding: 1.5rem;
 }
 .mgmt-shell .mgmt-section-icon {
-  color: var(--report-cyan);
-  background: color-mix(in srgb, var(--report-cyan) 10%, transparent);
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 10%, transparent);
   border-radius: 0.8rem;
 }
 .mgmt-shell .mgmt-form-section__title {
@@ -374,8 +325,8 @@
   border-radius: 0.75rem;
 }
 .mgmt-shell .mgmt-icon-action:hover {
-  border-color: var(--report-cyan);
-  color: var(--report-cyan);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
 }
 .mgmt-shell .mgmt-status-badge {
   border-radius: 0.5rem;
@@ -388,20 +339,16 @@
   border-block-end: 1px solid var(--border-subtle);
 }
 .mgmt-shell .mgmt-scroll-region__slider {
-  accent-color: var(--report-cyan);
+  accent-color: var(--accent-text);
 }
 #mgmt-overlay-portal-host :is(.mgmt-drawer, .mgmt-dialog) {
   background: var(--surface);
   border-color: var(--border-subtle);
   color: var(--foreground);
-  box-shadow: 0 24px 80px #00000045;
+  box-shadow: var(--miro-shadow-raised);
 }
 #mgmt-overlay-portal-host :is(.mgmt-drawer__header, .mgmt-dialog__header) {
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--report-cyan) 8%, transparent),
-    color-mix(in srgb, var(--report-violet) 6%, transparent)
-  );
+  background: linear-gradient(135deg, var(--miro-tint), var(--miro-surface));
   border-color: var(--border-subtle);
   padding: 1.5rem;
 }
@@ -451,18 +398,18 @@
 }
 .mgmt-section-switcher a:hover,
 .mgmt-section-switcher a:focus-visible {
-  color: var(--report-cyan);
-  background: color-mix(in srgb, var(--report-cyan) 8%, transparent);
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 8%, transparent);
 }
 .mgmt-shell .inventory-manager__header {
   padding: 1.25rem;
   background: transparent;
 }
 .mgmt-shell .inventory-manager__replenishment {
-  border-block-start: 2px solid var(--report-violet);
+  border-block-start: 2px solid var(--accent-text);
 }
 .mgmt-shell .inventory-manager__replenishment-header {
-  background: color-mix(in srgb, var(--report-violet) 6%, transparent);
+  background: color-mix(in srgb, var(--accent-text) 6%, transparent);
 }
 .mgmt-shell .inventory-manager__replenishment-item {
   background: var(--surface);
@@ -471,7 +418,7 @@
   border-radius: 0.8rem;
 }
 .mgmt-shell .inventory-manager__replenishment-recommended {
-  color: var(--report-violet);
+  color: var(--accent-text);
 }
 .mgmt-shell .users-management__select {
   background: var(--surface-muted);
@@ -491,7 +438,7 @@
   color: var(--muted-foreground);
 }
 .mgmt-shell :is(.users-management__tbody, .customers-manager__tbody) tr:hover {
-  background: color-mix(in srgb, var(--report-cyan) 4%, transparent);
+  background: color-mix(in srgb, var(--accent-text) 4%, transparent);
 }
 .mgmt-shell[data-density="compact"]
   :is(.mgmt-table__body td, .users-management__td, .customers-manager__td) {
@@ -555,7 +502,7 @@
   border-radius: 0.35rem;
 }
 .mgmt-workspace-search:focus-visible {
-  outline: 2px solid var(--report-cyan);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .mgmt-workspace-finder {
@@ -580,17 +527,17 @@
 }
 .mgmt-workspace-finder__link:hover,
 .mgmt-workspace-finder__link:focus-visible {
-  border-color: var(--report-cyan);
-  outline-color: var(--report-cyan);
+  border-color: var(--accent-text);
+  outline-color: var(--focus-ring);
 }
 .mgmt-workspace-finder__icon {
   display: grid;
   place-items: center;
-  color: var(--report-cyan);
+  color: var(--accent-text);
   inline-size: 2.5rem;
   block-size: 2.5rem;
   border-radius: 0.8rem;
-  background: color-mix(in srgb, var(--report-cyan) 9%, transparent);
+  background: color-mix(in srgb, var(--accent-text) 9%, transparent);
   flex: 0 0 auto;
 }
 .mgmt-workspace-finder__text {
@@ -624,8 +571,8 @@
   cursor: pointer;
 }
 .mgmt-workspace-preferences__choice:has(input:checked) {
-  border-color: var(--report-cyan);
-  background: color-mix(in srgb, var(--report-cyan) 7%, transparent);
+  border-color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 7%, transparent);
 }
 .mgmt-workspace-preferences__choice > span {
   display: grid;
@@ -639,7 +586,7 @@
 .mgmt-workspace-preferences__choice input {
   inline-size: 1.15rem;
   block-size: 1.15rem;
-  accent-color: var(--report-cyan);
+  accent-color: var(--accent-text);
   flex: 0 0 auto;
 }
 .mgmt-workspace-note {
@@ -675,7 +622,6 @@
 
 .mgmt-shell-root,
 #mgmt-overlay-portal-host {
-  --surface-hover: var(--surface-elevated);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
@@ -694,7 +640,7 @@
   border: 1px solid transparent;
 }
 .mgmt-shell .mgmt-settings-index a:hover {
-  border-color: var(--report-cyan);
+  border-color: var(--accent-text);
 }
 .mgmt-shell .mgmt-form-section {
   margin-block-end: 0;
@@ -727,7 +673,7 @@
   border-color: var(--border-subtle);
 }
 #mgmt-overlay-portal-host .customers-manager__section-title {
-  color: var(--report-cyan);
+  color: var(--accent-text);
   font-size: 0.95rem;
   font-weight: 600;
 }
@@ -735,7 +681,7 @@
   background:
     linear-gradient(
       120deg,
-      color-mix(in srgb, var(--report-violet) 10%, transparent),
+      color-mix(in srgb, var(--accent-text) 10%, transparent),
       transparent
     ),
     var(--surface);

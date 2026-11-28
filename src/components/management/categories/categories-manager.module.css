@@ -172,10 +172,10 @@
   align-items: center;
   gap: 0.375rem;
   padding: 0.5rem 1rem;
-  border: 1px solid var(--border-danger);
+  border: 1px solid var(--miro-danger);
   border-radius: var(--radius-xs);
   background: transparent;
-  color: var(--danger);
+  color: var(--miro-danger);
   font-size: 0.875rem;
   cursor: pointer;
   transition:
@@ -184,7 +184,7 @@
 }
 
 .removeIconButton:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--danger) 10%, transparent);
+  background: color-mix(in srgb, var(--miro-danger) 10%, transparent);
 }
 
 .removeIconButton:disabled {

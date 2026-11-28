@@ -1,51 +1,45 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 
-test("appearance backup restores original public tokens and console Dark stays unchanged", async ({
+test("all three palettes carry across both public appearance versions", async ({
   page,
 }) => {
-  await page.goto("/en/contact");
+  await page.goto("/en/contact", { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute(
     "data-motion-ready",
     "true",
   );
-  const palettes = await page.evaluate(() => {
-    const root = document.documentElement;
-    const read = () => {
-      const css = getComputedStyle(root);
-      return [
+  for (const theme of ["dark", "medium", "light"]) {
+    const { shared, v1, v2 } = await page.evaluate((theme) => {
+      const root = document.documentElement;
+      const tokens = [
         "--background",
         "--surface",
         "--foreground",
         "--primary",
         "--focus-ring",
-      ].map((token) => css.getPropertyValue(token).trim());
-    };
-    root.dataset.theme = "dark";
-    root.dataset.appearanceVersion = "1";
-    const original = read();
-    root.dataset.appearanceVersion = "2";
-    const enhanced = read();
-    const consoleRoot = document.createElement("div");
-    consoleRoot.className = "mgmt-shell-root";
-    consoleRoot.hidden = true;
-    document.body.append(consoleRoot);
-    const consoleDark = read();
-    consoleRoot.remove();
-    const workerRoot = document.createElement("section");
-    workerRoot.dataset.managementSurface = "true";
-    workerRoot.hidden = true;
-    document.body.append(workerRoot);
-    const workerDark = read();
-    workerRoot.remove();
-    root.dataset.appearanceVersion = "1";
-    const restored = read();
-    return { original, enhanced, consoleDark, workerDark, restored };
-  });
-  expect(palettes.enhanced).not.toEqual(palettes.original);
-  expect(palettes.consoleDark).toEqual(palettes.original);
-  expect(palettes.workerDark).toEqual(palettes.original);
-  expect(palettes.restored).toEqual(palettes.original);
+      ];
+      const read = (names: string[]) => {
+        const css = getComputedStyle(root);
+        return names.map((token) => css.getPropertyValue(token).trim());
+      };
+      root.dataset.theme = theme;
+      const shared = read([
+        "--miro-canvas",
+        "--miro-surface",
+        "--miro-text",
+        "--miro-gold",
+        "--miro-focus",
+      ]);
+      root.dataset.appearanceVersion = "1";
+      const v1 = read(tokens);
+      root.dataset.appearanceVersion = "2";
+      return { shared, v1, v2: read(tokens) };
+    }, theme);
+    expect(shared.every(Boolean)).toBe(true);
+    expect(v1).toEqual(shared);
+    expect(v2).toEqual(shared);
+  }
 });
 
 for (const { path, width } of [
@@ -62,15 +56,15 @@ for (const { path, width } of [
     await page.addInitScript(() => localStorage.setItem("miro-theme", "light"));
     if (path === "/he/store/:product") {
       // Owner-editable catalog entries can replace the original seed model.
-      await page.goto("/he");
+      await page.goto("/he", { waitUntil: "domcontentloaded" });
       const product = page.locator(".sf-product-title-link").first();
       await expect(product).toBeVisible();
       const href = await product.getAttribute("href");
       expect(href).toMatch(/^\/he\/store\/[^/]+\/[^/]+$/);
-      await page.goto(href!);
+      await page.goto(href!, { waitUntil: "domcontentloaded" });
       await expect(page.locator(".sf-product-detail-layout")).toBeVisible();
     } else {
-      await page.goto(path);
+      await page.goto(path, { waitUntil: "domcontentloaded" });
     }
     await expect(page.locator("html")).toHaveAttribute(
       "data-motion-ready",

@@ -522,7 +522,7 @@
   height: 60px;
   border-radius: 18px;
   background: var(--surface-hover);
-  color: var(--pos-accent);
+  color: var(--miro-accent);
 }
 .hubTile:first-child .tileIcon {
   background: var(--pos-accent);

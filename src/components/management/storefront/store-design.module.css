@@ -80,7 +80,7 @@
 .scene {
   position: relative;
   aspect-ratio: 16/9;
-  background: #101216;
+  background: var(--miro-inset);
 }
 .scene img {
   object-fit: cover;
@@ -90,8 +90,8 @@
   top: 0.75rem;
   inset-inline-start: 0.75rem;
   border-radius: 0.5rem;
-  background: #000a;
-  color: #ffe190;
+  background: var(--miro-raised);
+  color: var(--miro-accent);
   padding: 0.3rem 0.6rem;
   font-size: 0.8rem;
   font-variant-numeric: tabular-nums;
@@ -155,11 +155,11 @@
   font-size: 0.85rem;
 }
 .error {
-  background: #ff727714;
+  background: var(--miro-danger-bg);
   color: var(--error-text);
 }
 .success {
-  background: #72ffbd12;
+  background: var(--miro-success-bg);
   color: var(--success-text);
 }
 .editor:disabled input,

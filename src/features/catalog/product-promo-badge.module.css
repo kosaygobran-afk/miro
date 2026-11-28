@@ -213,30 +213,35 @@
   --promo-edge: #9d77c4;
 }
 
+:global([data-theme="medium"]) .toneSale,
 :global([data-theme="light"]) .toneSale {
   --promo-fill: #fff0f2;
   --promo-ink: #a52342;
   --promo-edge: #d9a4b2;
 }
 
+:global([data-theme="medium"]) .toneBest,
 :global([data-theme="light"]) .toneBest {
   --promo-fill: #fff6dc;
   --promo-ink: #795207;
   --promo-edge: #c7aa64;
 }
 
+:global([data-theme="medium"]) .toneNew,
 :global([data-theme="light"]) .toneNew {
   --promo-fill: #e7f8ee;
   --promo-ink: #1b6841;
   --promo-edge: #8abda0;
 }
 
+:global([data-theme="medium"]) .toneHot,
 :global([data-theme="light"]) .toneHot {
   --promo-fill: #fff0e4;
   --promo-ink: #94440b;
   --promo-edge: #d7ac8b;
 }
 
+:global([data-theme="medium"]) .toneLimited,
 :global([data-theme="light"]) .toneLimited {
   --promo-fill: #f3edfc;
   --promo-ink: #654196;

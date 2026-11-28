@@ -1,19 +1,22 @@
-# Dark-mode refinement and shared glass setting — 2026-10-29
+# Website themes and the shared glass setting
 
-MIRO Dark keeps its black/yellow identity with a balanced range of near-black surfaces,
-warm gold highlights and a lighter glass treatment. The enhancement defaults **on**
-and applies **only to Dark mode**. Medium and Light retain their exact previous
-appearance. Only an active CEO or admin can change the single shared switch at `/en/admin/settings#settings-glass`
-or `/he/admin/settings#settings-glass`. Choose **Enhanced glass**, then **Save and
-apply for everyone**. Off restores the theme colors and surface paints from the
-local checkpoint before this enhancement; the management setting stays available.
+## Three personal color modes — 2026-11-28
 
-The shared switch controls the Dark-mode enhancement for everyone. There is no
-visitor switch or browser-local glass preference. Older `miro-glass`
-localStorage values have no effect. The selected dark/medium/light theme remains a
-personal choice. A shared-setting save takes effect in the saving window after
-server confirmation; other visitors receive it after refreshing or on their next
-visit. Pages already open elsewhere are not pushed or polled.
+The storefront, customer accounts, CEO/admin workspaces and their menus and dialogs use the same palette. The active `data-theme` on the document root selects the colors in `src/app/globals.css`. Components inherit the values in both appearance versions, including when they render through a portal. Medium and Light both use a light native color scheme for browser controls.
+
+| Role | Light | Medium | Dark |
+| --- | --- | --- | --- |
+| Page | `#f8f7f3` | `#d4d3d0` | `#0b0b0b` |
+| Panel | `#ffffff` | `#efeeeb` | `#171717` |
+| Raised panel | `#ffffff` | `#fbfaf8` | `#252525` |
+| Main text | `#262520` | `#242322` | `#f6f5ef` |
+| Supporting text | `#504e47` | `#474641` | `#d0cec7` |
+| Primary action | `#efbf37` | `#e8ba3d` | `#edc451` |
+| Gold text | `#705109` | `#634906` | `#f1d37a` |
+
+Use `--miro-on-gold` for text on gold controls, `--miro-accent` for gold text on structural surfaces, and `--miro-focus` for keyboard focus. Keep semantic fills and labels paired. Sales-channel badges and charts retain distinguishable series. Cards use a small downward shadow. Floating windows and menus use a deeper shadow with a visible edge. The Version 1 backup retains its historical colors as a record. Restoring that version selects its layout and animation settings within the current palette.
+
+An active CEO or admin can set the optional Version 2 Dark finish at `/en/admin/settings#settings-glass` or `/he/admin/settings#settings-glass`. Choose **Enhanced glass**, then **Save and apply for everyone**. Turning it off reveals the solid Dark palette. After a confirmed save, the current window updates and other visitors receive the change on refresh or their next visit.
 
 The browser stores the theme choice in `miro-theme` as soon as the user
 selects it. The nonce-bearing bootstrap applies the preference on document
@@ -25,9 +28,8 @@ layouts switch in the same document.
 The 2026-11-19 owner follow-up gives the CEO and admin topbar the management page’s opaque background in every theme. The management account popover still follows the optional glass setting.
 
 - Every enhancement requires `data-appearance-version="2"`, `data-glass="on"` and `data-theme="dark"`.
-  Version 1 retains its existing appearance. No enhancement changes header sizes,
-  card widths, control radii, product fitting, text layout or motion settings.
-- Public, customer and worker Dark use true neutral black/gray surfaces, warm gold, restrained sage-mint and bright supporting text. Medium and Light have no enhancement palette, glass, nested-sheen or hover overrides. Public palette rules exclude CEO/admin shells and management surfaces except the explicitly marked worker page; the console's existing Dark and semantic status colors remain authoritative.
+  Version 1 uses the solid palette. Appearance versions retain their own geometry.
+- The shared palette applies independently of the glass setting. Workers use the customer account UI. Role-specific selectors in `deep-glass.css` target the finish on particular surfaces.
 - Selected public headers, category/account/mobile menus, non-compact service
   cards, consultation/bundle panels and department/brand bands receive glass.
   Chrome uses a 94% surface fill, menus a quieter 98% fill, 12px blur, 112%
@@ -48,42 +50,9 @@ The 2026-11-19 owner follow-up gives the CEO and admin topbar the management pag
   forced colors remove enhanced transparency/blur; forced colors uses system
   canvas colors. Existing reduced-motion behavior remains authoritative.
 - `public-refinement.css` stays the last locale-layout CSS import.
-  `deep-glass.css` is immediately before it. Baseline theme files remain intact so
-  off is executable restoration rather than an approximate alternate palette.
+  `deep-glass.css` is immediately before it and owns the optional finish.
 
-The owner’s subsequent color-harmony refinement on 2026-10-29 supersedes the
-initial neon-yellow palette. The 2026-10-31 follow-up removes the residual blue
-channel bias from structural surfaces. Public/customer/worker Dark uses page `#050505`, panel `#0c0c0c`,
-inset `#171717` and hover `#242424`, with off-white `#f5f5f2` main text and
-`#c4c4c4` supporting text. Warm gold `#e8c55b` fills primary actions, `#f2d67e`
-is their hover color, and dark ink `#17140b` labels both. Pale gold `#f3d989`
-is the reading/focus accent; sage-mint `#9bcdbd` remains secondary. Structural
-borders use `#444444`; interactive outlines use the stronger `#858585`.
-
-Public shadow tokens now use short neutral downward shadows (4px/14px at rest,
-8px/24px elevated), with a restrained top highlight. Primary controls no longer
-inherit the older saturated yellow glow. Gold hover/focus rings still highlight
-all four card edges. Public glass edge tint and nested sheen are quieter; the
-12px blur and management paints are unchanged. These are paint-only overrides
-inside the existing three-way gate; off, Version 1 and Medium/Light remain exact.
-
-## Worker and storefront surface completion — 2026-10-31
-
-The worker section keeps `data-management-surface="true"` for its existing
-geometry and adds `data-worker-surface="true"` solely to opt into the enhanced
-black palette. The exception is limited to `deep-glass.css`; authorization and
-other public/management guards do not change. A real `.mgmt-shell-root` still
-excludes the enhancement, even when a worker marker is also present.
-
-Product-card, moving-rail, preview and detail media backplates use neutral-token
-radial gradients instead of hard-coded blue-gray studio highlights. Product
-images, their fitting/clipping and semantic badges remain intact. The public
-account dashboard (including worker accounts), its forms and login/cart surfaces inherit
-the same neutral tokens. Verify protected pages with
-`node scripts/verify-dark-surfaces.mjs` (optional `BASE_URL`, `DARK_OUTPUT_DIR`):
-disposable customer/worker identities, both locales, 320/1440px, all themes,
-neutral Dark tokens, exact bright-theme paints and scoped identity cleanup.
-The harness never submits account, request or settings forms.
+For a local cross-role check, run `THEME_REVIEW=1 python3 scripts/verify-commerce-integration.py`. The fixture uses synthetic identities to exercise the public site, customer account, CEO shell and account menu. Set `COMMERCE_OUTPUT_DIR` to save screenshots. For a production build use `COMMERCE_PRODUCTION=1` as well. The Playwright theme and glass suites cover appearance versions, keyboard focus, layout and the reduced-transparency and forced-colors fallbacks.
 
 ## Global setting and authorization
 
@@ -111,7 +80,7 @@ one settings switch and no public/account-local override.
 
 | File                                                           | Responsibility                                                                        |
 | -------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `src/styles/deep-glass.css`                                    | Gated palettes, soft glass, nested reflections, all-side hover/focus and OS fallbacks |
+| `src/styles/deep-glass.css`                                    | Gated glass finish, nested reflections, all-side hover/focus and OS fallbacks |
 | `src/lib/glass-settings.ts`                                    | Strict public/protected contracts, defaults and cache tag                             |
 | `src/lib/glass-settings-server.ts`                             | Limited public RPC read, bounded cache and last-known-good fallback                   |
 | `src/app/[locale]/layout.tsx`                                  | Shared server-rendered root value and CSS import order                                |

@@ -590,7 +590,7 @@ export function SalesHistory({
                       >
                         {formatDate(order.created_at)}
                       </time>
-                      <span className="text-sm font-mono tabular-nums text-primary">
+                      <span className="text-sm font-mono tabular-nums text-accent-text">
                         {formatCurrency(order.total)}
                       </span>
                     </div>

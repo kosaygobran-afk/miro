@@ -472,12 +472,11 @@ try {
           );
           await parkChrome(page);
           const enhanced = await snapshot(page);
-          if (theme === "dark")
-            assert.notEqual(
-              enhanced.topbar.backdropFilter,
-              "none",
-              `${name}: enhanced backdrop`,
-            );
+          assert.equal(
+            enhanced.topbar.backdropFilter,
+            "none",
+            `${name}: opaque topbar`,
+          );
           if (theme !== "dark") {
             const unchangedPixels = await page
               .locator(".mgmt-topbar")
@@ -552,10 +551,10 @@ try {
             `${name}: chrome geometry unchanged`,
           );
           if (theme === "dark") {
-            assert.notEqual(
+            assert.equal(
               baseline.topbar.boxShadow,
               enhanced.topbar.boxShadow,
-              `${name}: off restores original depth`,
+              `${name}: shared glass leaves the topbar opaque`,
             );
           } else {
             assert.deepEqual(

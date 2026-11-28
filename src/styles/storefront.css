@@ -102,7 +102,7 @@
 }
 .sf-hero h1 span {
   display: block;
-  color: var(--primary);
+  color: var(--accent-text);
 }
 .sf-hero .sf-hero-intro {
   max-width: 470px;
@@ -148,7 +148,7 @@
 .sf-hero-signature span + span::before {
   content: "/";
   padding-inline-end: 1.3rem;
-  color: var(--primary);
+  color: var(--accent-text);
 }
 .sf-hero-caption {
   position: absolute;
@@ -421,7 +421,7 @@
     var(--accent-text) 60%,
     var(--border-subtle)
   );
-  box-shadow: 0 16px 34px #00000015;
+  box-shadow: var(--shadow-lift);
 }
 .sf-product-media {
   width: 100%;
@@ -432,7 +432,7 @@
   padding: 0.8rem 0.65rem 0;
   background: radial-gradient(
     ellipse at 50% 65%,
-    color-mix(in srgb, var(--surface-hover) 80%, #88949d) 0%,
+    color-mix(in srgb, var(--surface-hover) 80%, var(--miro-control-border)) 0%,
     var(--surface-muted) 64%
   );
   border: 0;
@@ -764,10 +764,10 @@
   color: var(--foreground);
   background: var(--surface);
   margin: auto;
-  box-shadow: 0 30px 100px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lift);
 }
 .sf-product-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.72);
+  background: var(--miro-scrim);
   backdrop-filter: blur(6px);
 }
 body:has(.sf-product-dialog[open]) {
@@ -1295,8 +1295,8 @@ body:has(.sf-product-dialog[open]) {
   .sf-hero::before {
     background: linear-gradient(
       180deg,
-      #080a0c 0%,
-      #080a0c 45%,
+      var(--background) 0%,
+      var(--background) 45%,
       transparent 64%
     );
   }
@@ -1688,7 +1688,7 @@ body:has(.sf-product-dialog[open]) {
   border-color: var(--accent-text);
 }
 .sf-thumbnail:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent-text) 38%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 .sf-thumbnail-image {
@@ -1708,7 +1708,7 @@ body:has(.sf-product-dialog[open]) {
   border-radius: 50%;
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   color: var(--foreground);
-  box-shadow: 0 10px 30px #0000001c;
+  box-shadow: var(--shadow-soft);
   backdrop-filter: blur(12px);
   cursor: pointer;
   transform: translateY(-50%);
@@ -1724,7 +1724,7 @@ body:has(.sf-product-dialog[open]) {
   transform: translateY(-50%) scale(1.06);
 }
 .sf-gallery-arrow:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent-text) 45%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 .sf-gallery-arrow-previous {
@@ -1833,14 +1833,14 @@ body:has(.sf-product-dialog[open]) {
   font-weight: 650;
 }
 .sf-stock-in {
-  background: color-mix(in srgb, var(--success) 15%, transparent);
-  color: var(--success);
-  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+  background: color-mix(in srgb, var(--miro-success) 15%, transparent);
+  color: var(--miro-success);
+  border: 1px solid color-mix(in srgb, var(--miro-success) 30%, transparent);
 }
 .sf-stock-low {
-  background: color-mix(in srgb, var(--warning) 15%, transparent);
-  color: var(--warning);
-  border: 1px solid color-mix(in srgb, var(--warning) 30%, transparent);
+  background: color-mix(in srgb, var(--miro-warning) 15%, transparent);
+  color: var(--miro-warning);
+  border: 1px solid color-mix(in srgb, var(--miro-warning) 30%, transparent);
 }
 .sf-stock-restock {
   background: color-mix(in srgb, var(--info) 15%, transparent);
@@ -1849,9 +1849,9 @@ body:has(.sf-product-dialog[open]) {
 }
 .sf-stock-contact,
 .sf-stock-out {
-  background: color-mix(in srgb, var(--destructive) 10%, transparent);
-  color: var(--destructive);
-  border: 1px solid color-mix(in srgb, var(--destructive) 25%, transparent);
+  background: color-mix(in srgb, var(--miro-danger) 10%, transparent);
+  color: var(--miro-danger);
+  border: 1px solid color-mix(in srgb, var(--miro-danger) 25%, transparent);
 }
 
 .sf-variant-fieldset {
@@ -2196,8 +2196,8 @@ body:has(.sf-product-dialog[open]) {
   text-decoration-thickness: 2px;
 }
 .sf-product-discount {
-  background: var(--error-text);
-  color: #fff;
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
   font-size: 0.55rem;
   font-weight: 800;
   padding: 0.1rem 0.35rem;
@@ -2219,7 +2219,7 @@ body:has(.sf-product-dialog[open]) {
   padding: 0.8rem 0.65rem 0;
   background: radial-gradient(
     ellipse at 50% 65%,
-    color-mix(in srgb, var(--surface-hover) 80%, #88949d) 0%,
+    color-mix(in srgb, var(--surface-hover) 80%, var(--miro-control-border)) 0%,
     var(--surface-muted) 64%
   );
   border: 0;
@@ -2315,7 +2315,7 @@ body:has(.sf-product-dialog[open]) {
   min-height: 100%;
   border-radius: 1.05rem;
   border-color: color-mix(in srgb, var(--border-subtle) 86%, transparent);
-  box-shadow: 0 10px 30px #0000000a;
+  box-shadow: var(--shadow-soft);
   transition:
     transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
     border-color 200ms ease,
@@ -2329,7 +2329,7 @@ body:has(.sf-product-dialog[open]) {
     var(--accent-text) 48%,
     var(--border-subtle)
   );
-  box-shadow: 0 24px 52px #0000001c;
+  box-shadow: var(--shadow-lift);
 }
 .sf-product-card[data-preview-intent] {
   transform: translateY(2px) scale(0.982);
@@ -2356,7 +2356,7 @@ body:has(.sf-product-dialog[open]) {
   background:
     radial-gradient(
       ellipse at 50% 72%,
-      color-mix(in srgb, var(--surface-hover) 82%, #7d8992),
+      color-mix(in srgb, var(--surface-hover) 82%, var(--miro-control-border)),
       var(--surface-muted) 66%
     ),
     var(--surface-muted);
@@ -2398,8 +2398,8 @@ body:has(.sf-product-dialog[open]) {
 .sf-product-discount {
   padding: 0.16rem 0.36rem;
   border-radius: 0.35rem;
-  background: color-mix(in srgb, #ff2d55 16%, transparent);
-  color: #d90d36 !important;
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger) !important;
 }
 .sf-product-actions {
   align-items: stretch;
@@ -2439,7 +2439,7 @@ body:has(.sf-product-dialog[open]) {
   transform: translateY(-1px);
 }
 .sf-add-cart-button:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--focus-ring) 50%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 .sf-add-cart-button:disabled {
@@ -2814,7 +2814,7 @@ body:has(.sf-product-dialog[open]) {
 
 .sf-product-quick-preview:focus-visible {
   display: grid;
-  outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -3050,9 +3050,7 @@ body:has(.sf-product-dialog[open]) {
   border: 1px solid color-mix(in srgb, var(--border-control) 82%, transparent);
   border-radius: 1.15rem;
   background: var(--surface);
-  box-shadow:
-    0 28px 80px #00000035,
-    0 2px 8px #00000018;
+  box-shadow: var(--shadow-lift);
   backdrop-filter: blur(22px) saturate(1.15);
 }
 .sf-hover-preview-close {
@@ -3082,7 +3080,7 @@ body:has(.sf-product-dialog[open]) {
   color: var(--accent-text);
 }
 .sf-hover-preview-close:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--primary) 46%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 .sf-hover-preview-gallery {
@@ -3122,7 +3120,7 @@ body:has(.sf-product-dialog[open]) {
 }
 .sf-hover-preview-thumbnail:focus-visible,
 .sf-hover-preview-arrow:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent-text) 42%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 .sf-hover-preview-media {
@@ -3132,7 +3130,7 @@ body:has(.sf-product-dialog[open]) {
   background:
     radial-gradient(
       ellipse at 50% 72%,
-      color-mix(in srgb, var(--surface-hover) 84%, #7c8a93),
+      color-mix(in srgb, var(--surface-hover) 84%, var(--miro-control-border)),
       var(--surface-muted) 68%
     ),
     var(--surface-muted);
@@ -3169,7 +3167,7 @@ body:has(.sf-product-dialog[open]) {
   border-radius: 50%;
   background: color-mix(in srgb, var(--surface) 86%, transparent);
   color: var(--foreground);
-  box-shadow: 0 8px 22px #00000022;
+  box-shadow: var(--shadow-soft);
   cursor: pointer;
   transform: translateY(-50%);
   backdrop-filter: blur(10px);
@@ -3230,8 +3228,8 @@ body:has(.sf-product-dialog[open]) {
   text-decoration: line-through;
 }
 .sf-hover-preview-discount {
-  background: color-mix(in srgb, #ff2d55 16%, transparent);
-  color: #d90d36;
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
   font-size: 0.62rem;
   font-weight: 850;
   padding: 0.16rem 0.4rem;
@@ -3262,13 +3260,13 @@ body:has(.sf-product-dialog[open]) {
 }
 .sf-hover-preview-stock-low,
 .sf-hover-preview-stock-out {
-  color: var(--warning);
+  color: var(--miro-warning);
 }
 .sf-hover-preview-stock-out {
-  color: var(--destructive);
+  color: var(--miro-danger);
 }
 .sf-hover-preview-stock-in_stock {
-  color: #16a064;
+  color: var(--miro-success);
 }
 .sf-hover-preview-footer {
   display: flex;
@@ -3301,7 +3299,7 @@ body:has(.sf-product-dialog[open]) {
   filter: brightness(1.04);
 }
 .sf-hover-preview-link:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -3383,7 +3381,7 @@ body:has(.sf-product-dialog[open]) {
   font-size: 0.72rem;
   font-weight: 750;
   cursor: pointer;
-  box-shadow: 0 8px 24px #0000000a;
+  box-shadow: var(--shadow-soft);
   transition:
     border-color 180ms ease,
     background 180ms ease,
@@ -3400,7 +3398,7 @@ body:has(.sf-product-dialog[open]) {
   color: var(--accent-text);
 }
 .sf-moving-rail-toggle:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--primary) 42%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .sf-moving-rail-viewport {
@@ -3487,7 +3485,7 @@ body:has(.sf-product-dialog[open]) {
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--border-subtle) 86%, transparent);
   background: color-mix(in srgb, var(--surface) 96%, transparent);
-  box-shadow: 0 10px 28px #0000000b;
+  box-shadow: var(--shadow-soft);
   transition:
     transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1),
     border-color 200ms ease,
@@ -3507,7 +3505,7 @@ body:has(.sf-product-dialog[open]) {
   border-radius: 50%;
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   color: var(--foreground);
-  box-shadow: 0 8px 22px #0000001a;
+  box-shadow: var(--shadow-soft);
   cursor: pointer;
   backdrop-filter: blur(10px);
 }
@@ -3518,7 +3516,7 @@ body:has(.sf-product-dialog[open]) {
 }
 .sf-moving-rail-preview-button:focus-visible {
   display: grid;
-  outline: 3px solid color-mix(in srgb, var(--accent-text) 46%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 @media (hover: none), (pointer: coarse) {
@@ -3534,10 +3532,10 @@ body:has(.sf-product-dialog[open]) {
     var(--accent-text) 54%,
     var(--border-subtle)
   );
-  box-shadow: 0 22px 48px #0000001f;
+  box-shadow: var(--shadow-lift);
 }
 .sf-moving-rail-card:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent-text) 72%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .sf-moving-rail-media {
@@ -3545,7 +3543,7 @@ body:has(.sf-product-dialog[open]) {
   aspect-ratio: 1.22;
   background: radial-gradient(
     ellipse at 50% 72%,
-    color-mix(in srgb, var(--surface-hover) 78%, #77848e) 0%,
+    color-mix(in srgb, var(--surface-hover) 78%, var(--miro-control-border)) 0%,
     var(--surface-muted) 67%
   );
   overflow: hidden;
@@ -3638,8 +3636,8 @@ body:has(.sf-product-dialog[open]) {
 .sf-moving-rail-discount {
   padding: 0.16rem 0.32rem;
   border-radius: 0.3rem;
-  background: color-mix(in srgb, #ff2d55 15%, transparent);
-  color: #d90d36;
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
   font-size: 0.6rem;
   font-weight: 850;
 }
@@ -3710,8 +3708,8 @@ body:has(.sf-product-dialog[open]) {
   text-decoration-thickness: 2px;
 }
 .sf-price-discount {
-  background: var(--error-text);
-  color: #fff;
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
   font-size: 0.75rem;
   font-weight: 800;
   padding: 0.2rem 0.5rem;
@@ -3848,7 +3846,7 @@ body:has(.sf-product-dialog[open]) {
   margin: 0;
 }
 .sf-stock-indicator {
-  --stock-color: #ff6173;
+  --stock-color: var(--miro-danger);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -3868,13 +3866,13 @@ body:has(.sf-product-dialog[open]) {
     0 0 14px color-mix(in srgb, var(--stock-color) 12%, transparent);
 }
 .sf-stock-indicator--abundant {
-  --stock-color: #43ed8d;
+  --stock-color: var(--miro-success);
 }
 .sf-stock-indicator--available {
-  --stock-color: #36bf7a;
+  --stock-color: color-mix(in srgb, var(--miro-success) 82%, var(--miro-text));
 }
 .sf-stock-indicator--limited {
-  --stock-color: #ffad43;
+  --stock-color: var(--miro-warning);
 }
 .sf-stock-indicator__light {
   width: 0.48rem;
@@ -3918,18 +3916,6 @@ body:has(.sf-product-dialog[open]) {
 .sf-stock-indicator:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
-}
-[data-theme="light"] .sf-stock-indicator--abundant {
-  --stock-color: #087b42;
-}
-[data-theme="light"] .sf-stock-indicator--available {
-  --stock-color: #126b48;
-}
-[data-theme="light"] .sf-stock-indicator--limited {
-  --stock-color: #9d4b00;
-}
-[data-theme="light"] .sf-stock-indicator--critical {
-  --stock-color: #b91c35;
 }
 @media (max-width: 600px) {
   .sf-catalog-grid,

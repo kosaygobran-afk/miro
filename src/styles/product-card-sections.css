@@ -79,7 +79,7 @@
   border: 1px solid color-mix(in srgb, var(--border-subtle) 86%, transparent);
   border-radius: 1.2rem;
   background: color-mix(in srgb, var(--surface) 96%, transparent);
-  box-shadow: 0 10px 28px #0000000b;
+  box-shadow: var(--shadow-soft);
   transition:
     border-color var(--motion-micro-duration) var(--motion-easing),
     box-shadow var(--motion-micro-duration) var(--motion-easing);
@@ -167,7 +167,7 @@
 
 .sf-moving-rail-details-link:focus-visible,
 .sf-product-actions > .sf-product-quick-preview:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent-text) 46%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -207,7 +207,7 @@
     :has(> [data-preview-source]:hover)
   ):not([data-preview-intent]) {
   border-color: color-mix(in srgb, var(--border-subtle) 86%, transparent);
-  box-shadow: 0 10px 30px #0000000a;
+  box-shadow: var(--shadow-soft);
 }
 
 :root[data-appearance-version="2"]

@@ -5,82 +5,12 @@ import type { PromoBadge } from "@/features/catalog/product-data";
 // Badge type definitions
 type BadgeType = "significant_sale" | "best_seller" | "new" | "hot" | "limited";
 
-// Color definitions
-const BADGE_COLORS = {
-  sale_red: "#ff2d55",
-  best_gold: "#ffd60a",
-  new_cyan: "#00ffe0",
-  hot_orange: "#ff9f0a",
-  limited_violet: "#bf5af2",
-  green: "#30d158",
-} as const;
-
-interface BadgeConfig {
-  icon: string;
-  color: string;
-  textColor: string;
-  bgColor: string;
-}
-
-const BADGE_CONFIGS: Record<BadgeType, BadgeConfig> = {
-  significant_sale: {
-    icon: "percent",
-    color: BADGE_COLORS.sale_red,
-    textColor: "#ffffff",
-    bgColor: BADGE_COLORS.sale_red,
-  },
-  best_seller: {
-    icon: "award",
-    color: BADGE_COLORS.best_gold,
-    textColor: "#000000",
-    bgColor: BADGE_COLORS.best_gold,
-  },
-  new: {
-    icon: "sparkles",
-    color: BADGE_COLORS.new_cyan,
-    textColor: "#000000",
-    bgColor: BADGE_COLORS.new_cyan,
-  },
-  hot: {
-    icon: "flame",
-    color: BADGE_COLORS.hot_orange,
-    textColor: "#ffffff",
-    bgColor: BADGE_COLORS.hot_orange,
-  },
-  limited: {
-    icon: "clock",
-    color: BADGE_COLORS.limited_violet,
-    textColor: "#ffffff",
-    bgColor: BADGE_COLORS.limited_violet,
-  },
-};
-
-const TONE_CONFIGS: Record<PromoBadge["tone"], Omit<BadgeConfig, "icon">> = {
-  sale: {
-    color: BADGE_COLORS.sale_red,
-    textColor: "#ffffff",
-    bgColor: BADGE_COLORS.sale_red,
-  },
-  best: {
-    color: BADGE_COLORS.best_gold,
-    textColor: "#171200",
-    bgColor: BADGE_COLORS.best_gold,
-  },
-  new: {
-    color: BADGE_COLORS.new_cyan,
-    textColor: "#001713",
-    bgColor: BADGE_COLORS.new_cyan,
-  },
-  hot: {
-    color: BADGE_COLORS.hot_orange,
-    textColor: "#221000",
-    bgColor: BADGE_COLORS.hot_orange,
-  },
-  limited: {
-    color: BADGE_COLORS.limited_violet,
-    textColor: "#ffffff",
-    bgColor: BADGE_COLORS.limited_violet,
-  },
+const PRESET_ICONS: Record<BadgeType, string> = {
+  significant_sale: "percent",
+  best_seller: "award",
+  new: "sparkles",
+  hot: "flame",
+  limited: "clock",
 };
 
 interface PromoBadgeProps {
@@ -382,12 +312,10 @@ export function LegacyPromoBadge({
   className = "",
 }: PromoBadgeProps) {
   const isRtl = locale === "he";
-  const preset =
-    BADGE_CONFIGS[badge.key as BadgeType] || BADGE_CONFIGS.significant_sale;
-  const tone = TONE_CONFIGS[badge.tone];
+  const presetIcon = PRESET_ICONS[badge.key as BadgeType] ?? "percent";
   const shapeStyles = getBadgeShapeStyles(badge.shape, size, isRtl);
   const renderIcon =
-    ICON_RENDERERS[badge.iconName ?? preset.icon] ?? renderPercentIcon;
+    ICON_RENDERERS[badge.iconName ?? presetIcon] ?? renderPercentIcon;
   const iconSize = size === "sm" ? 10 : size === "md" ? 12 : 14;
 
   // For tag shape, we need a special render with SVG background + HTML text
@@ -402,8 +330,8 @@ export function LegacyPromoBadge({
         style={
           {
             ...shapeStyles.base,
-            background: tone.bgColor,
-            color: tone.textColor,
+            background: "var(--promo-fill)",
+            color: "var(--promo-ink)",
           } as React.CSSProperties
         }
         aria-label={badge.label}
@@ -416,7 +344,7 @@ export function LegacyPromoBadge({
                 height={iconSize}
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke={tone.textColor}
+                stroke="currentColor"
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -442,7 +370,7 @@ export function LegacyPromoBadge({
             </>
           ) : (
             <>
-              {renderIcon({ size: iconSize, color: tone.textColor })}
+              {renderIcon({ size: iconSize })}
               <span>{badge.label}</span>
             </>
           )}
@@ -457,14 +385,14 @@ export function LegacyPromoBadge({
       style={
         {
           ...shapeStyles.base,
-          background: tone.bgColor,
-          color: tone.textColor,
+          background: "var(--promo-fill)",
+          color: "var(--promo-ink)",
         } as React.CSSProperties
       }
       aria-label={badge.label}
     >
       <span style={shapeStyles.inner as React.CSSProperties}>
-        {renderIcon({ size: iconSize, color: tone.textColor })}
+        {renderIcon({ size: iconSize })}
         <span>{badge.label}</span>
       </span>
     </span>

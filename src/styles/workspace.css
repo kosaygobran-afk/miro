@@ -15,7 +15,7 @@
 }
 
 .workspace-entry:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -43,7 +43,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
-  color: var(--primary);
+  color: var(--accent-text);
   font-size: 0.75rem;
   font-weight: 800;
   text-transform: uppercase;
@@ -67,7 +67,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   background: color-mix(in srgb, var(--primary) 18%, transparent);
-  color: var(--primary);
+  color: var(--accent-text);
   border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
@@ -146,7 +146,7 @@
 }
 
 .users-management__email {
-  color: var(--primary);
+  color: var(--accent-text);
   text-decoration: none;
   transition: opacity 160ms ease;
 }
@@ -170,7 +170,7 @@
 
 .role-badge--ceo {
   background: color-mix(in srgb, var(--primary) 15%, transparent);
-  color: var(--primary);
+  color: var(--accent-text);
   border-color: color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
@@ -266,7 +266,7 @@
 }
 
 .users-management__protected svg {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 /* Select Controls */
@@ -358,7 +358,7 @@
   gap: 1rem;
   padding: 1.5rem;
   background: color-mix(in srgb, var(--error-text) 5%, transparent);
-  border: 1px solid color-mix(in srgb, #ef4444 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miro-danger) 20%, transparent);
   border-radius: var(--radius-xl);
   color: var(--foreground);
 }
@@ -366,7 +366,7 @@
 .users-management__error-icon {
   flex-shrink: 0;
   margin-top: 0.125rem;
-  color: #ef4444;
+  color: var(--miro-danger);
 }
 
 .users-management__error-content {
@@ -468,7 +468,7 @@
   }
 
   .users-management__card-email {
-    color: var(--primary);
+    color: var(--accent-text);
     text-decoration: none;
     word-break: break-all;
   }
@@ -508,7 +508,7 @@
 .users-management__select:focus-visible,
 .users-management__delete-input:focus-visible,
 .users-management__retry-button:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -1085,7 +1085,7 @@
 }
 
 .inventory-manager__filter-toggle:focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -1115,7 +1115,7 @@
 }
 
 .inventory-manager__refresh-button:focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -1141,7 +1141,7 @@
 }
 
 .inventory-manager__loading svg {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .inventory-manager__table-wrapper {
@@ -1409,7 +1409,7 @@
 }
 
 .inventory-manager__history-loading svg {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .inventory-manager__history-empty {
@@ -1695,7 +1695,7 @@
 
 .suppliers-manager__toggle-input:focus-visible
   + .suppliers-manager__toggle-slider {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -1779,7 +1779,7 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--miro-scrim);
   backdrop-filter: blur(4px);
   animation: modal-overlay-enter 160ms ease-out;
 }
@@ -1853,7 +1853,7 @@
 }
 
 .mgmt-modal__close:focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -1991,7 +1991,7 @@
 }
 
 .settings-panel__loading svg {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .settings-panel__error {
@@ -2025,7 +2025,7 @@
   font-weight: 900;
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .settings-panel__current-rate .text-sm.text-muted-foreground {
@@ -2104,7 +2104,7 @@
 }
 
 .settings-panel__tax-loading svg {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 /* ============================================================================
@@ -2319,7 +2319,7 @@
 }
 
 .sales-panel__summary .text-primary {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .sales-panel__submit {
@@ -2515,7 +2515,7 @@
 }
 
 .sales-history__expand-btn:focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -2639,7 +2639,7 @@
 }
 
 .sales-history__card-meta .text-primary {
-  color: var(--primary);
+  color: var(--accent-text);
   font-family: var(--font-mono), monospace;
   font-variant-numeric: tabular-nums;
 }
@@ -2701,7 +2701,7 @@
 .sales-history__preset-btn:focus-visible,
 .finance-dashboard__preset-btn:focus-visible,
 .analytics-dashboard__preset-btn:focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -2784,7 +2784,7 @@
 }
 
 .customers-manager__email {
-  color: var(--primary);
+  color: var(--accent-text);
   text-decoration: none;
   transition: opacity 140ms ease;
 }
@@ -2879,7 +2879,7 @@
 }
 
 .customers-manager__card-email {
-  color: var(--primary);
+  color: var(--accent-text);
   text-decoration: none;
   word-break: break-all;
 }
@@ -2907,7 +2907,7 @@
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--miro-scrim);
   backdrop-filter: blur(4px);
   animation: modal-overlay-enter 160ms ease-out;
 }
@@ -2985,7 +2985,7 @@
 }
 
 .customers-manager__close-btn:focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -3102,7 +3102,7 @@
 }
 
 .customers-manager__detail-value.customers-manager__email {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .customers-manager__empty-text {
@@ -3829,7 +3829,7 @@
 
 /* Focus visible base - applies to admin workspace interactive elements */
 .mgmt-shell :focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 

@@ -18,7 +18,7 @@
   border-radius: 0.9rem;
   background: var(--surface);
   color: var(--foreground);
-  box-shadow: 0 14px 36px rgb(0 0 0 / 32%);
+  box-shadow: var(--shadow-lift);
 }
 
 .results {

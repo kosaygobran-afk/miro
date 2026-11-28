@@ -45,13 +45,13 @@
 
 .vatNote {
   font-size: 0.75rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   text-align: start;
 }
 
 .errorMessage {
   margin: 0;
-  color: var(--danger);
+  color: var(--miro-danger);
   font-size: 0.8125rem;
 }
 
@@ -92,7 +92,7 @@
 }
 
 .button:active:not(:disabled) {
-  background: var(--primary-subtle);
+  background: var(--miro-tint);
 }
 
 .button:focus-visible,
@@ -105,12 +105,12 @@
 
 .utilityButton {
   background: var(--surface-muted);
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
 }
 
 .operatorButton {
   background: var(--surface-muted);
-  color: var(--primary);
+  color: var(--accent-text);
   font-size: 1.375rem;
 }
 
@@ -127,8 +127,8 @@
 }
 
 .vatButton {
-  background: var(--primary-subtle);
-  color: var(--primary);
+  background: var(--miro-tint);
+  color: var(--accent-text);
   font-size: 0.8125rem;
   font-weight: 650;
 }
@@ -176,7 +176,7 @@
 }
 
 .historyChevron {
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   transition: transform 160ms ease;
 }
 
@@ -229,7 +229,7 @@
 .historyExpression {
   min-width: 0;
   overflow: hidden;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-family: var(--font-mono);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -250,7 +250,7 @@
 }
 
 .historyTime {
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.6875rem;
   white-space: nowrap;
 }
@@ -258,7 +258,7 @@
 .historyEmpty {
   padding: 1.25rem;
   text-align: center;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.8125rem;
 }
 
@@ -267,10 +267,10 @@
   min-height: 2.5rem;
   margin: 0 0.75rem 0.75rem;
   padding: 0.5rem 0.75rem;
-  border: 1px solid var(--danger);
+  border: 1px solid var(--miro-danger);
   border-radius: var(--radius-sm);
-  background: var(--danger-subtle);
-  color: var(--danger);
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
@@ -278,8 +278,8 @@
 }
 
 .clearHistoryButton:hover:not(:disabled) {
-  background: var(--danger);
-  color: var(--danger-foreground);
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
 }
 
 @container (max-width: 22rem) {
@@ -339,16 +339,15 @@
 }
 
 .calculatorName svg {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .vatRateBadge {
   padding: 0.25rem 0.5rem;
-  border: 1px solid
-    color-mix(in srgb, var(--sales-channel-pos) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miro-accent) 35%, transparent);
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--sales-channel-pos) 13%, var(--surface));
-  color: var(--sales-channel-pos-text);
+  background: color-mix(in srgb, var(--miro-accent) 13%, var(--surface));
+  color: var(--miro-accent);
   font-size: 0.6875rem;
   font-weight: 650;
 }
@@ -387,21 +386,21 @@
 }
 
 .operatorButton {
-  border-color: color-mix(in srgb, var(--sales-channel-pos) 30%, transparent);
-  background: color-mix(in srgb, var(--sales-channel-pos) 12%, var(--surface));
-  color: var(--sales-channel-pos-text);
+  border-color: color-mix(in srgb, var(--miro-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--miro-accent) 12%, var(--surface));
+  color: var(--miro-accent);
 }
 
 .vatButton {
   gap: 0.375rem;
-  border-color: color-mix(in srgb, var(--sales-channel-pos) 35%, transparent);
-  background: color-mix(in srgb, var(--sales-channel-pos) 13%, var(--surface));
-  color: var(--sales-channel-pos-text);
+  border-color: color-mix(in srgb, var(--miro-accent) 35%, transparent);
+  background: color-mix(in srgb, var(--miro-accent) 13%, var(--surface));
+  color: var(--miro-accent);
 }
 
 .vatButton:hover:not(:disabled) {
-  border-color: var(--sales-channel-pos);
-  background: color-mix(in srgb, var(--sales-channel-pos) 21%, var(--surface));
+  border-color: var(--miro-accent);
+  background: color-mix(in srgb, var(--miro-accent) 21%, var(--surface));
 }
 
 .historyTitle {
@@ -412,14 +411,14 @@
 }
 
 .historyTitle svg {
-  color: var(--sales-channel-pos-text);
+  color: var(--miro-accent);
 }
 
 .historyFeedback,
 .historyErrorState,
 .historyMutationError {
   margin: 0.5rem 0.75rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.75rem;
   line-height: 1.45;
 }
@@ -430,10 +429,10 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.625rem;
-  border: 1px solid var(--danger);
+  border: 1px solid var(--miro-danger);
   border-radius: var(--radius-sm);
-  background: var(--danger-subtle);
-  color: var(--danger);
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
 }
 
 .historyErrorState p,
@@ -454,15 +453,15 @@
 }
 
 .retryHistoryButton:hover {
-  border-color: var(--sales-channel-pos);
+  border-color: var(--miro-accent);
   background: var(--surface-hover);
 }
 
 .historyMutationError {
   padding: 0.5rem 0.625rem;
-  border-inline-start: 3px solid var(--danger);
-  background: var(--danger-subtle);
-  color: var(--danger);
+  border-inline-start: 3px solid var(--miro-danger);
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
 }
 
 .historyTime {

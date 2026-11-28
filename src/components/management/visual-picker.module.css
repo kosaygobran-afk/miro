@@ -76,7 +76,7 @@
 }
 
 .option:has(.radio:focus-visible) {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 1px;
 }
 

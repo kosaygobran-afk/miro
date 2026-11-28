@@ -8,6 +8,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## Shared website palettes — 2026-11-28
+
+- Keep exactly three personal color modes across the storefront, customer and worker accounts, CEO/admin console, POS, and their overlays. Define colors in `src/app/globals.css`. Light uses warm white, Medium uses dove gray with pale panels, and Dark uses neutral near-black with charcoal panels. Use gold fills with dark labels and the mode’s reading accent for text or outlines. Keep status and chart series distinguishable.
+- This owner direction supersedes the older separate console/public palettes and Version 1 color restoration. Keep appearance-specific layout and motion, the immutable historical preset, and the Dark/Version 2/shared-setting gate for the optional glass finish. See `docs/THEME_GLASS.md` for the palette and checks.
+
 ## Worker account correction — 2026-11-25
 
 - Workers are customer accounts with a distinct catalog pricing role, not operational staff. Use the customer account and shopping UI; keep legacy worker URLs as redirects. Never restore assigned-request access or a task workspace. Preserve historical request assignments while allowing only admin/CEO management and new assignees. See `docs/OPERATIONS.md` for pricing limits and the migration-first rollout.

@@ -1,59 +1,9 @@
-/* Optional Dark-mode enhancement. Every paint requires the shared setting,
-   Version 2 AND Dark. Medium/Light retain their exact baseline appearance.
-   No geometry, text opacity, imagery or motion changes.
-   Removing data-glass="on" reveals the untouched checkpoint appearance. */
+/* Optional finish over the shared palette for Version 2 Dark. */
 :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"] {
   --glass-fill: var(--surface);
   --glass-menu-fill: var(--surface);
   --glass-filter: none;
-  --glass-edge: color-mix(
-    in srgb,
-    var(--accent-text) 24%,
-    var(--border-subtle)
-  );
-  --glass-sheen: color-mix(in srgb, var(--foreground) 3%, transparent);
-  --glass-inner-sheen: color-mix(in srgb, var(--foreground) 4%, transparent);
-  --glass-shadow:
-    inset 0 1px 0 color-mix(in srgb, var(--foreground) 8%, transparent),
-    0 8px 24px rgb(0 0 0 / 14%);
-}
-
-/* The console's semantic high-contrast Dark palette stays authoritative.
-   Public/customer/worker Dark pairs true neutral blacks with warm gold.
-   The worker marker is a presentation-only exception to the management guard;
-   CEO/admin shells and other management surfaces retain their own palette. */
-:root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
-    :has(
-      .mgmt-shell-root,
-      [data-management-surface="true"]:not([data-worker-surface="true"])
-    )
-  ) {
-  --background: #050505;
-  --surface: #0c0c0c;
-  --surface-muted: #171717;
-  --surface-hover: #242424;
-  --foreground: #f5f5f2;
-  --muted-foreground: #c4c4c4;
-  --border-subtle: #444444;
-  --border-control: #858585;
-  --primary: #e8c55b;
-  --primary-hover: #f2d67e;
-  --primary-foreground: #17140b;
-  --accent-text: #f3d989;
-  --secondary-accent: #9bcdbd;
-  --header-surface: #0c0c0c;
-  --focus-ring: #f3d989;
-  /* One light source above; neutral shadows below. Keep gold in the control
-     itself instead of inheriting the baseline's saturated yellow halo. */
-  --shadow-soft: 0 4px 14px rgb(0 0 0 / 24%);
-  --shadow-lift: 0 8px 24px rgb(0 0 0 / 32%);
-  --shadow-glow:
-    inset 0 1px 0 rgb(255 255 255 / 14%), 0 4px 12px rgb(0 0 0 / 24%);
-  --glass-edge: color-mix(
-    in srgb,
-    var(--accent-text) 10%,
-    var(--border-subtle)
-  );
+  --glass-edge: color-mix(in srgb, var(--accent-text) 10%, var(--border-subtle));
   --glass-sheen: color-mix(in srgb, var(--foreground) 2.5%, transparent);
   --glass-inner-sheen: color-mix(in srgb, var(--foreground) 3.5%, transparent);
   --glass-shadow:
@@ -267,13 +217,7 @@
 /* OS accessibility wins over the saved preference. Palette improvements remain
    readable, while the enhanced panels become fully opaque and unfiltered. */
 @media (prefers-reduced-transparency: reduce) {
-  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"],
-  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
-      :has(
-        .mgmt-shell-root,
-        [data-management-surface="true"]:not([data-worker-surface="true"])
-      )
-    ) {
+  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"] {
     --glass-fill: var(--surface);
     --glass-menu-fill: var(--surface);
     --glass-filter: none;
@@ -283,13 +227,7 @@
 }
 
 @media (forced-colors: active) {
-  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"],
-  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"]:not(
-      :has(
-        .mgmt-shell-root,
-        [data-management-surface="true"]:not([data-worker-surface="true"])
-      )
-    ) {
+  :root[data-appearance-version="2"][data-glass="on"][data-theme="dark"] {
     --glass-fill: Canvas;
     --glass-menu-fill: Canvas;
     --glass-filter: none;

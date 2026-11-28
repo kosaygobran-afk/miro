@@ -30,7 +30,7 @@ export function PosCustomerButton({
           "flex items-center gap-2 p-3 rounded-xl border border-border-subtle bg-surface",
         )}
       >
-        <UserRound className="h-5 w-5 text-primary" aria-hidden="true" />
+        <UserRound className="h-5 w-5 text-accent-text" aria-hidden="true" />
         <div className="flex-1 min-w-0">
           <p
             className={cn(
@@ -55,7 +55,7 @@ export function PosCustomerButton({
           disabled={disabled}
           className={cn(
             "p-1.5 rounded-lg transition-colors",
-            "text-muted-foreground hover:text-red-400 hover:bg-red-500/10",
+            "text-muted-foreground hover:text-error-text hover:bg-[var(--miro-danger-bg)]",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]",
             "disabled:opacity-30",
           )}

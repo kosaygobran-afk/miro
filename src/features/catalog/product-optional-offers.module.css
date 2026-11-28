@@ -115,7 +115,7 @@
   inline-size: 1.25rem;
   block-size: 1.25rem;
   margin: 0.15rem 0 0;
-  accent-color: var(--primary);
+  accent-color: var(--accent-text);
   cursor: inherit;
 }
 
@@ -232,7 +232,7 @@
 }
 
 .stock[data-available="true"] .stockDot {
-  color: var(--secondary-accent);
+  color: var(--miro-success);
 }
 
 .summary {

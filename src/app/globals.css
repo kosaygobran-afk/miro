@@ -2,133 +2,140 @@
 
 @import "tailwindcss";
 
+/* Shared by both appearance versions, including body-level dialog portals.
+   Use gold for a filled action and accent for text on a reading surface. */
 :root,
-[data-theme="dark"] {
-  --space-section: 3rem;
-  --space-panel: 1.25rem;
-  --type-section: 1.5rem;
+:root[data-theme="dark"] {
   color-scheme: dark;
-  /* Sales channel semantics (management): POS = cyan, Website = violet */
-  --sales-channel-pos: #57e5dc;
-  --sales-channel-website: #b6a1ff;
-  /* New Dark: High contrast, pure black, luminous gold, neon turquoise */
-  --background: #000000;
-  --surface: #080808;
-  --surface-muted: #101010;
-  --surface-hover: #1a1a1a;
-  --foreground: #ffffff;
-  --muted-foreground: #c8c8c8;
-  --border-subtle: #595959;
-  --border-control: #969696;
-  --primary: #ffd700;
-  --primary-hover: #ffe766;
-  --primary-foreground: #000000;
-  --accent-text: #ffe44d;
-  --secondary-accent: #00ffe0;
-  --success-text: #5cff95;
-  --error-text: #ff767f;
-  --badge-admin: #d998ff;
-  --badge-worker: #69c7ff;
-  --badge-customer: #5cff95;
-  --badge-suspended: #ffdf4d;
-  --hero-glow: rgba(255, 215, 0, 0.1);
-  --header-surface: #000000;
-  --header-surface-strong: #000000;
-
-  --radius-xs: 0.375rem;
-  --radius-sm: 0.625rem;
-  --radius-md: 0.875rem;
-  --radius-lg: 1.125rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
-  --radius-full: 9999px;
-  --shadow-soft: 0 8px 24px rgba(0, 0, 0, 0.6);
-  --shadow-lift: 0 18px 38px rgba(0, 0, 0, 0.75);
-  --shadow-glow:
-    0 0 0 1px rgba(255, 215, 0, 0.7), 0 0 12px rgba(255, 215, 0, 0.2),
-    0 0 24px rgba(255, 215, 0, 0.08);
-  /* Dark-specific tokens */
-  --focus-ring: #00ffe0;
-  --gold-highlight: #fff3b0;
-  --turquoise-highlight: #a6fff4;
-  --turquoise-glow:
-    0 0 10px rgba(0, 255, 224, 0.2), 0 0 22px rgba(0, 255, 224, 0.08);
+  --miro-canvas: #0b0b0b;
+  --miro-surface: #171717;
+  --miro-raised: #252525;
+  --miro-inset: #202020;
+  --miro-hover: #303030;
+  --miro-text: #f6f5ef;
+  --miro-muted: #d0cec7;
+  --miro-subtle: #aaa9a3;
+  --miro-border: #424242;
+  --miro-control-border: #8b8980;
+  --miro-gold: #edc451;
+  --miro-gold-hover: #f7d577;
+  --miro-on-gold: #211c10;
+  --miro-accent: #f1d37a;
+  --miro-tint: #352e1b;
+  --miro-focus: #ffe39a;
+  --miro-shadow: 0 2px 8px rgb(0 0 0 / 24%);
+  --miro-shadow-raised: 0 8px 24px rgb(0 0 0 / 38%);
+  --miro-scrim: rgb(0 0 0 / 72%);
+  --miro-success: #94d8ae;
+  --miro-success-bg: #1c3226;
+  --miro-warning: #f0c380;
+  --miro-warning-bg: #392c1c;
+  --miro-danger: #ffa7a7;
+  --miro-danger-bg: #3b2325;
+  --miro-info: #aacddd;
+  --miro-info-bg: #213038;
+  --sales-channel-pos: #94d1c5;
+  --sales-channel-website: #c9b8e9;
 }
 
-[data-theme="medium"] {
-  /* Medium now holds the former Dark appearance */
-  color-scheme: dark;
-  /* Sales channel semantics (management): POS = cyan, Website = violet */
-  --sales-channel-pos: #006d68;
-  --sales-channel-website: #6841bc;
-  --space-section: 3rem;
-  --space-panel: 1.25rem;
-  --type-section: 1.5rem;
-  --background: #090b0d;
-  --surface: #121518;
-  --surface-muted: #1b1f23;
-  --surface-hover: #23282c;
-  --foreground: #f5f6f7;
-  --muted-foreground: #aeb5bc;
-  --border-subtle: #2c3238;
-  --border-control: #7e8a95;
-  --primary: #ffca28;
-  --primary-hover: #ffda66;
-  --primary-foreground: #111214;
-  --accent-text: #ffce42;
-  --secondary-accent: #69e1d3;
-  --success-text: #7fe5a2;
-  --error-text: #ff9a9a;
-  --badge-admin: #c084fc;
-  --badge-worker: #60a5fa;
-  --badge-customer: #4ade80;
-  --badge-suspended: #fbbf24;
-  --hero-glow: rgba(242, 194, 29, 0.22);
-  --header-surface: rgba(11, 14, 16, 0.94);
-  --header-surface-strong: rgba(12, 16, 19, 0.92);
-
-  --radius-xs: 0.375rem;
-  --radius-sm: 0.625rem;
-  --radius-md: 0.875rem;
-  --radius-lg: 1.125rem;
-  --radius-xl: 1.5rem;
-  --radius-2xl: 2rem;
-  --radius-full: 9999px;
-  --shadow-soft: 0 8px 24px rgb(0 0 0 / 12%);
-  --shadow-lift: 0 18px 38px rgb(0 0 0 / 20%);
-  --shadow-glow: 0 3px 12px rgb(255 202 40 / 9%);
-  --focus-ring: #ffca28;
-}
-
-[data-theme="light"] {
+:root[data-theme="medium"] {
   color-scheme: light;
-  /* Sales channel semantics (management): POS = cyan, Website = violet */
-  --sales-channel-pos: #006d68;
-  --sales-channel-website: #6841bc;
-  --background: #f7f8fa;
-  --surface: #ffffff;
-  --surface-muted: #edf2ef;
-  --surface-hover: #e1e7e4;
-  --foreground: #151b22;
-  --muted-foreground: #3a4652;
-  --border-subtle: #c4ccd5;
-  --border-control: #748391;
-  --primary: #f2c21d;
-  --primary-hover: #d8a90d;
-  --primary-foreground: #141414;
-  --accent-text: #765300;
-  --secondary-accent: #0d6d60;
-  --success-text: #0d6f3d;
-  --error-text: #b12323;
-  --badge-admin: #7e22ce;
-  --badge-worker: #1d4ed8;
-  --badge-customer: #15803d;
-  --badge-suspended: #92400e;
-  --hero-glow: rgba(242, 194, 29, 0.14);
-  --header-surface: rgba(255, 255, 255, 0.84);
-  --header-surface-strong: rgba(255, 255, 255, 0.96);
-  --focus-ring: #f2c21d;
+  --miro-canvas: #d4d3d0;
+  --miro-surface: #efeeeb;
+  --miro-raised: #fbfaf8;
+  --miro-inset: #e2e1de;
+  --miro-hover: #dad9d5;
+  --miro-text: #242322;
+  --miro-muted: #474641;
+  --miro-subtle: #52514c;
+  --miro-border: #b4b2ab;
+  --miro-control-border: #696760;
+  --miro-gold: #e8ba3d;
+  --miro-gold-hover: #dba923;
+  --miro-on-gold: #211c10;
+  --miro-accent: #634906;
+  --miro-tint: #f3e5b9;
+  --miro-focus: #694b00;
+  --miro-shadow: 0 2px 6px rgb(36 32 24 / 9%);
+  --miro-shadow-raised: 0 8px 24px rgb(36 32 24 / 16%);
+  --miro-scrim: rgb(23 22 19 / 50%);
+  --miro-success: #185c3c;
+  --miro-success-bg: #dceade;
+  --miro-warning: #724607;
+  --miro-warning-bg: #f3e4c9;
+  --miro-danger: #8b2936;
+  --miro-danger-bg: #f3dfe0;
+  --miro-info: #265774;
+  --miro-info-bg: #dce8ee;
+  --sales-channel-pos: #205850;
+  --sales-channel-website: #5f497e;
+}
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  --miro-canvas: #f8f7f3;
+  --miro-surface: #ffffff;
+  --miro-raised: #ffffff;
+  --miro-inset: #f1f0eb;
+  --miro-hover: #eae7df;
+  --miro-text: #262520;
+  --miro-muted: #504e47;
+  --miro-subtle: #605d55;
+  --miro-border: #d9d6cc;
+  --miro-control-border: #7b776b;
+  --miro-gold: #efbf37;
+  --miro-gold-hover: #e4af20;
+  --miro-on-gold: #211c10;
+  --miro-accent: #705109;
+  --miro-tint: #faf0ce;
+  --miro-focus: #785600;
+  --miro-shadow: 0 2px 8px rgb(40 34 19 / 6%);
+  --miro-shadow-raised: 0 8px 24px rgb(40 34 19 / 12%);
+  --miro-scrim: rgb(23 22 19 / 46%);
+  --miro-success: #206240;
+  --miro-success-bg: #e5f2e8;
+  --miro-warning: #79500e;
+  --miro-warning-bg: #fbefd6;
+  --miro-danger: #983240;
+  --miro-danger-bg: #f9e8e9;
+  --miro-info: #2b5a78;
+  --miro-info-bg: #e7f0f6;
+  --sales-channel-pos: #23635b;
+  --sales-channel-website: #634d82;
+}
+
+:root {
+  --background: var(--miro-canvas);
+  --surface: var(--miro-surface);
+  --surface-muted: var(--miro-inset);
+  --surface-elevated: var(--miro-raised);
+  --surface-hover: var(--miro-hover);
+  --foreground: var(--miro-text);
+  --muted-foreground: var(--miro-muted);
+  --border-subtle: var(--miro-border);
+  --border-control: var(--miro-control-border);
+  --primary: var(--miro-gold);
+  --primary-hover: var(--miro-gold-hover);
+  --primary-foreground: var(--miro-on-gold);
+  --accent-text: var(--miro-accent);
+  --secondary-accent: var(--sales-channel-pos);
+  --success-text: var(--miro-success);
+  --error-text: var(--miro-danger);
+  --warning-text: var(--miro-warning);
+  --badge-admin: var(--sales-channel-website);
+  --badge-worker: var(--miro-info);
+  --badge-customer: var(--miro-success);
+  --badge-suspended: var(--miro-warning);
+  --focus-ring: var(--miro-focus);
+  --hero-glow: color-mix(in srgb, var(--miro-gold) 10%, transparent);
+  --header-surface: color-mix(in srgb, var(--miro-surface) 97%, transparent);
+  --header-surface-strong: var(--miro-raised);
+  --shadow-soft: var(--miro-shadow);
+  --shadow-lift: var(--miro-shadow-raised);
+  --shadow-glow: var(--miro-shadow);
+  --space-section: 3rem;
+  --space-panel: 1.25rem;
+  --type-section: 1.5rem;
   --radius-xs: 0.375rem;
   --radius-sm: 0.625rem;
   --radius-md: 0.875rem;
@@ -136,20 +143,6 @@
   --radius-xl: 1.5rem;
   --radius-2xl: 2rem;
   --radius-full: 9999px;
-  --shadow-soft: 0 18px 38px rgba(19, 28, 35, 0.08);
-  --shadow-lift: 0 24px 42px rgba(19, 28, 35, 0.12);
-  --shadow-glow:
-    0 0 0 1px rgba(242, 194, 29, 0.28), 0 14px 34px rgba(242, 194, 29, 0.12);
-}
-
-/* Management-scoped Light theme tokens for stronger contrast in admin */
-[data-theme="light"] .mgmt-shell {
-  --mgmt-sidebar-bg: #eef1f5;
-  --mgmt-panel-border: #c4ccd5;
-  --mgmt-active-bg: #f5e6a0;
-  --mgmt-active-fg: #5a3f00;
-  --mgmt-active-border: #8a6500;
-  --mgmt-hover-bg: #e2e8ef;
 }
 
 @theme inline {
@@ -188,7 +181,7 @@ html {
   background: var(--background);
   color: var(--foreground);
   overflow-x: clip;
-  scrollbar-color: color-mix(in srgb, var(--primary) 72%, #f4d76c) transparent;
+  scrollbar-color: var(--miro-control-border) transparent;
   scrollbar-width: thin;
 }
 
@@ -197,7 +190,7 @@ body {
   margin: 0;
   overflow-x: clip;
   background:
-    linear-gradient(180deg, rgba(242, 194, 29, 0.045), transparent 18rem),
+    linear-gradient(180deg, color-mix(in srgb, var(--miro-gold) 4%, transparent), transparent 18rem),
     var(--background);
   color: var(--foreground);
   font-family: var(--font-miro), Arial, sans-serif;
@@ -223,13 +216,13 @@ html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 78%, #e6d282);
+  background: var(--miro-control-border);
   background-clip: padding-box;
 }
 
 html::-webkit-scrollbar-thumb:hover,
 body::-webkit-scrollbar-thumb:hover {
-  background: color-mix(in srgb, var(--primary) 92%, #f3d86d);
+  background: var(--miro-accent);
   background-clip: padding-box;
 }
 
@@ -275,7 +268,7 @@ textarea {
 }
 
 :focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -385,7 +378,7 @@ textarea {
   border-bottom: 1px solid var(--border-subtle);
   background: var(--header-surface);
   backdrop-filter: blur(18px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--miro-shadow);
 }
 
 .miro-input::placeholder {
@@ -447,8 +440,8 @@ details[open] > p {
 }
 
 ::selection {
-  background: #ffcf00;
-  color: #090a0b;
+  background: var(--miro-gold);
+  color: var(--miro-on-gold);
 }
 
 @keyframes miro-enter {
@@ -532,18 +525,9 @@ details[open] > p {
   }
 }
 
-/* Glass panel utility */
 .glass-panel {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-@media (prefers-color-scheme: dark) {
-  .glass-panel {
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
+  background: var(--miro-raised);
+  border: 1px solid var(--miro-border);
 }
 
 /* Canvas specific styles */
@@ -564,25 +548,25 @@ details[open] > p {
 }
 
 .canvas-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(242, 194, 29, 0.6);
+  background: var(--miro-control-border);
   border-radius: 4px;
 }
 
 .canvas-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(242, 194, 29, 0.8);
+  background: var(--miro-accent);
 }
 
 /* Focus visible styles for canvas tools */
 .canvas-tool:focus-visible {
-  outline: 2px solid #f2c21d;
+  outline: 2px solid var(--miro-focus);
   outline-offset: 2px;
 }
 
 /* Selection highlight */
 .selection-highlight {
   box-shadow:
-    0 0 0 2px #2563eb,
-    0 0 0 4px rgba(37, 99, 235, 0.2);
+    0 0 0 2px var(--miro-focus),
+    0 0 0 4px var(--miro-tint);
 }
 
 /* Snap line animation */
@@ -603,8 +587,8 @@ details[open] > p {
 /* Minimap viewfinder */
 .minimap-viewfinder {
   box-shadow:
-    inset 0 0 0 2px #2563eb,
-    0 0 0 1px rgba(255, 255, 255, 0.5);
+    inset 0 0 0 2px var(--miro-focus),
+    0 0 0 1px var(--miro-surface);
 }
 
 /* Toolbar pill animation */

@@ -86,7 +86,7 @@ export function CheckEmailClient({
       {/* Animated Mail Icon */}
       <div className="mx-auto mb-6 relative">
         <div className="w-20 h-20 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center animate-pulse">
-          <Mail className="w-10 h-10 text-primary" />
+          <Mail className="w-10 h-10 text-accent-text" />
         </div>
         {/* Orbiting dots animation */}
         <div className="absolute inset-0 -inset-4 flex items-center justify-center pointer-events-none">

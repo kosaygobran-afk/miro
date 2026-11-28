@@ -34,7 +34,7 @@ export default function DesignSystemPage() {
             ["CEO shell", "/en/admin", Palette],
           ].map(([title, href, Icon]) => (
             <div key={title as string} className="miro-card p-5">
-              <Icon className="mb-5 size-12 text-primary" aria-hidden="true" />
+              <Icon className="mb-5 size-12 text-accent-text" aria-hidden="true" />
               <h2 className="text-xl font-black">{title as string}</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Preview link points to a real private route, which remains

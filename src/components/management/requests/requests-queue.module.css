@@ -45,7 +45,7 @@
 }
 
 .statusTab:focus-visible {
-  outline: 2px solid var(--color-primary, #d9a509);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -98,7 +98,7 @@
 
 .select:focus-visible,
 .input:focus-visible {
-  outline: 2px solid var(--color-primary, #d9a509);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -214,7 +214,7 @@
 }
 
 .linkLike {
-  color: var(--color-primary, #d9a509);
+  color: var(--accent-text);
   background: none;
   border: none;
   padding: 0;
@@ -241,7 +241,7 @@
 }
 
 .rowChevron:focus-visible {
-  outline: 2px solid var(--color-primary, #d9a509);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -272,7 +272,7 @@
 }
 
 .contactLinks a {
-  color: var(--color-primary, #d9a509);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -363,7 +363,7 @@
 
 .contactAction:hover {
   border-color: var(--color-primary, #d9a509);
-  color: var(--color-primary, #d9a509);
+  color: var(--accent-text);
 }
 
 .productCard {
@@ -390,7 +390,7 @@
 
 .productLink {
   font-size: 0.8125rem;
-  color: var(--color-primary, #d9a509);
+  color: var(--accent-text);
 }
 
 .messageBox {
@@ -571,7 +571,7 @@
   min-inline-size: 0;
 }
 
-/* Premium operations workspace: readable density, neon cues, local overflow. */
+/* Request filters and status board. */
 .quickActions {
   display: flex;
   align-items: center;
@@ -584,8 +584,8 @@
   min-inline-size: 1.35rem;
   block-size: 1.35rem;
   border-radius: 50%;
-  background: var(--report-cyan);
-  color: var(--surface);
+  background: var(--miro-gold);
+  color: var(--miro-on-gold);
   font-size: 0.75rem;
 }
 .statusTabs {
@@ -599,9 +599,9 @@
   border: 1px solid transparent;
 }
 .statusTab[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--report-cyan) 12%, var(--surface));
-  color: var(--report-cyan);
-  border-color: color-mix(in srgb, var(--report-cyan) 35%, transparent);
+  background: color-mix(in srgb, var(--accent-text) 12%, var(--surface));
+  color: var(--accent-text);
+  border-color: color-mix(in srgb, var(--accent-text) 35%, transparent);
 }
 :global(html[data-appearance-version="2"]) .statusTabs {
   row-gap: 0.5rem;
@@ -665,11 +665,11 @@
   font-size: 0.85rem;
 }
 .requestCard:hover {
-  border-color: var(--report-cyan);
+  border-color: var(--accent-text);
   box-shadow: 0 6px 20px #0000000a;
 }
 .requestCard:focus-visible {
-  outline: 2px solid var(--report-cyan);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .cardMessage {
@@ -743,17 +743,17 @@
   border-color: var(--border-control);
 }
 .productCard {
-  background: color-mix(in srgb, var(--report-cyan) 5%, var(--surface));
+  background: color-mix(in srgb, var(--accent-text) 5%, var(--surface));
   border-color: color-mix(
     in srgb,
-    var(--report-cyan) 25%,
+    var(--accent-text) 25%,
     var(--border-subtle)
   );
 }
 .statusAction[data-active] {
-  border-color: var(--report-cyan);
-  color: var(--report-cyan);
-  background: color-mix(in srgb, var(--report-cyan) 10%, var(--surface));
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent-text) 10%, var(--surface));
 }
 .messageBox {
   background: var(--surface-muted);

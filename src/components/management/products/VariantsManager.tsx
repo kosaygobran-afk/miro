@@ -448,7 +448,7 @@ export function VariantsManager({
                     </td>
                     <td className="p-3">
                       {variant.is_default && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[var(--miro-tint)] text-accent-text">
                           {he ? "ברירת מחדל" : "Default"}
                         </span>
                       )}
@@ -562,7 +562,7 @@ export function VariantsManager({
                         : (variant.color_en ?? "—")}
                     </p>
                     {variant.is_default && (
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800 whitespace-nowrap">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--miro-tint)] text-accent-text whitespace-nowrap">
                         {he ? "ברירת מחדל" : "Default"}
                       </span>
                     )}

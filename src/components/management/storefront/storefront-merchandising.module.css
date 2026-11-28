@@ -168,8 +168,8 @@
   width: fit-content;
   border-radius: 999px;
   padding: 0.18rem 0.45rem;
-  background: color-mix(in srgb, var(--destructive) 14%, transparent);
-  color: var(--destructive);
+  background: color-mix(in srgb, var(--miro-danger) 14%, transparent);
+  color: var(--miro-danger);
   font-size: 0.72rem;
   font-weight: 800;
 }
@@ -275,7 +275,7 @@
 .fieldControl:focus,
 .compactSelect:focus {
   border-color: var(--primary);
-  outline: 3px solid color-mix(in srgb, var(--primary) 22%, transparent);
+  outline: 3px solid var(--focus-ring);
 }
 
 .searchField {
@@ -448,7 +448,7 @@
   border: 1px solid var(--border-control);
   border-radius: 0.5rem;
   background: var(--surface);
-  color: var(--destructive);
+  color: var(--miro-danger);
   cursor: pointer;
 }
 
@@ -535,8 +535,8 @@
 }
 .stepperButton:hover,
 .addBadgeButton:hover {
-  color: var(--report-cyan);
-  border-color: var(--report-cyan);
+  color: var(--accent-text);
+  border-color: var(--accent-text);
 }
 .previewContent {
   min-inline-size: 0;
@@ -859,7 +859,7 @@
 }
 
 .badgeChoiceInput:focus-visible + span {
-  outline: 3px solid color-mix(in srgb, var(--primary) 45%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 

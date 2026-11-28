@@ -185,7 +185,7 @@
   animation-play-state: paused;
 }
 .mgmt-overflow-text:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   overflow-x: auto;
 }
@@ -245,7 +245,7 @@
 }
 .mgmt-shell :is(.miro-input, .users-management__select):focus-visible {
   border-color: var(--primary);
-  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 .mgmt-shell :is(.mgmt-form-field__label, .mgmt-filter-field > span) {
@@ -297,7 +297,7 @@
   box-shadow: inset 0 1px 3px rgb(0 0 0 / 6%);
 }
 .mgmt-search-field input:focus {
-  outline: 2px solid color-mix(in srgb, var(--primary) 55%, transparent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-color: var(--primary);
 }
@@ -920,7 +920,7 @@
   cursor: help;
 }
 .mgmt-text-hint:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 4px;
 }
 .mgmt-text-hint__tooltip {

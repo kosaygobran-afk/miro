@@ -17,7 +17,7 @@ async function prepare(page: Page, theme: Theme = "dark") {
 }
 
 async function ready(page: Page, path = "/en/services") {
-  await page.goto(path);
+  await page.goto(path, { waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute(
     "data-motion-ready",
     "true",
@@ -216,7 +216,7 @@ test("visitors receive the shared setting and cannot change it with a legacy loc
     );
   });
   await expect(page.locator("html")).toHaveAttribute("data-glass", "on");
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("html")).toHaveAttribute(
     "data-motion-ready",
     "true",
