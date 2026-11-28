@@ -98,7 +98,7 @@
   display: block;
   flex: 0 0 auto;
   padding: 0.25rem 0.75rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   background: var(--surface);
   border-block-end: 1px solid var(--border-subtle);
   font-size: 0.75rem;

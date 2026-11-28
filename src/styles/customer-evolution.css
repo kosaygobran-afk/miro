@@ -1,83 +1,8 @@
-/* Appearance 2 is additive. Appearance 1 keeps the original public layers.
-   The root palette explicitly excludes the console so its Dark mode remains intact. */
+/* Version 2 customer geometry. Colors are shared with the management UI. */
 :root[data-appearance-version="2"] {
   --customer-radius: 1.25rem;
   --customer-radius-small: 0.85rem;
   --customer-panel-padding: clamp(1.15rem, 2.2vw, 2rem);
-}
-
-:root[data-appearance-version="2"][data-theme="dark"]:not(
-    :has(.mgmt-shell-root, [data-management-surface="true"])
-  ) {
-  --background: #0b0d11;
-  --surface: #15191f;
-  --surface-muted: #1b2027;
-  --surface-hover: #262d36;
-  --foreground: #f4f6f8;
-  --muted-foreground: #b6c0cb;
-  --border-subtle: #39424e;
-  --border-control: #818e9d;
-  --primary: #f5c748;
-  --primary-hover: #ffda75;
-  --accent-text: #f4ce68;
-  --primary-foreground: #1d211c;
-  --header-surface: #101318f5;
-  --focus-ring: #f5c748;
-  --shadow-soft: 0 8px 24px #00000020;
-  --shadow-lift: 0 18px 40px #00000040;
-  --shadow-glow: 0 4px 16px #f5c74812;
-}
-
-:root[data-appearance-version="2"][data-theme="medium"]:not(
-    :has(.mgmt-shell-root, [data-management-surface="true"])
-  ) {
-  --background: #20252b;
-  --surface: #2b323a;
-  --surface-muted: #343d46;
-  --surface-hover: #414b56;
-  --foreground: #f6f8fa;
-  --muted-foreground: #c8d0d9;
-  --border-subtle: #576474;
-  --border-control: #96a3b2;
-  --primary: #f5c748;
-  --primary-hover: #ffda75;
-  --accent-text: #f5d071;
-  --primary-foreground: #1d211c;
-  --header-surface: #262d34f5;
-  --focus-ring: #f5c748;
-  --shadow-soft: 0 8px 24px #00000012;
-  --shadow-lift: 0 18px 40px #00000024;
-  --shadow-glow: 0 4px 16px #f5c74810;
-}
-
-:root[data-appearance-version="2"][data-theme="light"]:not(
-    :has(.mgmt-shell-root, [data-management-surface="true"])
-  ) {
-  /* Warm, quiet surfaces reduce glare. Gold text has its own darker token. */
-  --background: #f1f2ed;
-  --surface: #fafbf7;
-  --surface-muted: #e7eae3;
-  --surface-hover: #dde2d8;
-  --foreground: #202821;
-  --muted-foreground: #515d53;
-  --border-subtle: #c5cdc2;
-  --border-control: #768273;
-  --primary: #e8bd42;
-  --primary-hover: #ddaf2d;
-  --primary-foreground: #19251b;
-  --accent-text: #765512;
-  --secondary-accent: #28634c;
-  --header-surface: #f5f7f1f5;
-  --focus-ring: #765512;
-  --shadow-soft: 0 6px 22px #26342608;
-  --shadow-lift: 0 16px 36px #26342614;
-  --shadow-glow: 0 4px 16px #7655120a;
-}
-
-/* Stock counts need text contrast against the warmer tinted badge, too. */
-:root[data-appearance-version="2"][data-theme="light"]
-  .sf-stock-indicator--abundant {
-  --stock-color: #076939;
 }
 
 /* Public controls use one geometry; structural widths stay responsive. */
@@ -100,7 +25,7 @@
   min-height: 48px;
   padding-inline: 1.25rem;
   font-weight: 720;
-  box-shadow: 0 3px 10px color-mix(in srgb, var(--foreground) 7%, transparent);
+  box-shadow: var(--shadow-soft);
   transition-duration: var(--motion-button-duration);
   transition-timing-function: var(--motion-easing);
 }
@@ -119,8 +44,8 @@
     :has(.mgmt-shell-root, [data-management-surface="true"])
   )
   .miro-input::placeholder {
-  color: var(--muted-foreground);
-  opacity: 0.82;
+  color: var(--miro-subtle);
+  opacity: 1;
 }
 :root[data-appearance-version="2"]:not(
     :has(.mgmt-shell-root, [data-management-surface="true"])
@@ -131,7 +56,7 @@
 }
 :root[data-appearance-version="2"] .premium-header {
   border-bottom-color: var(--border-subtle);
-  box-shadow: 0 4px 18px color-mix(in srgb, var(--foreground) 4%, transparent);
+  box-shadow: var(--shadow-soft);
 }
 :root[data-appearance-version="2"] .premium-nav-link {
   min-height: 46px;
@@ -184,9 +109,6 @@
   max-width: 18ch;
   text-wrap: balance;
   letter-spacing: -0.035em;
-}
-:root[data-appearance-version="2"][data-theme="light"] .sf-hero h1 span {
-  color: var(--accent-text);
 }
 :root[data-appearance-version="2"]
   :is(.sf-hero-intro, .experience-hero-description, .experience-description) {

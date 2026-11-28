@@ -103,7 +103,7 @@ export function PromoBadge({
         badge={badge}
         size={size}
         locale={locale}
-        className={className}
+        className={`${TONES[badge.tone]} ${className}`}
       />
     );
 

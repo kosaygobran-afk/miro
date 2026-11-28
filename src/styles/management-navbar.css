@@ -487,7 +487,7 @@
     border-color: var(--border-control);
     border-radius: 1.1rem;
     background: var(--surface);
-    box-shadow: 0 1rem 2.5rem rgb(0 0 0 / 22%);
+    box-shadow: var(--miro-shadow-raised);
   }
   .mgmt-account__identity {
     grid-template-columns: 2.75rem minmax(0, 1fr);

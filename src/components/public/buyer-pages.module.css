@@ -13,6 +13,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: clamp(1rem, 1.6vw, 1.75rem);
   background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .hero:not(:has(.heroMedia)) {
@@ -113,7 +114,7 @@
 .equipmentImage {
   position: relative;
   overflow: hidden;
-  background: #121210;
+  background: var(--surface-muted);
 }
 
 .heroMedia {
@@ -132,7 +133,7 @@
 .heroMedia[data-full-image] img {
   object-fit: contain;
   object-position: center;
-  background-color: #090909;
+  background-color: var(--surface-muted);
 }
 
 .section {

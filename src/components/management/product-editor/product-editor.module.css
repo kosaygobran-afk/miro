@@ -173,7 +173,7 @@
 }
 
 .sectionNavItem:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -271,7 +271,7 @@
 }
 
 .chipRemove:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -305,7 +305,7 @@
   white-space: nowrap;
 }
 .fileInput:focus-visible + label {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .fileInput:disabled + label {
@@ -422,7 +422,7 @@
 }
 
 .iconButton:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -554,12 +554,12 @@
 }
 .sectionNavItemActive,
 .sectionNavItemActive:hover {
-  background: color-mix(in srgb, var(--report-cyan) 10%, var(--surface));
-  color: var(--report-cyan);
+  background: color-mix(in srgb, var(--accent-text) 10%, var(--surface));
+  color: var(--accent-text);
   font-weight: 600;
 }
 .sectionNavItem:focus-visible {
-  outline-color: var(--report-cyan);
+  outline-color: var(--focus-ring);
 }
 .chip {
   border-radius: 0.55rem;
@@ -599,7 +599,7 @@
   .sectionNavItemActive {
     border-color: color-mix(
       in srgb,
-      var(--report-cyan) 35%,
+      var(--accent-text) 35%,
       var(--border-subtle)
     );
   }

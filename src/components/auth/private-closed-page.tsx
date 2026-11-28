@@ -84,7 +84,7 @@ export async function PrivateClosedPage({
       <div className="miro-container max-w-xl">
         <div className="miro-card p-8 text-center">
           <Lock
-            className="mx-auto mb-5 size-14 text-primary"
+            className="mx-auto mb-5 size-14 text-accent-text"
             aria-hidden="true"
           />
           <p className="text-sm font-black uppercase tracking-[0.24em] text-accent-text">

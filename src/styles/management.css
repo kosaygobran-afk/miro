@@ -33,40 +33,21 @@
   /* Sidebar brand identity (single source; layered files may re-assign). */
   --mgmt-sidebar-brand-gap: 0.7rem;
   --mgmt-sidebar-brand-padding: 1.5rem 1rem;
-  /* Gold active/brand paints — formerly hard-coded literals. */
-  --mgmt-gold-hi: #ffe889;
-  --mgmt-gold-lo: #ffcf32;
-  --mgmt-gold-ink: #201b08;
-  --mgmt-gold-edge: #ffe690;
-  --mgmt-gold-sheen: #fff4c3;
+  --mgmt-gold-hi: var(--miro-gold-hover);
+  --mgmt-gold-lo: var(--miro-gold);
+  --mgmt-gold-ink: var(--miro-on-gold);
+  --mgmt-gold-edge: var(--miro-gold);
+  --mgmt-gold-sheen: color-mix(in srgb, var(--miro-gold) 65%, white);
 }
 
-/* Management design tokens for Dark theme completeness */
-[data-theme="dark"] {
-  --mgmt-sidebar-bg: #080808;
-  --mgmt-panel-border: #595959;
-  --mgmt-active-bg: color-mix(in srgb, var(--primary) 15%, transparent);
-  --mgmt-active-fg: var(--accent-text);
-  --mgmt-active-border: var(--primary);
-  --mgmt-hover-bg: #1a1a1a;
-}
-
-[data-theme="medium"] {
-  --mgmt-sidebar-bg: #121518;
-  --mgmt-panel-border: #2c3238;
-  --mgmt-active-bg: color-mix(in srgb, var(--primary) 15%, transparent);
-  --mgmt-active-fg: var(--accent-text);
-  --mgmt-active-border: var(--primary);
-  --mgmt-hover-bg: #23282c;
-}
-
-[data-theme="light"] .mgmt-shell {
-  --mgmt-sidebar-bg: #eef1f5;
-  --mgmt-panel-border: #c4ccd5;
-  --mgmt-active-bg: #fff1bf;
-  --mgmt-active-fg: #654700;
-  --mgmt-active-border: #927000;
-  --mgmt-hover-bg: #e2e8ef;
+.mgmt-shell,
+#mgmt-overlay-portal-host {
+  --mgmt-sidebar-bg: var(--miro-surface);
+  --mgmt-panel-border: var(--miro-border);
+  --mgmt-active-bg: var(--miro-tint);
+  --mgmt-active-fg: var(--miro-accent);
+  --mgmt-active-border: var(--miro-accent);
+  --mgmt-hover-bg: var(--miro-hover);
 }
 
 /* ---------- Sticky layout variables ---------- */
@@ -181,7 +162,7 @@
 }
 
 .product-management__action:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--primary) 42%, transparent);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -196,7 +177,7 @@
 }
 
 .product-management__action--warning {
-  color: var(--warning-text, #a16207);
+  color: var(--miro-warning);
 }
 
 .product-management__action--danger {
@@ -215,7 +196,7 @@
   border-radius: 0.45rem;
   background: var(--foreground);
   color: var(--background);
-  box-shadow: 0 8px 24px #00000024;
+  box-shadow: var(--miro-shadow-raised);
   font-size: 0.7rem;
   font-weight: 700;
   line-height: 1.2;
@@ -258,7 +239,7 @@
 .mgmt-date-range__preset:focus-visible,
 .mgmt-toolbar__search-input:focus-visible,
 .mgmt-status-badge:focus-visible {
-  outline: 3px solid var(--accent-text);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -404,7 +385,11 @@
   flex-shrink: 0;
   place-items: center;
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--primary) 0%, #fff1a8 100%);
+  background: linear-gradient(
+    135deg,
+    var(--miro-gold) 0%,
+    var(--miro-gold-hover) 100%
+  );
   box-shadow: var(--shadow-glow);
   color: var(--primary-foreground);
   font-size: 1.05rem;
@@ -484,7 +469,7 @@
   place-items: center;
   border-radius: var(--radius-full);
   background: color-mix(in srgb, var(--primary) 16%, var(--surface));
-  color: var(--primary);
+  color: var(--accent-text);
   border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
   font-size: 0.78rem;
   font-weight: 900;
@@ -971,7 +956,7 @@
 .mgmt-role-badge--ceo,
 .mgmt-account__role--ceo {
   background: color-mix(in srgb, var(--primary) 18%, transparent);
-  color: var(--primary);
+  color: var(--accent-text);
   border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
@@ -1144,7 +1129,7 @@
 .mgmt-drawer-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--miro-scrim);
   backdrop-filter: blur(4px);
   animation: modal-overlay-enter 160ms ease-out;
 }
@@ -1261,7 +1246,7 @@
 .mgmt-dialog-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--miro-scrim);
   backdrop-filter: blur(4px);
   animation: modal-overlay-enter 160ms ease-out;
 }
@@ -1385,7 +1370,7 @@
   place-items: center;
   border-radius: var(--mgmt-radius-control);
   background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .mgmt-metric-card__content {
@@ -1440,7 +1425,7 @@
 
 .mgmt-metric-card--accent .mgmt-metric-card__icon {
   background: color-mix(in srgb, var(--primary) 14%, transparent);
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .mgmt-metric-card--success .mgmt-metric-card__icon {
@@ -1513,7 +1498,7 @@
   border: 1px solid var(--mgmt-panel-border);
   border-radius: 1rem;
   background: color-mix(in srgb, var(--surface) 92%, var(--background));
-  box-shadow: 0 4px 20px rgb(0 0 0 / 5%);
+  box-shadow: var(--miro-shadow);
   overflow: hidden;
 }
 
@@ -1753,31 +1738,31 @@
 
 .mgmt-status-badge--accent {
   background: color-mix(in srgb, var(--primary) 16%, transparent);
-  color: var(--primary);
+  color: var(--accent-text);
   border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
 .mgmt-status-badge--success {
-  background: color-mix(in srgb, var(--success-text) 14%, transparent);
-  color: var(--success-text);
+  background: var(--miro-success-bg);
+  color: var(--miro-success);
   border: 1px solid color-mix(in srgb, var(--success-text) 30%, transparent);
 }
 
 .mgmt-status-badge--warning {
-  background: color-mix(in srgb, var(--badge-suspended) 14%, transparent);
-  color: var(--badge-suspended);
+  background: var(--miro-warning-bg);
+  color: var(--miro-warning);
   border: 1px solid color-mix(in srgb, var(--badge-suspended) 30%, transparent);
 }
 
 .mgmt-status-badge--danger {
-  background: color-mix(in srgb, var(--error-text) 14%, transparent);
-  color: var(--error-text);
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
   border: 1px solid color-mix(in srgb, var(--error-text) 30%, transparent);
 }
 
 .mgmt-status-badge--info {
-  background: color-mix(in srgb, var(--badge-worker) 14%, transparent);
-  color: var(--badge-worker);
+  background: var(--miro-info-bg);
+  color: var(--miro-info);
   border: 1px solid color-mix(in srgb, var(--badge-worker) 30%, transparent);
 }
 
@@ -1952,7 +1937,7 @@
   place-items: center;
   border-radius: var(--radius-xl);
   background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .mgmt-error-state__icon {
@@ -2066,26 +2051,26 @@
 
 .mgmt-notice--info {
   border-color: color-mix(in srgb, var(--badge-worker) 30%, transparent);
-  background: color-mix(in srgb, var(--badge-worker) 8%, var(--surface));
-  color: var(--badge-worker);
+  background: var(--miro-info-bg);
+  color: var(--miro-info);
 }
 
 .mgmt-notice--success {
   border-color: color-mix(in srgb, var(--success-text) 30%, transparent);
-  background: color-mix(in srgb, var(--success-text) 8%, var(--surface));
-  color: var(--success-text);
+  background: var(--miro-success-bg);
+  color: var(--miro-success);
 }
 
 .mgmt-notice--warning {
   border-color: color-mix(in srgb, var(--badge-suspended) 30%, transparent);
-  background: color-mix(in srgb, var(--badge-suspended) 8%, var(--surface));
-  color: var(--badge-suspended);
+  background: var(--miro-warning-bg);
+  color: var(--miro-warning);
 }
 
 .mgmt-notice--danger {
   border-color: color-mix(in srgb, var(--error-text) 30%, transparent);
-  background: color-mix(in srgb, var(--error-text) 8%, var(--surface));
-  color: var(--error-text);
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
 }
 
 .mgmt-notice :where(.mgmt-notice__title) {
@@ -2780,7 +2765,7 @@
   background: var(--surface-hover);
 }
 .mgmt-icon-action:focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .mgmt-icon-action--danger:hover:not(:disabled) {
@@ -2806,7 +2791,7 @@
   font-weight: 600;
   line-height: 1.5;
   text-align: center;
-  box-shadow: 0 8px 24px rgb(0 0 0 / 20%);
+  box-shadow: var(--miro-shadow-raised);
   pointer-events: none;
 }
 .mgmt-activation-switch {
@@ -2829,7 +2814,7 @@
   inline-size: 1.0625rem;
   block-size: 1.0625rem;
   border-radius: 50%;
-  background: linear-gradient(145deg, #fafafa, #a9afb5);
+  background: var(--miro-text);
   box-shadow:
     inset 0 1px 0 #fff,
     0 2px 3px rgb(0 0 0 / 35%);
@@ -2839,7 +2824,7 @@
   inline-size: 0.1875rem;
   block-size: 0.4375rem;
   border-radius: 1px;
-  background: #61676d;
+  background: var(--miro-surface);
 }
 .mgmt-activation-switch[aria-checked="true"] .mgmt-activation-switch__track {
   background: color-mix(in srgb, var(--success-text) 35%, var(--surface));
@@ -2856,7 +2841,7 @@
 .mgmt-activation-switch[aria-checked="true"]
   .mgmt-activation-switch__thumb
   > span {
-  background: #167645;
+  background: var(--miro-surface);
 }
 .mgmt-row-actions {
   display: inline-flex;

@@ -70,7 +70,7 @@
   }
 
   .overview :global(.mgmt-status-badge--info) {
-    color: color-mix(in srgb, var(--report-cyan) 80%, var(--foreground));
+    color: color-mix(in srgb, var(--miro-info) 80%, var(--foreground));
   }
 
   .identity {
@@ -375,7 +375,7 @@
   }
 
   :is(a, button, select):focus-visible {
-    outline: 2px solid var(--accent-text);
+    outline: 2px solid var(--focus-ring);
     outline-offset: 3px;
   }
 

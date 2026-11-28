@@ -7,9 +7,11 @@
 .card {
   width: min(100%, 42rem);
   padding: clamp(1rem, 4vw, 2.5rem);
-  border: 1px solid var(--miro-border, #555);
+  border: 1px solid var(--border-subtle);
   border-radius: 1.25rem;
-  background: var(--miro-surface, #242424);
+  background: var(--surface);
+  color: var(--foreground);
+  box-shadow: var(--shadow-soft);
   overflow-wrap: anywhere;
   display: grid;
   gap: 1rem;
@@ -21,7 +23,7 @@
   margin: 0;
 }
 .brand {
-  color: var(--miro-accent, #d5ad50);
+  color: var(--accent-text);
   letter-spacing: 0.15em;
   font-weight: 800;
 }
@@ -43,11 +45,11 @@
   gap: 0.5rem;
 }
 .error {
-  border-inline-start: 3px solid #d96a6a;
+  border-inline-start: 3px solid var(--miro-danger);
   padding-inline-start: 0.75rem;
 }
 .warning {
-  border-inline-start: 3px solid #bd9234;
+  border-inline-start: 3px solid var(--miro-warning);
   padding-inline-start: 0.75rem;
 }
 .card label {
@@ -58,28 +60,11 @@
 .card select {
   padding: 0.7rem;
   color: inherit;
-  background: var(--miro-surface, #242424);
-  border: 1px solid var(--miro-border, #555);
+  background: var(--surface);
+  border: 1px solid var(--border-control);
   border-radius: 0.5rem;
 }
 
-/* Customer payment states use the same active public palette as the store. */
-:global(html[data-appearance-version="2"]) .card {
-  border-color: var(--border-subtle);
-  background: var(--surface);
-  color: var(--foreground);
-}
-:global(html[data-appearance-version="2"]) .brand {
-  color: var(--accent-text);
-}
 :global(html[data-appearance-version="2"]) .card select {
-  background: var(--surface);
-  border-color: var(--border-control);
   border-radius: var(--public-icon-radius, 0.75rem);
-}
-:global(html[data-appearance-version="2"]) .error {
-  border-color: var(--error-text);
-}
-:global(html[data-appearance-version="2"]) .warning {
-  border-color: var(--accent-text);
 }

@@ -1,4 +1,4 @@
-/* Appearance 2 refines component geometry; the console's dark palette is preserved. */
+/* Appearance 2 console geometry. */
 :root[data-appearance-version="2"] .mgmt-shell {
   --mgmt-content-padding: clamp(1rem, 2.5vw, 2.4rem);
 }
@@ -160,44 +160,6 @@
 :root[data-appearance-version="2"] .ceo-security form > button {
   margin-block-start: auto;
   min-block-size: 3rem;
-}
-
-/* Neutral reading surfaces replace icy whites only in the brighter console modes. */
-:root[data-appearance-version="2"]:is(
-    [data-theme="light"],
-    [data-theme="medium"]
-  )
-  :is(.mgmt-shell, #mgmt-overlay-portal-host)
-  .mgmt-status-badge--info {
-  color: color-mix(in srgb, var(--report-cyan) 88%, var(--foreground));
-}
-:root[data-appearance-version="2"][data-theme="light"]
-  :is(.mgmt-shell-root, #mgmt-overlay-portal-host) {
-  --background: #f3f3ef;
-  --foreground: #202b3a;
-  --surface: #fdfdfa;
-  --surface-muted: #edeeeb;
-  --surface-elevated: #fffffc;
-  --muted-foreground: #4e5c6f;
-  --border-subtle: #d2d8dc;
-  --border-control: #7f8e9e;
-  --accent-text: #785500;
-  --focus-ring: #785500;
-  --error-text: #a31f42;
-}
-:root[data-appearance-version="2"][data-theme="medium"]
-  :is(.mgmt-shell-root, #mgmt-overlay-portal-host) {
-  --background: #dfe3e4;
-  --foreground: #1c2a3d;
-  --surface: #edf0ee;
-  --surface-muted: #e0e6e5;
-  --surface-elevated: #f5f7f4;
-  --muted-foreground: #48586c;
-  --border-subtle: #bac5cb;
-  --border-control: #7a8c9d;
-  --accent-text: #715000;
-  --focus-ring: #715000;
-  --error-text: #a31f42;
 }
 
 @media (max-width: 767px) {

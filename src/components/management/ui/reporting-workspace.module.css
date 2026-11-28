@@ -1,7 +1,4 @@
 .workspace {
-  --report-cyan: #57e5dc;
-  --report-violet: #b6a1ff;
-  --report-lime: #c8f86c;
   display: grid;
   gap: 1.5rem;
   min-inline-size: 0;
@@ -12,12 +9,6 @@
   gap: 1.5rem;
   min-inline-size: 0;
 }
-:global([data-theme="medium"]) .workspace,
-:global([data-theme="light"]) .workspace {
-  --report-cyan: #006d68;
-  --report-violet: #6841bc;
-  --report-lime: #4b6b06;
-}
 .hero {
   min-inline-size: 0;
   padding: clamp(1.25rem, 3vw, 2rem);
@@ -26,12 +17,12 @@
   background:
     radial-gradient(
       ellipse at 100% 0%,
-      color-mix(in srgb, var(--report-violet, #b6a1ff) 11%, transparent),
+      color-mix(in srgb, var(--miro-gold) 11%, transparent),
       transparent 58%
     ),
     radial-gradient(
       ellipse at 0% 100%,
-      color-mix(in srgb, var(--report-cyan, #57e5dc) 9%, transparent),
+      color-mix(in srgb, var(--miro-gold) 9%, transparent),
       transparent 58%
     ),
     var(--surface);
@@ -54,7 +45,7 @@
   inline-size: 0.3rem;
   block-size: 0.3rem;
   border-radius: 50%;
-  background: var(--report-cyan);
+  background: var(--accent-text);
 }
 .connections {
   display: flex;
@@ -78,9 +69,9 @@
   color: var(--muted-foreground);
 }
 .connection[aria-current="page"] {
-  background: color-mix(in srgb, var(--report-cyan) 10%, transparent);
-  border-color: color-mix(in srgb, var(--report-cyan) 28%, transparent);
-  color: var(--report-cyan);
+  background: color-mix(in srgb, var(--accent-text) 10%, transparent);
+  border-color: color-mix(in srgb, var(--accent-text) 28%, transparent);
+  color: var(--accent-text);
 }
 .connection:hover {
   color: var(--foreground);
@@ -106,13 +97,13 @@
   font-size: 0.8rem;
 }
 .choices button[aria-pressed="true"] {
-  color: var(--report-cyan, var(--accent-text));
+  color: var(--accent-text);
   background: var(--surface);
-  box-shadow: 0 2px 8px #00000012;
+  box-shadow: var(--miro-shadow);
 }
 .choices button:focus-visible,
 .connection:focus-visible {
-  outline: 2px solid var(--accent-text);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 .toolbar,
@@ -174,34 +165,14 @@
   background:
     linear-gradient(
       145deg,
-      color-mix(in srgb, var(--report-cyan) 4%, transparent),
+      color-mix(in srgb, var(--accent-text) 4%, transparent),
       transparent 55%
     ),
     var(--surface);
   min-inline-size: 0;
 }
 .workspace :global(.mgmt-metric-card__icon) {
-  background: color-mix(in srgb, var(--report-cyan) 9%, transparent);
-  color: var(--report-cyan);
   border-radius: 0.85rem;
-}
-.workspace
-  :global(.mgmt-metric-card):nth-child(4n + 2)
-  :global(.mgmt-metric-card__icon) {
-  color: var(--report-violet);
-  background: color-mix(in srgb, var(--report-violet) 9%, transparent);
-}
-.workspace
-  :global(.mgmt-metric-card):nth-child(4n + 3)
-  :global(.mgmt-metric-card__icon) {
-  color: var(--accent-text);
-  background: color-mix(in srgb, var(--primary) 9%, transparent);
-}
-.workspace
-  :global(.mgmt-metric-card):nth-child(4n + 4)
-  :global(.mgmt-metric-card__icon) {
-  color: var(--report-lime);
-  background: color-mix(in srgb, var(--report-lime) 9%, transparent);
 }
 .split {
   display: grid;
@@ -232,31 +203,20 @@
   font-weight: 600;
 }
 .ledger > div:last-child {
-  border-color: var(--report-cyan);
+  border-color: var(--accent-text);
 }
 .ledger > div:last-child dd {
-  color: var(--report-cyan);
+  color: var(--accent-text);
 }
 .details {
   display: grid;
   gap: 1.25rem;
 }
-.drawer {
-  --report-cyan: #57e5dc;
-  --report-violet: #b6a1ff;
-  --report-lime: #c8f86c;
-}
-:global([data-theme="light"]) .drawer,
-:global([data-theme="medium"]) .drawer {
-  --report-cyan: #006d68;
-  --report-violet: #6841bc;
-  --report-lime: #4b6b06;
-}
 .drawer :global(.mgmt-drawer__header) {
   background: linear-gradient(
     120deg,
-    color-mix(in srgb, var(--report-cyan) 8%, transparent),
-    color-mix(in srgb, var(--report-violet) 6%, transparent)
+    color-mix(in srgb, var(--accent-text) 8%, transparent),
+    color-mix(in srgb, var(--miro-gold) 6%, transparent)
   );
 }
 @media (max-width: 75rem) {

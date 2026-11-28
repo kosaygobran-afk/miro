@@ -579,7 +579,7 @@ export function ProductManagement({
                     </td>
                     <td className="p-4">
                       {product.is_featured && (
-                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-[var(--miro-tint)] text-accent-text">
                           {he ? "מומלץ" : "Featured"}
                         </span>
                       )}

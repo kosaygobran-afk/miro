@@ -538,7 +538,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                       {supplier.phone ? (
                         <a
                           href={`tel:${supplier.phone}`}
-                          className="text-primary hover:underline"
+                          className="text-accent-text hover:underline"
                         >
                           {supplier.phone}
                         </a>
@@ -550,7 +550,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                       {supplier.email ? (
                         <a
                           href={`mailto:${supplier.email}`}
-                          className="text-primary hover:underline"
+                          className="text-accent-text hover:underline"
                         >
                           <OverflowText
                             text={supplier.email}
@@ -672,7 +672,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                           {supplier.phone ? (
                             <a
                               href={`tel:${supplier.phone}`}
-                              className="text-primary hover:underline"
+                              className="text-accent-text hover:underline"
                             >
                               {supplier.phone}
                             </a>
@@ -689,7 +689,7 @@ export function SuppliersManager({ locale }: { locale: Locale }) {
                           {supplier.email ? (
                             <a
                               href={`mailto:${supplier.email}`}
-                              className="text-primary hover:underline"
+                              className="text-accent-text hover:underline"
                             >
                               {supplier.email}
                             </a>

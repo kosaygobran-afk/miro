@@ -84,6 +84,8 @@ with tempfile.TemporaryDirectory(prefix="miro-commerce-integration-", dir=qa_par
             "ceo": {"id": "00000000-0000-0000-0000-000000009902", "email": "fixture-ceo@local.test", "name": "Fixture CEO", "token": "fixture-ceo-token"},
             "inactive": {"id": "00000000-0000-0000-0000-000000009903", "email": "fixture-inactive@local.test", "name": "Fixture Inactive Admin", "token": "fixture-inactive-token"},
         }
+        if os.getenv("THEME_REVIEW"):
+            actors["customer"] = {"id": "00000000-0000-0000-0000-000000009904", "email": "fixture-customer@local.test", "name": "Fixture Customer", "token": "fixture-customer-token"}
         seed = "insert into auth.users(id,email,email_confirmed_at,raw_user_meta_data) values " + ",".join(
             f"('{a['id']}','{a['email']}',now(),'{{\"full_name\":\"{a['name']}\"}}'::jsonb)" for a in actors.values()
         ) + ";"
@@ -148,6 +150,8 @@ with tempfile.TemporaryDirectory(prefix="miro-commerce-integration-", dir=qa_par
         node_env = env | {"COMMERCE_NEXT_URL": f"http://127.0.0.1:{next_port}"}
         try:
             script = "verify-document-previews.mjs" if os.getenv("DOCUMENT_PREVIEW_REVIEW") else "verify-pos-workspace.mjs" if os.getenv("POS_REVIEW") else "verify-commerce-workspaces.mjs"
+            if os.getenv("THEME_REVIEW"):
+                script = "verify-shared-themes.mjs"
             result = run(["node", str(ROOT / "scripts" / script)], cwd=ROOT, env=node_env, timeout=600)
             print(result)
         except Exception as error:

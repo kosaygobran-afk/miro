@@ -164,7 +164,7 @@ export function InventoryDisplay({
                             {variant.sku}
                           </span>
                           {variant.is_default && (
-                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 whitespace-nowrap">
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-[var(--miro-tint)] text-accent-text whitespace-nowrap">
                               {he ? "ברירת מחדל" : "Default"}
                             </span>
                           )}

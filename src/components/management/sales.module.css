@@ -45,7 +45,7 @@
 
 .input:focus-visible,
 .select:focus-visible {
-  outline: 2px solid var(--color-primary, #d9a509);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -190,7 +190,7 @@
 }
 
 .iconButton:focus-visible {
-  outline: 2px solid var(--color-primary, #d9a509);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 
@@ -426,10 +426,10 @@
 .selectionPill {
   min-inline-size: 0;
   max-inline-size: 100%;
-  background: color-mix(in srgb, var(--report-cyan) 8%, var(--surface));
+  background: color-mix(in srgb, var(--accent-text) 8%, var(--surface));
   border-color: color-mix(
     in srgb,
-    var(--report-cyan) 25%,
+    var(--accent-text) 25%,
     var(--border-subtle)
   );
 }
@@ -445,7 +445,7 @@
   padding: 1rem;
 }
 .reviewTotalsRow[data-strong] {
-  color: var(--report-cyan);
+  color: var(--accent-text);
 }
 .comboList {
   background: var(--surface-elevated);
@@ -454,5 +454,5 @@
 }
 .comboOption:hover,
 .comboOption:focus-visible {
-  background: color-mix(in srgb, var(--report-cyan) 8%, var(--surface));
+  background: color-mix(in srgb, var(--accent-text) 8%, var(--surface));
 }

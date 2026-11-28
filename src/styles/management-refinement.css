@@ -255,7 +255,7 @@
     .mgmt-table__body > tr:is(:hover, :focus-within) > td {
       background-color: color-mix(
         in srgb,
-        var(--report-cyan) 7%,
+        var(--accent-text) 7%,
         var(--surface)
       );
     }
@@ -350,10 +350,10 @@
     block-size: 1.75rem;
     padding: 0.25rem;
     border: 1px solid
-      color-mix(in srgb, var(--report-cyan) 20%, var(--border-subtle));
+      color-mix(in srgb, var(--accent-text) 20%, var(--border-subtle));
     border-radius: 0.5rem;
-    background: color-mix(in srgb, var(--report-cyan) 6%, var(--surface-muted));
-    color: color-mix(in srgb, var(--report-cyan) 55%, var(--muted-foreground));
+    background: color-mix(in srgb, var(--accent-text) 6%, var(--surface-muted));
+    color: color-mix(in srgb, var(--accent-text) 55%, var(--muted-foreground));
   }
   .mgmt-nav__link--active {
     border-inline-start-width: 1px;
@@ -368,13 +368,13 @@
     color: var(--accent-text);
   }
   .mgmt-nav__link--active .mgmt-nav__icon {
-    background: color-mix(in srgb, var(--report-cyan) 10%, var(--surface));
+    background: color-mix(in srgb, var(--accent-text) 10%, var(--surface));
     border-color: color-mix(
       in srgb,
-      var(--report-cyan) 45%,
+      var(--accent-text) 45%,
       var(--border-subtle)
     );
-    color: var(--report-cyan);
+    color: var(--accent-text);
   }
   .mgmt-nav__link:focus-visible {
     outline: 2px solid var(--focus-ring);

@@ -279,7 +279,7 @@
 
     &:is(:hover, :focus-visible) .card {
       transform: translateY(-0.2rem) scale(var(--category-card-scale));
-      box-shadow: 0 0.55rem 1.4rem rgb(0 0 0 / 24%);
+      box-shadow: var(--shadow-lift);
     }
   }
 }

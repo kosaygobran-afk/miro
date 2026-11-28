@@ -172,8 +172,8 @@ export function GlobalGlassSettings({ locale }: { locale: Locale }) {
       }
       description={
         he
-          ? "הגדרה משותפת למצב כהה לכל המבקרים, הלקוחות והעובדים. מצבי ביניים ובהיר נשארים כפי שהם. מנכ״ל ומנהל פעילים יכולים לשמור. השינוי מופיע לאחר רענון העמוד או בביקור הבא."
-          : "One shared Dark mode setting for all visitors, customers and staff. Mid and Light stay unchanged. Active CEOs and admins can save. Changes appear after a page refresh or on the next visit."
+          ? "מראה זכוכית במצב כהה בחנות, בחשבון הלקוח ובממשק הניהול. מנכ״ל ומנהל פעילים יכולים לשמור את ההגדרה לכולם. השינוי מופיע ברענון העמוד או בביקור הבא."
+          : "Apply a glass finish to the storefront, customer accounts and management console in Dark mode. Active CEOs and admins can save the setting for everyone. Visitors see the change on refresh or on their next visit."
       }
     >
       {loading ? (
@@ -224,8 +224,8 @@ export function GlobalGlassSettings({ locale }: { locale: Locale }) {
           </button>
           <p className={styles.help} id={`${id}-help`}>
             {he
-              ? "צבעים עשירים יותר ועומק במצב כהה של גרסה 2 בלבד. כיבוי מחזיר את המצב הכהה למראה שלפני השדרוג. רק שמירה והחלה מפעילות את השינוי לכל המשתמשים. גרסה 1 והעדפת המערכת להפחתת שקיפות מקבלות עדיפות."
-              : "Richer colors and depth only in Version 2 Dark mode. Off restores the Dark appearance before this enhancement. Save and apply activates the change for everyone. Version 1 and system reduced transparency take priority."}
+              ? "במצב כהה של גרסה 2, לוחות ותפריטים נבחרים מקבלים ברק עדין ורקע שקוף מעט. בחירה בהפחתת שקיפות במערכת מציגה רקע אטום."
+              : "In Version 2 Dark mode, selected panels and menus gain a soft highlight and a translucent background. The system’s reduced-transparency preference keeps these surfaces opaque."}
           </p>
           {!editable && (
             <Notice tone="info">

@@ -102,7 +102,7 @@ export function PosVariantPicker({
                   {price}
                 </span>
                 {variant.is_default && (
-                  <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                  <span className="px-1.5 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-accent-text">
                     {t({ he: "ברירת מחדל", en: "Default" })}
                   </span>
                 )}

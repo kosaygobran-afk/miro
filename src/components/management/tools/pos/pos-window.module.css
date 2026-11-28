@@ -7,17 +7,13 @@
   height: 100%;
   min-width: 0;
   min-height: 0;
-  background:
-    radial-gradient(circle at top, rgba(224, 175, 23, 0.12), transparent 36%),
-    linear-gradient(180deg, rgba(19, 21, 26, 0.98), rgba(13, 15, 20, 0.98));
-  border: 1px solid rgba(163, 170, 182, 0.28);
+  background: var(--miro-canvas);
+  border: 1px solid var(--miro-border);
   border-radius: 1.5rem;
   overflow: hidden;
   font-family: inherit;
   container-type: inline-size;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 18px 36px rgba(3, 7, 18, 0.28);
+  box-shadow: var(--miro-shadow-raised);
 }
 
 /* Maximized mode — fills available workspace */
@@ -32,7 +28,7 @@
   height: auto !important;
   border-radius: 1.5rem;
   z-index: 90;
-  box-shadow: 0 26px 60px rgba(3, 7, 18, 0.38);
+  box-shadow: var(--miro-shadow-raised);
 }
 
 .titleBar {
@@ -40,12 +36,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0.6rem 0.9rem;
-  background: linear-gradient(
-    180deg,
-    rgba(26, 30, 37, 0.98),
-    rgba(16, 19, 25, 0.98)
-  );
-  border-bottom: 1px solid rgba(164, 171, 181, 0.18);
+  background: var(--miro-raised);
+  border-bottom: 1px solid var(--miro-border);
   user-select: none;
   touch-action: none;
   flex-shrink: 0;
@@ -61,7 +53,7 @@
   font-size: 0.875rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: rgba(244, 247, 250, 0.96);
+  color: var(--miro-text);
   white-space: nowrap;
 }
 
@@ -71,8 +63,8 @@
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 0.16rem 0.56rem;
-  background: linear-gradient(180deg, #f7d959, #e3b20d);
-  color: #111827;
+  background: var(--miro-gold);
+  color: var(--miro-on-gold);
   border-radius: var(--radius-full);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
@@ -125,23 +117,15 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  background: linear-gradient(
-    180deg,
-    rgba(11, 13, 18, 0.9),
-    rgba(20, 23, 29, 0.96)
-  );
+  background: var(--miro-canvas);
 }
 
 /* Discovery Panel (Left) */
 .discoveryPanel {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    180deg,
-    rgba(16, 19, 25, 0.96),
-    rgba(11, 13, 18, 0.96)
-  );
-  border-inline-end: 1px solid rgba(164, 171, 181, 0.18);
+  background: var(--miro-surface);
+  border-inline-end: 1px solid var(--miro-border);
   min-width: 0;
   max-width: none;
   overflow: hidden;
@@ -149,8 +133,8 @@
 
 .discoveryTabs {
   display: flex;
-  border-bottom: 1px solid rgba(164, 171, 181, 0.18);
-  background: rgba(12, 15, 20, 0.9);
+  border-bottom: 1px solid var(--miro-border);
+  background: var(--miro-inset);
   padding: 0.35rem 0.45rem 0;
   flex-shrink: 0;
   gap: 0.25rem;
@@ -163,7 +147,7 @@
   padding: 0.6rem 0.8rem;
   border: none;
   background: transparent;
-  color: rgba(203, 214, 224, 0.72);
+  color: var(--miro-muted);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -187,18 +171,14 @@
 }
 
 .tab:disabled:hover {
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   background: transparent;
 }
 
 .tabActive {
-  color: #f7d95d;
-  background: linear-gradient(
-    180deg,
-    rgba(20, 23, 29, 0.98),
-    rgba(17, 20, 25, 0.98)
-  );
-  border-bottom: 2px solid #f7d95d;
+  color: var(--miro-accent);
+  background: var(--miro-tint);
+  border-bottom: 2px solid var(--miro-accent);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
@@ -207,7 +187,7 @@
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--surface);
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.6875rem;
   line-height: 1.45;
   text-align: start;
@@ -245,7 +225,7 @@
 .contextHelpTrigger:hover,
 .contextHelpTrigger:focus-visible {
   border-color: var(--primary);
-  outline: 2px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 .contextHelpPanel {
@@ -260,7 +240,7 @@
   border-radius: var(--radius-md);
   background: var(--surface);
   color: var(--foreground);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--miro-shadow-raised);
 }
 .contextHelpHeader {
   display: flex;
@@ -290,14 +270,14 @@
   gap: 0.65rem;
   margin: 0.8rem 0 0;
   padding-inline-start: 1.2rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.82rem;
   line-height: 1.55;
 }
 
 .sectionHint {
   font-size: 0.75rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   margin-top: 0.5rem;
   padding: 0.5rem;
   background: var(--background);
@@ -312,14 +292,14 @@
   padding: 0.5rem 0;
   margin-bottom: 0.5rem;
   font-size: 0.75rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   flex-wrap: wrap;
 }
 
 .breadcrumbItem {
   background: none;
   border: none;
-  color: var(--primary);
+  color: var(--accent-text);
   cursor: pointer;
   padding: 0.125rem 0.25rem;
   border-radius: var(--radius-sm);
@@ -362,12 +342,8 @@
   aspect-ratio: 1;
   min-height: 112px;
   padding: 0.9rem 0.7rem;
-  background: linear-gradient(
-    180deg,
-    rgba(21, 25, 31, 0.96),
-    rgba(15, 18, 24, 0.96)
-  );
-  border: 1px solid rgba(163, 170, 182, 0.2);
+  background: var(--miro-raised);
+  border: 1px solid var(--miro-border);
   border-radius: 1rem;
   cursor: pointer;
   transition:
@@ -380,10 +356,10 @@
 }
 
 .categoryCube:hover {
-  border-color: rgba(247, 217, 93, 0.8);
-  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.18);
+  border-color: var(--miro-accent);
+  box-shadow: var(--miro-shadow);
   transform: translateY(-2px);
-  background: linear-gradient(180deg, rgba(24, 28, 36, 1), rgba(18, 21, 28, 1));
+  background: var(--miro-hover);
 }
 
 .categoryCube:focus-visible {
@@ -405,20 +381,20 @@
 
 .categoryCubeCount {
   font-size: 0.6875rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
 }
 
 .empty {
   text-align: center;
   padding: 2rem 1rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.8125rem;
 }
 
 .loading {
   text-align: center;
   padding: 2rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.8125rem;
 }
 
@@ -473,7 +449,7 @@
   inset-inline-start: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   pointer-events: none;
 }
 
@@ -504,7 +480,7 @@
 
 .serviceItem:hover {
   border-color: var(--primary);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--miro-shadow);
 }
 
 .serviceInfo {
@@ -525,7 +501,7 @@
 
 .serviceDesc {
   font-size: 0.6875rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -534,7 +510,7 @@
 .servicePrice {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--accent-text);
   white-space: nowrap;
 }
 
@@ -602,11 +578,7 @@
 .cartPanel {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(
-    180deg,
-    rgba(17, 20, 27, 0.98),
-    rgba(11, 13, 18, 0.96)
-  );
+  background: var(--miro-inset);
   min-width: 0;
   overflow: hidden;
 }
@@ -625,10 +597,10 @@
   min-height: 2.75rem;
   font-size: 1rem;
   font-weight: 700;
-  color: rgba(244, 247, 250, 0.96);
+  color: var(--miro-text);
   margin-bottom: 0.75rem;
   padding-bottom: 0.65rem;
-  border-bottom: 1px solid rgba(164, 171, 181, 0.18);
+  border-bottom: 1px solid var(--miro-border);
 }
 
 .emptyCart {
@@ -639,19 +611,15 @@
   padding: 1.25rem;
   border: 1px dashed var(--border-control);
   border-radius: var(--radius-md);
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.8125rem;
   line-height: 1.5;
   text-align: center;
 }
 
 .cartLine {
-  background: linear-gradient(
-    180deg,
-    rgba(22, 26, 32, 0.96),
-    rgba(17, 20, 27, 0.96)
-  );
-  border: 1px solid rgba(163, 170, 182, 0.18);
+  background: var(--miro-surface);
+  border: 1px solid var(--miro-border);
   border-radius: 0.9rem;
   margin-bottom: 0.6rem;
   overflow: hidden;
@@ -686,17 +654,17 @@
 
 .cartLineSku {
   font-size: 0.6875rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
 }
 
 .stockInfo {
   font-size: 0.6875rem;
-  color: var(--success);
+  color: var(--miro-success);
 }
 
 .manualNote {
   font-size: 0.6875rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-style: italic;
 }
 
@@ -711,13 +679,13 @@
 }
 
 .serviceBadge {
-  background: var(--info);
-  color: var(--info-foreground);
+  background: var(--miro-info-bg);
+  color: var(--miro-info);
 }
 
 .manualBadge {
-  background: var(--warning);
-  color: var(--warning-foreground);
+  background: var(--miro-warning-bg);
+  color: var(--miro-warning);
 }
 
 .cartLineControls {
@@ -807,15 +775,15 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .removeButton:hover:not(:disabled) {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: var(--danger-foreground);
+  background: var(--miro-danger-bg);
+  border-color: var(--miro-danger);
+  color: var(--miro-danger);
 }
 
 .removeButton:disabled {
@@ -846,7 +814,7 @@
   border: 2px dashed var(--border-control);
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.8125rem;
   font-weight: 500;
   cursor: pointer;
@@ -855,8 +823,8 @@
 
 .addLineButton:hover:not(:disabled) {
   border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-subtle);
+  color: var(--accent-text);
+  background: var(--miro-tint);
 }
 
 .addLineButton:disabled {
@@ -903,7 +871,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   margin-bottom: 0.5rem;
 }
 
@@ -927,7 +895,7 @@
 .paymentSummaryRowStrong {
   font-weight: 600;
   font-size: 0.9375rem;
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .paymentsList {
@@ -984,15 +952,15 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   cursor: pointer;
   justify-self: end;
 }
 
 .removePaymentButton:hover:not(:disabled) {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: var(--danger-foreground);
+  background: var(--miro-danger-bg);
+  border-color: var(--miro-danger);
+  color: var(--miro-danger);
 }
 
 .removePaymentButton:disabled {
@@ -1011,7 +979,7 @@
   border: 2px dashed var(--border-control);
   border-radius: var(--radius-md);
   background: transparent;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
@@ -1020,8 +988,8 @@
 
 .addPaymentButton:hover:not(:disabled) {
   border-color: var(--primary);
-  color: var(--primary);
-  background: var(--primary-subtle);
+  color: var(--accent-text);
+  background: var(--miro-tint);
 }
 
 .fillRemainingButton {
@@ -1046,7 +1014,7 @@
 
 .fillRemainingButton:hover:not(:disabled) {
   border-color: var(--primary);
-  background: var(--primary-subtle);
+  background: var(--miro-tint);
 }
 
 .fillRemainingButton:disabled {
@@ -1118,7 +1086,7 @@
 }
 
 .buttonPrimary:hover:not(:disabled) {
-  filter: brightness(1.05);
+  background: var(--miro-gold-hover);
 }
 
 .buttonPrimary:disabled,
@@ -1131,7 +1099,7 @@
 .reviewOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--miro-scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1207,7 +1175,7 @@
 .reviewDescription {
   padding: 0.75rem 1.25rem;
   font-size: 0.8125rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -1228,7 +1196,7 @@
 
 .reviewCustomer span {
   font-size: 0.8125rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
 }
 
 .reviewAccountBadge {
@@ -1263,7 +1231,7 @@
 
 .reviewTable th {
   font-weight: 600;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   white-space: nowrap;
@@ -1302,13 +1270,13 @@
 
 .fieldHint {
   font-size: 0.6875rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   padding: 0 1.25rem 0.75rem;
 }
 
 .saveError {
   padding: 0.5rem 1.25rem;
-  color: var(--danger);
+  color: var(--miro-danger);
   font-size: 0.8125rem;
 }
 
@@ -1317,14 +1285,10 @@
   gap: 0.5rem;
   margin: 0 1.25rem 0.75rem;
   padding: 0.75rem;
-  border: 1px solid var(--warning, #b7791f);
+  border: 1px solid var(--miro-warning);
   border-radius: var(--radius-md);
   color: var(--foreground);
-  background: color-mix(
-    in srgb,
-    var(--warning, #b7791f) 10%,
-    var(--background)
-  );
+  background: color-mix(in srgb, var(--miro-warning) 10%, var(--background));
   font-size: 0.8125rem;
 }
 
@@ -1361,7 +1325,7 @@
   margin: 0;
 }
 .parkedDraftPanel p {
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.75rem;
 }
 .parkedDraftControls {
@@ -1392,7 +1356,7 @@
   gap: 0.65rem;
   align-items: flex-start;
   padding: 0.75rem;
-  border: 1px solid var(--warning, #b7791f);
+  border: 1px solid var(--miro-warning);
   border-radius: var(--radius-md);
   color: var(--foreground);
   font-size: 0.85rem;
@@ -1415,10 +1379,10 @@
 /* Success Message */
 .successMessage {
   padding: 0.75rem 1rem;
-  background: var(--success-subtle);
-  border: 1px solid var(--success);
+  background: var(--miro-success-bg);
+  border: 1px solid var(--miro-success);
   border-radius: var(--radius-md);
-  color: var(--success);
+  color: var(--miro-success);
   font-size: 0.8125rem;
   margin: 0.75rem;
 }
@@ -1441,7 +1405,7 @@
   background: var(--surface);
   border: 1px solid var(--border-control);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--miro-shadow);
   z-index: 50;
   list-style: none;
   margin: 0;
@@ -1471,7 +1435,7 @@
 .comboStatus {
   padding: 0.75rem;
   text-align: center;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.8125rem;
 }
 
@@ -1480,10 +1444,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.375rem 0.5rem;
-  background: var(--primary-subtle);
+  background: var(--miro-tint);
   border-radius: var(--radius-md);
   font-size: 0.8125rem;
-  color: var(--primary);
+  color: var(--accent-text);
 }
 
 .clearButton {
@@ -1494,14 +1458,14 @@
   block-size: 1.5rem;
   border: none;
   background: transparent;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   cursor: pointer;
   border-radius: var(--radius-sm);
 }
 
 .clearButton:hover {
   background: var(--surface-hover);
-  color: var(--danger);
+  color: var(--miro-danger);
 }
 
 .field {
@@ -1515,7 +1479,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
 }
 
 .input {
@@ -1537,11 +1501,11 @@
 }
 
 .input[aria-invalid="true"] {
-  border-color: var(--danger);
+  border-color: var(--miro-danger);
 }
 
 .input[aria-invalid="true"]:focus {
-  box-shadow: 0 0 0 2px var(--danger-subtle);
+  box-shadow: 0 0 0 2px var(--miro-danger-bg);
 }
 
 .textarea {
@@ -1564,19 +1528,19 @@
 
 .fieldError {
   font-size: 0.75rem;
-  color: var(--danger);
+  color: var(--miro-danger);
 }
 
 .fieldHint {
   font-size: 0.6875rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
 }
 
 .stockBadge {
   font-size: 0.625rem;
   padding: 0.125rem 0.375rem;
-  background: var(--success-subtle);
-  color: var(--success);
+  background: var(--miro-success-bg);
+  color: var(--miro-success);
   border-radius: var(--radius-full);
   margin-inline-start: 0.5rem;
   white-space: nowrap;
@@ -1588,7 +1552,7 @@
 
 .sku {
   font-size: 0.6875rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
 }
 
 .grow2 {
@@ -1623,7 +1587,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   margin-bottom: 0.125rem;
 }
 
@@ -1648,10 +1612,10 @@
 
 .successMessage {
   padding: 0.75rem;
-  background: var(--success-subtle);
-  border: 1px solid var(--success);
+  background: var(--miro-success-bg);
+  border: 1px solid var(--miro-success);
   border-radius: var(--radius-md);
-  color: var(--success);
+  color: var(--miro-success);
 }
 
 .actionButtons {
@@ -1675,7 +1639,7 @@
     min-height: 13rem;
     max-height: 19rem;
     border-inline-end: 0;
-    border-bottom: 1px solid rgba(164, 171, 181, 0.18);
+    border-bottom: 1px solid var(--miro-border);
   }
 
   .discoverySection {
@@ -1786,7 +1750,7 @@
   .discoveryPanel {
     min-height: 12rem;
     border-inline-end: 0;
-    border-bottom: 1px solid rgba(164, 171, 181, 0.18);
+    border-bottom: 1px solid var(--miro-border);
   }
 
   .totalsPanel {
@@ -1872,8 +1836,8 @@
 }
 
 .tabActive {
-  color: var(--sales-channel-pos-text);
-  background: color-mix(in srgb, var(--sales-channel-pos) 16%, var(--surface));
+  color: var(--miro-accent);
+  background: color-mix(in srgb, var(--miro-accent) 16%, var(--surface));
   border-bottom-color: transparent;
 }
 
@@ -1881,7 +1845,7 @@
   position: absolute;
   inset-inline-start: 0.75rem;
   top: 50%;
-  color: var(--sales-channel-pos);
+  color: var(--miro-accent);
   transform: translateY(-50%);
   pointer-events: none;
 }
@@ -1900,11 +1864,7 @@
 }
 
 .categoryCube:hover {
-  background: color-mix(
-    in srgb,
-    var(--sales-channel-pos) 8%,
-    var(--background)
-  );
+  background: color-mix(in srgb, var(--miro-accent) 8%, var(--background));
 }
 
 .cartTitle {
@@ -1921,11 +1881,10 @@
   width: 2rem;
   height: 2rem;
   place-items: center;
-  border: 1px solid
-    color-mix(in srgb, var(--sales-channel-pos) 32%, transparent);
+  border: 1px solid color-mix(in srgb, var(--miro-accent) 32%, transparent);
   border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--sales-channel-pos) 13%, var(--surface));
-  color: var(--sales-channel-pos-text);
+  background: color-mix(in srgb, var(--miro-accent) 13%, var(--surface));
+  color: var(--miro-accent);
 }
 
 .cartCount {
@@ -1936,8 +1895,8 @@
   padding-inline: 0.375rem;
   place-items: center;
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--sales-channel-pos) 16%, var(--surface));
-  color: var(--sales-channel-pos-text);
+  background: color-mix(in srgb, var(--miro-accent) 16%, var(--surface));
+  color: var(--miro-accent);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 700;
@@ -1981,14 +1940,14 @@
 }
 
 .qtyInput[aria-invalid="true"] {
-  color: var(--danger);
+  color: var(--miro-danger);
 }
 
 .stockError {
   margin: 0;
   padding: 0.375rem 0.75rem;
-  background: var(--danger-subtle);
-  color: var(--danger);
+  background: var(--miro-danger-bg);
+  color: var(--miro-danger);
   font-size: 0.75rem;
   text-align: start;
 }
@@ -2004,7 +1963,7 @@
   gap: 1rem;
   padding-top: 0.625rem;
   border-top: 1px solid var(--border-subtle);
-  color: var(--primary);
+  color: var(--accent-text);
   font-size: 1.0625rem;
 }
 
@@ -2022,7 +1981,7 @@
 }
 
 .paymentSummaryRowStrong {
-  color: var(--sales-channel-pos-text);
+  color: var(--miro-accent);
 }
 
 .paymentSelect,

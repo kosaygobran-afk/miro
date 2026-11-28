@@ -219,7 +219,7 @@ html[dir="rtl"] .experience-hero-media::after {
   font-size: 0.73rem;
 }
 .experience-hero-bottom a:hover {
-  color: var(--primary);
+  color: var(--accent-text);
 }
 .experience-hero-bottom svg {
   width: 1rem;
@@ -256,7 +256,7 @@ html[dir="rtl"] .experience-hero-media::after {
 .experience-category-card:hover {
   transform: translateY(-4px);
   border-color: color-mix(in srgb, var(--primary) 65%, var(--border-subtle));
-  box-shadow: 0 15px 38px #00000013;
+  box-shadow: var(--shadow-lift);
 }
 .experience-category-top {
   display: flex;
@@ -636,7 +636,7 @@ html[dir="rtl"] .experience-hero-media::after {
   border: 1px solid var(--border-subtle);
   border-radius: 0.8rem;
   background: var(--surface);
-  box-shadow: 0 10px 25px #00000008;
+  box-shadow: var(--shadow-soft);
 }
 .experience-system-node svg {
   width: 1.55rem;
@@ -1294,17 +1294,17 @@ html[dir="rtl"] .experience-hero-media::after {
   .experience-hero-media::after {
     background: linear-gradient(
       90deg,
-      #050607 0%,
-      #050607db 38%,
-      #05060744 85%
+      var(--background) 0%,
+      color-mix(in srgb, var(--background) 92%, transparent) 38%,
+      color-mix(in srgb, var(--background) 28%, transparent) 85%
     );
   }
   html[dir="rtl"] .experience-hero-media::after {
     background: linear-gradient(
       270deg,
-      #050607 0%,
-      #050607db 38%,
-      #05060744 85%
+      var(--background) 0%,
+      color-mix(in srgb, var(--background) 92%, transparent) 38%,
+      color-mix(in srgb, var(--background) 28%, transparent) 85%
     );
   }
   .experience-category-grid {
@@ -1451,9 +1451,9 @@ html[dir="rtl"] .experience-hero-media::after {
   html[dir="rtl"] .experience-hero-media::after {
     background: linear-gradient(
       180deg,
-      #050607 0%,
-      #050607 45%,
-      #050607aa 62%,
+      var(--background) 0%,
+      var(--background) 45%,
+      color-mix(in srgb, var(--background) 70%, transparent) 62%,
       transparent 85%
     );
   }

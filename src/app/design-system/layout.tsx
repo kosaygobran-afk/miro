@@ -1,3 +1,4 @@
+import { ThemeBootstrap } from "@/components/theme-bootstrap";
 import "../globals.css";
 import "@/styles/premium.css";
 import "@/styles/storefront.css";
@@ -9,7 +10,10 @@ export default function DesignSystemLayout({
 }) {
   return (
     <html lang="en" dir="ltr" data-theme="dark" suppressHydrationWarning>
-      <body>{children}</body>
+      <body>
+        <ThemeBootstrap />
+        {children}
+      </body>
     </html>
   );
 }

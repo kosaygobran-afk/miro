@@ -25,7 +25,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-full, 999px);
   background: var(--surface);
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   text-decoration: none;
   font-size: 0.82rem;
   font-weight: 600;
@@ -143,7 +143,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background: var(--surface);
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--miro-shadow);
 }
 
 .cardHeader {
@@ -163,7 +163,7 @@
 .cardHeader p {
   margin: 0;
   max-width: 72ch;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.82rem;
   line-height: 1.55;
 }
@@ -281,7 +281,7 @@
 }
 
 .metricLabel {
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.76rem;
 }
 .metricValue {
@@ -301,7 +301,7 @@
 }
 
 .subtle {
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.82rem;
   line-height: 1.55;
 }
@@ -310,7 +310,7 @@
   gap: 0.5rem;
   margin: 0;
   padding-inline-start: 1.2rem;
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
 }
 .statusLine {
   display: flex;
@@ -334,7 +334,7 @@
   gap: 0.25rem;
 }
 .detail dt {
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.76rem;
 }
 .detail dd {
@@ -383,7 +383,7 @@
   padding: 0.75rem;
   border-inline-start: 3px solid var(--primary);
   background: var(--surface-muted);
-  color: var(--foreground-muted);
+  color: var(--muted-foreground);
   font-size: 0.8rem;
   line-height: 1.55;
   white-space: pre-wrap;

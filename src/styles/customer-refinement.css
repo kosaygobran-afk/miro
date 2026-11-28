@@ -52,11 +52,11 @@
   align-items: center;
   gap: 0.3rem;
   padding: 0.35rem;
-  border: 1px solid #ffffff35;
-  background: #101214a8;
+  border: 1px solid var(--border-control);
+  background: var(--miro-raised);
+  box-shadow: var(--shadow-soft);
   border-radius: 999px;
-  backdrop-filter: blur(14px);
-  color: #fff;
+  color: var(--foreground);
 }
 .sf-hero-controls button {
   display: grid;
@@ -70,8 +70,8 @@
   cursor: pointer;
 }
 .sf-hero-controls button:hover {
-  background: #ffffff18;
-  color: #ffe18a;
+  background: var(--surface-hover);
+  color: var(--accent-text);
 }
 .sf-hero-controls > span {
   min-width: 4rem;
@@ -81,7 +81,7 @@
   letter-spacing: 0.1em;
 }
 .sf-hero-controls small {
-  color: #d1d1d1;
+  color: var(--muted-foreground);
 }
 .sf-hero-caption {
   bottom: 1.5rem !important;
@@ -202,7 +202,7 @@
     transform 160ms ease;
   filter: brightness(0) invert(1);
 }
-[data-theme="light"] .sf-company-mark img {
+:is([data-theme="light"], [data-theme="medium"]) .sf-company-mark img {
   filter: brightness(0);
 }
 .sf-company-mark:hover img {
@@ -243,7 +243,7 @@
 }
 .sf-product-card:hover {
   box-shadow:
-    0 18px 45px #00000012,
+    var(--shadow-lift),
     0 0 0 1px color-mix(in srgb, var(--primary) 20%, transparent);
 }
 .sf-product-media {
@@ -375,7 +375,7 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
   box-shadow:
-    0 30px 100px #0006,
+    var(--shadow-lift),
     0 0 0 1px color-mix(in srgb, var(--primary) 12%, transparent);
 }
 .sf-hover-preview-gallery {
@@ -668,9 +668,6 @@
 .sf-gallery-arrow:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
-}
-[data-theme="light"] .sf-hero h1 span {
-  color: var(--accent-text);
 }
 [dir="ltr"] .sf-department-arrow,
 [dir="rtl"] .sf-department-arrow {

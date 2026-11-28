@@ -108,24 +108,26 @@ try {
           );
           const tokens = await page.evaluate(() => {
             const s = getComputedStyle(document.documentElement);
-            return Object.fromEntries(
-              [
-                "--background",
-                "--surface",
-                "--surface-muted",
-                "--surface-hover",
-                "--primary",
-                "--success-text",
-                "--error-text",
-              ].map((k) => [k, s.getPropertyValue(k).trim()]),
-            );
+            const aliases = {
+              "--background": "--miro-canvas",
+              "--surface": "--miro-surface",
+              "--surface-muted": "--miro-inset",
+              "--surface-hover": "--miro-hover",
+              "--primary": "--miro-gold",
+              "--success-text": "--miro-success",
+              "--error-text": "--miro-danger",
+            };
+            return Object.entries(aliases).map(([alias, shared]) => ({
+              alias,
+              color: s.getPropertyValue(alias).trim(),
+              shared: s.getPropertyValue(shared).trim(),
+            }));
           });
-          if (theme === "dark") {
-            assert.equal(tokens["--background"], "#050505");
-            assert.equal(tokens["--surface"], "#0c0c0c");
-            assert.equal(tokens["--surface-muted"], "#171717");
-            assert.equal(tokens["--surface-hover"], "#242424");
-          } else {
+          for (const token of tokens) {
+            assert.ok(token.shared, token.alias);
+            assert.equal(token.color, token.shared, token.alias);
+          }
+          if (theme !== "dark") {
             const on = await paint(page);
             await page.evaluate(() => {
               document.documentElement.dataset.glass = "off";

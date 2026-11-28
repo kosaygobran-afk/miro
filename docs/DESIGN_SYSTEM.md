@@ -1,5 +1,11 @@
 # Design System
 
+## Shared website palettes — 2026-11-28
+
+Public pages, customer and worker accounts, the management console and its detached tools share the theme selected in the header. Light uses a warm white page with white panels. Medium uses a dove-gray page with pale gray cards and near-white raised surfaces. Dark uses a neutral near-black page with progressively lighter charcoal layers to distinguish menus, panels and inputs. Gold marks primary actions throughout. Prefer the reading accent for links, icons on neutral surfaces and section labels, and use the separate focus color for keyboard outlines. Use the short shadow on cards and the deeper shadow on floating menus and dialogs.
+
+The role and tone definitions live in `src/app/globals.css`. Both appearance versions inherit them. Reports, statuses, availability badges and alerts retain distinct colors alongside their labels. The full palette, its contrast checks and the optional glass finish are documented in [Themes and glass](THEME_GLASS.md).
+
 ## Storefront section headings — 2026-11-27
 
 Version 2 storefront section labels use the gold accent at 16.8–18.4px, below the rendered brand wordmark height. Their secondary dark titles stay smaller at 16–16.8px and larger than supporting copy; do not enlarge or recolor the existing gray descriptions. Every section label ends with the same 22×2px gold rule; move Categories' existing rule to the trailing edge rather than duplicating it. Use the shared 0.35rem gap between label, title and supporting text, and a consistent 1rem gap after the heading group. Main content sections use equal top/bottom padding. The category and moving-product rails keep balanced insets, with at least 1rem inside the moving rail for native scrollbar/focus clearance. Version 1 remains unchanged.
@@ -436,9 +442,9 @@ Runtime source of truth: `src/app/globals.css`. Files under `src/styles/` **are*
 
 ### Theme system
 
-- Three modes: `dark`, `medium`, `light` (defined in `premium.css` and `globals.css`).
-- Default bootstrap prefers `dark` or `medium` from system preference; honors stored `localStorage.miro-theme`.
-- Segmented switch control (D / M / L) in header.
+- The header offers three modes, `dark`, `medium` and `light`, defined in `src/app/globals.css`.
+- The bootstrap reads the saved `miro-theme` choice first, then the system color preference.
+- The header uses three labeled, keyboard-operable buttons.
 - `--header-sticky-offset` token added per theme for sticky coordination.
 
 ## Premium Refinement (2026-09-20)

@@ -1,6 +1,6 @@
 # Customer storefront design — 2026-10-02
 
-The public storefront supports MIRO's dark/medium/light themes. Version 2 adds calmer charcoal/gold and warm bright palettes, framed icons, consistent component geometry and phone layouts. Version 1 restores the original presentation. The customer layers keep their own palette, separate from the management console.
+The storefront and management console share Light, Medium and Dark. Both appearance versions use the palette in `src/app/globals.css`. Version 2 adds its own component geometry and phone layouts. The current colors and their usage are in [Themes and glass](THEME_GLASS.md).
 
 2026-10-20 owner direction: visitor/customer icon controls now share the management interface's bordered rounded-rectangle geometry, replacing the earlier circular controls. The public palette remains charcoal/gold across all three themes. The final `public-refinement.css` layer owns frame radii/borders, footer action gaps, customer-form label gaps and contact validation spacing; the payment module uses the same public theme tokens. Detailed scope and verification live in `docs/DESIGN_SYSTEM.md` and `docs/PROJECT_STATUS.md`.
 

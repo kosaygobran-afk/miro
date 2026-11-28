@@ -235,8 +235,8 @@ export function AnimationSettings({
               </p>
               <p className={styles.note}>
                 {he
-                  ? "הכנת שחזור מעתיקה את הגיבוי לטיוטה הזאת ומחליפה שינויים שטרם נשמרו כאן. רק הכפתור שמירה והחלה מפעיל אותה. הבחירה האישית של המבקר בכהה/בינוני/בהיר נשמרת; מוצרי החנות, עיצוב החנות, תכנים, אנשי קשר והרשאות אינם משתנים."
-                  : "Preparing a restore copies the backup into this draft and replaces unsaved changes in this section. Only Save and apply activates it. Each visitor’s personal dark/medium/light choice is retained; catalog, store design, content, contact details and permissions are untouched."}
+                  ? "הכנת שחזור מעתיקה לטיוטה את הפריסה וההנפשות של גרסה 1 ומחליפה את השינויים שטרם נשמרו כאן. בחרו שמירה והחלה כדי לפרסם. בשתי הגרסאות מוצגת ערכת הצבעים העדכנית לפי הבחירה האישית של כל מבקר."
+                  : "Preparing a restore replaces this draft with the Version 1 layout and animation settings. Choose Save and apply to publish. Both versions use the current site palette for each visitor’s chosen theme."}
               </p>
               <p className={styles.note}>
                 {he
@@ -269,8 +269,8 @@ export function AnimationSettings({
               </h3>
               <p id="animation-appearance-version-note" className={styles.note}>
                 {he
-                  ? "מפעיל את שכבת העיצוב המשופרת של גרסה2. בכיבוי, האתר משתמש במראה המקורי של גרסה1 עם הגדרות ההנפשה שבטיוטה הזאת. לשחזור גם של ההנפשות המקוריות, השתמשו בכפתור הכנת שחזור גרסה1. נדרשת שמירה והחלה."
-                  : "Enables the enhanced Version2 styling layer. Off uses the original Version1 appearance with this draft’s animation choices. To restore the original animations too, use Prepare Version1 restore. Save and apply is required."}
+                  ? "מפעיל את הפריסה המשופרת של גרסה 2. בכיבוי, האתר משתמש בפריסה של גרסה 1 ובהגדרות ההנפשה שבטיוטה הזאת. לשחזור גם של ההנפשות המקוריות, השתמשו בכפתור הכנת שחזור גרסה1. נדרשת שמירה והחלה."
+                  : "Enables the Version 2 layout. Turning it off selects the Version 1 layout with this draft’s animation choices. To restore the original animations too, use Prepare Version1 restore. Save and apply is required."}
               </p>
             </div>
             <ActivationSwitch

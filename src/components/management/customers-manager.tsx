@@ -952,7 +952,7 @@ export function CustomersManager({ locale }: { locale: "he" | "en" }) {
                       <div className="customers-manager__activity-group">
                         <h5 className="customers-manager__activity-group-title flex items-center gap-2">
                           <Package
-                            className="h-4 w-4 text-primary"
+                            className="h-4 w-4 text-accent-text"
                             aria-hidden="true"
                           />
                           {he ? "פעילות מוצרים" : "Product Activity"}
